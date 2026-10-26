@@ -165,6 +165,60 @@ and prints the result as JSON.
   \label{fig:sources}
 \end{figure}
 
+\section{Class competitions}
+\label{sec:competitions}
+A competition is a lab run as a timed, class-wide challenge with a live
+leaderboard (\cref{fig:compete}). It reuses the lab's questions, roster and
+recorded sessions and adds a clock, a lobby in which students choose the name
+shown on the board, and test-graded submissions. Ordinary labs treat
+correctness as optional, since in class the effort is what matters; a
+competition is the one place where correctness is scored. Every competition
+question therefore needs at least one test case before the clock can start.
+A submission earns $100 \times$ the share of tests passed, keeping the best
+submission per question, plus up to 50 points for a full solve, scaled by the
+share of the planned time still left. Wrong submissions cost nothing.
+
+The board is kept deliberately gentle: by default students see the top ten
+and their own place, never who is last; badges (first to solve, fastest per
+question, solved them all, most bugs fixed) let more students stand out; and
+only chosen board names are shown. The leaderboard reads nothing from the
+detector or the review timeline, so a moment flagged for conversation can
+never cost a place or become public.
+
+Competition sittings are recorded like any lab but measured separately. Time
+pressure and an audience change how people type and work, so a competition
+is a different behaviour, not a noisy lab. A student's lab baseline therefore
+leaves competition sessions out, and a competition session is compared only
+with the same student's sessions from their other competitions (leave one
+competition out), with the same minimum of two sessions before anything is
+scored. This keeps the lab baseline clean and gives the thesis a second,
+within-student condition: how far a student's competition habits sit from
+their lab habits is itself a measurement, and a takeover during a
+competition is judged against how that student behaves under pressure.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{compete/compete-light-04-lobby}
+    \caption{Lobby: students pick a board name before the clock starts.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{compete/compete-light-05-arena-live}
+    \caption{Live: questions, own standing and the board.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{compete/compete-light-07-submit-solved}
+    \caption{Submit runs the tests; hidden tests report pass or fail only.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{compete/compete-dark-09-podium}
+    \caption{Teacher's projector board with the podium at the end.}
+  \end{subfigure}
+  \caption{Class competitions. All screens, light and dark, are in
+  \texttt{snapshots/compete/}.}
+  \label{fig:compete}
+\end{figure}
+
 \section{Teacher evidence timeline}
 \label{sec:review-timeline}
 The last part of the pipeline is a review screen for the teacher or

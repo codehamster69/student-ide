@@ -10,7 +10,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, CircleAlert, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal } from "lucide-react";
+import { CheckCircle2, CircleAlert, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
 import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
 import { LANGUAGES } from "../teach/api";
@@ -18,6 +18,8 @@ import { captureExtension, captureWindow, SNAPSHOT_EVERY_MS } from "../capture";
 import type { LiveSession } from "../editor/session";
 import { editorTheme } from "../editor/theme";
 import { Badge, Button, Dialog, Kbd, LiveDot, LogoMark, Spinner, TextArea, cn, duration, ease } from "../ui";
+import type { SubmitResult } from "../compete/api";
+import { SubmitDialog } from "../compete/SubmitDialog";
 
 export interface SessionSummary {
   runs: number;
@@ -63,6 +65,9 @@ export function Workspace({ studentId, task, session, onFinished }: {
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [taskOpen, setTaskOpen] = useState(true);
+  const competing = !!task.competition;
+  const [submitting, setSubmitting] = useState(false);
+  const [verdict, setVerdict] = useState<SubmitResult | { error: string } | null>(null);
   const [checking, setChecking] = useState(false);
   const [grade, setGrade] = useState<CheckResult | null>(null);
   const [pane, setPane] = useState<"output" | "tests">("output");
@@ -122,6 +127,23 @@ export function Workspace({ studentId, task, session, onFinished }: {
 
   const runRef = useRef(runCode);
   runRef.current = runCode;
+
+  /** Competitions only: run the question's test cases on the server and score the result. */
+  const submit = useCallback(async () => {
+    const v = view.current;
+    if (!v || runningRef.current) return;
+    setSubmitting(true);
+    const code = v.state.doc.toString();
+    rec.log("snapshot", { reason: "run", text: code });
+    lastSnapshot.current = code;
+    try {
+      setVerdict(await api<SubmitResult>(`/api/sessions/${sessionId}/submit`, { code }));
+    } catch (err) {
+      setVerdict({ error: (err as Error).message });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [rec, sessionId]);
 
   useEffect(() => {
     rec.onStatus = (pending, ok) => setLink({ pending, ok });
@@ -226,6 +248,13 @@ export function Workspace({ studentId, task, session, onFinished }: {
             Run
             <Kbd className="ml-1 border-white/30">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
           </Button>
+          {competing && (
+            <Button variant="primary" size="sm" onClick={() => void submit()} disabled={submitting || running || saving}
+              className="bg-gold text-accent-fg hover:bg-gold hover:opacity-90">
+              {submitting ? <Spinner className="size-3.5" /> : <FlaskConical className="size-3.5" />}
+              Submit
+            </Button>
+          )}
           {canCheck && (
             <Button size="sm" onClick={() => void checkCode()} disabled={checking || saving}
               title="Run the teacher's tests on your code. Just for you; it isn't graded.">
@@ -234,8 +263,8 @@ export function Workspace({ studentId, task, session, onFinished }: {
             </Button>
           )}
           <Button size="sm" onClick={() => setConfirming(true)} disabled={saving}>
-            <Flag className="size-3.5" />
-            Finish
+            {competing ? <Trophy className="size-3.5" /> : <Flag className="size-3.5" />}
+            {competing ? "Back to board" : "Finish"}
           </Button>
         </div>
       </header>
@@ -401,18 +430,24 @@ export function Workspace({ studentId, task, session, onFinished }: {
         open={confirming}
         onClose={saving ? () => {} : closeDialog}
         icon={<Flag className="size-4" />}
-        title="Finish this session?"
-        description="You will not be able to edit it afterwards. Your code and activity have been saved as you worked."
+        title={competing ? "Leave this question?" : "Finish this session?"}
+        description={competing
+          ? "Your best submission keeps its points. You can open the question again from the board while the clock runs."
+          : "You will not be able to edit it afterwards. Your code and activity have been saved as you worked."}
         actions={
           <>
             <Button onClick={closeDialog} disabled={saving}>Keep working</Button>
             <Button variant="primary" onClick={() => void finish()} disabled={saving} data-autofocus>
               {saving && <Spinner className="size-3.5" />}
-              Finish session
+              {competing ? "Back to board" : "Finish session"}
             </Button>
           </>
         }
       />
+      {competing && (
+        <SubmitDialog verdict={verdict} onClose={() => { setVerdict(null); view.current?.focus(); }}
+          onLeave={() => { setVerdict(null); setConfirming(true); }} />
+      )}
     </div>
   );
 }

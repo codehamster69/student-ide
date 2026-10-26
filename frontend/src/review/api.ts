@@ -24,6 +24,8 @@ export interface SessionInfo {
   n_events: number;
   duration_s: number;
   phase: "baseline" | "assessed";
+  /** recorded in a class competition: timed, under pressure, with its own baseline */
+  context: "lab" | "competition";
   synthetic: Truth | null;
 }
 
@@ -71,7 +73,11 @@ export interface ChannelTrace {
 export interface Review {
   session: SessionInfo;
   window_s: number;
-  baseline: { status: "ready" | "insufficient"; n_sessions: number; needed: number; days: number; n_windows?: number };
+  baseline: {
+    status: "ready" | "insufficient"; n_sessions: number; needed: number; days: number; n_windows?: number;
+    /** competition sessions are compared only with the student's other competitions */
+    context: "lab" | "competition";
+  };
   channels: Partial<Record<Channel, ChannelTrace>>;
   episodes: Episode[];
   windows: { start: number; end: number; active: boolean; n_keys: number }[];

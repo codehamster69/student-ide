@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, Eye, EyeOff, FlaskConical, HeartHandshake,
   MessageCircleQuestion, Pause, Play, Play as RunIcon, ScanEye, SkipBack,
+  Trophy,
 } from "lucide-react";
 import { Badge, Button, Card, RhythmBars, cn, item, pop, spring, stagger } from "../ui";
 import { AuthError, CHANNELS, get, type Episode, type ReplayData, type Review } from "./api";
@@ -115,11 +116,15 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
               <span>{s.task_title ?? TASKS[s.task_id] ?? s.task_id}</span>
             </h1>
             <p className="mt-0.5 text-sm text-muted">
-              {dayTime(s.started_at)} · {clock(s.duration_s)} long · compared with {review.baseline.n_sessions} baseline session{review.baseline.n_sessions === 1 ? "" : "s"}
+              {dayTime(s.started_at)} · {clock(s.duration_s)} long · compared with {review.baseline.n_sessions}{" "}
+              {s.context === "competition"
+                ? `session${review.baseline.n_sessions === 1 ? "" : "s"} from this student's other competitions`
+                : `baseline session${review.baseline.n_sessions === 1 ? "" : "s"}`}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {s.context === "competition" && <Badge tone="warn"><Trophy className="size-3.5" /> Competition</Badge>}
           {s.phase === "baseline" ? <Badge>Baseline week</Badge> : <Badge tone="accent">Reviewed session</Badge>}
           {syn && (
             <>
@@ -220,7 +225,9 @@ function Verdict({ review }: { review: Review }) {
   let tone = "border-border bg-surface", icon = <HeartHandshake className="size-5 text-success" />, title: string, body: string;
   if (review.baseline.status !== "ready") {
     title = "Not scored yet";
-    body = `This student has ${review.baseline.n_sessions} of the ${review.baseline.needed} baseline sessions needed. Until then there is nothing to compare with.`;
+    body = s.context === "competition"
+      ? `Competitions are timed, so they are compared only with this student's other competitions, never with normal labs. ${review.baseline.n_sessions} of the ${review.baseline.needed} sessions needed so far.`
+      : `This student has ${review.baseline.n_sessions} of the ${review.baseline.needed} baseline sessions needed. Until then there is nothing to compare with.`;
     icon = <HeartHandshake className="size-5 text-muted" />;
   } else if (s.phase === "baseline") {
     title = n ? `Baseline week: ${n} moment${n > 1 ? "s" : ""} shown for checking the baseline only` : "Baseline week: steady";

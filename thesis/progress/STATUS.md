@@ -19,7 +19,7 @@ flowchart LR
 
   subgraph Build["Build pipeline"]
     B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
-    B2 --> B3["3. Teacher timeline dashboard<br/>#8, #10, #11, #13"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
+    B2 --> B3["3. Teacher timeline dashboard<br/>#8, #10, #11, #12, #13"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
   end
 
   subgraph Study["Study (months 1 to 12)"]
@@ -50,6 +50,7 @@ flowchart LR
 | 3 Dashboard | Code replay at any moment; simulated demo students | ✅ | #8 |
 | 3 Dashboard | Timeline runs the frozen evaluated config (window lengths, prior, calibrated h) | ✅ | #10 |
 | 3 Dashboard | Teacher authoring: labs, questions with starter code, rosters; every session linked to its lab and question | ✅ | #11 |
+| 3 Dashboard | Class competitions: lobby, clock, test-graded submissions, live leaderboard (the one place correctness is scored) | ✅ | #12 |
 | 3 Dashboard | Optional tests (ungraded Check in labs; required in competitions), lab subject and language (Python, C, C++, Java, JS), questions from platforms: Exercism live, LeetCode/HackerRank/CodeChef link only | ✅ | #13 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |

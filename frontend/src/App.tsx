@@ -9,12 +9,14 @@ import { Consent } from "./screens/Consent";
 import { Tasks } from "./screens/Tasks";
 import { Workspace, type SessionSummary } from "./screens/Workspace";
 import { Saved } from "./screens/Saved";
+import { Arena } from "./compete/Arena";
 
 type Screen =
   | { name: "login" }
   | { name: "consent"; studentId: string }
   | { name: "tasks"; studentId: string }
-  | { name: "session"; studentId: string; task: Task; session: LiveSession }
+  | { name: "arena"; studentId: string; labId: string }
+  | { name: "session"; studentId: string; task: Task; session: LiveSession; arena?: string }
   | { name: "saved"; studentId: string; summary: SessionSummary };
 
 export function App() {
@@ -46,6 +48,22 @@ export function App() {
               const session = await startSession(screen.studentId, task);
               setScreen({ name: "session", studentId: screen.studentId, task, session });
             }}
+            onCompetition={(labId) => setScreen({ name: "arena", studentId: screen.studentId, labId })}
+          />
+        </Shell>
+      );
+      break;
+    case "arena":
+      content = (
+        <Shell step={2} studentId={screen.studentId} onSignOut={signOut}>
+          <Arena
+            studentId={screen.studentId}
+            labId={screen.labId}
+            onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })}
+            onPick={async (task) => {
+              const session = await startSession(screen.studentId, task);
+              setScreen({ name: "session", studentId: screen.studentId, task, session, arena: screen.labId });
+            }}
           />
         </Shell>
       );
@@ -56,7 +74,9 @@ export function App() {
           studentId={screen.studentId}
           task={screen.task}
           session={screen.session}
-          onFinished={(summary) => setScreen({ name: "saved", studentId: screen.studentId, summary })}
+          onFinished={(summary) => setScreen(screen.arena
+            ? { name: "arena", studentId: screen.studentId, labId: screen.arena }
+            : { name: "saved", studentId: screen.studentId, summary })}
         />
       );
       break;
@@ -71,7 +91,7 @@ export function App() {
 
   // Sign-in screens share one Shell so the stepper animates between them; the
   // editor gets its own full-screen layer.
-  const layer = screen.name === "session" ? `session-${screen.session.id}` : "shell";
+  const layer = screen.name === "session" ? `session-${screen.session.id}` : screen.name === "arena" ? `arena-${screen.labId}` : "shell";
   return (
     <MotionConfig reducedMotion="user">
       <AnimatePresence mode="wait">

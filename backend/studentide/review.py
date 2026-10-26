@@ -202,7 +202,12 @@ class Reviewer:
     # -- data
 
     def _sessions(self) -> list[dict]:
-        return [dict(r) for r in self.db.list_sessions()]
+        """Every session, tagged with its context: 'competition' for a session
+        recorded in a class competition (timed, under pressure: a different
+        behaviour with its own baseline), else 'lab'."""
+        with self.db.connect() as conn:
+            comp = {r[0] for r in conn.execute("SELECT id FROM labs WHERE kind = 'competition'")}
+        return [dict(r) | {"context": "competition" if r["lab_id"] in comp else "lab"} for r in self.db.list_sessions()]
 
     def windows(self, session: dict, window_s: float | None = None) -> list[dict]:
         W = window_s or self.window_s
@@ -224,13 +229,20 @@ class Reviewer:
             w = add_pair_features(w, pop.vocab, st.pairs.get("normalise", True), st.pairs.get("min_count", 1))
         return w
 
-    def baseline_ids(self, student_sessions: list[dict]) -> list[str]:
-        """The student's sessions in the first BASELINE_DAYS after their first one."""
-        if not student_sessions:
+    def baseline_ids(self, student_sessions: list[dict], context: str = "lab", lab_id: str | None = None) -> list[str]:
+        """Lab context: the student's lab sessions in the first BASELINE_DAYS
+        after their first one. Competition context: the student's sessions
+        from their *other* competitions (leave one competition out), so a
+        competition is only ever compared with the same student under the
+        same kind of pressure. The two never mix."""
+        mine = [s for s in student_sessions if s.get("context", "lab") == context and s["n_events"] > 0]
+        if context == "competition":
+            return [s["id"] for s in sorted(mine, key=lambda s: s["started_at"]) if s["lab_id"] != lab_id]
+        if not mine:
             return []
-        t0 = min(s["started_at"] for s in student_sessions)
-        return [s["id"] for s in sorted(student_sessions, key=lambda s: s["started_at"])
-                if s["started_at"] < t0 + BASELINE_DAYS * 86400 and s["n_events"] > 0]
+        t0 = min(s["started_at"] for s in mine)
+        return [s["id"] for s in sorted(mine, key=lambda s: s["started_at"])
+                if s["started_at"] < t0 + BASELINE_DAYS * 86400]
 
     def population(self, by_id: dict[str, dict]) -> _Population:
         """Key-pair vocabulary, ICC weights and population prior from every
@@ -297,8 +309,9 @@ class Reviewer:
             raise KeyError(session_id)
         s = by_id[session_id]
         mine = [x for x in sessions if x["student_id"] == s["student_id"]]
-        base_all = self.baseline_ids(mine)
-        in_baseline = session_id in base_all
+        context = s["context"]
+        base_all = self.baseline_ids(mine, context, s["lab_id"])
+        in_baseline = context == "lab" and session_id in base_all
         base_ids = [i for i in base_all if i != session_id]
         wins = self.windows(s)
         st = self.settings
@@ -310,7 +323,7 @@ class Reviewer:
             "window_s": self.window_s,
             "baseline": {"status": "ready" if len(base_ids) >= MIN_BASELINE else "insufficient",
                          "n_sessions": len(base_ids), "needed": MIN_BASELINE, "session_ids": base_ids,
-                         "days": BASELINE_DAYS},
+                         "days": BASELINE_DAYS, "context": context},
             "channels": {}, "alarms": [], "episodes": [],
         }
         if out["baseline"]["status"] == "ready" and wins:
@@ -379,6 +392,7 @@ def _session_json(s: dict, duration_s: float, in_baseline: bool) -> dict:
     out["lab_id"] = s.get("lab_id")
     out["task_title"] = q["title"] if q else None  # lab questions carry their own title; practice tasks are looked up client-side
     out["phase"] = "baseline" if in_baseline else "assessed"
+    out["context"] = s.get("context", "lab")
     syn = meta.get("synthetic")
     out["synthetic"] = syn if isinstance(syn, dict) else None  # ground truth, demo data only
     return out

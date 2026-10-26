@@ -7,6 +7,7 @@ import {
 import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, TextArea, cn, item, pop, spring, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
+import { CompetitionPanel } from "../compete/CompetitionPanel";
 import {
   LANGUAGES, parseIds, STATUS, type GradeResult, type Language, type LabDetail, type LabStatus, type Question, type QuestionFields,
 } from "./api";
@@ -166,6 +167,10 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
         </motion.section>
 
         <motion.aside variants={item} className="grid gap-5 lg:sticky lg:top-20">
+          {lab.kind === "competition" && (
+            <CompetitionPanel labId={lab.id} version={lab} onAuthLost={onAuthLost}
+              onChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
+          )}
           <Settings lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
           <Assign lab={lab} onSave={(student_ids, everyone) => write("PUT", `/api/teach/labs/${lab.id}/roster`, { student_ids, everyone })} onAuthLost={onAuthLost} />
           <Progress lab={lab} />

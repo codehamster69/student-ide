@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowUpRight, CheckCircle2, Code2, NotebookPen } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Code2, NotebookPen, Trophy } from "lucide-react";
 import { api, type Lab, type Task } from "../api";
-import { Badge, Spinner, cn, item, spring, stagger } from "../ui";
+import { Badge, LiveDot, Spinner, cn, item, spring, stagger } from "../ui";
 
-export function Tasks({ studentId, onPick }: { studentId: string; onPick: (task: Task) => Promise<void> }) {
+export function Tasks({ studentId, onPick, onCompetition }: {
+  studentId: string;
+  onPick: (task: Task) => Promise<void>;
+  onCompetition: (labId: string) => void;
+}) {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [opening, setOpening] = useState<string | null>(null);
@@ -40,7 +44,9 @@ export function Tasks({ studentId, onPick }: { studentId: string; onPick: (task:
       {error && <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
       {!tasks && !error && <div className="mt-10 flex justify-center text-muted"><Spinner className="size-5" /></div>}
 
-      {tasks && labs.map((lab, li) => (
+      {tasks && labs.map((lab, li) => lab.kind === "competition" ? (
+        <CompetitionCard key={lab.id} lab={lab} delay={0.1 + li * 0.08} onOpen={() => onCompetition(lab.id)} />
+      ) : (
         <motion.section key={lab.id} variants={stagger(0.06, 0.1 + li * 0.08)} initial="initial" animate="animate" className="mt-7">
           <motion.div variants={item} className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <div>
@@ -122,5 +128,43 @@ export function Tasks({ studentId, onPick }: { studentId: string; onPick: (task:
         </>
       )}
     </div>
+  );
+}
+
+const COMP_STATE = {
+  waiting: { label: "Lobby open", tone: "accent" as const, cta: "Join the lobby" },
+  live: { label: "Live now", tone: "success" as const, cta: "Enter" },
+  ended: { label: "Finished", tone: "neutral" as const, cta: "See results" },
+};
+
+function CompetitionCard({ lab, delay, onOpen }: { lab: Lab; delay: number; onOpen: () => void }) {
+  const st = COMP_STATE[lab.state ?? "waiting"];
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay, ...spring } }}
+      whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }} transition={spring}
+      onClick={onOpen}
+      className="group relative mt-7 flex w-full items-center gap-5 overflow-clip rounded-2xl border border-gold/30 bg-surface p-5 text-left shadow-md transition-[border-color,box-shadow] duration-200 hover:border-gold/60 hover:shadow-lg"
+    >
+      <div className="pointer-events-none absolute -left-10 -top-16 size-48 rounded-full bg-gold/10 blur-3xl" />
+      <span className="relative grid size-12 shrink-0 place-items-center rounded-2xl bg-gold-soft text-gold"><Trophy className="size-6" /></span>
+      <span className="relative min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
+          <strong className="text-[15px] font-semibold text-text">{lab.title}</strong>
+          <Badge tone={st.tone}>{lab.state === "live" && <LiveDot tone="success" />}{st.label}</Badge>
+        </span>
+        <span className="mt-0.5 line-clamp-1 block text-[13px] text-muted">
+          {lab.description || "A class competition: solve the questions, pass the tests, climb the board."}
+        </span>
+        <span className="mt-1 block text-xs text-faint">
+          {lab.n_questions} question{lab.n_questions === 1 ? "" : "s"}
+          {lab.duration_s ? ` · ${Math.round(lab.duration_s / 60)} minutes` : ""}
+          {lab.joined ? " · you're in" : ""}
+        </span>
+      </span>
+      <span className="relative flex items-center gap-1 text-sm font-medium text-gold">
+        {st.cta}<ArrowUpRight className="size-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+      </span>
+    </motion.button>
   );
 }

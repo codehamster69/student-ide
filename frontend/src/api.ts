@@ -18,13 +18,22 @@ export interface Task {
   position?: number;
   sessions?: number;
   submitted?: boolean;
+  /** set when the question belongs to a class competition (Submit runs its tests) */
+  competition?: boolean;
 }
 
 export interface Lab {
   id: string;
+  kind: "lab" | "competition";
   title: string;
   description: string;
   questions: Task[];
+  /** competitions only: questions stay hidden until the clock starts */
+  state?: "waiting" | "live" | "ended";
+  ends_at?: number | null;
+  duration_s?: number | null;
+  n_questions?: number;
+  joined?: boolean;
 }
 
 export interface RunResult {
