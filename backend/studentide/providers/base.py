@@ -58,16 +58,19 @@ class Imported:
 class Provider:
     id: ClassVar[str]
     name: ClassVar[str]
-    # "live": browse and import through an official or openly licensed source.
+    # "live": browse and import, fetched from an official or openly licensed source when the teacher looks.
+    # "bundled": browse and import from an openly licensed dataset shipped with the app (no live API exists).
     # "link_only": no permitted source; the teacher can record a link and type the question themselves.
-    status: ClassVar[Literal["live", "link_only"]]
+    status: ClassVar[Literal["live", "bundled", "link_only"]]
     about: ClassVar[str]  # one or two sentences shown in the picker
     terms_url: ClassVar[str] = ""
-    hosts: ClassVar[tuple[str, ...]] = ()  # for link_only: hostnames a source link may point at
+    hosts: ClassVar[tuple[str, ...]] = ()  # hostnames a source link may point at (empty: no linking)
+    license: ClassVar[str] = ""
 
     def info(self) -> dict:
         return {"id": self.id, "name": self.name, "status": self.status, "about": self.about,
-                "terms_url": self.terms_url, "hosts": list(self.hosts)}
+                "terms_url": self.terms_url, "hosts": list(self.hosts), "license": self.license,
+                "can_browse": self.status != "link_only", "can_link": bool(self.hosts)}
 
     def categories(self, language: str) -> list[Category]:
         raise ProviderError(f"{self.name} questions cannot be browsed here", 409)
@@ -77,6 +80,27 @@ class Provider:
 
     def fetch(self, language: str, ref: str) -> Imported:
         raise ProviderError(f"{self.name} questions cannot be imported here", 409)
+
+
+# Shared topic vocabulary, so "Graphs" or "Strings" means the same thing in every source.
+TOPICS: dict[str, str] = {
+    "implementation": "Implementation", "arrays": "Arrays and lists", "strings": "Strings", "math": "Math",
+    "number-theory": "Number theory", "combinatorics": "Combinatorics", "greedy": "Greedy", "dp": "Dynamic programming",
+    "sorting": "Sorting", "searching": "Binary search", "two-pointers": "Two pointers", "brute-force": "Brute force",
+    "data-structures": "Data structures", "dictionaries": "Dictionaries and sets", "graphs": "Graphs", "trees": "Trees",
+    "bits": "Bit manipulation", "geometry": "Geometry", "constructive": "Constructive", "games": "Games",
+    "divide-conquer": "Divide and conquer", "recursion": "Recursion", "regex": "Regular expressions", "tuples": "Tuples",
+}
+
+
+def topic_categories(items: list[list[str]], levels: list[tuple[str, str, int]]) -> list[Category]:
+    """Topic categories (in TOPICS order) with counts, then difficulty levels."""
+    counts: dict[str, int] = {}
+    for topics in items:
+        for t in topics:
+            counts[t] = counts.get(t, 0) + 1
+    out = [Category(f"topic:{t}", label, counts[t]) for t, label in TOPICS.items() if counts.get(t)]
+    return out + [Category(f"level:{k}", label, n) for k, label, n in levels if n]
 
 
 Fetcher = Callable[[str], bytes | None]  # url -> body, None on 404

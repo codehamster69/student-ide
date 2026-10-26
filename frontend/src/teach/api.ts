@@ -17,7 +17,7 @@ export interface TestCase {
   stdin: string;
   expected: string;
   hidden: boolean;
-  compare: "text" | "json";
+  compare: "text" | "json" | "tokens";
 }
 
 /** Where an imported or linked question came from. */
@@ -74,14 +74,18 @@ export type QuestionFields = Pick<Question, "title" | "prompt" | "starter_code" 
 export interface Provider {
   id: string;
   name: string;
-  status: "live" | "link_only";
+  /** live: fetched when browsed; bundled: an openly licensed dataset shipped with the app; link_only: links only */
+  status: "live" | "bundled" | "link_only";
   about: string;
   terms_url: string;
   hosts: string[];
+  license: string;
+  can_browse: boolean;
+  can_link: boolean;
 }
 
 export interface SourceCategory { id: string; label: string; count: number }
-export interface SourceSummary { ref: string; title: string; difficulty: string; categories: string[] }
+export interface SourceSummary { ref: string; title: string; difficulty: string; categories: string[]; blurb: string }
 export interface SourcePreview {
   title: string;
   prompt: string;

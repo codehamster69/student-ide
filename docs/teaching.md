@@ -72,5 +72,7 @@ reads the session back and checks its lab, question and events).
 
 Questions can carry optional tests (an ungraded Check for students; required
 only in competitions), labs have a subject and a programming language, and
-questions can be picked from Exercism (live) or linked from LeetCode,
-HackerRank and CodeChef. See [question-sources.md](question-sources.md).
+questions can be picked by topic and difficulty from Codeforces and CodeChef
+(through the openly licensed CodeContests dataset, with tests), Exercism and
+MBPP, or linked from LeetCode and HackerRank. See
+[question-sources.md](question-sources.md).
