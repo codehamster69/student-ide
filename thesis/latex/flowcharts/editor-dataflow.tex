@@ -1,0 +1,23 @@
+% Phase 1 event recorder data flow (TikZ). Used in chapter 4 via \tikzfig{editor-dataflow}.
+\begin{tikzpicture}[
+    node distance=8mm and 10mm,
+    box/.style={rectangle, rounded corners, draw, thick, align=center,
+                minimum width=2.6cm, minimum height=1.0cm, font=\small},
+    store/.style={box, fill=blue!8},
+    arrow/.style={-{Stealth}, thick},
+    lab/.style={font=\scriptsize, align=center}]
+  \node[box] (cm) {CodeMirror 6\\editor};
+  \node[box, below=of cm] (dom) {Browser\\(window, tab)};
+  \node[box, right=22mm of cm] (rec) {Recorder\\(seq, $t$ in ms)};
+  \node[box, right=of rec] (api) {FastAPI\\\texttt{/events}};
+  \node[store, right=of api] (db) {SQLite\\events, runs};
+  \node[box, below=of api] (run) {Python runner\\(timeout, limits)};
+  \node[box, below=of db] (out) {Export / replay\\(phase 2 input)};
+  \draw[arrow] (cm) -- node[above, lab] {key, edit,\\clipboard, cursor} (rec);
+  \draw[arrow] (dom) -| node[below right, lab, pos=0.25] {focus,\\visibility} (rec);
+  \draw[arrow] (rec) -- node[above, lab] {batches\\every 2\,s} (api);
+  \draw[arrow] (api) -- (db);
+  \draw[arrow] (run) -- node[below, lab] {run record} (db.south west);
+  \draw[arrow] (db) -- (out);
+  \draw[arrow, dashed] (rec.south) |- node[below left, lab, pos=0.75] {Run: code, stdin} (run.west);
+\end{tikzpicture}
