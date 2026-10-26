@@ -1,0 +1,27 @@
+% Two-channel switch detector (phase 2). Used in chapter 5 via \tikzfig{detector}.
+% Code: backend/studentide/detector/{features,detector}.py
+\begin{tikzpicture}[
+    node distance=6mm and 7mm,
+    box/.style={rectangle, rounded corners, draw, thick, align=center,
+                minimum width=2.3cm, minimum height=0.95cm, font=\small},
+    store/.style={box, fill=gray!10},
+    chan/.style={box, fill=blue!8},
+    arrow/.style={-{Stealth}, thick}]
+  \node[box] (ev) {Event log\\(key, edit, run,\\focus, paste)};
+  \node[box, right=of ev] (win) {30\,s windows\\code keys vs.\\comment keys};
+  \node[chan, above right=3mm and 9mm of win] (id) {\textbf{Identity}\\rhythm + digraph\\ICC-weighted $z$};
+  \node[chan, below right=3mm and 9mm of win] (pr) {\textbf{Process}\\pauses, revisions,\\build order, runs,\\focus, paste};
+  \node[box, right=9mm of id] (cid) {$x_t=\frac{d_t-\mu_0}{\sigma_0}$\\CUSUM, $h_{id}$};
+  \node[box, right=9mm of pr] (cpr) {$x_t=\frac{d_t-\mu_0}{\sigma_0}$\\CUSUM, $h_{pr}$};
+  \node[box, right=8mm of $(cid)!0.5!(cpr)$] (al) {Alarm on\\either channel\\+ switch time\\+ channel};
+  \node[store, anchor=north] (base) at ($(pr.south)!0.5!(cpr.south |- pr.south) + (0,-8mm)$) {Per-student baseline per channel (4 lab weeks):\\feature median, MAD; score level $\mu_0$, $\sigma_0$};
+  \draw[arrow] (ev) -- (win);
+  \draw[arrow] (win) -- (id);
+  \draw[arrow] (win) -- (pr);
+  \draw[arrow] (id) -- node[above, font=\scriptsize] {$d_t$} (cid);
+  \draw[arrow] (pr) -- node[above, font=\scriptsize] {$d_t$} (cpr);
+  \draw[arrow] (cid) -- (al);
+  \draw[arrow] (cpr) -- (al);
+  \draw[arrow, dashed] (base.north -| pr.south) -- (pr.south);
+  \draw[arrow, dashed] (base.north -| cpr.south) -- (cpr.south);
+\end{tikzpicture}
