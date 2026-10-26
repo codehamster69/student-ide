@@ -2,7 +2,9 @@ import { useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, CameraOff, Keyboard, MessagesSquare } from "lucide-react";
 import { api } from "../api";
+import type { AuthConfig, Me } from "../auth";
 import { Button, Card, Field, Input, Spinner, TypingDemo, item, stagger } from "../ui";
+import { GoogleSignIn } from "./GoogleSignIn";
 
 const FACTS = [
   { icon: Keyboard, text: "Records typing rhythm, edits, pastes and runs" },
@@ -10,7 +12,12 @@ const FACTS = [
   { icon: MessagesSquare, text: "A flag only ever leads to a conversation" },
 ];
 
-export function Login({ onDone }: { onDone: (studentId: string, consented: boolean) => void }) {
+/** `cfg.mode` "google": the college Google account; "dev": a typed roll number (local work, staged sessions). */
+export function Login({ cfg, onDone, onTeacher }: {
+  cfg: AuthConfig;
+  onDone: (studentId: string, consented: boolean) => void;
+  onTeacher?: (me: Me) => void;
+}) {
   const [id, setId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,6 +50,15 @@ export function Login({ onDone }: { onDone: (studentId: string, consented: boole
 
       <Card variants={item} className="mx-auto w-full max-w-md p-8">
         <h2 className="text-xl font-semibold tracking-tight text-text">Sign in</h2>
+        {cfg.mode === "google" ? (
+          <>
+            <p className="mt-1 text-sm text-muted">Use your college Google account (<span className="font-mono text-xs">@{cfg.domain}</span>).</p>
+            <div className="mt-6">
+              <GoogleSignIn cfg={cfg} onDone={(me) => (me.role !== "student" && onTeacher ? onTeacher(me) : onDone(me.student_id, me.consented))} />
+            </div>
+          </>
+        ) : (
+          <>
         <p className="mt-1 text-sm text-muted">Use your roll number. No password needed in the lab.</p>
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <Field label="Roll number">
@@ -79,6 +95,8 @@ export function Login({ onDone }: { onDone: (studentId: string, consented: boole
             {!busy && <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />}
           </Button>
         </form>
+          </>
+        )}
         <ul className="mt-7 grid gap-2.5 border-t border-border pt-6">
           {FACTS.map(({ icon: Icon, text }) => (
             <li key={text} className="flex items-center gap-3 text-[13px] text-muted">

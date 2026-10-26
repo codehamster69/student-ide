@@ -87,6 +87,9 @@ or export everything to JSONL: `python -m studentide.export --db data/studentide
 
 - No webcam, microphone or screen capture. Keys are logged only while the editor has focus.
 - The consent screen states what is recorded; sessions cannot start without consent.
-- Research read endpoints need `STUDENTIDE_ADMIN_TOKEN` and are off when it is unset.
-- Planned (phase 2): once a student's baseline is built, raw `key` events from the
-  baseline weeks are deleted and only summary statistics are kept.
+- Research read endpoints need a teacher account (Google mode) or `STUDENTIDE_ADMIN_TOKEN`
+  (dev mode), and are off when neither is configured.
+- Raw `key` events are deleted once due (a student's baseline sessions when the four
+  baseline weeks end, any session after `STUDENTIDE_RAW_KEY_DAYS`, default 28) after the
+  detector's window features are stored in `session_windows`; the session is stamped
+  `keys_purged_at`. See `backend/studentide/retention.py` and [deploy.md](deploy.md).

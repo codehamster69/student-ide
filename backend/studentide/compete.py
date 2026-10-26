@@ -48,7 +48,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Callable, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from .db import Database
@@ -305,8 +305,13 @@ class SubmitIn(BaseModel):
 HANDLE = re.compile(r"^[\w .'-]{2,24}$", re.UNICODE)
 
 
-def router(db: Database, require_admin: Callable) -> APIRouter:
+def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
+    """`auth`: an auth.Auth; in Google mode it limits the student endpoints to the signed-in student."""
     ensure_schema(db)
+
+    def own(request: Request, sid: str) -> None:
+        if auth is not None:
+            auth.own_student(request, sid)
     r = APIRouter()
 
     def comp_or_404(lab_id: str) -> dict:
@@ -423,16 +428,18 @@ def router(db: Database, require_admin: Callable) -> APIRouter:
                 "lobby": sorted(p.handle for p in ranked) if state == "waiting" else []}
 
     @r.get("/api/competitions/{lab_id}")
-    def view(lab_id: str, student_id: str) -> dict:
+    def view(lab_id: str, student_id: str, request: Request) -> dict:
         sid = student_or_400(student_id)
+        own(request, sid)
         comp = comp_or_404(lab_id)
         if not on_roster(db, lab_id, sid) and state_of(comp) != "ended":
             raise HTTPException(403, "this competition is not open for you")
         return student_view(comp, sid)
 
     @r.post("/api/competitions/{lab_id}/join")
-    def join(lab_id: str, body: JoinIn) -> dict:
+    def join(lab_id: str, body: JoinIn, request: Request) -> dict:
         sid = student_or_400(body.student_id)
+        own(request, sid)
         comp = comp_or_404(lab_id)
         if not on_roster(db, lab_id, sid):
             raise HTTPException(403, "this competition is not open for you")
@@ -451,10 +458,11 @@ def router(db: Database, require_admin: Callable) -> APIRouter:
         return student_view(comp_or_404(lab_id), sid)
 
     @r.post("/api/sessions/{session_id}/submit")
-    def submit(session_id: str, body: SubmitIn) -> dict:
+    def submit(session_id: str, body: SubmitIn, request: Request) -> dict:
         sess = db.get_session(session_id)
         if sess is None:
             raise HTTPException(404, "unknown session")
+        own(request, sess["student_id"])
         comp = get_comp(db, sess["lab_id"]) if sess["lab_id"] else None
         if comp is None:
             raise HTTPException(400, "this session is not part of a competition")

@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     client_meta    TEXT NOT NULL,            -- JSON: user agent, screen, keyboard layout hint, ...
     lab_id         TEXT,                     -- teacher-made lab this session belongs to (NULL = practice task)
     question_id    TEXT,                     -- question within that lab; task_id holds the same id
-    question_json  TEXT                      -- JSON copy of the question as the student saw it
+    question_json  TEXT,                     -- JSON copy of the question as the student saw it
+    keys_purged_at REAL                      -- raw key events deleted at this time, see retention.py
 );
 CREATE INDEX IF NOT EXISTS sessions_by_student ON sessions(student_id, started_at);
 
@@ -115,7 +116,7 @@ CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
 
 # Columns added after phase 1. Older database files get them on open.
 MIGRATIONS = {
-    "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT")),
+    "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT"), ("keys_purged_at", "REAL")),
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
              ("kind", "TEXT NOT NULL DEFAULT 'lab'")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),

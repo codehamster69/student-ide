@@ -2,6 +2,9 @@ import { useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, HeartHandshake, KeyRound, ShieldCheck, UserRound } from "lucide-react";
 import { Button, Card, Field, Input, Spinner, item, stagger } from "../ui";
+import type { AuthConfig, Me } from "../auth";
+import { signOut } from "../auth";
+import { GoogleSignIn } from "../screens/GoogleSignIn";
 import { AuthError, get, token } from "./api";
 
 const PRINCIPLES = [
@@ -10,8 +13,12 @@ const PRINCIPLES = [
   { icon: ShieldCheck, text: "No webcam, microphone or screen recording, ever." },
 ];
 
-/** Asks for the research/admin token before any student data is shown. */
-export function Gate({ onDone }: { onDone: () => void }) {
+/** Signs a teacher in before any student data is shown: their college Google
+ * account on a deployment, the research token in dev mode. */
+export function Gate({ cfg, signedInStudent = null, onDone }: {
+  cfg: AuthConfig; signedInStudent?: Me | null; onDone: (me: Me | null) => void;
+}) {
+  const [student, setStudent] = useState<Me | null>(signedInStudent);
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,7 +30,7 @@ export function Gate({ onDone }: { onDone: () => void }) {
     try {
       await get("/api/review/config", value.trim());
       token.set(value.trim());
-      onDone();
+      onDone(null);
     } catch (err) {
       setError(err instanceof AuthError ? "That token was not accepted." : (err as Error).message);
       setBusy(false);
@@ -55,6 +62,24 @@ export function Gate({ onDone }: { onDone: () => void }) {
       <Card variants={item} className="w-full p-8">
         <span className="mb-5 grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><KeyRound className="size-5" /></span>
         <h2 className="text-xl font-semibold tracking-tight text-text">Teacher access</h2>
+        {cfg.mode === "google" ? (
+          <>
+            <p className="mt-1 text-sm text-muted">Sign in with your college Google account (<span className="font-mono text-xs">@{cfg.domain}</span>).</p>
+            <div className="mt-6">
+              {student ? (
+                <div className="grid gap-3 rounded-xl bg-warn-soft px-4 py-3 text-sm text-text" role="alert">
+                  <p><span className="font-mono text-xs">{student.email}</span> is a student account. If you teach or assist a lab,
+                    ask an admin to give this account the teacher role.</p>
+                  <Button variant="secondary" size="sm" className="justify-self-start"
+                    onClick={() => { void signOut(); setStudent(null); }}>Use another account</Button>
+                </div>
+              ) : (
+                <GoogleSignIn cfg={cfg} onDone={(me) => (me.role === "student" ? setStudent(me) : onDone(me))} />
+              )}
+            </div>
+          </>
+        ) : (
+          <>
         <p className="mt-1 text-sm text-muted">Enter the research token set on the server (<code className="font-mono text-xs">STUDENTIDE_ADMIN_TOKEN</code>).</p>
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <Field label="Access token">
@@ -78,6 +103,8 @@ export function Gate({ onDone }: { onDone: () => void }) {
         <p className="mt-6 border-t border-border pt-5 text-xs leading-relaxed text-faint">
           The token stays in this browser tab only. Close the tab or press Lock to forget it.
         </p>
+          </>
+        )}
       </Card>
     </motion.div>
   );

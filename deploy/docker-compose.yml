@@ -1,0 +1,76 @@
+# Student IDE pilot deployment: one VM, four containers.
+#
+#   caddy   HTTPS on 443 (Let's Encrypt certificate, renewed automatically), proxies to app
+#   app     the web app and API; holds the database volume
+#   runner  runs student programs; no database, no secrets, no internet
+#   backup  a consistent, gzipped copy of the database every 24 h, 14 days kept
+#
+# Setup and day-to-day commands: docs/deploy.md. From this folder:
+#   cp .env.example .env   # then fill it in
+#   docker compose up -d --build
+
+name: studentide
+
+services:
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      STUDENTIDE_DOMAIN: ${STUDENTIDE_DOMAIN:?set STUDENTIDE_DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [web]
+    depends_on: [app]
+
+  app:
+    build: {context: .., dockerfile: Dockerfile}
+    image: studentide:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      STUDENTIDE_DB: /data/studentide.sqlite3
+      STUDENTIDE_RUNNER_URL: http://runner:8001
+    volumes: ["data:/data"]
+    networks: [web, sandbox]
+    depends_on: [runner]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/auth/config', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  runner:
+    image: studentide:latest
+    restart: unless-stopped
+    command: ["uvicorn", "studentide.runner_service:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
+    networks: [sandbox]          # internal network: reachable from app only, no way out
+    read_only: true
+    tmpfs: ["/tmp:size=512m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 3g
+    cpus: 2
+
+  backup:
+    image: studentide:latest
+    restart: unless-stopped
+    command: ["python", "-m", "studentide.backup", "--db", "/data/studentide.sqlite3", "--dir", "/backups",
+              "--every-hours", "24", "--keep-days", "${BACKUP_KEEP_DAYS:-14}"]
+    volumes: ["data:/data", "backups:/backups"]
+    network_mode: none
+    depends_on: [app]
+
+networks:
+  web: {}
+  sandbox: {internal: true}
+
+volumes:
+  data: {}
+  backups: {}
+  caddy_data: {}
+  caddy_config: {}

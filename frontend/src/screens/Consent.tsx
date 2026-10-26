@@ -54,7 +54,8 @@ export function Consent({ studentId, onDone }: { studentId: string; onDone: () =
         <motion.p variants={item} className="mt-4 text-sm leading-relaxed text-muted">
           Your typing patterns are compared only with your own earlier sessions. If something looks unusual, the only
           consequence is a conversation with your instructor, never an automatic penalty. Raw keystroke data is deleted
-          once summary statistics have been computed.
+          once summary statistics have been computed: when your four-week baseline is built, and never kept longer than
+          28 days.
         </motion.p>
       </div>
 
