@@ -5,7 +5,8 @@ import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, st
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { dayTime } from "../review/format";
-import { STATUS, type LabDetail, type LabRow, type LabStatus } from "./api";
+import { STATUS, type Language, type LabDetail, type LabRow, type LabStatus } from "./api";
+import { LanguageBadge, LanguageSelect } from "./bits";
 
 const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutral", open: "success", closed: "warn" };
 
@@ -62,8 +63,11 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
                   <span className="flex items-center gap-2">
                     <strong className="truncate text-[15px] font-semibold text-text">{l.title}</strong>
                     <Badge tone={TONE[l.status]} className="h-5 px-2 text-[11px]">{STATUS[l.status].label}</Badge>
+                    <LanguageBadge language={l.language} />
                   </span>
-                  <span className="mt-0.5 block truncate text-[13px] text-muted">{l.description || "No description"}</span>
+                  <span className="mt-0.5 block truncate text-[13px] text-muted">
+                    {l.subject && <span className="font-medium text-text/80">{l.subject} · </span>}{l.description || "No description"}
+                  </span>
                 </span>
                 <Count icon={ListChecks} value={l.n_questions} label={l.n_questions === 1 ? "question" : "questions"} />
                 <Count icon={Users} value={l.everyone ? "All" : l.n_roster} label={l.everyone ? "students" : "assigned"} />
@@ -92,6 +96,8 @@ function Count({ icon: Icon, value, label }: { icon: typeof Users; value: number
 function NewLab({ onClose, onAuthLost }: { onClose: () => void; onAuthLost: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [subject, setSubject] = useState("");
+  const [language, setLanguage] = useState<Language>("python");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -99,7 +105,7 @@ function NewLab({ onClose, onAuthLost }: { onClose: () => void; onAuthLost: () =
     e.preventDefault();
     setBusy(true);
     try {
-      const lab = await send<LabDetail>("POST", "/api/teach/labs", { title, description });
+      const lab = await send<LabDetail>("POST", "/api/teach/labs", { title, description, subject, language });
       location.hash = `#/teach/l/${lab.id}`;
     } catch (err) {
       if (err instanceof AuthError) return onAuthLost();
@@ -119,6 +125,14 @@ function NewLab({ onClose, onAuthLost }: { onClose: () => void; onAuthLost: () =
           <Field label="Title">
             <Input autoFocus required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lab 5: Strings and dictionaries" />
           </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Subject" hint="Optional.">
+              <Input maxLength={120} value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Data Structures" />
+            </Field>
+            <Field label="Programming language" hint="What students write and run in this lab.">
+              <LanguageSelect value={language} onChange={setLanguage} />
+            </Field>
+          </div>
           <Field label="Instructions for students" hint="Optional. Shown above the questions.">
             <TextArea rows={3} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="Work through the questions in order. Run your code as often as you like." />

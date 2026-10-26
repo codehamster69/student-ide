@@ -3,12 +3,17 @@ import { flushSync } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
+import { cpp } from "@codemirror/lang-cpp";
+import { java } from "@codemirror/lang-java";
+import { javascript } from "@codemirror/lang-javascript";
 import { EditorView, keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, CircleAlert, Flag, PanelLeftClose, PanelLeftOpen, Play, Terminal } from "lucide-react";
-import { api, type RunResult, type Task } from "../api";
+import { CheckCircle2, CircleAlert, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal } from "lucide-react";
+import { api, type CheckResult, type RunResult, type Task } from "../api";
+import { GradeView } from "../teach/bits";
+import { LANGUAGES } from "../teach/api";
 import { captureExtension, captureWindow, SNAPSHOT_EVERY_MS } from "../capture";
 import type { LiveSession } from "../editor/session";
 import { editorTheme } from "../editor/theme";
@@ -28,6 +33,8 @@ interface Outcome {
 }
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+
+const SYNTAX = { python, c: cpp, cpp, java, javascript: () => javascript() };
 
 /**
  * The editor screen. CodeMirror lives outside React state: it is created once
@@ -56,6 +63,28 @@ export function Workspace({ studentId, task, session, onFinished }: {
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [taskOpen, setTaskOpen] = useState(true);
+  const [checking, setChecking] = useState(false);
+  const [grade, setGrade] = useState<CheckResult | null>(null);
+  const [pane, setPane] = useState<"output" | "tests">("output");
+  const language = task.language ?? "python";
+  const lang = LANGUAGES[language];
+  // Competitions submit for a score instead; a lab's Check is only for the student.
+  const canCheck = (task.n_tests ?? 0) > 0 && !("competition" in task && task.competition);
+
+  const checkCode = useCallback(async () => {
+    const v = view.current;
+    if (!v) return;
+    setChecking(true);
+    setPane("tests");
+    try {
+      setGrade(await api<CheckResult>(`/api/sessions/${sessionId}/check`, { code: v.state.doc.toString() }));
+    } catch (err) {
+      setGrade({ check_id: "", passed: 0, total: 0, results: [{ name: `Could not check: ${(err as Error).message}`, passed: false,
+        hidden: false, error_type: "network", duration_ms: 0 }] });
+    } finally {
+      setChecking(false);
+    }
+  }, [sessionId]);
 
   const runningRef = useRef(false);
   const runCode = useCallback(async () => {
@@ -64,6 +93,7 @@ export function Workspace({ studentId, task, session, onFinished }: {
     runningRef.current = true;
     // Commit "Running…" synchronously so the output never shows a stale result.
     flushSync(() => setRunning(true));
+    setPane("output");
     const code = v.state.doc.toString();
     rec.log("snapshot", { reason: "run", text: code });
     lastSnapshot.current = code;
@@ -101,7 +131,7 @@ export function Workspace({ studentId, task, session, onFinished }: {
       parent: host.current!,
       extensions: [
         basicSetup,
-        python(),
+        SYNTAX[language](),
         indentUnit.of("    "),
         keymap.of([indentWithTab]),
         editorTheme,
@@ -196,6 +226,13 @@ export function Workspace({ studentId, task, session, onFinished }: {
             Run
             <Kbd className="ml-1 border-white/30">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
           </Button>
+          {canCheck && (
+            <Button size="sm" onClick={() => void checkCode()} disabled={checking || saving}
+              title="Run the teacher's tests on your code. Just for you; it isn't graded.">
+              {checking ? <Spinner className="size-3.5" /> : <FlaskConical className="size-3.5" />}
+              Check
+            </Button>
+          )}
           <Button size="sm" onClick={() => setConfirming(true)} disabled={saving}>
             <Flag className="size-3.5" />
             Finish
@@ -220,6 +257,32 @@ export function Workspace({ studentId, task, session, onFinished }: {
                 </p>
                 <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text">{task.title}</h2>
                 <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{task.prompt}</p>
+                {task.tests && task.tests.length > 0 && (
+                  <div className="mt-5 grid gap-2">
+                    <p className="text-xs font-medium text-text">Examples</p>
+                    {task.tests.slice(0, 3).map((t, i) => (
+                      <div key={i} className="grid grid-cols-2 gap-2 font-mono text-[11.5px]">
+                        <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-text">{t.stdin || "(no input)"}</pre>
+                        <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-text">{t.expected}</pre>
+                      </div>
+                    ))}
+                    {task.harness && (
+                      <p className="text-[11px] leading-relaxed text-faint">
+                        Tests call your function with these arguments (as JSON) and compare what it returns.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {canCheck && (
+                  <p className="mt-4 flex items-start gap-1.5 rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">
+                    <FlaskConical className="mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      {task.n_tests} test{task.n_tests === 1 ? "" : "s"} to check against
+                      {task.n_hidden_tests ? <> (<EyeOff className="inline size-3" /> {task.n_hidden_tests} hidden)</> : null}.
+                      Checking is just for you and isn't graded.
+                    </span>
+                  </p>
+                )}
                 {task.sample_input && (
                   <div className="mt-5">
                     <p className="mb-1.5 text-xs font-medium text-text">Sample input</p>
@@ -251,8 +314,8 @@ export function Workspace({ studentId, task, session, onFinished }: {
         <div className="grid min-w-0 flex-1 grid-rows-[38px_minmax(0,1fr)_minmax(200px,34%)]">
           <div className="flex items-end gap-1 border-b border-border bg-surface-2 px-2">
             <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-border bg-surface px-3 font-mono text-xs text-text">
-              <span className="size-2 rounded-sm bg-[#3776ab]" />
-              main.py
+              <span className="size-2 rounded-sm" style={{ background: lang.color }} />
+              {lang.file}
             </div>
           </div>
           <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />
@@ -272,7 +335,8 @@ export function Workspace({ studentId, task, session, onFinished }: {
             </div>
 
             <div className="flex min-h-0 flex-col">
-              <PaneHeader icon={<Play className="size-3.5" />} label="Output">
+              <PaneHeader icon={<Play className="size-3.5" />} label="Output"
+                tabs={canCheck ? { value: pane, onChange: setPane, tests: grade ? `${grade.passed}/${grade.total}` : "" } : undefined}>
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span
                     key={running ? "running" : outcome ? `done-${runs}` : "idle"}
@@ -300,6 +364,13 @@ export function Workspace({ studentId, task, session, onFinished }: {
                   {running && (
                     <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden">
                       <div className="h-full w-1/2 bg-accent animate-indeterminate" />
+                    </div>
+                  )}
+                  {pane === "tests" && (
+                    <div className="absolute inset-0 z-10 overflow-auto bg-console px-4 py-3">
+                      {checking ? <p className="text-[13px] text-console-text/60">Checking…</p>
+                        : grade ? <GradeView grade={grade} dark />
+                        : <p className="text-[13px] text-console-text/50">Press Check to run the tests.</p>}
                     </div>
                   )}
                   <motion.pre
@@ -346,10 +417,25 @@ export function Workspace({ studentId, task, session, onFinished }: {
   );
 }
 
-function PaneHeader({ icon, label, children }: { icon: React.ReactNode; label: string; children?: React.ReactNode }) {
+function PaneHeader({ icon, label, children, tabs }: {
+  icon: React.ReactNode; label: string; children?: React.ReactNode;
+  tabs?: { value: "output" | "tests"; onChange: (v: "output" | "tests") => void; tests: string };
+}) {
   return (
     <div className="flex h-10 shrink-0 items-center justify-between px-3">
-      <span className="flex items-center gap-1.5 text-xs font-medium text-muted">{icon}{label}</span>
+      {tabs ? (
+        <span className="flex items-center gap-1" role="tablist">
+          {(["output", "tests"] as const).map((t) => (
+            <button key={t} role="tab" aria-selected={tabs.value === t} onClick={() => tabs.onChange(t)}
+              className={cn("flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
+                tabs.value === t ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+              {t === "output" ? <>{icon}{label}</> : <><FlaskConical className="size-3.5" />Tests{tabs.tests && <span className="tabular-nums text-faint">{tabs.tests}</span>}</>}
+            </button>
+          ))}
+        </span>
+      ) : (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-muted">{icon}{label}</span>
+      )}
       {children}
     </div>
   );

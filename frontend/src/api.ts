@@ -4,6 +4,14 @@ export interface Task {
   prompt: string;
   starter_code: string;
   sample_input: string;
+  /** lab questions run in the lab's language; practice tasks are Python */
+  language?: "python" | "c" | "cpp" | "java" | "javascript";
+  subject?: string;
+  /** optional tests: the visible ones in full, hidden ones only counted */
+  tests?: { name: string; stdin: string; expected: string }[];
+  n_tests?: number;
+  n_hidden_tests?: number;
+  harness?: string;
   /** set when the task is a question from a lab the teacher assigned */
   lab_id?: string;
   lab_title?: string;
@@ -27,6 +35,14 @@ export interface RunResult {
   error_type: string | null;
   stdout: string;
   stderr: string;
+}
+
+export interface CheckResult {
+  check_id: string;
+  passed: number;
+  total: number;
+  results: { name: string; passed: boolean; hidden: boolean; error_type: string | null; duration_ms: number;
+    stdin?: string; stdout?: string; expected?: string; stderr?: string }[];
 }
 
 export async function api<T>(path: string, body?: unknown): Promise<T> {
