@@ -40,7 +40,7 @@ from pathlib import Path
 import numpy as np
 
 from .detector import CHANNELS, Baseline, channel_features, cusum, detect, feature_weights
-from .features import FEATURES, GROUPS, Streams, streams, window_features
+from .features import FEATURES, GROUPS, LEGACY_FEATURES, Streams, streams, window_features
 from .synth import Truth, generate_session, nearest_speed, population
 
 TEST_CONDITIONS = [
@@ -464,6 +464,10 @@ def main() -> None:
     extra = [
         ("Identity channel only", {"identity": chans["identity"]}, "separate"),
         ("Process channel only", {"process": chans["process"]}, "separate"),
+        ("Old build order (edit position, caret jumps)",
+         {"identity": chans["identity"],
+          "process": ([f for f in chans["process"][0] if FEATURES[f] != "build_order"] + list(LEGACY_FEATURES),
+                      "equal", 0.5)}, "separate"),
         ("Identity channel with $k=0.5$", {"identity": chans["identity"][:2] + (0.5,), "process": chans["process"]}, "separate"),
         ("One channel, all features, equal weights", {"all": (feats, "equal", 0.5)}, "separate"),
         ("One channel, all features, ICC weights", {"all": (feats, "icc", 0.5)}, "separate"),

@@ -29,7 +29,7 @@ weights = feature_weights(baseline_windows)            # store with the baseline
 models = {st: fit_channels(st, w, weights) for st, w in baseline_windows.items()}
 # models[st]["identity"].to_json() is all that needs keeping; raw baseline keys can go
 
-dets, alarms = detect_channels(models["PG25CS07"], win(todays_session), h={"identity": 5.25, "process": 11.0})
+dets, alarms = detect_channels(models["PG25CS07"], win(todays_session), h={"identity": 5.25, "process": 16.5})
 for alarm_s, est_switch_s, channel in alarms:
     ...  # evidence for the teacher timeline (phase 3)
 ```
@@ -47,7 +47,9 @@ ones at 30 s windows and will change once real data exists.
   because comment text is typed like retyping (Lueder et al., Nosi).
 - **Features**: rhythm (digraph median, L-scale of log inter-key time, hold
   time), digraph groups (alternate/same hand, to/from space, shifted),
-  pauses, revisions, build order, run rate, focus losses, paste share.
+  pauses, revisions, build order (share of new code lines written above
+  existing code, and block headers still without a body, both over the
+  trailing 5 minutes), run rate, focus losses, paste share.
 - **Baseline**: per feature median and 1.4826×MAD (floored), plus the
   student's own honest score level μ0, σ0 measured leave-one-session-out.
 - **Two channels**: *identity* (rhythm + digraph, weighted by intraclass
@@ -64,12 +66,12 @@ and `thesis/latex/ablations/` for everything.
 
 | condition | detected | median delay | median switch-time error |
 |-----------|----------|--------------|--------------------------|
-| B full proxy (speed-matched) | 88% | 150 s | 0 s |
-| C takeover (speed-matched) | 75% | 86 s | 30 s |
+| B full proxy (speed-matched) | 90% | 165 s | 0 s |
+| C takeover (speed-matched) | 72% | 80 s | 29 s |
 | C takeover (random partner) | 88% | 65 s | 31 s |
-| D copying out | 50% | 448 s | 37 s |
-| E paste | 82% | 441 s | 40 s |
-| A honest | 0.42 false alarms per hour, 10% of sessions flagged | | |
+| D copying out | 80% | 405 s | 36 s |
+| E paste | 78% | 502 s | 22 s |
+| A honest | 0.42 false alarms per hour, 11% of sessions flagged | | |
 
 These are simulated people. They show the pipeline works end to end and how
 the settings trade off, not how it will do on students.
@@ -87,6 +89,7 @@ python -m studentide.detector.synth --out ../synthetic --typists 4              
 
 - The generator types indentation with Tab; the real editor auto-indents and
   auto-closes brackets, so real `del_per_100` and digraphs around brackets will differ.
-- Build-order features add noise on synthetic data (removing them raises
-  copying detection from 50% to 95%); revisit on real data before dropping.
+- Build order was first measured per edit, which was noisy (copying
+  detection 50%); the line-level version gets 80%. Dropping it altogether
+  gets 95% at slightly more false alarms, so decide on real data.
 - Scaled Manhattan and TypeNet-style baselines are left for the evaluation harness (phase 4).

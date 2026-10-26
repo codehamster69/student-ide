@@ -2,7 +2,7 @@
 \label{ch:detector}
 
 % Draft written with the phase 2 code (backend/studentide/detector/).
-% Brain entries 2026-10-26-09 to -12.
+% Brain entries 2026-10-26-09 to -13.
 
 \Cref{fig:detector} summarises the detector. The event log of a session is
 cut into windows of $W$ seconds; each window becomes a vector of habit
@@ -39,7 +39,12 @@ use by default.
 \Cref{tab:features} lists the features. Latencies are on a log scale, so a
 difference means the same for slow and fast typists. A digraph is two
 consecutive code keystrokes with no deletion between them and a gap below
-2\,s; longer gaps are pauses. The L-scale (second L-moment
+2\,s; longer gaps are pauses. Build order is measured per completed code
+line rather than per edit: replaying the edits shows, for every line that is
+finished (blank and comment lines excluded), whether code already follows it,
+which distinguishes writing top to bottom from writing a skeleton and
+filling it in. Run rate and build order use the trailing five minutes,
+because a single window holds too few runs or new lines. The L-scale (second L-moment
 \cite{hosking1990lmoments}) of log inter-key time is the spread measure Nosi
 uses to separate composing from transcribing \cite{lueder2026nosi}.
 
@@ -60,7 +65,8 @@ uses to separate composing from transcribing \cite{lueder2026nosi}.
     \midrule
     pauses & \texttt{pause\_per\_100}, \texttt{pause\_median} & pauses ($\ge 2$\,s) per 100 keys; their median length \\
     revision & \texttt{del\_per\_100}, \texttt{del\_burst} & deletions per 100 keys; mean run of deletions \\
-    build order & \texttt{nonappend\_frac}, \texttt{jump\_rate} & share of edits not at the end of the file; caret jumps $>2$ lines per minute \\
+    build order & \texttt{fill\_in\_frac} & share of completed code lines written above existing code (trailing 5\,min) \\
+     & \texttt{open\_blocks} & block headers (\texttt{def}, \texttt{if}, \ldots) still without a body (trailing 5\,min mean) \\
     runs & \texttt{run\_rate} & runs per minute over the trailing 5 minutes \\
     focus & \texttt{focus\_out\_rate} & window/tab focus losses per minute \\
     paste & \texttt{paste\_frac} & share of inserted characters that were pasted \\

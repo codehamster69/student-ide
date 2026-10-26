@@ -31,6 +31,8 @@ PAUSE_MS = 2000.0  # an inter-key gap at least this long is a pause, not rhythm
 MIN_KEYS = 20  # code keystrokes needed for a window to count
 MIN_PAIRS = 5  # digraphs needed for a latency statistic
 RUN_SPAN_S = 300.0  # run frequency is measured over the trailing five minutes
+BUILD_SPAN_S = 300.0  # so is build order: one window holds too few new lines
+MIN_LINES = 3  # completed code lines needed for fill_in_frac
 
 # feature -> group. Groups are what the ablation removes.
 FEATURES: dict[str, str] = {
@@ -46,13 +48,16 @@ FEATURES: dict[str, str] = {
     "pause_median": "pauses",  # median pause length (log ms)
     "del_per_100": "revision",  # backspace/delete per 100 code keys
     "del_burst": "revision",  # mean length of a run of deletions
-    "nonappend_frac": "build_order",  # edits not at the end of the document
-    "jump_rate": "build_order",  # caret jumps of > 2 lines per minute
+    "fill_in_frac": "build_order",  # new code lines written above existing code, trailing 5 min
+    "open_blocks": "build_order",  # block headers (`...:`) still without a body, trailing 5 min
     "run_rate": "runs",  # runs per minute, trailing five minutes
     "focus_out_rate": "focus",  # looks away from the editor per minute
     "paste_frac": "paste",  # share of inserted characters that were pasted
 }
 COMMENT_FEATURES = ("c_dg_median", "c_key_frac")
+# first-version build-order features, still computed for the ablation
+# comparison but no longer scored: per-edit position is too noisy per window
+LEGACY_FEATURES = ("nonappend_frac", "jump_rate")
 GROUPS = tuple(dict.fromkeys(FEATURES.values()))
 
 
@@ -75,6 +80,11 @@ class Streams:
     e_paste: np.ndarray
     run_t: np.ndarray
     focus_out_t: np.ndarray
+    # build order, at line level
+    l_t: np.ndarray = field(default_factory=lambda: np.zeros(0))  # a code line was completed
+    l_fill: np.ndarray = field(default_factory=lambda: np.zeros(0, bool))  # ... above existing code
+    b_t: np.ndarray = field(default_factory=lambda: np.zeros(0))  # open-block count sampled here
+    b_open: np.ndarray = field(default_factory=lambda: np.zeros(0))
     meta: dict = field(default_factory=dict)
 
 
@@ -96,6 +106,51 @@ def _in_comment(doc: str, pos: int) -> bool:
     return False
 
 
+def _code_part(line: str) -> str:
+    """The line without its trailing comment, stripped; '' for blank/comment lines."""
+    if "#" in line:
+        quote = None
+        for i, ch in enumerate(line):
+            if quote:
+                if ch == quote:
+                    quote = None
+            elif ch in "'\"":
+                quote = ch
+            elif ch == "#":
+                line = line[:i]
+                break
+    return line.strip()
+
+
+def open_blocks(doc: str) -> int:
+    """Block headers (a code line ending in ':') whose next code line is not
+    indented deeper, i.e. a def/if/for/class written before its body."""
+    code = []
+    for ln in doc.split("\n"):
+        c = _code_part(ln)
+        if c:
+            code.append((len(ln) - len(ln.lstrip(" \t")), c))
+    n = 0
+    for i, (ind, c) in enumerate(code):
+        if c.endswith(":") and (i + 1 == len(code) or code[i + 1][0] <= ind):
+            n += 1
+    return n
+
+
+def _new_lines(before: str, after: str, frm: int, text: str) -> tuple[int, bool]:
+    """For an insertion of `text` at `frm`: how many non-blank, non-comment
+    lines it completes, and whether code already follows the insertion
+    (the new lines go above existing code, i.e. filling in, not appending)."""
+    if "\n" not in text:
+        return 0, False
+    head = after[after.rfind("\n", 0, frm) + 1: frm + len(text)]
+    completed = head.split("\n")[:-1]  # the part after the last newline is not finished yet
+    n = sum(1 for ln in completed if _code_part(ln))
+    rest = after[frm + len(text):]
+    follows = any(_code_part(ln) for ln in rest.split("\n"))
+    return n, follows
+
+
 def streams(events: list[dict]) -> Streams:
     doc: str | None = None
     caret = 0
@@ -103,6 +158,7 @@ def streams(events: list[dict]) -> Streams:
     open_down: dict[str, int] = {}
     e_t, e_app, e_line, e_ins, e_paste = [], [], [], [], []
     run_t, focus_t = [], []
+    l_t, l_fill, b_t, b_open = [], [], [], []
     end = 0.0
     for ev in events:
         typ, d, t = ev["type"], ev["data"], ev["t"]
@@ -141,7 +197,20 @@ def streams(events: list[dict]) -> Streams:
                 e_paste.append(d["origin"].startswith("input.paste") or d["origin"].startswith("input.drop"))
                 last = ch[-1]
                 caret = last[0] + len(last[2]) + sum(len(c[2]) - (c[1] - c[0]) for c in ch[:-1])
+            before = doc
             doc = apply_edit(doc, d)
+            completed = False
+            shift = 0
+            for frm, to, text in ch:
+                n, follows = _new_lines(before, doc, frm + shift, text)
+                shift += len(text) - (to - frm)
+                if n:
+                    l_t.extend([t] * n)
+                    l_fill.extend([follows] * n)
+                    completed = True
+            if completed:
+                b_t.append(t)
+                b_open.append(open_blocks(doc))
         elif typ == "cursor":
             caret = d["head"]
             if doc is not None:
@@ -163,6 +232,7 @@ def streams(events: list[dict]) -> Streams:
         e_t=a(e_t, float), e_append=a(e_app, bool), e_line=a(e_line, float),
         e_inserted=a(e_ins, float), e_paste=a(e_paste, bool),
         run_t=a(run_t, float), focus_out_t=a(focus_t, float),
+        l_t=a(l_t, float), l_fill=a(l_fill, bool), b_t=a(b_t, float), b_open=a(b_open, float),
     )
 
 
@@ -243,6 +313,12 @@ def _window(s: Streams, lo: float, hi: float, comments: str) -> dict:
     f["jump_rate"] = float((np.abs(np.diff(lines)) > 2).sum() / W_min) if len(ei) > 1 else 0.0
     ins = s.e_inserted[ei]
     f["paste_frac"] = float(ins[s.e_paste[ei]].sum() / ins.sum()) if ins.sum() else 0.0
+
+    blo = max(0.0, hi - max(BUILD_SPAN_S * 1000, hi - lo))
+    li = (s.l_t >= blo) & (s.l_t < hi)
+    f["fill_in_frac"] = float(s.l_fill[li].mean()) if li.sum() >= MIN_LINES else math.nan
+    bi = (s.b_t >= blo) & (s.b_t < hi)
+    f["open_blocks"] = float(s.b_open[bi].mean()) if bi.any() else math.nan
 
     span = max(RUN_SPAN_S * 1000, hi - lo)
     rlo = max(0.0, hi - span)

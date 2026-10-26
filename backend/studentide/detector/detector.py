@@ -54,7 +54,7 @@ Z_CAP = 6.0
 # does not turn a tiny change into an enormous z
 SCALE_FLOOR = {
     "pause_per_100": 0.5, "pause_median": 0.15, "del_per_100": 1.0, "del_burst": 0.3,
-    "nonappend_frac": 0.05, "jump_rate": 0.3, "run_rate": 0.1, "focus_out_rate": 0.3,
+    "fill_in_frac": 0.05, "open_blocks": 0.3, "nonappend_frac": 0.05, "jump_rate": 0.3, "run_rate": 0.1, "focus_out_rate": 0.3,
     "paste_frac": 0.02, "dg_lscale": 0.02,
 }
 DEFAULT_FLOOR = 0.04  # log-ms latency features
