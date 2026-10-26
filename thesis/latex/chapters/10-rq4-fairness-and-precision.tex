@@ -1,8 +1,55 @@
 \chapter{RQ4: Fairness and Precision at Realistic Rates}
 \label{ch:rq4}
 \section{Subgroup error rates}
-\todo{Typing speed, keyboard layout, prior experience, gender, etc.}
+\todo{Typing speed, keyboard layout, prior experience, gender, etc.\ from the
+study's participant attributes (\texttt{students.csv} in the labels manifest).}
+
+\subsection*{Synthetic test students (evaluation harness)}
+Simulated people have no demographics, so the harness groups them by terciles
+of their simulated habits: typing speed, rhythm variability and build style
+(\cref{tab:harness-fairness,fig:harness-fairness}). Honest sessions flagged
+range from 0\% (slow typists) to 14\% (medium speed) and matched takeovers
+detected from 43\% to 80\%, but with 10--14 students per group every interval
+overlaps with the others. The machinery is in place; what it shows is that a
+test set of 36 cannot establish or rule out a disparity of this size, which
+argues for pooling subgroup analysis across all study phases or recruiting
+towards the top of the planned 60--80.
+
+\input{tables/harness-fairness}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{harness-fairness}
+  \caption{Error rates by synthetic subgroup, 95\% student-bootstrap intervals.}
+  \label{fig:harness-fairness}
+\end{figure}
+
 \section{Precision at low prevalence}
-\todo{Precision $= \frac{\mathrm{TPR}\,\pi}{\mathrm{TPR}\,\pi + \mathrm{FPR}(1-\pi)}$
-at $\pi = 1/100$ and $1/500$.}
+Precision $= \frac{\mathrm{TPR}\,\pi}{\mathrm{TPR}\,\pi + \mathrm{FPR}(1-\pi)}$
+at $\pi = 1/100$ and $1/500$.
+
+On the synthetic test students the thesis detector finds 83\% of non-honest
+sessions and flags 7\% of honest ones (\cref{tab:harness-precision}). If 1 in 100
+sessions involved a switch, about 11\% of flagged sessions would be real (95\%
+interval 6--38\%); at 1 in 500, about 2\%. Put the other way, a teacher would
+see 8 honest sessions flagged for every real one at 1 in 100, and 42 at 1 in
+500. The baselines, with lower TPR and similar or higher FPR, are worse (4--6\%
+at 1 in 100). Lowering the operating point helps but cannot fix this
+(\cref{fig:harness-precision}): at the lowest calibrated false-alarm rate
+precision at 1 in 100 reaches about 20\%.
+
+This is the quantitative case for the design rule that a flag only ever starts
+a conversation: at realistic rates most flags will be honest students, and any
+use of the tool as evidence of misconduct would be wrong most of the time.
+
+\input{tables/harness-precision}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\linewidth]{harness-precision}
+  \caption{Precision of a flag by operating point at two prevalences (thesis
+    detector, synthetic test students).}
+  \label{fig:harness-precision}
+\end{figure}
+
 \section{Summary}

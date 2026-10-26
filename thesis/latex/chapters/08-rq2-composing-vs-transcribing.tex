@@ -11,4 +11,36 @@ the full participant pool.
 comments-only typing as a known confound; per-student vs.\ population
 thresholds.}
 \section{Results}
+\subsection*{Synthetic test students (evaluation harness)}
+On the 36 synthetic test students (\cref{tab:harness-rq2,fig:harness-rq2}) the
+Nosi recipe reaches 78\% balanced accuracy at 150\,s windows (interval 73--84\%),
+close to the about 80\% Nosi reports; its accuracy peaks around 150\,s and falls
+at 300\,s. Scoring the same L-scale against the student's own baseline instead
+of one population threshold raises it to 91\%, and the process channel (pauses,
+revisions, build order, runs, looking away) to 94\%, with both still improving
+at longer windows. The per-student baseline, not a richer classifier, is what
+helps the rhythm measure most.
+
+With only five participants, as in Nosi's study, the same recipe gives 73\%
+on average but anywhere from 51\% to 91\% depending on which five (5--95th
+percentile over 200 random draws), so an $N=5$ result cannot distinguish a
+good measure from a weak one; the personal and process scorers stay above 79\%
+and 82\%.
+
+\paragraph{Comments.} Chunks of 60 comment keystrokes from honest sessions are
+judged ``transcribing'' by the code-trained threshold 37\% of the time, against
+26\% for composed code and 71\% for transcribed code. In simulated data comments
+differ from code only by a latency offset and fewer word pauses, so this is a
+lower bound on the confound the study should expect.
+
+\input{tables/harness-rq2}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\linewidth]{harness-rq2}
+  \caption{Composing vs.\ transcribing by window length (synthetic test students,
+    95\% intervals over participants).}
+  \label{fig:harness-rq2}
+\end{figure}
+
 \section{Summary}

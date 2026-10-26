@@ -1,0 +1,51 @@
+{
+ "created": "2026-10-26",
+ "corpus": {
+  "source": "synthetic:synth-v1-n120-s2026-b8-m30",
+  "students": 120,
+  "fingerprint": "f4cd7f5ee7179c97",
+  "typists": 120,
+  "seed": 2026,
+  "n_base": 8,
+  "minutes": 30
+ },
+ "split": {
+  "test_frac": 0.3,
+  "dev": 84,
+  "test": 36
+ },
+ "target_fa_per_h": 0.2,
+ "calibration_source": "pooled",
+ "n_base": 4,
+ "methods": {
+  "thesis": {
+   "kind": "thesis",
+   "process_w": 90,
+   "prior_n": 2.0
+  },
+  "sm": {
+   "kind": "sm",
+   "window_s": 30,
+   "k": 0.25,
+   "rule": "cusum"
+  },
+  "typenet": {
+   "kind": "typenet",
+   "window_s": 30,
+   "steps": 1500,
+   "k": 0.25,
+   "rule": "cusum"
+  },
+  "nosi": {
+   "kind": "nosi",
+   "window_s": 30,
+   "k": 0.5,
+   "rule": "cusum"
+  }
+ },
+ "calibration_error": {
+  "holdout": 0.6127411391657284,
+  "self": 0.38874310166812026,
+  "pooled": 0.23834890289104
+ }
+}

@@ -13,7 +13,7 @@ ever leads to a conversation, never a penalty.
 | 1. Event-logging editor | done |
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md) |
-| 4. Evaluation harness | planned |
+| 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
 
 ## Stack
 
@@ -60,6 +60,19 @@ cd backend && python -m studentide.detector.evaluate --typists 60 --thesis ../th
 
 Simulated typists, 30-second habit features, per-student baselines and a
 two-channel CUSUM switch detector. See [docs/detector.md](docs/detector.md).
+
+## Evaluation harness (phase 4)
+
+```bash
+cd backend
+python -m studentide.harness dev  --thesis ../thesis/latex   # design on dev students, freeze the config
+python -m studentide.harness test --thesis ../thesis/latex   # score the held-out students once (logged)
+```
+
+Strict student-level dev/test split, the thesis detector against scaled
+Manhattan, TypeNet-style and Nosi-style baselines, RQ1/RQ2/RQ4 tables and
+graphs into `thesis/latex/`. Runs on recorded study data with `--db` and a
+labels manifest. See [docs/evaluation.md](docs/evaluation.md).
 
 ## Tests
 

@@ -11,3 +11,6 @@ data/
 # detector outputs
 synthetic/
 detector-results/
+
+# evaluation harness cache (simulated corpora)
+.cache/

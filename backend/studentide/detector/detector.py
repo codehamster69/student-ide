@@ -73,7 +73,8 @@ class Baseline:
     meta: dict = field(default_factory=dict)
 
     @staticmethod
-    def _stats(windows: list[dict], feats: list[str]) -> tuple[dict, dict]:
+    def _stats(windows: list[dict], feats: list[str], prior: dict | None = None,
+               n_sessions: int = 0) -> tuple[dict, dict]:
         centre, spread = {}, {}
         for f in feats:
             x = np.array([w[f] for w in windows if w["active"] and not math.isnan(w[f])], float)
@@ -81,25 +82,35 @@ class Baseline:
                 continue
             c = float(np.median(x))
             mad = float(np.median(np.abs(x - c))) * 1.4826
+            if prior and f in prior["spread"]:
+                # short baselines: shrink the spread towards the population's
+                # typical spread, as if prior["n"] extra sessions had been seen
+                a = n_sessions / (n_sessions + prior["n"])
+                mad = math.sqrt(a * mad * mad + (1 - a) * prior["spread"][f] ** 2)
             centre[f] = c
             spread[f] = max(mad, SCALE_FLOOR.get(f, DEFAULT_FLOOR))
         return centre, spread
 
     @classmethod
     def fit(cls, student: str, sessions: list[list[dict]], features: list[str] | None = None,
-            weights: dict[str, float] | None = None) -> "Baseline":
+            weights: dict[str, float] | None = None, prior: dict | None = None) -> "Baseline":
         """`sessions`: window-feature lists, one per baseline session.
-        `weights`: optional per-feature weights, e.g. from `feature_weights`."""
+        `weights`: optional per-feature weights, e.g. from `feature_weights`.
+        `prior`: optional population prior for short baselines, from
+        `population_prior`: {"spread": {feature: s}, "mu0", "sd0", "n"}; the
+        student's own estimates count as len(sessions) sessions against the
+        prior's n. None (the default) uses the student's data alone."""
         feats = list(features or FEATURES)
         all_w = [w for s in sessions for w in s]
-        centre, spread = cls._stats(all_w, feats)
+        n = len(sessions)
+        centre, spread = cls._stats(all_w, feats, prior, n)
         b = cls(student, feats, centre, spread, sum(w["active"] for w in all_w), weights=weights)
         # calibrate the student's honest distance level leave-one-session-out
         held = []
-        if len(sessions) >= 2:
-            for i in range(len(sessions)):
+        if n >= 2:
+            for i in range(n):
                 rest = [w for j, s in enumerate(sessions) if j != i for w in s]
-                c2, s2 = cls._stats(rest, feats)
+                c2, s2 = cls._stats(rest, feats, prior, n - 1)
                 part = cls(student, feats, c2, s2, 0, weights=weights)
                 held += [d for d in part.distances(sessions[i]) if not math.isnan(d)]
         else:
@@ -107,6 +118,12 @@ class Baseline:
         if len(held) >= 3:
             b.mu0 = float(np.mean(held))
             b.sd0 = max(float(np.std(held)), 0.05)
+        if prior and "mu0" in prior:
+            # one in-sample session underestimates the honest level; lean on the prior
+            a = (n - 1) / (n - 1 + prior["n"]) if n >= 2 else 0.0
+            b.mu0 = a * b.mu0 + (1 - a) * prior["mu0"]
+            b.sd0 = a * b.sd0 + (1 - a) * prior["sd0"]
+            b.meta["prior_n"] = prior["n"]
         return b
 
     def distance(self, w: dict) -> float:
@@ -157,6 +174,16 @@ def feature_weights(baselines: dict[str, list[list[dict]]], features: list[str] 
         b, wv = float(np.var(med)), float(np.mean(within))
         out[f] = max(floor, b / (b + wv)) if b + wv > 0 else floor
     return out
+
+
+def population_prior(baselines: dict[str, "Baseline"], n: float = 2.0) -> dict:
+    """Population prior for short baselines, from students whose baselines are
+    complete: the median per-feature spread and the median honest level.
+    `n` is how many sessions the prior is worth."""
+    feats = sorted({f for b in baselines.values() for f in b.spread})
+    spread = {f: float(np.median([b.spread[f] for b in baselines.values() if f in b.spread])) for f in feats}
+    return {"spread": spread, "mu0": float(np.median([b.mu0 for b in baselines.values()])),
+            "sd0": float(np.median([b.sd0 for b in baselines.values()])), "n": float(n)}
 
 
 @dataclass

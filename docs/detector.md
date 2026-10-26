@@ -92,4 +92,5 @@ python -m studentide.detector.synth --out ../synthetic --typists 4              
 - Build order was first measured per edit, which was noisy (copying
   detection 50%); the line-level version gets 80%. Dropping it altogether
   gets 95% at slightly more false alarms, so decide on real data.
-- Scaled Manhattan and TypeNet-style baselines are left for the evaluation harness (phase 4).
+- Scaled Manhattan and TypeNet-style baselines, threshold calibration and short
+  baselines are handled by the evaluation harness, see [evaluation.md](evaluation.md).
