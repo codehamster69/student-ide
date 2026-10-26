@@ -7,12 +7,25 @@
     \toprule
     Method & Rule & $k$ & $W$ (s) & Mean detected & Takeover & FA/h \\
     \midrule
-    two-channel CUSUM (process $W$, prior 0) & cusum & 1 & 30 & 73\% & 52\% & 0.17 \\
-    two-channel CUSUM (process $W$, prior 2) & cusum & 1 & 30 & 82\% & 55\% & 0.20 \\
-    two-channel CUSUM (process $W$, prior 0) & cusum & 1 & 60 & 79\% & 52\% & 0.15 \\
-    two-channel CUSUM (process $W$, prior 2) & cusum & 1 & 60 & 83\% & 55\% & 0.18 \\
-    two-channel CUSUM (process $W$, prior 0) & cusum & 1 & 90 & 80\% & 54\% & 0.19 \\
-    \textbf{two-channel CUSUM (process $W$, prior 2)} & cusum & 1 & 90 & \textbf{85\%} & 57\% & 0.18 \\
+    thesis detector (process $W$, prior 0) & cusum & 1 & 30 & 73\% & 52\% & 0.17 \\
+    thesis detector (process $W$, prior 2) & cusum & 1 & 30 & 82\% & 55\% & 0.20 \\
+    thesis detector (process $W$, prior 0) & cusum & 1 & 60 & 79\% & 52\% & 0.15 \\
+    thesis detector (process $W$, prior 2) & cusum & 1 & 60 & 83\% & 55\% & 0.18 \\
+    thesis detector (process $W$, prior 0) & cusum & 1 & 90 & 80\% & 54\% & 0.19 \\
+    thesis detector (process $W$, prior 2) & cusum & 1 & 90 & 85\% & 57\% & 0.18 \\
+    thesis detector (no key pairs) & cusum & 1 & 90 & 85\% & 57\% & 0.18 \\
+    thesis detector (key pairs in identity, weight 0.5) & cusum & 1 & 90 & 85\% & 58\% & 0.17 \\
+    thesis detector (key pairs in identity, weight 1) & cusum & 1 & 90 & 86\% & 58\% & 0.18 \\
+    thesis detector (key pairs in identity, weight 2) & cusum & 1 & 90 & 87\% & 63\% & 0.18 \\
+    thesis detector (key-pair channel, 20 pairs) & cusum & 0.25 & 90 & 91\% & 75\% & 0.15 \\
+    thesis detector (key-pair channel, 40 pairs) & cusum & 0.25 & 90 & 91\% & 73\% & 0.18 \\
+    thesis detector (key-pair channel, 80 pairs) & cusum & 0.25 & 90 & 90\% & 69\% & 0.15 \\
+    thesis detector (key-pair channel, 20 pairs) & cusum & 0.5 & 90 & 91\% & 74\% & 0.18 \\
+    thesis detector (key-pair channel, 40 pairs) & cusum & 0.5 & 90 & 91\% & 74\% & 0.17 \\
+    \textbf{thesis detector (key-pair channel, 80 pairs)} & cusum & 0.5 & 90 & \textbf{92\%} & 75\% & 0.17 \\
+    thesis detector (key-pair channel, 20 pairs) & cusum & 1 & 90 & 88\% & 67\% & 0.17 \\
+    thesis detector (key-pair channel, 40 pairs) & cusum & 1 & 90 & 90\% & 73\% & 0.13 \\
+    thesis detector (key-pair channel, 80 pairs) & cusum & 1 & 90 & 90\% & 71\% & 0.17 \\
     \textbf{scaled Manhattan} & cusum & 0.25 & 30 & \textbf{49\%} & 69\% & 0.15 \\
     scaled Manhattan & cusum & 0.5 & 30 & 48\% & 67\% & 0.17 \\
     scaled Manhattan & cusum & 1 & 30 & 48\% & 65\% & 0.17 \\

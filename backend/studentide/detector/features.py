@@ -15,6 +15,16 @@ ignores unless `comments="mixed"` folds them back in (the ablation).
 Latency features are on a log scale (log ms) so that differences mean the
 same at every typing speed. A window with too few code keystrokes is
 `active=False` and the detector skips it.
+
+Step 3 (optional), `add_pair_features()`: per-key-pair timing. Every window
+also keeps, for each key pair typed in flow (`KeyT>KeyH`), the sum and count
+of its log latencies. Given a vocabulary of common pairs (fitted on the
+population's baseline sessions, `pair_vocabulary()`), each pair becomes a
+feature `pk:KeyT>KeyH`: its mean log latency in the window, minus the
+window's mean log latency over all pairs when `normalise` is on. The
+normalised form describes the *shape* of a person's rhythm (which pairs they
+are quick or slow on, relative to their own pace that minute), so it does not
+repeat what `dg_median` already says about overall speed.
 """
 
 from __future__ import annotations
@@ -54,11 +64,17 @@ FEATURES: dict[str, str] = {
     "focus_out_rate": "focus",  # looks away from the editor per minute
     "paste_frac": "paste",  # share of inserted characters that were pasted
 }
+PAIR_PREFIX = "pk:"  # per-key-pair features, named pk:<code>><code>, group "pairs"
 COMMENT_FEATURES = ("c_dg_median", "c_key_frac")
 # first-version build-order features, still computed for the ablation
 # comparison but no longer scored: per-edit position is too noisy per window
 LEGACY_FEATURES = ("nonappend_frac", "jump_rate")
 GROUPS = tuple(dict.fromkeys(FEATURES.values()))
+
+
+def feature_group(f: str) -> str:
+    """The group of any feature, including the per-pair `pk:` ones."""
+    return "pairs" if f.startswith(PAIR_PREFIX) else FEATURES[f]
 
 
 @dataclass
@@ -291,6 +307,15 @@ def _window(s: Streams, lo: float, hi: float, comments: str) -> dict:
     f["dg_to_space"] = _logmed(lat[to_sp]) if len(lat) else math.nan
     f["dg_from_space"] = _logmed(lat[from_sp]) if len(lat) else math.nan
     f["dg_shifted"] = _logmed(lat[shifted], 3) if len(lat) else math.nan
+    # per-pair sums for add_pair_features(); private (underscore) keys
+    pairs: dict[str, list[float]] = {}
+    loglat = np.log(np.maximum(lat, 1.0))
+    for a_, b_, v in zip(pa, pb, loglat):
+        acc = pairs.setdefault(f"{s.k_code[a_]}>{s.k_code[b_]}", [0.0, 0])
+        acc[0] += float(v)
+        acc[1] += 1
+    f["_pairs"] = pairs
+    f["_pace"] = float(loglat.mean()) if len(loglat) >= MIN_PAIRS else math.nan
 
     # pauses: gaps between any two consecutive code keys
     gaps = lat_all[lat_all >= PAUSE_MS]
@@ -346,4 +371,31 @@ def window_features(s: Streams, window_s: float = 30.0, hop_s: float | None = No
     while lo + W <= s.duration_ms + 1e-6:
         out.append(_window(s, lo, lo + W, comments))
         lo += hop
+    return out
+
+
+def pair_vocabulary(sessions, n: int = 40) -> list[str]:
+    """The `n` key pairs typed most often in flow over the given window lists
+    (one list per session), most frequent first; ties by name, so the result
+    does not depend on input order."""
+    count: dict[str, int] = {}
+    for windows in sessions:
+        for w in windows:
+            for p, (_, c) in w.get("_pairs", {}).items():
+                count[p] = count.get(p, 0) + c
+    return sorted(count, key=lambda p: (-count[p], p))[:n]
+
+
+def add_pair_features(windows: list[dict], vocab: list[str], normalise: bool = True,
+                      min_count: int = 1) -> list[dict]:
+    """Copies of `windows` with one `pk:` feature per vocabulary pair (NaN when
+    the pair was typed fewer than `min_count` times in the window)."""
+    out = []
+    for w in windows:
+        x = dict(w)
+        pace = w["_pace"] if normalise else 0.0
+        for p in vocab:
+            acc = w["_pairs"].get(p)
+            x[PAIR_PREFIX + p] = acc[0] / acc[1] - pace if acc and acc[1] >= min_count else math.nan
+        out.append(x)
     return out

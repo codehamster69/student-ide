@@ -93,8 +93,10 @@ The pilot above tuned and reported on one population of 60. The evaluation
 harness (\cref{sec:protocol}) replaces it with the protocol the study data will
 go through: a fresh simulated population of 120 students (seed 2026, never used
 before), 84 dev and 36 test students split by hashed id, every choice made on dev
-with 5-fold cross-fitting, then the test students scored once
-(\texttt{thesis/evaluation/test-ledger.jsonl} records that single run). Each
+with 5-fold cross-fitting, then the test students scored once per frozen
+configuration (\texttt{thesis/evaluation/test-ledger.jsonl} records every run:
+two so far, the configuration of phase 4 and the one with key-pair timing
+below, each scored exactly once). Each
 student has 8 baseline sessions, of which the first 4 form the baseline, and the
 same seven test sessions as in the pilot.
 
@@ -108,28 +110,42 @@ the five non-honest conditions from 73\% to 85\% on dev
 (\cref{tab:harness-tuning}). Each baseline got its own best alarm rule and $k$
 on dev; all chose a CUSUM, none the per-window threshold.
 
+The first test run (configuration of phase 4, two channels) found scaled
+Manhattan ahead on speed-matched takeovers, 89\% against 64\%. Scaled
+Manhattan compares individual digraphs, whereas the identity channel only had
+grouped ones (alternating hands, into the space bar, \dots). Per-key-pair
+timing was therefore added (\cref{sec:detector-channels}) and its use chosen on
+dev, without looking at the test students again: inside the identity
+channel at weight 0.5, 1 or 2, or as a channel of its own with $k\in\{0.25,
+0.5, 1\}$ and 20, 40 or 80 pairs. A channel of its own with $k=0.5$ and 80
+pairs was best, raising mean detection on dev from 85\% to 92\% (matched
+takeovers 57\% $\to$ 75\%, proxies 77\% $\to$ 95\%) at the same false-alarm
+rate; inside the identity channel the pairs added at most 6 points on matched
+takeovers. This became the second frozen configuration, and the test
+students were scored with it once. The numbers below are from that run.
+
 \paragraph{Results on the test students} (\cref{tab:harness-methods,tab:harness-conditions,fig:harness-curves}).
 At the frozen operating point the thesis detector catches all copying-out and
-pasting sessions (delays of about 4 and 3 minutes), 81\% of takeovers by a random
-classmate and 64\% (95\% interval 47--78\%) by a speed-matched one, with a median
-delay of 5 minutes. Honest sessions see 0.28 false alarms per hour (interval
-0.06--0.61; 7\% of honest sessions with any alarm), above the 0.2 target but
-inside its uncertainty. Over all non-honest sessions it detects 83\%, against
-53\% for scaled Manhattan, 39\% for the TypeNet-style model and 47\% for the
-Nosi-style measure.
+pasting sessions (delays of about 4.5 and 3 minutes), 89\% of full proxies,
+83\% of takeovers by a random classmate and 86\% (95\% interval 75--97\%) by a
+speed-matched one, with a median delay of 4.6 minutes. Honest sessions see
+0.19 false alarms per hour (interval 0.06--0.39; 7\% of honest sessions with
+any alarm), on the 0.2 target. Over all non-honest sessions it detects 92\%,
+against 53\% for scaled Manhattan, 39\% for the TypeNet-style model and 47\%
+for the Nosi-style measure. With the two-channel configuration the same test
+students gave 64\% of matched takeovers, 69\% of proxies, 83\% overall and
+0.28 false alarms per hour. The key-pair channel fires first on about half of
+the caught proxies and matched takeovers (16 of 32 and 16 of 31), the
+rhythm channel on most of the random-partner takeovers (21 of 30), whose
+overall speed already differs.
 
-The keystroke-only baselines are not weaker at telling typists apart.
-Scaled Manhattan, which compares the latency of each of the 40 most common
-digraphs, catches 89\% of matched takeovers (the thesis detector 64\%) and
-proxies more often too, but it is blind to copying and pasting (6\% and 8\%),
-because the same hands keep typing. The TypeNet-style model separates single
-windows almost as well (AUC 0.83 against 0.86) but trained on only 84 students
-it does not reach the hand-built features. The Nosi-style L-scale, designed
-for transcription, catches two thirds of copying but few switches.
-The finding to carry forward is that per-digraph latencies hold identity
-information the identity channel's grouped digraph features lose; adding them
-to the identity channel is the next design change, to be made on dev and
-scored as a new frozen configuration (so as not to tune on the test students).
+Scaled Manhattan is still slightly ahead on matched takeovers (89\% against
+86\%, well inside each other's intervals) and faster (3.5 against 4.6 minutes),
+but it is blind to copying and pasting (6\% and 8\%), because the same hands
+keep typing. The TypeNet-style model separates single windows almost as well
+(AUC 0.83 against 0.86) but trained on only 84 students it does not reach the
+hand-built features. The Nosi-style L-scale, designed for transcription,
+catches two thirds of copying but few switches.
 
 \input{tables/harness-methods}
 \input{tables/harness-conditions}
@@ -154,7 +170,7 @@ alarms. Scoring every student's own baseline sessions leave-one-session-out
 (\emph{self}) needs no staged sessions and quadruples the honest hours; it hits
 the target with 20 students (0.20) and errs on the conservative side with more.
 The pooled source was the closest on average and is the frozen choice; on the
-unseen test students it gives 0.28, self alone 0.19 and holdout alone 0.33. In
+unseen test students (key-pair configuration) it gives 0.19, self alone 0.19 and holdout alone 0.28. In
 the study this means every enrolled student's baseline weeks double as
 calibration data, so $h$ need not wait for staged sessions.
 
@@ -173,10 +189,14 @@ showed baseline-week sessions raising moments against a leave-one-out baseline
 of one or two sessions. The population prior shrinks a student's per-feature
 spread and honest score level towards the population's, as if the population
 were worth two more sessions. On dev (\cref{tab:harness-baseline-length,fig:harness-baseline-length})
-it makes two baseline sessions as good as four: matched takeovers 57\% against
-42\% without it, copying 100\% against 74\%. With one session it cuts honest
-sessions flagged from 12\% to 8\% (0.26 to 0.18 false alarms per hour); with six
-or eight sessions it no longer matters.
+it makes two baseline sessions nearly as good as four: copying 100\% against
+70\% without it, matched takeovers 69\% against 66\% (75\% with four). With one
+session it cuts honest sessions flagged from 14\% to 11\% (0.32 to 0.21 false
+alarms per hour) but, since key-pair timing was added, also costs matched
+takeovers (51\% $\to$ 37\%): the prior widens the spread of 80 per-pair
+features the student has barely been measured on. With six or eight sessions
+it no longer matters much. (Numbers from the second dev run, with key pairs;
+the first run, without them, is in the brain log.)
 
 \begin{figure}[ht]
   \centering
@@ -187,18 +207,25 @@ or eight sessions it no longer matters.
 
 \subsection{Ablations on dev}
 The harness ablations (\cref{app:ablations}) confirm the pilot's design on
-new students with cross-fitting. Rhythm carries the identity channel (matched
-takeovers 57\% $\to$ 23\% without it) and focus carries copying (100\% $\to$
-7\%). The accumulating CUSUM matters: a per-window threshold at the same
-false-alarm rate catches 31\% of matched takeovers and 37\% of copying. One
+new students with cross-fitting. Removing the key-pair channel costs 18 points
+on matched takeovers (75\% $\to$ 57\%) and 18 on proxies; not subtracting the
+window's own pace costs little on synthetic data (one point overall, more
+false alarms), and letting the key-pair channel replace the rhythm channel
+loses 14 points on matched takeovers, so both typing channels are kept.
+With key-pair timing the population prior no longer helps with a single
+baseline session (matched takeovers 51\% without it, 37\% with), though it
+still helps copying (70\% $\to$ 96\%) and from two sessions on.
+Rhythm still matters on top of the key pairs (matched takeovers 75\% $\to$ 57\%
+and window AUC 0.86 $\to$ 0.68 without it) and focus carries copying (99\%
+$\to$ 5\%). The accumulating CUSUM matters: a per-window threshold at the same
+false-alarm rate catches 29\% of matched takeovers and 24\% of copying. One
 ICC-weighted channel misses copying and pasting (4\%, 5\%). Window length shows
 the split the pilot suggested: matched takeovers are caught soonest with short
 windows (152\,s delay at 10\,s), copying best with 90\,s and longer (93\%),
-hence identity at 30\,s and process at 90\,s. The line-level build-order
-features now earn a small place (without them proxies drop from 77\% to 70\%
-and matched takeovers from 57\% to 54\%, copying unchanged), whereas the old
-per-edit version cuts copying from 100\% to 77\%. Keeping comment keystrokes
-apart still changes nothing on simulated data.
+hence the typing channels at 30\,s and process at 90\,s. The line-level
+build-order features earn a small place (without them proxies drop from 95\%
+to 90\%), whereas the old per-edit version cuts copying to 77\%. Keeping
+comment keystrokes apart still changes nothing on simulated data.
 
 \section{Summary}
 \todo{After real data.}

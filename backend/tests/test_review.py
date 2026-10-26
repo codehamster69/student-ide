@@ -1,12 +1,14 @@
 """Review timeline API (phase 3) on seeded synthetic students."""
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
 from studentide.app import create_app
 from studentide.db import Database
 from studentide.replay import apply_edit
-from studentide.review import episodes, parse_h
+from studentide.review import episodes, key_name, load_settings, parse_h
 from studentide.seed import seed
 
 TOKEN = "test-token"
@@ -39,20 +41,28 @@ def test_students_and_session_summaries(client):
     assert all(s["n_sessions"] == 6 and s["n_baseline"] == 4 and s["baseline_ready"] for s in students)
     rows = client.get("/api/review/sessions", headers=ADMIN, params={"student_id": "DEMO01"}).json()
     assert [r["phase"] for r in rows] == ["baseline"] * 4 + ["assessed"] * 2
-    assert all(r["baseline"] == "ready" and set(r["spark"]) == {"identity", "process"} for r in rows)
+    assert all(r["baseline"] == "ready" and set(r["spark"]) == set(load_settings().channels) for r in rows)
     assert all(r["synthetic"]["student"] == "DEMO01" for r in rows)
 
 
-def test_takeover_session_has_an_identity_episode_with_evidence(client):
+TYPING = ("identity", "pairs")  # the channels that ask whether the hands changed
+
+
+def test_takeover_session_has_a_typing_episode_with_evidence(client):
     # DEMO01 and DEMO04 each have a takeover by a speed-matched partner; use the first one caught
     rows = client.get("/api/review/sessions", headers=ADMIN).json()
     takeover = next(r for r in rows if r["synthetic"]["condition"] == "takeover"
-                    and any(e["channel"] == "identity" for e in r["episodes"]))
+                    and any(e["channel"] in TYPING for e in r["episodes"]))
     r = client.get(f"/api/review/sessions/{takeover['id']}", headers=ADMIN).json()
-    assert set(r["channels"]) == {"identity", "process"}
-    n = len(r["windows"])
-    assert all(len(c["score"]) == n and len(c["cusum"]) == n for c in r["channels"].values())
-    ep = [e for e in r["episodes"] if e["channel"] == "identity"]
+    st = load_settings()
+    assert set(r["channels"]) == set(st.channels)
+    # every channel runs at its frozen window length
+    for ch, c in r["channels"].items():
+        assert c["window_s"] == st.window_s[ch] and c["h"] == st.h[ch]
+        assert len(c["score"]) == len(c["cusum"]) == len(c["start"]) == len(c["end"])
+        assert len(c["score"]) == int(r["session"]["duration_s"] // st.window_s[ch])
+    assert len(r["windows"]) == len(r["channels"]["identity"]["score"])
+    ep = [e for e in r["episodes"] if e["channel"] in TYPING]
     assert ep[0]["switch_est"] <= ep[0]["first_alarm"] <= ep[0]["last_alarm"]
     assert ep[0]["evidence"] and {"feature", "label", "z", "baseline", "observed", "unit"} <= set(ep[0]["evidence"][0])
     # the detector's guess should land near the simulated switch
@@ -90,5 +100,27 @@ def test_chained_alarms_merge_into_one_episode():
 
 
 def test_parse_h():
-    assert parse_h("identity=4,process=12.5,bogus=1") == {"identity": 4.0, "process": 12.5}
-    assert parse_h(None) == {"identity": 5.25, "process": 16.5}
+    base = {"identity": 19.25, "process": 7.25}
+    assert parse_h("identity=4,process=12.5,bogus=1", base) == {"identity": 4.0, "process": 12.5}
+    assert parse_h(None, base) == base
+
+
+def test_settings_follow_the_frozen_config(tmp_path):
+    cfg = tmp_path / "frozen.json"
+    cfg.write_text(json.dumps({"methods": {"thesis": {"kind": "thesis", "process_w": 90, "prior_n": 2.0,
+                                                      "pairs": {"channel": "pairs", "k": 0.5, "n": 40}}},
+                               "operating_point": {"h": {"identity": 20, "process": 8, "pairs": 11},
+                                                   "pair_vocab": ["KeyT>KeyH"]}}))
+    st = load_settings(cfg, h_override="")
+    assert st.window_s == {"identity": 30.0, "process": 90.0, "pairs": 30.0}
+    assert st.k == {"identity": 1.0, "process": 0.5, "pairs": 0.5}
+    assert st.h == {"identity": 20.0, "process": 8.0, "pairs": 11.0} and st.prior_n == 2.0
+    assert st.pair_channel == "pairs" and st.pair_vocab == ["KeyT>KeyH"]
+    assert load_settings(cfg, h_override="pairs=3").h["pairs"] == 3.0
+    # no config file: the built-in copy of the frozen settings
+    fb = load_settings(tmp_path / "missing.json", h_override="")
+    assert fb.source == "built-in" and fb.window_s["process"] == 90.0
+
+
+def test_key_names():
+    assert [key_name(c) for c in ("KeyT", "Digit3", "Space", "Period", "F5")] == ["t", "3", "space", ".", "F5"]

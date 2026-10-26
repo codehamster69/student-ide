@@ -5,8 +5,8 @@ import {
   MessageCircleQuestion, Pause, Play, Play as RunIcon, ScanEye, SkipBack,
 } from "lucide-react";
 import { Badge, Button, Card, RhythmBars, cn, item, pop, spring, stagger } from "../ui";
-import { AuthError, get, type Episode, type ReplayData, type Review } from "./api";
-import { CH_COLOR, ChannelTag, Skeleton } from "./bits";
+import { AuthError, CHANNELS, get, type Episode, type ReplayData, type Review } from "./api";
+import { CH_CHANGED, CH_COLOR, ChannelTag, Skeleton } from "./bits";
 import { CodeReplay } from "./CodeReplay";
 import { Timeline } from "./Timeline";
 import { changedLines, Replayer } from "./replay";
@@ -249,7 +249,7 @@ function Verdict({ review }: { review: Review }) {
 function Legend() {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-      <ChannelTag channel="identity" /><ChannelTag channel="process" />
+      {CHANNELS.map((ch) => <ChannelTag key={ch} channel={ch} />)}
       <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-4 rounded-sm border border-warn/60 bg-[repeating-linear-gradient(45deg,var(--warn-soft),var(--warn-soft)_2px,transparent_2px,transparent_4px)]" />moment to discuss</span>
       <span className="inline-flex items-center gap-1.5"><span className="inline-block size-2.5 rotate-45 rounded-[2px] bg-warn" />paste</span>
       <span className="inline-flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-success" />run ok</span>
@@ -266,7 +266,7 @@ function MomentCard({ ep, index, active, onHover, onJump }: { ep: Episode; index
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-faint">Moment {index + 1}</p>
           <p className="mt-1 text-[15px] font-semibold text-text">
-            {ep.channel === "identity" ? "Typing rhythm changed" : "Way of working changed"} from about {clock(ep.switch_est)}
+            {CH_CHANGED[ep.channel]} from about {clock(ep.switch_est)}
           </p>
           <p className="mt-0.5 text-sm text-muted">
             Noticed at {clock(ep.first_alarm)}{ep.n_alarms > 1 ? `, and still different at ${clock(ep.last_alarm)}` : ""}.
@@ -309,7 +309,7 @@ function Guide({ eps }: { eps: Episode[] }) {
   const first = eps[0];
   const qs = first ? [
     `Ask the student to walk you through the code written after ${clock(first.switch_est)}, in their own words.`,
-    first.channel === "identity"
+    first.channel !== "process"
       ? "Ask whether anything changed at that point: a break, a different laptop or keyboard, someone sitting with them."
       : "Ask how they worked out that part and where the ideas came from (notes, the web, a friend, an AI tool).",
     "Ask them to make a small change to that code while you watch.",
@@ -349,12 +349,19 @@ function ChannelsExplained({ review }: { review: Review }) {
           </div>
         ))}
         <p className="text-[13px] text-muted">
-          The strip shows how far each {review.window_s}-second window sits from the baseline. The line adds up sustained differences and
+          The strip shows how far each window sits from the baseline ({windowLengths(review)}). The line adds up sustained differences and
           lets ordinary blips fade; a moment is marked when it crosses the threshold, and its start is the detector's best guess of when the change began.
         </p>
       </div>
     </Card>
   );
+}
+
+function windowLengths(review: Review): string {
+  const byW = new Map<number, string[]>();
+  for (const c of Object.values(review.channels)) byW.set(c!.window_s, [...(byW.get(c!.window_s) ?? []), c!.label.toLowerCase()]);
+  if (byW.size <= 1) return `${review.window_s}-second windows`;
+  return [...byW].map(([w, names]) => `${w} s for ${names.join(" and ")}`).join("; ");
 }
 
 function Nearby({ review, t, onSeek }: { review: Review; t: number; onSeek: (t: number) => void }) {

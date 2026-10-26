@@ -1,1 +1,2 @@
 {"config": "8e2ce5f7faa6", "corpus": "f4cd7f5ee7179c97", "dirty": true, "git": "6f11daa", "reason": "first test run for this config", "students": 36, "time": "2026-10-26T13:30:04Z"}
+{"config": "be03e7dea805", "corpus": "f4cd7f5ee7179c97", "dirty": true, "git": "e7800e5", "reason": "new frozen config: key-pair timing channel chosen on dev (2026-10-26); scored once", "students": 36, "time": "2026-10-26T15:11:23Z"}

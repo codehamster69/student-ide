@@ -84,7 +84,12 @@ def test_lstm_gradients_match_finite_differences():
         assert (a - b) / 2e-5 == pytest.approx(g[k][idx], rel=1e-4, abs=1e-8)
 
 
-@pytest.mark.parametrize("make", [thesis_detector, nosi_style, ScaledManhattan, lambda: TypeNetStyle(steps=30)])
+PAIRS = {"channel": "pairs", "k": 0.5, "n": 20}
+
+
+@pytest.mark.parametrize("make", [thesis_detector, lambda: thesis_detector(pairs=PAIRS),
+                                  lambda: thesis_detector(pairs={"channel": "identity", "block": 1.0, "n": 20}),
+                                  nosi_style, ScaledManhattan, lambda: TypeNetStyle(steps=30)])
 def test_every_method_scores_every_test_session(corpus, make):
     dev, test = split(corpus.students, 0.3)
     m = make()
@@ -103,7 +108,7 @@ def test_every_method_scores_every_test_session(corpus, make):
 def test_population_parts_never_see_test_students(corpus, monkeypatch):
     dev, test = split(corpus.students, 0.3)
     seen = []
-    m = thesis_detector()
+    m = thesis_detector(prior_n=2.0, pairs=PAIRS)
     orig = corpus.baseline
 
     def spy(st, n=None):
@@ -113,6 +118,8 @@ def test_population_parts_never_see_test_students(corpus, monkeypatch):
     monkeypatch.setattr(corpus, "baseline", spy)
     m.fit_population(corpus, dev, 3)
     assert seen and set(seen) <= set(dev)
+    # the key-pair vocabulary comes from dev baselines too and becomes the pair channel's features
+    assert m.vocab and m.channels["pairs"].features == ["pk:" + p for p in m.vocab]
 
 
 def test_rq2_lopo_runs(corpus):

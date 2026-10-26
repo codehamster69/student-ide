@@ -34,12 +34,25 @@ Screenshots for the thesis: `BASE=http://127.0.0.1:8000 TOKEN=change-me node fro
 - **Baseline**: a student's sessions in the 28 days after their first one.
   At least 2 are needed before anything is scored. A baseline session is
   scored against the *other* baseline sessions and labelled as a baseline
-  check. ICC feature weights are computed from every student's baseline
-  once 3 students have one (equal weights before that).
-- **Detector**: `fit_channels` + `detect_channels` from phase 2, W = 30 s.
-  Thresholds default to the synthetic calibration
-  (identity 5.25, process 16.5); override with
-  `STUDENTIDE_H="identity=…,process=…"` once real calibration exists.
+  check.
+- **Detector = the frozen evaluation config.** `load_settings()` reads
+  `thesis/evaluation/frozen-config.json` (or `$STUDENTIDE_CONFIG`), so the
+  screen runs exactly what the harness evaluated: each channel's window
+  length (typing rhythm and key-pair timing 30 s, way of working 90 s), its
+  CUSUM k, the key-pair channel, the population prior for short baselines
+  and the thresholds h calibrated on the dev students
+  (`operating_point` in the config). Without the file it falls back to a
+  built-in copy. `STUDENTIDE_H="identity=…,pairs=…,process=…"` overrides h,
+  e.g. after calibrating on the class's real data. `GET /api/review/config`
+  shows what is in force and where it came from.
+- **Population parts from the class**: once 3 students have a baseline, the
+  ICC feature weights, the key-pair vocabulary (the class's most-typed key
+  pairs) and the population prior are fitted on every student's baseline
+  sessions, just as the harness fits them on its training students. Before
+  that: equal weights, the frozen vocabulary, no prior.
+- **Lanes**: each channel's trace carries its own window grid
+  (`start`/`end`/`window_s`), so the 90 s process lane and the 30 s typing
+  lanes line up on one time axis.
 - **Moments**: CUSUM restarts after an alarm, so a lasting change raises a
   chain of alarms where each starts at the previous one. `episodes()` merges
   a chain into one moment (estimated start, first alarm, last alarm).

@@ -99,18 +99,40 @@ A single score over all features turned out to be a poor compromise
 (\cref{tab:ablation-feature-groups}): equal weights let the many noisy
 process features drown the typing rhythm, and weighting by how well a
 feature separates students drowns the process features that reveal copying
-and pasting. The detector therefore runs two channels:
+and pasting. The detector therefore runs separate channels:
 \begin{description}
   \item[Identity] (rhythm and digraph groups) asks whether the same hands
   are typing. Weights $w_f$ are the intraclass correlation of the feature
   across students' baseline windows \cite{shrout1979icc}, between-student
   variance over total variance. They need only honest baseline data from all
   students, no impostor examples.
+  \item[Key-pair timing] asks the same question at a finer grain (see
+  below): which key pairs this person is quick or slow on. Added after the
+  evaluation harness showed that scaled Manhattan, which compares individual
+  digraphs, caught more speed-matched takeovers than the grouped digraph
+  features.
   \item[Process] (pauses, revisions, build order, runs, focus, paste), equal
   weights, asks whether the way of working changed. It catches copying out
   and pasting by the student themselves, which the identity channel cannot
   see.
 \end{description}
+
+\paragraph{Key-pair features.}\label{sec:detector-channels} Every window keeps, for each pair of
+consecutive code keys typed in flow (for example \texttt{t}$\to$\texttt{h}),
+the mean of its log latencies. The 80 pairs typed most often in the
+training students' baseline sessions form a vocabulary, and each becomes a
+feature: the pair's mean log latency in the window \emph{minus the window's
+mean log latency over all pairs}. Subtracting the window's own pace keeps
+what the identity channel already measures (overall speed, which drifts with
+tiredness) out of this channel and leaves the shape of a person's rhythm,
+which pairs their fingers make quick or slow. A pair absent from a window is
+simply skipped. The channel uses equal weights over the pairs, the same
+median/MAD baseline (summary statistics only) and its own CUSUM with $k=0.5$.
+Its design was chosen on the dev students only (\cref{tab:harness-tuning}):
+putting the pairs inside the identity channel, at any weight, gained at most
+6 points on matched takeovers, whereas a channel of their own gained 18,
+because a separate CUSUM lets many small per-pair deviations accumulate
+instead of being averaged against the rhythm features.
 
 \section{CUSUM change-point detection}
 Each channel runs a one-sided CUSUM \cite{page1954continuous,basseville1993detection}
@@ -123,9 +145,9 @@ time is estimated as the start of the window after the last $t$ with
 $S_t=0$. After an alarm $S$ restarts at zero, so every false alarm in a long
 honest session is counted. The identity channel uses $k=1$ (a typist change
 moves its score by several $\sigma_0$, and the larger $k$ absorbs
-day-to-day drift), the process channel $k=0.5$. The threshold $h$ of each
-channel is set on calibration students so that the two channels together
-give at most 0.2 false alarms per hour of honest work.
+day-to-day drift), the key-pair and process channels $k=0.5$. The threshold
+$h$ of each channel is set on calibration students so that the channels
+together give at most 0.2 false alarms per hour of honest work.
 \Cref{fig:cusum-trace} shows a takeover being caught.
 
 \begin{figure}[ht]
@@ -141,8 +163,9 @@ give at most 0.2 false alarms per hour of honest work.
 \section{Baselines}
 Scaled Manhattan \cite{killourhy2009comparing}, TypeNet-style
 \cite{acien2022typenet}, Nosi IAT rhythm \cite{lueder2026nosi}. A Nosi-style
-detector (the L-scale feature alone, same CUSUM) is already part of the
-ablation; the other two are planned for the evaluation harness (phase 4).
+detector (the L-scale feature alone, same CUSUM) is part of the pilot
+ablation; all three are implemented in the evaluation harness
+(\cref{sec:rq1-harness}).
 
 \section{Synthetic-data pipeline}
 Before Phase 2 data exists, the detector is built and tuned on simulated

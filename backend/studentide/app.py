@@ -189,9 +189,11 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
 
     @app.get("/api/review/config", dependencies=[Depends(require_admin)])
     def review_config() -> dict:
+        st = reviewer.settings
         return {"h": reviewer.h, "window_s": reviewer.window_s, "baseline_days": BASELINE_DAYS,
-                "min_baseline": MIN_BASELINE,
-                "channels": {ch: {"label": l, "about": a} for ch, (l, a) in CHANNEL_INFO.items()}}
+                "min_baseline": MIN_BASELINE, "config_source": st.source, "prior_n": st.prior_n,
+                "channels": {ch: {"label": l, "about": a, "window_s": st.window_s[ch], "k": st.k[ch]}
+                             for ch, (l, a) in CHANNEL_INFO.items() if ch in st.channels}}
 
     @app.get("/api/review/students", dependencies=[Depends(require_admin)])
     def review_students() -> list[dict]:

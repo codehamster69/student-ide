@@ -1,8 +1,8 @@
 // Research-side API for the review timeline. Every call carries the admin
 // token (kept in sessionStorage, so it goes away with the tab).
 
-export type Channel = "identity" | "process";
-export const CHANNELS: Channel[] = ["identity", "process"];
+export type Channel = "identity" | "pairs" | "process";
+export const CHANNELS: Channel[] = ["identity", "pairs", "process"];
 
 export interface Truth {
   condition: "honest" | "proxy" | "takeover" | "copying" | "paste";
@@ -56,6 +56,10 @@ export interface ChannelTrace {
   about: string;
   h: number;
   k: number;
+  /** each channel runs at its own window length (frozen by the evaluation harness) */
+  window_s: number;
+  start: number[];
+  end: number[];
   score: (number | null)[];
   cusum: (number | null)[];
   peak: number;

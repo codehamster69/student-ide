@@ -65,22 +65,27 @@ def table_methods(rows: list[dict], meta: str, target: float) -> str:
     return "\n".join(L + _tail())
 
 
+CH_SHORT = {"identity": "id", "process": "proc", "pairs": "pairs"}
+
+
 def table_conditions(summ: dict, cis: dict, meta: str, h: dict, k: dict) -> str:
     hs = "/".join(f"{v:g}" for v in h.values())
     ks = "/".join(f"{v:g}" for v in k.values())
+    chans = list(h)
     hon = summ["honest"]
     L = _head(meta, f"Thesis detector by condition on the synthetic test students ($k={ks}$, $h={hs}$ for"
-              f" identity/process, 95\\% student-bootstrap intervals). Honest sessions: {hon['fa_per_h']:.2f}"
+              f" {'/'.join(chans)}, 95\\% student-bootstrap intervals). Honest sessions: {hon['fa_per_h']:.2f}"
               f"{ci(*cis['fa'], nd=2)} false alarms per hour, {100 * hon['flagged']:.0f}\\%{ci(*cis['flagged'], pct=True)}"
               f" of honest sessions with at least one alarm.",
               "tab:harness-conditions", "@{}lrlrrrrc@{}",
-              "Condition & $n$ & Detected & Delay med.\\ (s) & Delay p90 (s) & Switch err.\\ (s) & Early alarms & First: id/proc")
+              "Condition & $n$ & Detected & Delay med.\\ (s) & Delay p90 (s) & Switch err.\\ (s) & Early alarms & First: "
+              + "/".join(CH_SHORT.get(c, c) for c in chans))
     for v in CHEAT:
         c = summ[v]
         fc = c["first_channel"]
         L.append(f"    {VARIANT_LABELS[v]} & {c['n']} & {f(c['detected'], pct=True)}{ci(*cis[v], pct=True)} & "
                  f"{f(c['delay_median_s'])}{ci(*cis[v + '_delay'])} & {f(c['delay_p90_s'])} & {f(c['switch_err_median_s'])} & "
-                 f"{c['early_alarms']} & {fc.get('identity', 0)}/{fc.get('process', 0)} \\\\")
+                 f"{c['early_alarms']} & {'/'.join(str(fc.get(ch, 0)) for ch in chans)} \\\\")
     return "\n".join(L + _tail())
 
 

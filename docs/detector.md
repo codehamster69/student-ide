@@ -56,6 +56,13 @@ ones at 30 s windows and will change once real data exists.
   correlation across students, CUSUM k = 1) and *process* (everything else,
   equal weights, k = 0.5). A single combined score could not catch both
   takeovers and copying (see the ablation table).
+- **Key-pair timing** (optional, on in the frozen config since #10):
+  `add_pair_features(windows, vocab)` adds one `pk:<code>><code>` feature per
+  vocabulary pair (mean log latency in the window minus the window's mean log
+  latency over all pairs); `pair_vocabulary()` picks the most-typed pairs from
+  baseline sessions. The harness runs them as a third channel *pairs* (equal
+  weights, k = 0.5, 80 pairs), chosen on dev over adding them to the identity
+  channel (`pair_block_weights`). See [evaluation.md](evaluation.md).
 - **CUSUM**: S_t = max(0, S_{t-1} + x_t − k), alarm at S_t > h, switch
   estimate = start of the window after the last S = 0; restart after an alarm.
 
