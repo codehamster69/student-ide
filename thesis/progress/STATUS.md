@@ -19,7 +19,7 @@ flowchart LR
 
   subgraph Build["Build pipeline"]
     B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
-    B2 --> B3["3. Teacher timeline dashboard<br/>#8"]:::done --> B4["4. Evaluation harness"]:::pend
+    B2 --> B3["3. Teacher timeline dashboard<br/>#8"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
   end
 
   subgraph Study["Study (months 1 to 12)"]
@@ -47,13 +47,18 @@ flowchart LR
 | 3 Dashboard | Evidence timeline per session (alarms, switch estimate, channel) | ✅ | #8 |
 | 3 Dashboard | Review view leading to a conversation, never a penalty | ✅ | #8 |
 | 3 Dashboard | Code replay at any moment; simulated demo students | ✅ | #8 |
-| 4 Evaluation | Replay staged sessions A to E | ⬜ | |
-| 4 Evaluation | Calibrate alarm threshold on real baseline data | ⬜ | |
-| 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ⬜ | |
-| 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ⬜ | |
+| 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
+| 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
+| 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
+| 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ✅ | #9 |
+| 4 Evaluation | Run on the Phase 1-2 recordings (labels manifest) | ⬜ | |
 
 Detector, synthetic results (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
 median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
+
+Evaluation harness, synthetic test students (36, scored once): 83% of non-honest sessions caught at
+0.28 false alarms per hour; scaled Manhattan better on matched takeovers (89% vs 64%) but blind to
+copying; precision of a flag about 11% at 1 in 100 prevalence.
 
 Dashboard demo (6 simulated students): all 8 non-honest sessions got a moment to discuss on the
 expected channel, none of the 4 honest ones did.

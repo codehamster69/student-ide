@@ -32,6 +32,52 @@
 \section{Phase 3: mock remote interview}
 \todo{20--30 participants, own laptop.}
 
+\section{Evaluation protocol}
+\label{sec:protocol}
+All research questions are answered by one evaluation harness
+(\texttt{studentide.harness}, \cref{fig:harness}) that runs unchanged on simulated
+sessions now and on the study recordings later; only the corpus changes.
+
+\paragraph{Split by student.} Thirty per cent of participants form the test
+set, chosen by a salted hash of the participant id, so the split does not depend
+on who else enrolled and later enrolments move nobody. Every population-level
+quantity (feature weights, the population prior for short baselines, the
+TypeNet-style embedder, the digraph vocabulary of the scaled-Manhattan baseline
+and the alarm thresholds $h$) is estimated on development (dev) participants only.
+
+\paragraph{Design on dev, report on test once.} All choices (the
+calibration source, the process-channel window, whether to use a population
+prior, each baseline's alarm rule and CUSUM $k$) are made on dev
+participants with 5-fold cross-fitting, so that dev figures are also
+out-of-sample, and are then frozen in a configuration file. The test
+participants are scored once per frozen configuration; every test run is
+recorded in a ledger with its time, code version, configuration hash and
+corpus fingerprint, and re-scoring the same corpus with the same
+configuration needs a written reason, which is logged. Ablations are
+therefore reported on dev participants and headline results on test.
+
+\paragraph{Thresholds.} $h$ is set per channel for a target of 0.2 false
+alarms per honest hour (split equally across channels). Three calibration
+sources are compared: staged honest sessions of other students
+(\emph{holdout}), every student's own baseline sessions scored
+leave-one-session-out (\emph{self}, which needs no staged sessions), and
+both (\emph{pooled}).
+
 \section{Metrics}
-\todo{Detection delay, false alarms per hour, AUC/EER, precision at
-1/100 and 1/500 prevalence, per-subgroup error rates.}
+For each condition: the share of sessions with an alarm after the switch,
+the median and 90th-percentile detection delay, the median error of the
+estimated switch time and the alarms raised before the switch; for honest
+sessions, false alarms per hour and the share of sessions with at least one
+alarm. Window-level AUC compares one window of the student with one window
+typed by someone else. Detection against false alarms per hour is traced by
+sweeping the calibration target. Precision at prevalence $\pi$ is
+$\mathrm{TPR}\,\pi/(\mathrm{TPR}\,\pi + \mathrm{FPR}(1-\pi))$ with TPR from
+non-honest and FPR from honest sessions, at $\pi = 1/100$ and $1/500$. All
+intervals are 95\% percentile intervals from resampling participants.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{\tikzfig{evaluation-harness}}
+  \caption{The evaluation harness: one protocol for synthetic and recorded data.}
+  \label{fig:harness}
+\end{figure}

@@ -1,0 +1,23 @@
+% Evaluation harness protocol (phase 4). Used in chapter 6 (fig:harness).
+% Code: backend/studentide/harness/
+\begin{tikzpicture}[
+    node distance=5mm and 6mm,
+    box/.style={rectangle, rounded corners, draw, thick, align=center,
+                minimum width=2.5cm, minimum height=0.95cm, font=\small},
+    lock/.style={box, dashed},
+    arrow/.style={-{Stealth}, thick}]
+  \node[box] (corpus) {Labelled corpus\\(simulated, or\\recordings + manifest)};
+  \node[box, right=of corpus, yshift=8mm] (dev) {Dev students\\(70\%, by hashed id)};
+  \node[box, right=of corpus, yshift=-8mm] (test) {Test students\\(30\%)};
+  \node[box, right=of dev] (cv) {5-fold cross-fitting:\\calibration, tuning,\\ablations};
+  \node[lock, right=of cv] (frozen) {Frozen\\configuration};
+  \node[box, below=of frozen, yshift=-2.5mm] (score) {Score test once:\\RQ1, RQ2, RQ4};
+  \node[lock, left=of score] (ledger) {Test ledger\\(commit, config,\\corpus hash)};
+  \draw[arrow] (corpus) -- (dev);
+  \draw[arrow] (corpus) -- (test);
+  \draw[arrow] (dev) -- (cv);
+  \draw[arrow] (cv) -- (frozen);
+  \draw[arrow] (frozen) -- (score);
+  \draw[arrow] (test) -- (ledger);
+  \draw[arrow] (ledger) -- (score);
+\end{tikzpicture}

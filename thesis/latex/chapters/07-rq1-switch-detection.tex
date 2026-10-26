@@ -87,5 +87,118 @@ keystrokes apart made no difference on synthetic data (72\% either way),
 unsurprising because simulated comments differ from code by a single
 offset; this needs re-testing on real sessions.
 
+\section{Evaluation harness: detector against baselines (synthetic)}
+\label{sec:rq1-harness}
+The pilot above tuned and reported on one population of 60. The evaluation
+harness (\cref{sec:protocol}) replaces it with the protocol the study data will
+go through: a fresh simulated population of 120 students (seed 2026, never used
+before), 84 dev and 36 test students split by hashed id, every choice made on dev
+with 5-fold cross-fitting, then the test students scored once
+(\texttt{thesis/evaluation/test-ledger.jsonl} records that single run). Each
+student has 8 baseline sessions, of which the first 4 form the baseline, and the
+same seven test sessions as in the pilot.
+
+\paragraph{Choices made on dev.} Thresholds are calibrated on the
+\emph{pooled} source (other students' staged honest sessions plus every
+student's own baseline sessions scored leave-one-session-out; see
+\cref{sec:calibration-finding}). The process channel runs on 90\,s windows
+while the identity channel keeps 30\,s, and both channels use the population
+prior (\cref{sec:short-baselines}); together these raised mean detection over
+the five non-honest conditions from 73\% to 85\% on dev
+(\cref{tab:harness-tuning}). Each baseline got its own best alarm rule and $k$
+on dev; all chose a CUSUM, none the per-window threshold.
+
+\paragraph{Results on the test students} (\cref{tab:harness-methods,tab:harness-conditions,fig:harness-curves}).
+At the frozen operating point the thesis detector catches all copying-out and
+pasting sessions (delays of about 4 and 3 minutes), 81\% of takeovers by a random
+classmate and 64\% (95\% interval 47--78\%) by a speed-matched one, with a median
+delay of 5 minutes. Honest sessions see 0.28 false alarms per hour (interval
+0.06--0.61; 7\% of honest sessions with any alarm), above the 0.2 target but
+inside its uncertainty. Over all non-honest sessions it detects 83\%, against
+53\% for scaled Manhattan, 39\% for the TypeNet-style model and 47\% for the
+Nosi-style measure.
+
+The keystroke-only baselines are not weaker at telling typists apart.
+Scaled Manhattan, which compares the latency of each of the 40 most common
+digraphs, catches 89\% of matched takeovers (the thesis detector 64\%) and
+proxies more often too, but it is blind to copying and pasting (6\% and 8\%),
+because the same hands keep typing. The TypeNet-style model separates single
+windows almost as well (AUC 0.83 against 0.86) but trained on only 84 students
+it does not reach the hand-built features. The Nosi-style L-scale, designed
+for transcription, catches two thirds of copying but few switches.
+The finding to carry forward is that per-digraph latencies hold identity
+information the identity channel's grouped digraph features lose; adding them
+to the identity channel is the next design change, to be made on dev and
+scored as a new frozen configuration (so as not to tune on the test students).
+
+\input{tables/harness-methods}
+\input{tables/harness-conditions}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{harness-detection-vs-false-alarms}
+  \caption{Detection against false alarms per honest hour on the synthetic test
+    students, sweeping the calibration target (dotted line: 0.2 per hour).}
+  \label{fig:harness-curves}
+\end{figure}
+
+\subsection{Calibrating the threshold}
+\label{sec:calibration-finding}
+The pilot's thresholds, set on 20 students' staged honest sessions, gave twice
+the target false-alarm rate. The harness reproduces this on dev: with 20
+calibration students the \emph{holdout} source gives 0.43 false alarms per hour
+for a 0.2 target, and even 68 students give 0.30
+(\cref{tab:harness-calibration,fig:harness-calibration}). Each student
+contributes only two honest test sessions, so $h$ is set by a handful of
+alarms. Scoring every student's own baseline sessions leave-one-session-out
+(\emph{self}) needs no staged sessions and quadruples the honest hours; it hits
+the target with 20 students (0.20) and errs on the conservative side with more.
+The pooled source was the closest on average and is the frozen choice; on the
+unseen test students it gives 0.28, self alone 0.19 and holdout alone 0.33. In
+the study this means every enrolled student's baseline weeks double as
+calibration data, so $h$ need not wait for staged sessions.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.65\linewidth]{harness-calibration}
+  \caption{Achieved false alarms per hour against calibration students (dev,
+    mean and 10--90th percentile over 20 draws), target 0.2 per hour.}
+  \label{fig:harness-calibration}
+\end{figure}
+
+\subsection{Short baselines}
+\label{sec:short-baselines}
+A student who missed lab weeks has a thin baseline, and the review dashboard
+showed baseline-week sessions raising moments against a leave-one-out baseline
+of one or two sessions. The population prior shrinks a student's per-feature
+spread and honest score level towards the population's, as if the population
+were worth two more sessions. On dev (\cref{tab:harness-baseline-length,fig:harness-baseline-length})
+it makes two baseline sessions as good as four: matched takeovers 57\% against
+42\% without it, copying 100\% against 74\%. With one session it cuts honest
+sessions flagged from 12\% to 8\% (0.26 to 0.18 false alarms per hour); with six
+or eight sessions it no longer matters.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\linewidth]{harness-baseline-length}
+  \caption{Baseline length with and without the population prior (dev).}
+  \label{fig:harness-baseline-length}
+\end{figure}
+
+\subsection{Ablations on dev}
+The harness ablations (\cref{app:ablations}) confirm the pilot's design on
+new students with cross-fitting. Rhythm carries the identity channel (matched
+takeovers 57\% $\to$ 23\% without it) and focus carries copying (100\% $\to$
+7\%). The accumulating CUSUM matters: a per-window threshold at the same
+false-alarm rate catches 31\% of matched takeovers and 37\% of copying. One
+ICC-weighted channel misses copying and pasting (4\%, 5\%). Window length shows
+the split the pilot suggested: matched takeovers are caught soonest with short
+windows (152\,s delay at 10\,s), copying best with 90\,s and longer (93\%),
+hence identity at 30\,s and process at 90\,s. The line-level build-order
+features now earn a small place (without them proxies drop from 77\% to 70\%
+and matched takeovers from 57\% to 54\%, copying unchanged), whereas the old
+per-edit version cuts copying from 100\% to 77\%. Keeping comment keystrokes
+apart still changes nothing on simulated data.
+
 \section{Summary}
 \todo{After real data.}
