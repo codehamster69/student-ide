@@ -3,8 +3,10 @@ import math
 import numpy as np
 import pytest
 
-from studentide.detector.detector import Baseline, cusum, detect, feature_weights, fit_channels, detect_channels
-from studentide.detector.features import FEATURES, _in_comment, lscale, streams, window_features
+from studentide.detector.detector import (Baseline, channel_features, cusum, detect, detect_channels, feature_weights,
+                                         fit_channels, pair_block_weights)
+from studentide.detector.features import (FEATURES, PAIR_PREFIX, _in_comment, add_pair_features, feature_group, lscale,
+                                          pair_vocabulary, streams, window_features)
 from studentide.detector.synth import CONDITIONS, generate_session, key_for, nearest_speed, population
 from studentide.replay import final_text
 from studentide.schema import Event
@@ -75,6 +77,34 @@ def test_window_features_and_comment_separation():
         assert 3 < x["dg_median"] < 8  # log ms
     mixed = window_features(s, 30, comments="mixed")
     assert sum(x["n_keys"] for x in mixed) > sum(x["n_keys"] for x in w)
+
+
+def test_key_pair_features():
+    ev, _ = generate_session(POP[0], "honest", duration_s=600, seed=2)
+    w = window_features(streams(ev), 30)
+    vocab = pair_vocabulary([w], 10)
+    assert len(vocab) == 10 and all(">" in p for p in vocab)
+    counts = [sum(x["_pairs"].get(p, (0, 0))[1] for x in w) for p in vocab]
+    assert counts == sorted(counts, reverse=True)
+    raw = add_pair_features(w, vocab, normalise=False)
+    rel = add_pair_features(w, vocab)
+    x, r = next((a, b) for a, b in zip(raw, rel) if a["active"] and vocab[0] in a["_pairs"])
+    f = PAIR_PREFIX + vocab[0]
+    s_, n = x["_pairs"][vocab[0]]
+    assert x[f] == pytest.approx(s_ / n) and r[f] == pytest.approx(s_ / n - x["_pace"])
+    assert feature_group(f) == "pairs" and f in channel_features("identity", list(FEATURES) + [f])
+    # needing two typings per window can only blank features out
+    two = add_pair_features(w, vocab, min_count=2)
+    assert sum(math.isnan(a[f]) for a in two) >= sum(math.isnan(a[f]) for a in rel)
+
+
+def test_pair_block_weights():
+    feats = ["dg_median", "hold_median", "pk:KeyA>KeyB", "pk:KeyC>KeyD"]
+    w = pair_block_weights(feats, {"dg_median": 0.6, "hold_median": 0.4, "pk:KeyA>KeyB": 0.3, "pk:KeyC>KeyD": 0.1}, 2.0)
+    assert w["dg_median"] == 0.6 and w["pk:KeyA>KeyB"] + w["pk:KeyC>KeyD"] == pytest.approx(2.0)
+    assert w["pk:KeyA>KeyB"] == pytest.approx(3 * w["pk:KeyC>KeyD"])
+    eq = pair_block_weights(feats, None, 1.0)
+    assert eq["dg_median"] == 1.0 and eq["pk:KeyA>KeyB"] == pytest.approx(1.0)
 
 
 def test_cusum_alarm_and_switch_estimate():

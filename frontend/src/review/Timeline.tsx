@@ -158,7 +158,7 @@ export function Timeline({ review, t, onSeek, instant, showTruth, focusEpisode, 
             <p className="mb-2 font-mono text-[11px] text-muted">{clock(win[hoverIdx].start)} – {clock(win[hoverIdx].end)}</p>
             {chans.map((ch) => {
               const c = review.channels[ch]!;
-              const v = c.cusum[hoverIdx];
+              const v = c.cusum[Math.min(c.cusum.length - 1, Math.floor(hover / c.window_s))];
               return (
                 <p key={ch} className="flex items-center justify-between gap-2 py-0.5">
                   <span className="flex items-center gap-1.5 text-text"><span className="size-2 rounded-full" style={{ background: CH_COLOR[ch] }} />{c.label}</span>
@@ -182,7 +182,8 @@ function ChannelLane({ ch, review, top, x, plotW, focusEpisode, onFocusEpisode }
   focusEpisode: number | null; onFocusEpisode: (i: number | null) => void;
 }) {
   const c = review.channels[ch]!;
-  const win = review.windows;
+  // this channel's own windows (the process lane uses longer ones than the typing lanes)
+  const win = c.start.map((start, i) => ({ start, end: c.end[i] }));
   const norm = c.cusum.map((v) => (v ?? 0) / c.h);
   const yMax = Math.max(1.3, ...norm) * 1.05;
   const base = top + STRIP_H + 4 + CH_H;

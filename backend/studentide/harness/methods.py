@@ -28,8 +28,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..detector.detector import CHANNELS, Baseline, channel_features, feature_weights, population_prior
-from ..detector.features import PAUSE_MS
+from ..detector.detector import (CHANNELS, Baseline, channel_features, feature_weights, pair_block_weights,
+                                 population_prior)
+from ..detector.features import PAIR_PREFIX, PAUSE_MS, add_pair_features, pair_vocabulary
 from .corpus import Corpus, Session
 from .lstm import LSTMEmbedder, train
 
@@ -85,19 +86,48 @@ def _standardise(dist: np.ndarray, mu0: float, sd0: float) -> np.ndarray:
 # --------------------------------------------------------------- thesis detector
 
 class ChannelMethod(Method):
+    """`pairs` (optional) adds per-key-pair timing features:
+    {"n": vocabulary size, "normalise": relative to the window's pace,
+    "min_count": typings of a pair needed in a window, "channel": "identity"
+    (join the identity channel, the pairs together weighted `block` times the
+    other identity features) or "pairs" (a channel of their own, CUSUM `k`)}."""
+
     def __init__(self, name: str, channels: dict[str, ChannelSpec], comments: str = "separate",
-                 prior_n: float = 0.0):
+                 prior_n: float = 0.0, pairs: dict | None = None):
         self.name, self.channels, self.comments, self.prior_n = name, channels, comments, prior_n
+        self.pairs = dict(pairs) if pairs else None
+        self.vocab: list[str] = []
+        if self.pairs and self.pairs.get("channel", "identity") == "pairs":
+            W = channels["identity"].window_s if "identity" in channels else 30.0
+            self.channels = {**channels, "pairs": ChannelSpec([], "equal", self.pairs.get("k", 1.0), W)}
+        self._base = {ch: list(c.features) for ch, c in self.channels.items()}
         self.weights: dict[str, dict | None] = {}
         self.prior: dict[str, dict | None] = {}
 
+    def windows(self, corpus, s, W):
+        w = corpus.windows(s, W, self.comments)
+        if not self.vocab:
+            return w
+        # not cached: cheap, and the vocabulary differs between folds
+        return add_pair_features(w, self.vocab, self.pairs.get("normalise", True), self.pairs.get("min_count", 1))
+
     def _bw(self, corpus, sessions, W):
-        return [corpus.windows(s, W, self.comments) for s in sessions]
+        return [self.windows(corpus, s, W) for s in sessions]
 
     def fit_population(self, corpus, students, n_base):
+        target = None
+        if self.pairs:
+            target = self.pairs.get("channel", "identity")
+            W = self.channels[target].window_s
+            self.vocab = pair_vocabulary([corpus.windows(s, W, self.comments) for st in students
+                                          for s in corpus.baseline(st, n_base)], self.pairs.get("n", 40))
+            self.channels[target].features = self._base[target] + [PAIR_PREFIX + p for p in self.vocab]
         for ch, c in self.channels.items():
             bw = {st: self._bw(corpus, corpus.baseline(st, n_base), c.window_s) for st in students}
-            self.weights[ch] = feature_weights(bw, c.features) if c.weighting == "icc" else None
+            w = feature_weights(bw, c.features) if c.weighting == "icc" else None
+            if ch == target and target != "pairs":
+                w = pair_block_weights(c.features, w, self.pairs.get("block", 1.0))
+            self.weights[ch] = w
             self.prior[ch] = None
             if self.prior_n > 0:
                 # the prior comes from students with the full baseline (all their baseline weeks)
@@ -112,7 +142,7 @@ class ChannelMethod(Method):
     def score(self, corpus, model, s):
         out = {}
         for ch, c in self.channels.items():
-            w = corpus.windows(s, c.window_s, self.comments)
+            w = self.windows(corpus, s, c.window_s)
             b = model[ch]
             d = np.array(b.distances(w), float)
             out[ch] = Series(np.array([x["start"] for x in w]), np.array([x["end"] for x in w]),
@@ -122,14 +152,14 @@ class ChannelMethod(Method):
 
 def thesis_detector(features: list[str] | None = None, identity_w: float = 30, process_w: float = 30,
                     prior_n: float = 0.0, comments: str = "separate", name: str = "two-channel CUSUM",
-                    k: dict[str, float] | None = None) -> ChannelMethod:
+                    k: dict[str, float] | None = None, pairs: dict | None = None) -> ChannelMethod:
     chans = {}
     for ch, (_, weighting, k0) in CHANNELS.items():
         feats = channel_features(ch, features)
         if feats:
             chans[ch] = ChannelSpec(feats, weighting, (k or {}).get(ch, k0),
                                     identity_w if ch == "identity" else process_w)
-    return ChannelMethod(name, chans, comments, prior_n)
+    return ChannelMethod(name, chans, comments, prior_n, pairs)
 
 
 def nosi_style(window_s: float = 150, k: float = 0.5) -> ChannelMethod:

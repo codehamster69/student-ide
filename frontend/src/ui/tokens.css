@@ -35,9 +35,10 @@
 
   --console: #0d1117;
 
-  /* detector channels on the review timeline (validated as a 2-slot
-     categorical palette against --surface, light and dark) */
+  /* detector channels on the review timeline (a 3-slot categorical palette
+     against --surface, light and dark; pink stays clear of the amber --warn) */
   --ch-identity: #4f46e5;
+  --ch-pairs: #be185d;
   --ch-process: #0d9488;
   --console-text: #d7dde8;
   --console-danger: #ff9b95;
@@ -85,6 +86,7 @@
 
     --console: #080a0f;
     --ch-identity: #7c83f5;
+    --ch-pairs: #f472b6;
     --ch-process: #0fa595;
 
     --syn-keyword: #c4b5fd;
@@ -129,6 +131,7 @@
   --danger-soft: rgb(248 113 113 / 0.12);
   --console: #080a0f;
   --ch-identity: #7c83f5;
+  --ch-pairs: #f472b6;
   --ch-process: #0fa595;
   --syn-keyword: #c4b5fd;
   --syn-string: #86efac;
@@ -173,6 +176,7 @@
   --color-console-text: var(--console-text);
   --color-console-danger: var(--console-danger);
   --color-ch-identity: var(--ch-identity);
+  --color-ch-pairs: var(--ch-pairs);
   --color-ch-process: var(--ch-process);
 
   --shadow-sm: var(--shadow-sm);

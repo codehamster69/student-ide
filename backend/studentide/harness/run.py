@@ -10,8 +10,9 @@ dev (dev students only, 5-fold cross-fitting):
   1. calibration: holdout vs self vs pooled sources, and how many calibration
      students h needs (target vs achieved false alarms per hour);
   2. the thesis detector's open choices (process-channel window, population
-     prior) and each baseline's alarm rule, k and window, by mean detection
-     over the five non-honest conditions at <= target false alarms per hour;
+     prior, then how to use per-key-pair timing) and each baseline's alarm
+     rule, k and window, by mean detection over the five non-honest
+     conditions at <= target false alarms per hour;
   3. ablations: window length, channels, feature groups (incl. build order),
      alarm rule, comments, k;
   4. short baselines: 1-8 baseline sessions, with and without the prior;
@@ -84,7 +85,8 @@ def make(spec: dict):
     kind = spec["kind"]
     if kind == "thesis":
         return thesis_detector(spec.get("features"), spec.get("identity_w", 30), spec.get("process_w", 30),
-                               spec.get("prior_n", 0.0), spec.get("comments", "separate"), k=spec.get("k"))
+                               spec.get("prior_n", 0.0), spec.get("comments", "separate"), k=spec.get("k"),
+                               pairs=spec.get("pairs"))
     if kind == "channels":
         return ChannelMethod(spec.get("name", "custom"), {ch: ChannelSpec(*c) for ch, c in spec["channels"].items()},
                              spec.get("comments", "separate"), spec.get("prior_n", 0.0))
@@ -171,12 +173,31 @@ def dev(a):
     thesis_cands = [{"kind": "thesis", "process_w": w, "prior_n": p} for w in (30, 60, 90) for p in (0.0, 2.0)]
     jobs = [(json.dumps(sp), sp, dev_s, 4, source, T, None, "cusum") for sp in thesis_cands]
     trows = parallel(jobs, a.workers)
-    best_t = max(zip(thesis_cands, trows), key=lambda z: (z[1]["mean_detected"] - (1 if z[1]["fa_per_h"] > 2 * T else 0)))[0]
-    tuning = [{"method": "two-channel CUSUM", "rule": "cusum", "k": 1.0, "window_s": sp["process_w"],
-               "prior": sp["prior_n"], **r} for sp, r in zip(thesis_cands, trows)]
-    for t in tuning:
-        t["method"] = f"two-channel CUSUM (process $W$, prior {t['prior']:g})"
-        t["chosen"] = t["window_s"] == best_t["process_w"] and t["prior"] == best_t["prior_n"]
+    def pick(cands, rows):
+        return max(zip(cands, rows), key=lambda z: (z[1]["mean_detected"] - (1 if z[1]["fa_per_h"] > 2 * T else 0)))[0]
+    best_t = pick(thesis_cands, trows)
+    tuning = [{"method": f"thesis detector (process $W$, prior {sp['prior_n']:g})", "rule": "cusum", "k": 1.0,
+               "window_s": sp["process_w"], "prior": sp["prior_n"], **r} for sp, r in zip(thesis_cands, trows)]
+    # 2b. per-key-pair timing on top of the chosen settings: none, inside the
+    # identity channel (pairs weighted `block` x the other identity features),
+    # or a key-pair channel of its own (CUSUM k, vocabulary size n)
+    pair_cands = [None] + [{"channel": "identity", "block": b, "n": 40} for b in (0.5, 1.0, 2.0)] + \
+                 [{"channel": "pairs", "k": k, "n": n} for k in (0.25, 0.5, 1.0) for n in (20, 40, 80)]
+    pair_specs = [best_t if pc is None else {**best_t, "pairs": {"normalise": True, "min_count": 1, **pc}} for pc in pair_cands]
+    prows = parallel([(json.dumps(sp), sp, dev_s, 4, source, T, None, "cusum") for sp in pair_specs[1:]], a.workers)
+    prows = [next(r for sp, r in zip(thesis_cands, trows) if sp == best_t)] + prows
+    best_p = pick(pair_specs, prows)
+    for sp, r in zip(pair_specs, prows):
+        pc = sp.get("pairs")
+        lab = ("no key pairs" if pc is None else f"key pairs in identity, weight {pc['block']:g}" if pc["channel"] == "identity"
+               else f"key-pair channel, {pc['n']} pairs")
+        tuning.append({"method": f"thesis detector ({lab})", "rule": "cusum",
+                       "k": pc["k"] if pc and pc["channel"] == "pairs" else 1.0, "window_s": best_t["process_w"],
+                       "prior": best_t["prior_n"], **r, "chosen": sp == best_p, "pairs": json.dumps(pc)})
+    for t in tuning[:len(thesis_cands)]:
+        t["chosen"] = False
+    best_t = best_p
+    log(f"   -> thesis detector: {best_t}")
     chosen = {"thesis": best_t}
     baselines = {"sm": [{"kind": "sm", "window_s": 30}], "typenet": [{"kind": "typenet", "window_s": 30, "steps": a.typenet_steps}],
                  "nosi": [{"kind": "nosi", "window_s": 30}, {"kind": "nosi", "window_s": 150}]}
@@ -203,9 +224,19 @@ def dev(a):
     log("3. ablations ...")
     ref = dict(best_t)
     feats = list(FEATURES)
-    ab = [("Two channels (chosen)", ref)]
+    ab = [("Chosen configuration", ref)]
     for g in GROUPS:
         ab.append((f"\\quad without {g.replace('_', ' ')}", {**ref, "features": [f for f in feats if FEATURES[f] != g]}))
+    if "pairs" in ref:
+        rp = ref["pairs"]
+        nop = {k: v for k, v in ref.items() if k != "pairs"}
+        ab += [("\\quad without key pairs", nop),
+               ("\\quad key pairs not speed-normalised", {**ref, "pairs": {**rp, "normalise": False}}),
+               ("\\quad key pairs need 2 typings per window", {**ref, "pairs": {**rp, "min_count": 2}})]
+        if rp["channel"] == "pairs":
+            ab += [("\\quad key pairs inside the identity channel", {**ref, "pairs": {**rp, "channel": "identity", "block": 1.0}}),
+                   ("\\quad key-pair channel replaces identity channel",
+                    {**ref, "features": [f for f in feats if FEATURES[f] not in ("rhythm", "digraph")]})]
     idf = [f for f in feats if FEATURES[f] in ("rhythm", "digraph")]
     prf = [f for f in feats if FEATURES[f] not in ("rhythm", "digraph")]
     pw = ref["process_w"]
@@ -222,7 +253,8 @@ def dev(a):
         ("Comments mixed into code", {**ref, "comments": "mixed"}),
     ]
     jobs = [(lab, sp, dev_s, 4, source, T, None, "cusum") for lab, sp in ab]
-    jobs.append(("Per-window threshold instead of CUSUM", ref, dev_s, 4, source, T, {"identity": 0, "process": 0}, "window"))
+    jobs.append(("Per-window threshold instead of CUSUM", ref, dev_s, 4, source, T,
+                 {ch: 0 for ch in make(ref).channels}, "window"))
     arows = parallel(jobs, a.workers)
     wl = [(f"{W:g}", {"kind": "thesis", "identity_w": W, "process_w": W}) for W in (10, 20, 30, 60, 90, 150)]
     wrows = parallel([(lab, sp, dev_s, 4, source, T, None, "cusum") for lab, sp in wl], a.workers)
@@ -237,12 +269,23 @@ def dev(a):
         r.update({"n_base": n, "prior": "none" if p == 0 else f"{p:g} sessions",
                   "takeover": r["takeover"], "copying": r["copying"], "paste": r["paste"]})
 
+    # operating point for the review timeline: the chosen detector fitted on
+    # every dev student, h calibrated on them as `test` does
+    log("5. operating point ...")
+    op_run = score_run(make(best_t), corpus, dev_s, [], 4, calib_students=dev_s, self_cal=source != "holdout")
+    op_k = op_run.method.k()
+    from .alarms import H_GRID
+    op = {"h": {ch: float(H_GRID[i]) for ch, i in op_run.h_index(op_k, "cusum", source, T).items()}, "k": op_k,
+          "window_s": {ch: c.window_s for ch, c in op_run.method.channels.items()},
+          "pair_vocab": op_run.method.vocab}
+    log(f"   h {op['h']}")
+
     desc = describe(corpus)
     desc.pop("sessions")
     frozen = {"created": time.strftime("%Y-%m-%d"), "corpus": desc,
               "split": {"test_frac": a.test_frac, "dev": len(dev_s), "test": len(test_s)},
               "target_fa_per_h": T, "calibration_source": source, "n_base": 4, "methods": chosen,
-              "calibration_error": err}
+              "calibration_error": err, "operating_point": op}
     out.mkdir(parents=True, exist_ok=True)
     (out / "frozen-config.json").write_text(json.dumps(frozen, indent=1, default=float) + "\n")
     (out / "dev-summary.json").write_text(json.dumps({"calibration": cal_rows, "tuning": tuning, "ablations": arows,
@@ -294,7 +337,7 @@ def test(a):
     log(f"test: {len(test_s)} students, calibration on {len(dev_s)} dev students ({source}), target {T}/h")
     t0 = time.time()
     m = fz["methods"]
-    plan = [("Two-channel CUSUM", m["thesis"], None, "cusum")]
+    plan = [("Thesis detector", m["thesis"], None, "cusum")]
     for key, label in (("sm", "Scaled Manhattan"), ("typenet", "TypeNet-style LSTM"), ("nosi", "Nosi-style L-scale")):
         sp = m[key]
         method = make(sp)

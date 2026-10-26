@@ -26,7 +26,7 @@ from dataclasses import asdict, dataclass, field
 
 import numpy as np
 
-from .features import FEATURES
+from .features import FEATURES, feature_group
 
 # Two channels, each with its own baseline, score and CUSUM. "identity" asks
 # whether the typing hands are the same person (rhythm and digraph timing,
@@ -40,14 +40,14 @@ from .features import FEATURES
 # absorbs day-to-day drift; copying shifts the process score only slightly,
 # so that channel keeps the textbook k = 0.5 (detects a half-sigma shift).
 CHANNELS: dict[str, tuple[tuple[str, ...], str, float]] = {
-    "identity": (("rhythm", "digraph"), "icc", 1.0),
+    "identity": (("rhythm", "digraph", "pairs"), "icc", 1.0),
     "process": (("pauses", "revision", "build_order", "runs", "focus", "paste"), "equal", 0.5),
 }
 
 
 def channel_features(channel: str, features: list[str] | None = None) -> list[str]:
     groups = CHANNELS[channel][0]
-    return [f for f in (features or FEATURES) if FEATURES[f] in groups]
+    return [f for f in (features or FEATURES) if feature_group(f) in groups]
 
 Z_CAP = 6.0
 # floors on the spread, so a habit a student never varies (e.g. never pastes)
@@ -176,6 +176,23 @@ def feature_weights(baselines: dict[str, list[list[dict]]], features: list[str] 
     return out
 
 
+def pair_block_weights(features: list[str], weights: dict[str, float] | None, block: float) -> dict[str, float]:
+    """Weights for a channel that holds per-pair (`pk:`) features next to
+    ordinary ones. There can be dozens of pairs, so left alone they would
+    outvote the handful of rhythm features; here the pairs together get
+    `block` times the total weight of the other features, shared among them
+    in proportion to their own weights (ICC, or equal when `weights` is None)."""
+    w = {f: (weights.get(f, 0.0) if weights else 1.0) for f in features}
+    pairs = [f for f in features if feature_group(f) == "pairs"]
+    rest = sum(v for f, v in w.items() if f not in pairs)
+    tot = sum(w[f] for f in pairs)
+    if pairs and tot > 0:
+        scale = block * (rest or 1.0) / tot
+        for f in pairs:
+            w[f] *= scale
+    return w
+
+
 def population_prior(baselines: dict[str, "Baseline"], n: float = 2.0) -> dict:
     """Population prior for short baselines, from students whose baselines are
     complete: the median per-feature spread and the median honest level.
@@ -215,7 +232,10 @@ def cusum(x: list[float], k: float, h: float) -> tuple[list[float], list[int], l
 
 def fit_channels(student: str, sessions: list[list[dict]], weights: dict[str, float] | None = None,
                  features: list[str] | None = None) -> dict[str, Baseline]:
-    """One baseline per channel. `weights` (from `feature_weights`) apply to icc channels."""
+    """One baseline per channel, all on the same windows. `weights` (from
+    `feature_weights`) apply to icc channels. The review timeline, which runs
+    the channels at different window lengths with a population prior, fits
+    them one by one with `Baseline.fit` instead."""
     out = {}
     for ch, (_, weighting, _) in CHANNELS.items():
         feats = channel_features(ch, features)

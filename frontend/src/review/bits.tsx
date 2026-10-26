@@ -5,8 +5,9 @@ import { animate, motion, useInView } from "motion/react";
 import { cn, ease } from "../ui";
 import type { Channel } from "./api";
 
-export const CH_COLOR: Record<Channel, string> = { identity: "var(--ch-identity)", process: "var(--ch-process)" };
-export const CH_TEXT: Record<Channel, string> = { identity: "Typing rhythm", process: "Way of working" };
+export const CH_COLOR: Record<Channel, string> = { identity: "var(--ch-identity)", pairs: "var(--ch-pairs)", process: "var(--ch-process)" };
+export const CH_TEXT: Record<Channel, string> = { identity: "Typing rhythm", pairs: "Key-pair timing", process: "Way of working" };
+export const CH_CHANGED: Record<Channel, string> = { identity: "Typing rhythm changed", pairs: "Key-pair timing changed", process: "Way of working changed" };
 
 /** A number that counts up when it first appears. */
 export function CountUp({ to, className }: { to: number; className?: string }) {
