@@ -108,6 +108,19 @@ Baseline-week sessions are scored only against the student's other
 baseline sessions and are labelled as a check of the baseline, not of the
 student; students without enough baseline sessions are not scored at all.
 
+\paragraph{The screen runs the evaluated detector.} The review screen reads
+the configuration the evaluation harness froze
+(\texttt{thesis/evaluation/frozen-config.json}, \cref{sec:rq1-harness}), so
+what a teacher sees is what was evaluated: three lanes (typing rhythm and
+key-pair timing on \SI{30}{\second} windows, way of working on
+\SI{90}{\second} windows), each with its own CUSUM $k$, the population prior
+for short baselines and the thresholds $h$ calibrated on the dev students.
+Each lane is drawn on its own window grid against one time axis. The
+population parts (feature weights, the key-pair vocabulary, the prior) are
+fitted on the class's own baseline sessions once three students have one,
+just as the harness fits them on its training students. Thresholds can be
+overridden once they are calibrated on the class's real data.
+
 \paragraph{Demo data.} \texttt{python -m studentide.seed} fills a fresh
 database with simulated students (four honest baseline weeks, then
 sessions under the study conditions). Their ground truth is stored with
@@ -115,17 +128,19 @@ the session and can be overlaid on the timeline
 (\cref{fig:review-session}b), which made the screen testable before any
 real student was recorded. It is refused on an existing database file so
 demo and real data never mix. On the default demo (six simulated students,
-twelve assessed sessions) every non-honest session got a moment on the
-expected channel, starting within \SI{50}{\second} of the simulated switch,
-and none of the four honest ones did; this is a check that the screen
-shows the detector faithfully, not an evaluation (that is
-\cref{ch:rq1}).
+twelve assessed sessions) with the frozen configuration, seven of the eight
+non-honest sessions got a moment on the expected kind of lane (one
+speed-matched takeover was missed), none of the four honest sessions did,
+and none of the 24 baseline-week sessions did either (with the earlier
+untuned thresholds and no prior, 5 of 24 baseline-week sessions had raised
+a moment). This is a check that the screen shows the detector faithfully,
+not an evaluation (that is \cref{ch:rq1}).
 
 \begin{figure}[ht]
   \centering
   \includegraphics[width=\linewidth]{review/review-light-02-overview}
-  \caption{Review overview on simulated students: each row shows both
-  channels' accumulated evidence relative to the threshold (dashed) and
+  \caption{Review overview on simulated students: each row shows every
+  channel's accumulated evidence relative to the threshold (dashed) and
   the moments to discuss, with the channel that found them.}
   \label{fig:review-overview}
 \end{figure}
@@ -134,13 +149,15 @@ shows the detector faithfully, not an evaluation (that is
   \centering
   \begin{subfigure}{\textwidth}
     \includegraphics[width=\linewidth]{review/review-light-03-session-takeover}
-    \caption{A simulated takeover: the typing-rhythm channel marks a moment
-    from about 20:30; the replay shows the code at the playhead.}
+    \caption{A simulated takeover: the typing-rhythm and key-pair lanes mark
+    moments; the replay shows the code at the playhead.}
   \end{subfigure}\\[1ex]
   \begin{subfigure}{\textwidth}
     \includegraphics[width=\linewidth]{review/review-light-04-takeover-truth-hover}
-    \caption{Same session with the simulated ground truth (switch at 20:24)
-    overlaid and the hover read-out for one window.}
+    \caption{Same session with the simulated ground truth (switch at 7:43)
+    overlaid and the hover read-out for one window. The key-pair lane's
+    first moment is dated well before the switch, a reminder that the
+    estimated start is a guess.}
   \end{subfigure}
   \caption{Session review timeline. Light and dark versions of every
   screen are in \texttt{snapshots/review/}.}

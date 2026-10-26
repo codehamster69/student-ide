@@ -14,7 +14,7 @@ population parts (ICC feature weights, the key-pair vocabulary, the prior)
 are fitted on this class's own baseline sessions once MIN_POP_STUDENTS
 students have a baseline, as the harness fits them on its training
 students; before that, equal weights, the frozen vocabulary and no prior.
-$STUDENTIDE_H ("identity=19.25,process=7.25") overrides h, e.g. after
+$STUDENTIDE_H ("identity=24,pairs=11.25,process=8.75") overrides h, e.g. after
 calibrating on real data.
 
 Baselines follow the study plan: a student's sessions in the first four
@@ -117,8 +117,9 @@ class Settings:
 
 
 # what the harness froze on 2026-10-26; used when no config file is found
-_FALLBACK = {"methods": {"thesis": {"kind": "thesis", "process_w": 90, "prior_n": 2.0}},
-             "operating_point": {"h": {"identity": 19.25, "process": 7.25}}}
+_FALLBACK = {"methods": {"thesis": {"kind": "thesis", "process_w": 90, "prior_n": 2.0,
+                                    "pairs": {"normalise": True, "min_count": 1, "channel": "pairs", "k": 0.5, "n": 80}}},
+             "operating_point": {"h": {"identity": 24.0, "process": 8.75, "pairs": 11.25}}}
 
 
 def load_settings(path: str | os.PathLike | None = None, h_override: str | None = None) -> Settings:

@@ -44,9 +44,11 @@ flowchart LR
 | 2 Detector | Habit features per 30 s window | ✅ | #6 |
 | 2 Detector | Two-channel CUSUM (identity, process) | ✅ | #6 |
 | 2 Detector | Rework structural build-order features | ✅ | #6 |
+| 2 Detector | Key-pair timing channel (per-digraph latency, chosen on dev) | ✅ | #10 |
 | 3 Dashboard | Evidence timeline per session (alarms, switch estimate, channel) | ✅ | #8 |
 | 3 Dashboard | Review view leading to a conversation, never a penalty | ✅ | #8 |
 | 3 Dashboard | Code replay at any moment; simulated demo students | ✅ | #8 |
+| 3 Dashboard | Timeline runs the frozen evaluated config (window lengths, prior, calibrated h) | ✅ | #10 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
@@ -56,12 +58,13 @@ flowchart LR
 Detector, synthetic results (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
 median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
 
-Evaluation harness, synthetic test students (36, scored once): 83% of non-honest sessions caught at
-0.28 false alarms per hour; scaled Manhattan better on matched takeovers (89% vs 64%) but blind to
-copying; precision of a flag about 11% at 1 in 100 prevalence.
+Evaluation harness, synthetic test students (36, scored once per frozen config): with the key-pair
+channel (#10) 92% of non-honest sessions caught at 0.19 false alarms per hour, matched takeovers 86%
+(scaled Manhattan 89%, but blind to copying); precision of a flag about 12% at 1 in 100 prevalence.
+The two-channel config of #9 gave 83%, 64% and 0.28.
 
-Dashboard demo (6 simulated students): all 8 non-honest sessions got a moment to discuss on the
-expected channel, none of the 4 honest ones did.
+Dashboard demo (6 simulated students, frozen config): 7 of 8 non-honest sessions got a moment to
+discuss, none of the 4 honest ones and none of the 24 baseline-week sessions did.
 
 ## Study timeline
 

@@ -105,6 +105,20 @@ students.csv  student,<attribute columns: gender, layout, experience, own_laptop
 
 Every column of `students.csv` becomes a fairness subgroup in RQ4.
 
+## Frozen configurations so far
+
+| config | chosen on dev | test (36 students, scored once) |
+|--------|---------------|---------------------------------|
+| `8e2ce5f7faa6` (#9) | two channels, process W = 90 s, prior n = 2 | 83% of non-honest, matched takeovers 64%, 0.28 FA/h |
+| `be03e7dea805` (#10) | + key-pair channel (80 pairs, speed-normalised, k = 0.5) | 92% of non-honest, matched takeovers 86% (scaled Manhattan 89%), 0.19 FA/h |
+
+`dev` also writes an `operating_point` block (h per channel, k, window
+lengths, key-pair vocabulary) from the chosen detector fitted on all dev
+students; the review timeline loads it (see [review.md](review.md)). `test`
+recalibrates h the same way but its self-calibration also uses the test
+students' own baseline weeks, so its h differs slightly (27 / 8.25 / 11 vs
+24 / 8.75 / 11.25).
+
 ## Baselines, as implemented
 
 - **Scaled Manhattan** (Killourhy and Maxion 2009, free-text form): per window,

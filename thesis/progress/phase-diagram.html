@@ -192,19 +192,21 @@ const BUILD = [
     { t: "Habit features per 30 s window", s: "done", pr: "#6" },
     { t: "Two-channel CUSUM: identity and process", s: "done", pr: "#6" },
     { t: "Rework the structural build-order features", s: "done", pr: "#6" },
+    { t: "Key-pair timing channel, chosen on dev students", s: "done", pr: "#10" },
   ], note: 'Synthetic results: <span class="mono">72%</span> of takeovers caught, <span class="mono">80 s</span> median delay, <span class="mono">80%</span> of copying caught, <span class="mono">0.42</span> false alarms per hour.' },
   { n: 3, title: "Teacher timeline dashboard", s: "done", items: [
     { t: "Evidence timeline per session: alarms, estimated switch time, channel", s: "done", pr: "#8" },
     { t: "Review view that leads to a conversation, never a penalty", s: "done", pr: "#8" },
     { t: "Code replay at any moment; simulated demo students", s: "done", pr: "#8" },
-  ], note: 'Demo on 6 simulated students: all <span class="mono">8</span> non-honest sessions got a moment to discuss, none of the <span class="mono">4</span> honest ones.' },
+    { t: "Timeline runs the frozen evaluated config", s: "done", pr: "#10" },
+  ], note: 'Demo on 6 simulated students: <span class="mono">7</span> of 8 non-honest sessions got a moment to discuss, none of the <span class="mono">4</span> honest or <span class="mono">24</span> baseline-week ones.' },
   { n: 4, title: "Evaluation harness", s: "done", items: [
     { t: "Harness: student-level dev/test split, frozen config, test ledger", s: "done", pr: "#9" },
     { t: "Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm", s: "done", pr: "#9" },
     { t: "Calibrate the alarm threshold (students' own baseline weeks)", s: "done", pr: "#9" },
     { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "done", pr: "#9" },
     { t: "Run on the Phase 1 to 2 recordings (labels manifest)", s: "pend" },
-  ], note: 'Synthetic test students: <span class="mono">83%</span> of non-honest sessions caught at <span class="mono">0.28</span> false alarms per hour; precision of a flag about <span class="mono">11%</span> at 1 in 100.' },
+  ], note: 'Synthetic test students, with key-pair timing: <span class="mono">92%</span> of non-honest sessions caught at <span class="mono">0.19</span> false alarms per hour (matched takeovers <span class="mono">86%</span>, scaled Manhattan 89%); precision of a flag about <span class="mono">12%</span> at 1 in 100.' },
 ];
 
 const STUDY = [
