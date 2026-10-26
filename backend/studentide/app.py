@@ -250,8 +250,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     @app.get("/api/review/students", dependencies=[Depends(require_admin)])
     def review_students() -> list[dict]:
         by_student: dict[str, list] = {}
-        for r in db.list_sessions():
-            by_student.setdefault(r["student_id"], []).append(dict(r))
+        for r in reviewer._sessions():  # tagged with context, so competitions stay out of the lab baseline
+            by_student.setdefault(r["student_id"], []).append(r)
         out = []
         for st, ss in sorted(by_student.items()):
             base = reviewer.baseline_ids(ss)

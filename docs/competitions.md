@@ -64,11 +64,20 @@ conversation" stays between the teacher and the student and can never cost a
 place or appear on the board. Competition sessions are ordinary sessions, so
 keystrokes, runs and pastes are logged as in any lab.
 
-Open question for the study: competition sittings are timed and under
-pressure, so typing rhythm may differ from a normal lab. They are not
-excluded from a student's 4-week baseline yet; decide on the Phase 1 data
-whether to exclude them (`labs.kind = 'competition'` makes that a one-line
-filter).
+**Competition sessions are measured separately** (Rohan, 2026-10-26: "that's
+a different behaviour we can use"). A timed, competitive sitting is not a
+normal lab, so the review timeline never mixes the two:
+
+- a student's lab baseline (first four weeks) leaves competition sessions
+  out, even inside those weeks;
+- a competition session is compared only with the same student's sessions
+  from their *other* competitions (leave one competition out), and is not
+  scored until there are at least two of those;
+- the timeline marks such sessions *Competition* and says what they were
+  compared with.
+
+The population-level settings (key-pair vocabulary, feature weights, prior)
+still come from lab baselines.
 
 ## API
 

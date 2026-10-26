@@ -138,6 +138,7 @@ function Row({ r }: { r: SessionSummary }) {
         <span className="grid size-8 place-items-center rounded-full bg-surface-3 font-mono text-[11px] font-semibold text-muted">{r.student_id.slice(-2)}</span>
         <span className="font-mono text-sm font-medium text-text">{r.student_id}</span>
         {r.phase === "baseline" && <Badge className="h-5 px-2 text-[11px]">baseline</Badge>}
+        {r.context === "competition" && <Badge tone="warn" className="h-5 px-2 text-[11px]">competition</Badge>}
       </span>
       <span className="text-sm">
         <span className="text-text">{r.task_title ?? TASKS[r.task_id] ?? r.task_id}</span>

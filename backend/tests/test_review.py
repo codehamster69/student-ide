@@ -124,3 +124,35 @@ def test_settings_follow_the_frozen_config(tmp_path):
 
 def test_key_names():
     assert [key_name(c) for c in ("KeyT", "Digit3", "Space", "Period", "F5")] == ["t", "3", "space", ".", "F5"]
+
+
+def test_competition_sessions_have_their_own_baseline():
+    from studentide.review import Reviewer
+
+    day = 86400
+    lab = [{"id": f"l{i}", "lab_id": None, "context": "lab", "started_at": i * day, "n_events": 9} for i in range(3)]
+    comp = [{"id": f"c{i}", "lab_id": f"comp{i // 2}", "context": "competition", "started_at": (i + 1) * day + 5,
+             "n_events": 9} for i in range(5)]
+    r = Reviewer.__new__(Reviewer)
+    # a lab baseline never takes in competition sittings, even inside the first four weeks
+    assert r.baseline_ids(lab + comp) == ["l0", "l1", "l2"]
+    # a competition is compared only with the same student's other competitions
+    assert r.baseline_ids(lab + comp, "competition", "comp0") == ["c2", "c3", "c4"]
+    assert r.baseline_ids(lab + comp, "competition", "comp2") == ["c0", "c1", "c2", "c3"]
+
+
+def test_review_tags_competition_sessions(client, seeded):
+    db = Database(seeded)
+    sid = next(s["id"] for s in db.list_sessions("DEMO01") if s["lab_id"])
+    with db.connect() as conn:
+        conn.execute("INSERT INTO labs(id, title, created_at, updated_at, kind) VALUES ('lab_cmp', 'Sprint', 0, 0, 'competition')")
+        conn.execute("UPDATE sessions SET lab_id = 'lab_cmp' WHERE id = ?", (sid,))
+    try:
+        r = client.get(f"/api/review/sessions/{sid}", headers=ADMIN).json()
+        assert r["session"]["context"] == "competition" and r["baseline"]["context"] == "competition"
+        assert r["baseline"]["status"] == "insufficient"  # no other competition yet: nothing to compare with
+        assert all(i != sid for i in r["baseline"]["session_ids"])
+    finally:
+        with db.connect() as conn:
+            conn.execute("UPDATE sessions SET lab_id = 'lab_demo1' WHERE id = ?", (sid,))
+            conn.execute("DELETE FROM labs WHERE id = 'lab_cmp'")

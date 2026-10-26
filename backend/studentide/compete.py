@@ -12,7 +12,7 @@ questions stay hidden) -> started (clock runs, questions appear) -> ended
 (board frozen; the teacher can also close the lab as usual).
 
 Teacher (admin token):
-    POST  /api/teach/competitions                  {title, description, duration_min, board}
+    POST  /api/teach/competitions                  {title, description, subject, language, duration_min, board}
     GET   /api/teach/competitions/{lab_id}         settings + full board
     PATCH /api/teach/competitions/{lab_id}         {duration_min?, board?}
     POST  /api/teach/competitions/{lab_id}/start   opens the lab and starts the clock
@@ -34,7 +34,10 @@ first. Runs and fixed errors never score; they only earn badges.
 
 The leaderboard never reads anything from the review timeline or the
 detector: a "moment worth a conversation" stays between the teacher and the
-student and can never cost a place on the board.
+student and can never cost a place on the board. In the other direction, the
+review timeline measures competition sessions separately (their own
+baseline, see review.Reviewer.baseline_ids): a competition is a different
+behaviour from a normal lab.
 """
 
 from __future__ import annotations
@@ -279,6 +282,8 @@ def student_card(db: Database, lab, student_id: str) -> dict:
 class CompIn(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=4000)
+    subject: str = Field(default="", max_length=120)
+    language: Literal["python", "c", "cpp", "java", "javascript"] = "python"
     duration_min: int | None = Field(default=30, ge=1, le=600)
     board: Literal["top", "all", "hidden"] = "top"
 
@@ -332,6 +337,7 @@ def router(db: Database, require_admin: Callable) -> APIRouter:
     def create(body: CompIn) -> dict:
         lab_id = "lab_" + uuid.uuid4().hex[:10]
         db.create_lab(lab_id, body.title.strip(), body.description.strip())
+        db.update_lab(lab_id, {"subject": body.subject.strip(), "language": body.language})
         with db.connect() as conn:
             conn.execute("UPDATE labs SET kind = 'competition' WHERE id = ?", (lab_id,))
             conn.execute("INSERT INTO competitions(lab_id, duration_s, board) VALUES (?,?,?)",

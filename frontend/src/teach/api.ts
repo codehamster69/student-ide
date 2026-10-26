@@ -1,6 +1,35 @@
 // Teacher authoring API (/api/teach/*), same admin token as the review timeline.
 
 export type LabStatus = "draft" | "open" | "closed";
+export type Language = "python" | "c" | "cpp" | "java" | "javascript";
+
+export const LANGUAGES: Record<Language, { label: string; file: string; color: string }> = {
+  python: { label: "Python", file: "main.py", color: "#3776ab" },
+  c: { label: "C", file: "main.c", color: "#5c6bc0" },
+  cpp: { label: "C++", file: "main.cpp", color: "#00599c" },
+  java: { label: "Java", file: "Main.java", color: "#e76f00" },
+  javascript: { label: "JavaScript", file: "main.js", color: "#d4b106" },
+};
+
+/** Optional. stdin in, stdout out; hidden ones show students pass/fail only. */
+export interface TestCase {
+  name: string;
+  stdin: string;
+  expected: string;
+  hidden: boolean;
+  compare: "text" | "json";
+}
+
+/** Where an imported or linked question came from. */
+export interface QuestionSource {
+  provider: string;
+  url: string;
+  ref?: string;
+  license?: string;
+  attribution?: string;
+  linked_only?: boolean;
+  notes?: string[];
+}
 
 export interface LabRow {
   id: string;
@@ -10,6 +39,8 @@ export interface LabRow {
   /** a class competition is a lab with a clock, test-graded submissions and a leaderboard */
   kind: "lab" | "competition";
   everyone: boolean;
+  subject: string;
+  language: Language;
   created_at: number;
   updated_at: number;
   n_questions: number;
@@ -26,6 +57,9 @@ export interface Question {
   prompt: string;
   starter_code: string;
   sample_input: string;
+  tests: TestCase[];
+  harness: string;
+  source: QuestionSource | null;
   n_sessions: number;
 }
 
@@ -35,7 +69,37 @@ export interface LabDetail extends Omit<LabRow, "n_questions" | "n_roster" | "n_
   progress: { student_id: string; question_id: string; n: number; submitted: boolean; last_at: number }[];
 }
 
-export type QuestionFields = Pick<Question, "title" | "prompt" | "starter_code" | "sample_input">;
+export type QuestionFields = Pick<Question, "title" | "prompt" | "starter_code" | "sample_input" | "tests">;
+
+export interface Provider {
+  id: string;
+  name: string;
+  status: "live" | "link_only";
+  about: string;
+  terms_url: string;
+  hosts: string[];
+}
+
+export interface SourceCategory { id: string; label: string; count: number }
+export interface SourceSummary { ref: string; title: string; difficulty: string; categories: string[] }
+export interface SourcePreview {
+  title: string;
+  prompt: string;
+  starter_code: string;
+  tests: TestCase[];
+  harness: string;
+  source: QuestionSource;
+  notes: string[];
+}
+
+export interface GradeResult {
+  passed: number;
+  total: number;
+  results: { name: string; passed: boolean; hidden: boolean; error_type: string | null; duration_ms: number;
+    stdin?: string; stdout?: string; expected?: string; stderr?: string }[];
+}
+
+export const BLANK_TEST: TestCase = { name: "", stdin: "", expected: "", hidden: false, compare: "text" };
 
 export const STATUS: Record<LabStatus, { label: string; about: string }> = {
   draft: { label: "Draft", about: "Only you can see it." },

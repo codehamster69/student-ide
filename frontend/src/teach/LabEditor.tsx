@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
-  ArrowDown, ArrowLeft, ArrowUp, Check, CheckCircle2, CircleDashed, Code2, Pencil, Plus, Trash2, UserPlus, Users,
+  ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, Pencil, Plus, Trash2,
+  UserPlus, Users,
 } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, TextArea, cn, item, pop, spring, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { CompetitionPanel } from "../compete/CompetitionPanel";
-import { parseIds, STATUS, type LabDetail, type LabStatus, type Question, type QuestionFields } from "./api";
+import {
+  LANGUAGES, parseIds, STATUS, type GradeResult, type Language, type LabDetail, type LabStatus, type Question, type QuestionFields,
+} from "./api";
+import { LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
+import { SourcePicker } from "./SourcePicker";
 
-const BLANK: QuestionFields = { title: "", prompt: "", starter_code: "", sample_input: "" };
+const BLANK: QuestionFields = { title: "", prompt: "", starter_code: "", sample_input: "", tests: [] };
 
 /** #/teach/l/<id>: edit one lab's questions, roster and status, and watch progress. */
 export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
   const [lab, setLab] = useState<LabDetail | null>(null);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<string | null>(null); // question id, or "new"
+  const [editing, setEditing] = useState<string | null>(null); // question id, "new", or "pick" (from a platform)
+  const [notes, setNotes] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const fail = useCallback((e: unknown) => {
@@ -29,12 +35,12 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
   const write = useCallback(async (method: string, path: string, body?: unknown) => {
     setError("");
     try {
-      const next = await send<LabDetail>(method, path, body);
+      const next = await send<LabDetail & { imported?: string; notes?: string[] }>(method, path, body);
       setLab(next);
-      return true;
+      return next;
     } catch (e) {
       fail(e);
-      return false;
+      return null;
     }
   }, [fail]);
 
@@ -83,10 +89,25 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-faint">
               Questions <span className="ml-1 tabular-nums text-muted">{lab.questions.length}</span>
             </h2>
-            <Button size="sm" onClick={() => setEditing("new")} disabled={editing === "new"}>
-              <Plus className="size-3.5" /> Add question
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setEditing("pick")} disabled={editing === "pick"}>
+                <Globe className="size-3.5" /> From a platform
+              </Button>
+              <Button size="sm" onClick={() => setEditing("new")} disabled={editing === "new"}>
+                <Plus className="size-3.5" /> Add question
+              </Button>
+            </div>
           </div>
+
+          <AnimatePresence>
+            {notes.length > 0 && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                className="mb-3 overflow-hidden rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+                {notes.map((n) => <p key={n}>{n}</p>)}
+                <button className="mt-1 font-medium underline" onClick={() => setNotes([])}>Dismiss</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <LayoutGroup>
             <motion.ol layout className="grid gap-3">
@@ -95,7 +116,8 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
                   <motion.li key={q.id} layout transition={spring} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}>
                     {editing === q.id ? (
-                      <QuestionForm index={i} initial={q} onCancel={() => setEditing(null)}
+                      <QuestionForm index={i} initial={q} harness={q.harness} onCancel={() => setEditing(null)}
+                        onTry={(code) => send<GradeResult>("POST", `/api/teach/questions/${q.id}/check`, { code })}
                         onSave={async (f) => { if (await write("PATCH", `/api/teach/questions/${q.id}`, f)) setEditing(null); }}
                         onDelete={q.n_sessions ? undefined : async () => { if (await write("DELETE", `/api/teach/questions/${q.id}`)) setEditing(null); }} />
                     ) : (
@@ -104,6 +126,21 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
                     )}
                   </motion.li>
                 ))}
+                {editing === "pick" && (
+                  <motion.li key="pick" layout variants={pop} initial="initial" animate="animate" exit="exit">
+                    <SourcePicker language={lab.language} onClose={() => setEditing(null)} onAuthLost={onAuthLost}
+                      onImport={async (provider, ref) => {
+                        const next = await write("POST", `/api/teach/labs/${lab.id}/import`, { provider, ref });
+                        if (next) { setEditing(null); setNotes(next.notes ?? []); }
+                        return !!next;
+                      }}
+                      onLink={async (provider, url, title) => {
+                        const next = await write("POST", `/api/teach/labs/${lab.id}/link`, { provider, url, title });
+                        if (next?.imported) setEditing(next.imported); // straight on to writing the prompt
+                        return !!next;
+                      }} />
+                  </motion.li>
+                )}
                 {editing === "new" && (
                   <motion.li key="new" layout variants={pop} initial="initial" animate="animate" exit="exit">
                     <QuestionForm index={lab.questions.length} initial={BLANK} onCancel={() => setEditing(null)}
@@ -118,8 +155,13 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
               <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent"><Code2 className="size-5" /></span>
               <p className="text-sm font-medium text-text">Add the first question</p>
-              <p className="max-w-sm text-sm text-muted">Each question has a prompt, optional starter code that opens in the editor, and a sample input.</p>
-              <Button variant="primary" size="sm" className="mt-2" onClick={() => setEditing("new")}><Plus className="size-3.5" /> Add question</Button>
+              <p className="max-w-sm text-sm text-muted">
+                Write your own (a prompt, optional starter code, a sample input and optional tests), or pick one from a platform.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" onClick={() => setEditing("pick")}><Globe className="size-3.5" /> From a platform</Button>
+                <Button variant="primary" size="sm" onClick={() => setEditing("new")}><Plus className="size-3.5" /> Add question</Button>
+              </div>
             </Card>
           )}
         </motion.section>
@@ -129,6 +171,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             <CompetitionPanel labId={lab.id} version={lab} onAuthLost={onAuthLost}
               onChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
           )}
+          <Settings lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
           <Assign lab={lab} onSave={(student_ids, everyone) => write("PUT", `/api/teach/labs/${lab.id}/roster`, { student_ids, everyone })} onAuthLost={onAuthLost} />
           <Progress lab={lab} />
         </motion.aside>
@@ -144,7 +187,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
   );
 }
 
-function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: string; description?: string }) => Promise<boolean> }) {
+function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: string; description?: string }) => Promise<unknown> }) {
   const [title, setTitle] = useState(lab.title);
   const [description, setDescription] = useState(lab.description);
   const [saved, setSaved] = useState(false);
@@ -215,9 +258,15 @@ function QuestionCard({ q, index, first, last, onEdit, onMove }: {
         <div className="flex flex-wrap items-center gap-2">
           <strong className="text-[15px] font-semibold text-text">{q.title}</strong>
           {q.starter_code && <Badge className="h-5 px-2 text-[11px]">Starter code</Badge>}
+          {q.tests.length > 0 && (
+            <Badge tone="accent" className="h-5 gap-1 px-2 text-[11px]"><FlaskConical className="size-3" />{q.tests.length} test{q.tests.length === 1 ? "" : "s"}</Badge>
+          )}
+          <SourceBadge source={q.source} />
           {q.n_sessions > 0 && <Badge tone="accent" className="h-5 px-2 text-[11px]">{q.n_sessions} session{q.n_sessions === 1 ? "" : "s"}</Badge>}
         </div>
-        <p className="mt-1 line-clamp-2 whitespace-pre-line text-[13px] leading-relaxed text-muted">{q.prompt || "No prompt yet"}</p>
+        <p className="mt-1 line-clamp-2 whitespace-pre-line text-[13px] leading-relaxed text-muted">
+          {q.prompt || (q.source?.linked_only ? "Linked question: write the prompt in your own words" : "No prompt yet")}
+        </p>
         {q.starter_code && (
           <pre className="mt-2.5 max-h-20 overflow-hidden rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">{q.starter_code}</pre>
         )}
@@ -243,14 +292,16 @@ function indentOnTab(e: KeyboardEvent<HTMLTextAreaElement>, set: (v: string) => 
   requestAnimationFrame(() => el.setSelectionRange(a + 4, a + 4));
 }
 
-function QuestionForm({ index, initial, onSave, onCancel, onDelete }: {
-  index: number; initial: QuestionFields; onSave: (f: QuestionFields) => Promise<void>; onCancel: () => void; onDelete?: () => Promise<void>;
+function QuestionForm({ index, initial, harness, onSave, onCancel, onDelete, onTry }: {
+  index: number; initial: QuestionFields; harness?: string; onSave: (f: QuestionFields) => Promise<void>; onCancel: () => void;
+  onDelete?: () => Promise<void>; onTry?: (code: string) => Promise<GradeResult>;
 }) {
   const [f, setF] = useState<QuestionFields>({
     title: initial.title, prompt: initial.prompt, starter_code: initial.starter_code, sample_input: initial.sample_input,
+    tests: initial.tests,
   });
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof QuestionFields) => (v: string) => setF((p) => ({ ...p, [k]: v }));
+  const set = (k: Exclude<keyof QuestionFields, "tests">) => (v: string) => setF((p) => ({ ...p, [k]: v }));
   const isNew = !initial.title;
 
   const save = async () => { setBusy(true); await onSave(f); setBusy(false); };
@@ -280,8 +331,10 @@ function QuestionForm({ index, initial, onSave, onCancel, onDelete }: {
               placeholder={"listen\nsilent"} className="bg-surface-2 font-mono text-[12.5px] leading-relaxed" />
           </Field>
         </div>
+        <TestsEditor tests={f.tests} onChange={(tests) => setF((p) => ({ ...p, tests }))} harness={harness} />
+        {!isNew && onTry && initial.tests.length > 0 && <TryAnswer run={onTry} starter={initial.starter_code} />}
         {!isNew && (
-          <p className="text-xs text-faint">Sessions already recorded keep the version of the question the student saw.</p>
+          <p className="text-xs text-faint">Sessions already recorded keep the version of the question the student saw, tests included.</p>
         )}
         <div className="flex items-center gap-2">
           {onDelete && !isNew && (
@@ -301,8 +354,28 @@ function QuestionForm({ index, initial, onSave, onCancel, onDelete }: {
   );
 }
 
+/** Subject and programming language for the whole lab. */
+function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: string; language?: Language }) => Promise<unknown> }) {
+  const [subject, setSubject] = useState(lab.subject);
+  useEffect(() => setSubject(lab.subject), [lab.subject]);
+  return (
+    <Card className="p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><BookOpen className="size-4 text-accent" /> Session settings</h2>
+      <div className="mt-4 grid gap-3">
+        <Field label="Subject">
+          <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} placeholder="Data Structures" className="h-9 text-[13px]"
+            onBlur={() => subject.trim() !== lab.subject && void onSave({ subject })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
+        </Field>
+        <Field label="Programming language" hint={`Students write and run ${LANGUAGES[lab.language].label} in ${LANGUAGES[lab.language].file}.${lab.n_sessions ? " Recorded sessions keep the language they used." : ""}`}>
+          <LanguageSelect value={lab.language} onChange={(language) => void onSave({ language })} className="[&_select]:h-9 [&_select]:text-[13px]" />
+        </Field>
+      </div>
+    </Card>
+  );
+}
+
 function Assign({ lab, onSave, onAuthLost }: {
-  lab: LabDetail; onSave: (ids: string[], everyone: boolean) => Promise<boolean>; onAuthLost: () => void;
+  lab: LabDetail; onSave: (ids: string[], everyone: boolean) => Promise<unknown>; onAuthLost: () => void;
 }) {
   const [known, setKnown] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
