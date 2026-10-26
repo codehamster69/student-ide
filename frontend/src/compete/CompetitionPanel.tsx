@@ -62,7 +62,7 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
   const ready = c.questions.length > 0 && untested.length === 0;
 
   return (
-    <Card className="relative overflow-hidden border-gold/30 p-5">
+    <Card className="relative overflow-clip border-gold/30 p-5">
       <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><Trophy className="size-4 text-gold" /> Competition</h2>

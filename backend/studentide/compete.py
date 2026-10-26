@@ -156,8 +156,9 @@ def score(comp: dict, question_ids: list[str], players: dict[str, str], runs: li
         qs.tries += 1
         solved = sub["passed"] == sub["total"]
         pts = round(SOLVE_PTS * sub["passed"] / sub["total"])
-        if solved and duration and end is not None:
-            pts += round(SPEED_PTS * max(0.0, (end - t) / duration))
+        if solved and duration:
+            # measured against the planned end, so ending early never shrinks a bonus already earned
+            pts += round(SPEED_PTS * max(0.0, (start + duration - t) / duration))
         if pts > qs.points:
             gains[s].append((t, pts - qs.points))
             qs.points, qs.passed, qs.total = pts, sub["passed"], sub["total"]

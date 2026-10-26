@@ -22,15 +22,20 @@ export function SubmitDialog({ verdict, onClose, onLeave }: {
       title={failed ? "Could not submit" : solved ? "All tests passed!" : `${r?.passed ?? 0} of ${r?.total ?? 0} tests passed`}
       description={failed ? (verdict as { error: string }).error : r && (
         <div className="grid gap-3">
-          <ol className="grid gap-1">
+          <ol className="grid max-h-[50vh] gap-1 overflow-y-auto">
             {r.results.map((t, i) => (
               <motion.li key={t.name + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ ...spring, delay: 0.08 * i }}
-                className={cn("flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px]", t.passed ? "bg-success-soft" : "bg-danger-soft")}>
+                className={cn("flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg px-2.5 py-1.5 text-[13px]", t.passed ? "bg-success-soft" : "bg-danger-soft")}>
                 {t.passed ? <CheckCircle2 className="size-4 text-success" /> : <CircleX className="size-4 text-danger" />}
                 <span className="flex-1 text-text">{t.name}</span>
                 {t.hidden && <span className="flex items-center gap-1 text-[11px] text-muted"><EyeOff className="size-3" />hidden</span>}
                 {!t.passed && t.error_type && <span className="font-mono text-[11px] text-danger">{t.error_type}</span>}
+                {!t.passed && !t.hidden && !t.error_type && t.expected !== undefined && (
+                  <span className="basis-full font-mono text-[11px] text-muted">
+                    expected <span className="text-text">{clip(t.expected)}</span>, got <span className="text-danger">{clip(t.stdout ?? "")}</span>
+                  </span>
+                )}
               </motion.li>
             ))}
           </ol>
@@ -53,3 +58,8 @@ export function SubmitDialog({ verdict, onClose, onLeave }: {
     />
   );
 }
+
+const clip = (s: string) => {
+  const one = s.trim().replace(/\n/g, " ⏎ ");
+  return one.length > 60 ? one.slice(0, 60) + "…" : one || "(nothing)";
+};

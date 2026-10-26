@@ -21,14 +21,16 @@ export function Ticker({ value, className }: { value: number; className?: string
   return <motion.span className={cn("tabular-nums", className)}>{text}</motion.span>;
 }
 
-export function RankMark({ rank, className }: { rank: number; className?: string }) {
+/** Medals only go to someone who has scored: at 0 points nobody is "first". */
+export function RankMark({ rank, points = 1, className }: { rank: number; points?: number; className?: string }) {
+  const medal = rank <= 3 && points > 0;
   return (
     <span className={cn(
       "grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold tabular-nums ring-1",
-      rank <= 3 ? MEDAL[rank - 1] : "bg-surface-2 text-muted ring-border",
+      medal ? MEDAL[rank - 1] : "bg-surface-2 text-muted ring-border",
       className,
     )}>
-      {rank === 1 ? <Crown className="size-4" /> : rank}
+      {rank === 1 && medal ? <Crown className="size-4" /> : rank}
     </span>
   );
 }
@@ -89,9 +91,9 @@ export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, em
                   "relative flex items-center gap-3 rounded-xl border px-3",
                   big ? "py-3" : "py-2",
                   r.me ? "border-accent/50 bg-accent-soft/60" : "border-border bg-surface",
-                  r.rank === 1 && !r.me && "border-gold/40",
+                  r.rank === 1 && r.points > 0 && !r.me && "border-gold/40",
                 )}>
-                <RankMark rank={r.rank} className={big ? "size-10 text-base" : undefined} />
+                <RankMark rank={r.rank} points={r.points} className={big ? "size-10 text-base" : undefined} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <strong className={cn("truncate font-semibold text-text", big ? "text-lg" : "text-sm")}>{r.handle}</strong>
@@ -156,7 +158,7 @@ export function Countdown({ comp, offset, className }: { comp: Pick<CompSettings
 
 /** Top three on rising steps, for the end of a competition. */
 export function Podium({ rows }: { rows: BoardRow[] }) {
-  const order = [1, 0, 2].map((i) => rows[i]).filter(Boolean);
+  const order = [1, 0, 2].map((i) => rows[i]).filter((r) => r && r.points > 0);
   const height = ["h-28", "h-20", "h-14"];
   return (
     <div className="flex items-end justify-center gap-3 pt-4">

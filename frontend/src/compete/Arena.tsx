@@ -148,7 +148,7 @@ function Lobby({ view, studentId, onJoined }: { view: ArenaView; studentId: stri
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_1fr]">
-      <Card className="relative overflow-hidden p-6">
+      <Card className="relative overflow-clip p-6">
         <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-gold/10 blur-2xl" />
         <motion.span animate={{ rotate: [0, -8, 8, 0] }} transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 2.4 }}
           className="grid size-12 place-items-center rounded-2xl bg-gold-soft text-gold"><Trophy className="size-6" /></motion.span>
@@ -191,7 +191,7 @@ function Lobby({ view, studentId, onJoined }: { view: ArenaView; studentId: stri
 function MyStanding({ me, nQ, ended }: { me: NonNullable<ArenaView["me"]>; nQ: number; ended: boolean }) {
   return (
     <Card className="flex flex-wrap items-center gap-5 p-5">
-      <RankMark rank={me.rank} className="size-12 text-lg" />
+      <RankMark rank={me.rank} points={me.points} className="size-12 text-lg" />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-muted">{ended ? "You finished" : "You are"}</p>
         <p className="text-lg font-semibold text-text">

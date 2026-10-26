@@ -69,7 +69,8 @@ export interface ArenaView extends CompSettings {
 export interface SubmitResult {
   passed: number;
   total: number;
-  results: { name: string; passed: boolean; hidden: boolean; error_type: string | null }[];
+  /** stdout and expected are only present for tests that are not hidden */
+  results: { name: string; passed: boolean; hidden: boolean; error_type: string | null; stdout?: string; expected?: string }[];
   standing: ArenaView["me"];
 }
 

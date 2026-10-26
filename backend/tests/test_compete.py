@@ -129,6 +129,9 @@ def test_score_partial_credit_speed_and_ties():
     assert pts == {"a": 125, "b": 50, "c": 50, "d": 0}
     assert [p.student_id for p in ranked] == ["a", "b", "c", "d"]
     assert ranked[1].questions["q1"].tries == 2
+    # the teacher ending early does not change bonuses already earned
+    early = compete.score(comp | {"ends_at": 400.0}, ["q1"], players, [], subs)
+    assert next(p.points for p in early if p.student_id == "a") == 125
 
 
 def test_runs_never_score_but_earn_a_badge():

@@ -144,7 +144,7 @@ function CompetitionCard({ lab, delay, onOpen }: { lab: Lab; delay: number; onOp
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay, ...spring } }}
       whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }} transition={spring}
       onClick={onOpen}
-      className="group relative mt-7 flex w-full items-center gap-5 overflow-hidden rounded-2xl border border-gold/30 bg-surface p-5 text-left shadow-md transition-[border-color,box-shadow] duration-200 hover:border-gold/60 hover:shadow-lg"
+      className="group relative mt-7 flex w-full items-center gap-5 overflow-clip rounded-2xl border border-gold/30 bg-surface p-5 text-left shadow-md transition-[border-color,box-shadow] duration-200 hover:border-gold/60 hover:shadow-lg"
     >
       <div className="pointer-events-none absolute -left-10 -top-16 size-48 rounded-full bg-gold/10 blur-3xl" />
       <span className="relative grid size-12 shrink-0 place-items-center rounded-2xl bg-gold-soft text-gold"><Trophy className="size-6" /></span>
