@@ -29,6 +29,10 @@ All four containers come from one image (`Dockerfile` at the repo root) and
 
 ## 1. A VM in India
 
+The running pilot (GCP Mumbai, studentide.hokora.xyz) is described in
+[deploy/gcp/README.md](../deploy/gcp/README.md).
+
+
 Pick an India region so personal data stays in the country (the safe reading
 of the DPDP Act 2023 for a college; also the simplest story for the ethics
 committee):
