@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS labs (
     description   TEXT NOT NULL DEFAULT '',
     status        TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'closed')),
     everyone      INTEGER NOT NULL DEFAULT 0,  -- 1 = every consented student, roster ignored
+    subject       TEXT NOT NULL DEFAULT '',    -- e.g. "Data Structures"; free text
+    language      TEXT NOT NULL DEFAULT 'python',  -- runner.LANGUAGES key the editor and runner use
     created_at    REAL NOT NULL,
     updated_at    REAL NOT NULL
 );
@@ -80,6 +82,9 @@ CREATE TABLE IF NOT EXISTS questions (
     prompt        TEXT NOT NULL DEFAULT '',
     starter_code  TEXT NOT NULL DEFAULT '',
     sample_input  TEXT NOT NULL DEFAULT '',
+    tests_json    TEXT NOT NULL DEFAULT '[]',  -- optional: [{name, stdin, expected, hidden, compare}], see grading.py
+    harness       TEXT NOT NULL DEFAULT '',    -- optional code appended after the student's when tests run
+    source_json   TEXT,                        -- where an imported question came from (provider, url, license)
     created_at    REAL NOT NULL,
     updated_at    REAL NOT NULL
 );
@@ -92,12 +97,29 @@ CREATE TABLE IF NOT EXISTS lab_students (
     student_id    TEXT NOT NULL,
     PRIMARY KEY (lab_id, student_id)
 ) WITHOUT ROWID;
+
+-- A student pressing "Check": their code against the question's tests. Kept
+-- server side (not as a client event) so the event schema stays at v1.
+CREATE TABLE IF NOT EXISTS checks (
+    id            TEXT PRIMARY KEY,
+    session_id    TEXT NOT NULL REFERENCES sessions(id),
+    created_at    REAL NOT NULL,
+    code          TEXT NOT NULL,
+    passed        INTEGER NOT NULL,
+    total         INTEGER NOT NULL,
+    results_json  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
 """
 
 # Columns added after phase 1. Older database files get them on open.
 MIGRATIONS = {
     "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT")),
+    "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'")),
+    "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
+                  ("source_json", "TEXT")),
 }
+QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json")
 
 
 class Database:
@@ -230,6 +252,15 @@ class Database:
         with self.connect() as conn:
             return conn.execute("SELECT * FROM runs WHERE session_id = ? ORDER BY created_at", (session_id,)).fetchall()
 
+    def insert_check(self, check_id: str, session_id: str, code: str, grade: dict) -> None:
+        with self.connect() as conn:
+            conn.execute("INSERT INTO checks(id, session_id, created_at, code, passed, total, results_json) VALUES (?,?,?,?,?,?,?)",
+                         (check_id, session_id, time.time(), code, grade["passed"], grade["total"], json.dumps(grade["results"])))
+
+    def list_checks(self, session_id: str) -> list[sqlite3.Row]:
+        with self.connect() as conn:
+            return conn.execute("SELECT * FROM checks WHERE session_id = ? ORDER BY created_at", (session_id,)).fetchall()
+
     # labs and questions (teacher authoring) -----------------------------------
 
     def create_lab(self, lab_id: str, title: str, description: str) -> None:
@@ -253,7 +284,8 @@ class Database:
                    FROM labs l ORDER BY l.created_at DESC""").fetchall()
 
     def update_lab(self, lab_id: str, fields: dict) -> None:
-        allowed = {k: v for k, v in fields.items() if k in ("title", "description", "status", "everyone")}
+        allowed = {k: v for k, v in fields.items()
+                   if k in ("title", "description", "status", "everyone", "subject", "language")}
         if not allowed:
             return
         sets = ", ".join(f"{k} = ?" for k in allowed)
@@ -276,15 +308,16 @@ class Database:
         now = time.time()
         with self.connect() as conn:
             pos = conn.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM questions WHERE lab_id = ?", (lab_id,)).fetchone()[0]
+            cols = [c for c in QUESTION_FIELDS if c in q]
             conn.execute(
-                """INSERT INTO questions(id, lab_id, position, title, prompt, starter_code, sample_input, created_at, updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,?)""",
-                (question_id, lab_id, pos, q["title"], q["prompt"], q["starter_code"], q["sample_input"], now, now),
+                f"""INSERT INTO questions(id, lab_id, position, {', '.join(cols)}, created_at, updated_at)
+                    VALUES (?,?,?,{','.join('?' * len(cols))},?,?)""",
+                (question_id, lab_id, pos, *(q[c] for c in cols), now, now),
             )
             conn.execute("UPDATE labs SET updated_at = ? WHERE id = ?", (now, lab_id))
 
     def update_question(self, question_id: str, fields: dict) -> None:
-        allowed = {k: v for k, v in fields.items() if k in ("title", "prompt", "starter_code", "sample_input")}
+        allowed = {k: v for k, v in fields.items() if k in QUESTION_FIELDS}
         if not allowed:
             return
         sets = ", ".join(f"{k} = ?" for k in allowed)

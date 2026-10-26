@@ -7,13 +7,15 @@ Student-facing (no auth beyond a roll number, the lab is supervised):
     POST /api/consent                   {student_id}
     POST /api/sessions                  {student_id, task_id | question_id, client_meta}
     POST /api/sessions/{id}/events      {schema_version, events: [...]}
-    POST /api/sessions/{id}/run         {code, stdin}
+    POST /api/sessions/{id}/run         {code, stdin}   in the lab's language (Python for practice tasks)
+    POST /api/sessions/{id}/check       {code}          against the question's tests, if it has any
 
 Research-facing (needs header X-Admin-Token = $STUDENTIDE_ADMIN_TOKEN;
 disabled entirely when that variable is unset):
     GET  /api/sessions[?student_id=]
     GET  /api/sessions/{id}/events
     GET  /api/sessions/{id}/runs
+    GET  /api/sessions/{id}/checks
 
 Review timeline (phase 3, same token):
     GET  /api/review/config
@@ -43,7 +45,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import runner, teach
+from . import grading, runner, teach
 from .db import Database
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .schema import SCHEMA_VERSION, Event
@@ -68,6 +70,10 @@ class SessionIn(BaseModel):
 class RunIn(BaseModel):
     code: str = Field(max_length=200_000)
     stdin: str = Field(default="", max_length=100_000)
+
+
+class CheckIn(BaseModel):
+    code: str = Field(max_length=200_000)
 
 
 def _student_id(raw: str) -> str:
@@ -123,7 +129,9 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             q = db.get_question(body.question_id)
             if q is None or q["lab_id"] not in {l["id"] for l in db.labs_for_student(sid)}:
                 raise HTTPException(403, "this question is not open for you")
-            question = teach.question_json(q)
+            lab = db.get_lab(q["lab_id"])
+            # The snapshot keeps everything the session ran against, hidden tests included.
+            question = teach.question_json(q) | {"language": lab["language"], "subject": lab["subject"]}
             task_id = q["id"]
         elif body.task_id in TASK_IDS:
             task_id = body.task_id
@@ -169,10 +177,14 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                 db.end_session(session_id, ev["data"].get("reason") or "end")
         return {"accepted": len(good), "inserted": inserted, "rejected": rejected, "max_seq": db.max_seq(session_id)}
 
+    def snapshot(row) -> dict:
+        """The question as the student saw it when the session started (empty for practice tasks)."""
+        return json.loads(row["question_json"]) if row["question_json"] else {}
+
     @app.post("/api/sessions/{session_id}/run")
     def run(session_id: str, body: RunIn) -> dict:
-        live_session(session_id)
-        res = runner.run_python(body.code, body.stdin)
+        row = live_session(session_id)
+        res = runner.run(body.code, body.stdin, snapshot(row).get("language", "python"))
         run_id = uuid.uuid4().hex
         db.insert_run({
             "id": run_id, "session_id": session_id, "created_at": time.time(),
@@ -185,6 +197,18 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             "stdout": res.stdout, "stderr": res.stderr,
             "exit_code": res.exit_code, "duration_ms": res.duration_ms, "error_type": res.error_type,
         }
+
+    @app.post("/api/sessions/{session_id}/check")
+    def check(session_id: str, body: CheckIn) -> dict:
+        """Checks against the tests in the session's snapshot, so a question edited
+        mid-session never changes what an open session is checked against."""
+        q = snapshot(live_session(session_id))
+        graded = grading.grade(q, body.code, q.get("language", "python")) if q else None
+        if graded is None:
+            raise HTTPException(409, "this question has no test cases")
+        check_id = uuid.uuid4().hex
+        db.insert_check(check_id, session_id, body.code, graded)
+        return graded | {"check_id": check_id, "code_sha256": hashlib.sha256(body.code.encode()).hexdigest()}
 
     @app.get("/api/sessions", dependencies=[Depends(require_admin)])
     def sessions(student_id: str | None = None, lab_id: str | None = None) -> list[dict]:
@@ -205,6 +229,11 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def session_runs(session_id: str) -> list[dict]:
         live_session(session_id)
         return [dict(r) for r in db.list_runs(session_id)]
+
+    @app.get("/api/sessions/{session_id}/checks", dependencies=[Depends(require_admin)])
+    def session_checks(session_id: str) -> list[dict]:
+        live_session(session_id)
+        return [dict(r) | {"results_json": json.loads(r["results_json"])} for r in db.list_checks(session_id)]
 
     @app.get("/api/review/config", dependencies=[Depends(require_admin)])
     def review_config() -> dict:

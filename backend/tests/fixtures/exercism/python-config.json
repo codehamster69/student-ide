@@ -1,0 +1,83 @@
+{
+ "exercises": {
+  "practice": [
+   {
+    "slug": "reverse-string",
+    "name": "Reverse String",
+    "uuid": "d39f86fe-db56-461c-8a93-d87058af8366",
+    "practices": [
+     "sequences"
+    ],
+    "prerequisites": [
+     "basics",
+     "bools",
+     "conditionals",
+     "strings"
+    ],
+    "difficulty": 1
+   },
+   {
+    "slug": "isogram",
+    "name": "Isogram",
+    "uuid": "d1a98c79-d3cc-4035-baab-0e334d2b6a57",
+    "practices": [
+     "strings"
+    ],
+    "prerequisites": [
+     "strings"
+    ],
+    "difficulty": 1
+   },
+   {
+    "slug": "two-fer",
+    "name": "Two Fer",
+    "uuid": "4177de10-f767-4306-b45d-5e9c08ef4753",
+    "practices": [
+     "function-arguments"
+    ],
+    "prerequisites": [
+     "basics",
+     "sets"
+    ],
+    "difficulty": 1
+   },
+   {
+    "slug": "high-scores",
+    "name": "High Scores",
+    "uuid": "574d6323-5ff5-4019-9ebe-0067daafba13",
+    "practices": [
+     "classes"
+    ],
+    "prerequisites": [
+     "basics",
+     "lists",
+     "list-methods",
+     "classes"
+    ],
+    "difficulty": 3
+   },
+   {
+    "slug": "zipper",
+    "name": "Zipper",
+    "uuid": "569210ea-71c1-4fd2-941e-6bf0d953019e",
+    "practices": [
+     "class-customization",
+     "none"
+    ],
+    "prerequisites": [
+     "basics",
+     "bools",
+     "conditionals",
+     "classes",
+     "dicts",
+     "lists",
+     "list-methods",
+     "loops",
+     "numbers",
+     "strings"
+    ],
+    "difficulty": 6
+   }
+  ]
+ }
+}
