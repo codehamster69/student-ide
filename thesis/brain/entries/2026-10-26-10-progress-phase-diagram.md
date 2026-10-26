@@ -1,8 +1,8 @@
 ---
 date: 2026-10-26
 type: event
-title: Progress phase diagram added (Artifact page, STATUS.md with Mermaid, TikZ in appendix D)
-thesis-chapter: appendices/D-project-progress
+title: Progress phase diagram added (Artifact page, STATUS.md with Mermaid, TikZ in appendix E)
+thesis-chapter: appendices/E-project-progress
 ---
 
 ## What happened
@@ -14,7 +14,7 @@ pending. Three views of the same data were added:
   `thesis/progress/phase-diagram.html` (statuses in its JS data block).
 - `thesis/progress/STATUS.md`: tables per track plus a Mermaid diagram that
   GitHub renders.
-- `thesis/latex/flowcharts/phase-progress.tex`, shown as appendix D.
+- `thesis/latex/flowcharts/phase-progress.tex`, shown as appendix E.
 
 State on this date: thesis folder (#1), related work (#3), editor (#2) and UI
 redesign (#5) merged; detector (#6) open and being reworked; dashboard and

@@ -3,7 +3,7 @@
 Last updated: **2026-10-26**. Live page: <https://claude.ai/artifact/7nwKBLuR3yH3HDyJ3588Bd>
 (private; its source is [`phase-diagram.html`](phase-diagram.html)). The same picture for the
 thesis is the TikZ figure [`latex/flowcharts/phase-progress.tex`](../latex/flowcharts/phase-progress.tex),
-shown in appendix D.
+shown in appendix E.
 
 **Keep these in step.** When a PR finishes or changes a tracked item, update this file,
 the data block at the bottom of `phase-diagram.html`, and the TikZ figure in the same PR,
