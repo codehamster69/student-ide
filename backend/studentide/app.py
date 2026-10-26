@@ -25,6 +25,8 @@ Review timeline (phase 3, same token):
     GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
 
 Teacher authoring (same token): /api/teach/*, see teach.py.
+Class competitions: /api/teach/competitions/*, /api/competitions/*,
+POST /api/sessions/{id}/submit, see compete.py.
 
 Run with:  uvicorn studentide.app:create_app --factory
 (env STUDENTIDE_DB picks the database file)
@@ -45,7 +47,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import grading, runner, teach
+from . import compete, grading, runner, teach
 from .db import Database
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .schema import SCHEMA_VERSION, Event
@@ -139,6 +141,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             raise HTTPException(400, "unknown task")
         if db.get_or_create_student(sid)["consented_at"] is None:
             raise HTTPException(403, "consent required before recording")
+        if question:
+            compete.can_start_session(db, question["lab_id"], sid)
         session_id = uuid.uuid4().hex
         db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question)
         return {"session_id": session_id, "schema_version": SCHEMA_VERSION,
@@ -271,6 +275,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return replay_data(db, session_id)
 
     app.include_router(teach.router(db, require_admin))
+    app.include_router(compete.router(db, require_admin))
 
     if serve_frontend and FRONTEND_DIST.is_dir():
         app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

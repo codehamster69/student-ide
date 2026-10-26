@@ -4,6 +4,7 @@ import { Activity, ListChecks, LogOut, MessagesSquare } from "lucide-react";
 import { Button, Logo, cn, page, spring } from "../ui";
 import { Labs } from "../teach/Labs";
 import { LabEditor } from "../teach/LabEditor";
+import { LiveBoard } from "../compete/LiveBoard";
 import { token } from "./api";
 import { Gate } from "./Gate";
 import { Overview } from "./Overview";
@@ -11,20 +12,22 @@ import { SessionView } from "./SessionView";
 
 type Route =
   | { name: "overview" } | { name: "session"; id: string }
-  | { name: "labs" } | { name: "lab"; id: string };
+  | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string };
 
 // Routes: #/review (overview), #/review/s/<session id>, #/teach (labs) and
-// #/teach/l/<lab id>. One teacher area, one token.
+// #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board). One teacher area, one token.
 function route(): Route {
   const s = location.hash.match(/^#\/review\/s\/([0-9a-f]+)/);
   if (s) return { name: "session", id: s[1] };
   const l = location.hash.match(/^#\/teach\/l\/([A-Za-z0-9_]+)/);
   if (l) return { name: "lab", id: l[1] };
+  const c = location.hash.match(/^#\/teach\/c\/([A-Za-z0-9_]+)/);
+  if (c) return { name: "board", id: c[1] };
   return location.hash.startsWith("#/teach") ? { name: "labs" } : { name: "overview" };
 }
 
 const TABS = [
-  { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" },
+  { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" || r.name === "board" },
   { href: "#/review", label: "Review", icon: Activity, match: (r: Route) => r.name === "overview" || r.name === "session" },
 ];
 
@@ -38,7 +41,7 @@ export function ReviewApp() {
     return () => window.removeEventListener("hashchange", on);
   }, []);
 
-  const teaching = r.name === "labs" || r.name === "lab";
+  const teaching = r.name === "labs" || r.name === "lab" || r.name === "board";
   useEffect(() => { document.title = `${teaching ? "Labs" : "Review"} · Student IDE`; }, [teaching]);
 
   const signOut = () => { token.clear(); setAuthed(false); };
@@ -87,6 +90,8 @@ export function ReviewApp() {
                 <Gate onDone={() => setAuthed(true)} />
               ) : r.name === "session" ? (
                 <SessionView id={r.id} onAuthLost={signOut} />
+              ) : r.name === "board" ? (
+                <LiveBoard id={r.id} onAuthLost={signOut} />
               ) : r.name === "lab" ? (
                 <LabEditor id={r.id} onAuthLost={signOut} />
               ) : r.name === "labs" ? (

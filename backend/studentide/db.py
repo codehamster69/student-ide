@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS labs (
     everyone      INTEGER NOT NULL DEFAULT 0,  -- 1 = every consented student, roster ignored
     subject       TEXT NOT NULL DEFAULT '',    -- e.g. "Data Structures"; free text
     language      TEXT NOT NULL DEFAULT 'python',  -- runner.LANGUAGES key the editor and runner use
+    kind          TEXT NOT NULL DEFAULT 'lab', -- 'lab' or 'competition' (see compete.py)
     created_at    REAL NOT NULL,
     updated_at    REAL NOT NULL
 );
@@ -115,7 +116,8 @@ CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
 # Columns added after phase 1. Older database files get them on open.
 MIGRATIONS = {
     "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT")),
-    "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'")),
+    "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
+             ("kind", "TEXT NOT NULL DEFAULT 'lab'")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
                   ("source_json", "TEXT")),
 }

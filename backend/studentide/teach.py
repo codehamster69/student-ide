@@ -147,8 +147,13 @@ def is_competition(lab) -> bool:
 def student_labs(db: Database, student_id: str) -> list[dict]:
     """What a student sees: open labs assigned to them, questions in order,
     and their own progress on each question."""
+    from .compete import student_card  # compete imports question_json from here
+
     out = []
     for lab in db.labs_for_student(student_id):
+        if lab["kind"] == "competition":
+            out.append(student_card(db, lab, student_id))
+            continue
         done = db.attempts(student_id, lab["id"])
         qs = []
         for q in db.lab_questions(lab["id"]):
@@ -157,7 +162,7 @@ def student_labs(db: Database, student_id: str) -> list[dict]:
                      **done.get(q["id"], {"sessions": 0, "submitted": False}))
             qs.append(d)
         if qs:
-            out.append({"id": lab["id"], "title": lab["title"], "description": lab["description"],
+            out.append({"id": lab["id"], "kind": "lab", "title": lab["title"], "description": lab["description"],
                         "subject": lab["subject"], "language": lab["language"], "questions": qs})
     return out
 

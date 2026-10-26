@@ -181,8 +181,7 @@ def test_competition_questions_keep_their_tests(client):
     lab = open_lab(client, questions=[{"title": "Sum", "tests": [{"stdin": "1 2", "expected": "3"}]}])
     qid = lab["questions"][0]["id"]
     db = client.app.state.db
-    with db.connect() as conn:  # the competitions work adds labs.kind; simulate it here
-        conn.execute("ALTER TABLE labs ADD COLUMN kind TEXT NOT NULL DEFAULT 'lab'")
+    with db.connect() as conn:
         conn.execute("UPDATE labs SET kind = 'competition' WHERE id = ?", (lab["id"],))
     assert client.patch(f"/api/teach/questions/{qid}", json={"tests": []}, headers=ADMIN).status_code == 409
     assert client.patch(f"/api/teach/questions/{qid}", json={"title": "Add"}, headers=ADMIN).status_code == 200

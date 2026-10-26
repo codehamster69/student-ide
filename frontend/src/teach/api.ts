@@ -7,6 +7,8 @@ export interface LabRow {
   title: string;
   description: string;
   status: LabStatus;
+  /** a class competition is a lab with a clock, test-graded submissions and a leaderboard */
+  kind: "lab" | "competition";
   everyone: boolean;
   created_at: number;
   updated_at: number;

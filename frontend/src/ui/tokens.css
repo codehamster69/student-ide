@@ -40,6 +40,13 @@
   --ch-identity: #4f46e5;
   --ch-pairs: #be185d;
   --ch-process: #0d9488;
+  /* podium (class competitions) */
+  --gold: #b7791f;
+  --gold-soft: #fdf4dc;
+  --silver: #64748b;
+  --silver-soft: #eef1f5;
+  --bronze: #a0522d;
+  --bronze-soft: #fbece3;
   --console-text: #d7dde8;
   --console-danger: #ff9b95;
 
@@ -88,6 +95,12 @@
     --ch-identity: #7c83f5;
     --ch-pairs: #f472b6;
     --ch-process: #0fa595;
+    --gold: #f5c451;
+    --gold-soft: rgb(245 196 81 / 0.14);
+    --silver: #cbd5e1;
+    --silver-soft: rgb(203 213 225 / 0.12);
+    --bronze: #f0a070;
+    --bronze-soft: rgb(240 160 112 / 0.13);
 
     --syn-keyword: #c4b5fd;
     --syn-string: #86efac;
@@ -133,6 +146,12 @@
   --ch-identity: #7c83f5;
   --ch-pairs: #f472b6;
   --ch-process: #0fa595;
+  --gold: #f5c451;
+  --gold-soft: rgb(245 196 81 / 0.14);
+  --silver: #cbd5e1;
+  --silver-soft: rgb(203 213 225 / 0.12);
+  --bronze: #f0a070;
+  --bronze-soft: rgb(240 160 112 / 0.13);
   --syn-keyword: #c4b5fd;
   --syn-string: #86efac;
   --syn-number: #fdba74;
@@ -178,6 +197,12 @@
   --color-ch-identity: var(--ch-identity);
   --color-ch-pairs: var(--ch-pairs);
   --color-ch-process: var(--ch-process);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-silver: var(--silver);
+  --color-silver-soft: var(--silver-soft);
+  --color-bronze: var(--bronze);
+  --color-bronze-soft: var(--bronze-soft);
 
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);

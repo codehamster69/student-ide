@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronRight, ListChecks, Plus, Users, X } from "lucide-react";
+import { ChevronRight, ListChecks, Plus, Trophy, Users, X } from "lucide-react";
 import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { dayTime } from "../review/format";
 import { STATUS, type LabDetail, type LabRow, type LabStatus } from "./api";
+import { BOARD_MODES, type BoardMode, type TeacherComp } from "../compete/api";
 
 const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutral", open: "success", closed: "warn" };
 
@@ -13,7 +14,7 @@ const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutra
 export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
   const [labs, setLabs] = useState<LabRow[] | null>(null);
   const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<false | "lab" | "competition">(false);
 
   useEffect(() => {
     get<LabRow[]>("/api/teach/labs").then(setLabs)
@@ -30,12 +31,17 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
             Every session a student records is linked to the lab and question they worked on.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setCreating(true)} disabled={creating}>
-          <Plus className="size-4" /> New lab
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setCreating("competition")} disabled={!!creating}>
+            <Trophy className="size-4 text-gold" /> New competition
+          </Button>
+          <Button variant="primary" onClick={() => setCreating("lab")} disabled={!!creating}>
+            <Plus className="size-4" /> New lab
+          </Button>
+        </div>
       </motion.div>
 
-      <AnimatePresence>{creating && <NewLab onClose={() => setCreating(false)} onAuthLost={onAuthLost} />}</AnimatePresence>
+      <AnimatePresence>{creating && <NewLab key={creating} kind={creating} onClose={() => setCreating(false)} onAuthLost={onAuthLost} />}</AnimatePresence>
 
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
 
@@ -48,7 +54,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
           <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><ListChecks className="size-5" /></span>
           <p className="text-sm font-medium text-text">No labs yet</p>
           <p className="max-w-sm text-sm text-muted">Create one, add a few questions, assign your students and open it when the class starts.</p>
-          <Button variant="primary" className="mt-2" onClick={() => setCreating(true)}><Plus className="size-4" /> New lab</Button>
+          <Button variant="primary" className="mt-2" onClick={() => setCreating("lab")}><Plus className="size-4" /> New lab</Button>
         </Card>
       )}
 
@@ -60,6 +66,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
                 className="group grid items-center gap-x-6 gap-y-2 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md md:grid-cols-[1fr_auto_auto_auto_1.25rem]">
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">
+                    {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
                     <strong className="truncate text-[15px] font-semibold text-text">{l.title}</strong>
                     <Badge tone={TONE[l.status]} className="h-5 px-2 text-[11px]">{STATUS[l.status].label}</Badge>
                   </span>
@@ -89,9 +96,12 @@ function Count({ icon: Icon, value, label }: { icon: typeof Users; value: number
   );
 }
 
-function NewLab({ onClose, onAuthLost }: { onClose: () => void; onAuthLost: () => void }) {
+function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; onClose: () => void; onAuthLost: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [minutes, setMinutes] = useState("30");
+  const [board, setBoard] = useState<BoardMode>("top");
+  const comp = kind === "competition";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -99,8 +109,11 @@ function NewLab({ onClose, onAuthLost }: { onClose: () => void; onAuthLost: () =
     e.preventDefault();
     setBusy(true);
     try {
-      const lab = await send<LabDetail>("POST", "/api/teach/labs", { title, description });
-      location.hash = `#/teach/l/${lab.id}`;
+      const id = comp
+        ? (await send<TeacherComp>("POST", "/api/teach/competitions",
+            { title, description, duration_min: Number(minutes) || null, board })).lab_id
+        : (await send<LabDetail>("POST", "/api/teach/labs", { title, description })).id;
+      location.hash = `#/teach/l/${id}`;
     } catch (err) {
       if (err instanceof AuthError) return onAuthLost();
       setError((err as Error).message);
@@ -113,12 +126,37 @@ function NewLab({ onClose, onAuthLost }: { onClose: () => void; onAuthLost: () =
       <Card className="p-6">
         <form onSubmit={submit} className="grid gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-text">New lab</h2>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-text">
+              {comp && <Trophy className="size-4 text-gold" />}{comp ? "New competition" : "New lab"}
+            </h2>
             <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cancel"><X className="size-4" /></Button>
           </div>
           <Field label="Title">
-            <Input autoFocus required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lab 5: Strings and dictionaries" />
+            <Input autoFocus required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)}
+              placeholder={comp ? "Friday sprint: strings" : "Lab 5: Strings and dictionaries"} />
           </Field>
+          {comp && (
+            <div className="grid gap-4 md:grid-cols-[160px_1fr]">
+              <Field label="Clock (minutes)" hint="Empty for no clock; you end it.">
+                <Input type="number" min={1} max={600} value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+              </Field>
+              <Field label="Students see" hint={BOARD_MODES[board].about}>
+                <div className="flex gap-1.5">
+                  {(Object.keys(BOARD_MODES) as BoardMode[]).map((m) => (
+                    <button type="button" key={m} onClick={() => setBoard(m)}
+                      className={cn("h-11 flex-1 rounded-lg border text-[13px] font-medium transition-colors",
+                        board === m ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-muted hover:text-text")}>
+                      {BOARD_MODES[m].label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <p className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted md:col-span-2">
+                Competitions are graded on test cases: every question needs at least one test before you can start the clock.
+                Students earn points for tests passed and a bonus for solving early. Nothing from the review timeline ever reaches the board.
+              </p>
+            </div>
+          )}
           <Field label="Instructions for students" hint="Optional. Shown above the questions.">
             <TextArea rows={3} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="Work through the questions in order. Run your code as often as you like." />
