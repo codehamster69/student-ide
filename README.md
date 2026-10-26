@@ -21,7 +21,10 @@ ever leads to a conversation, never a penalty.
   logger, feature extraction and statistics in one language.
 - **Frontend**: TypeScript, CodeMirror 6, Vite (`frontend/`). CodeMirror exposes every
   document change as a transaction with its origin (typed, pasted, undo, autocomplete…),
-  which is exactly what the logger needs.
+  which is exactly what the logger needs. The UI around the editor is React + Tailwind CSS
+  + Motion, built on a shared design system in `frontend/src/ui/` (see its README) that the
+  teacher dashboard will reuse. Event capture lives in framework-free `recorder.ts` and
+  `capture.ts`.
 
 ## Run it
 
@@ -52,6 +55,7 @@ snapshots, all per student and per session.
 ```bash
 cd backend && pytest                    # API, schema validation, runner, edit replay
 node frontend/e2e/record.mjs            # browser end-to-end (needs a running server)
+node frontend/e2e/screenshots.mjs out/ light   # thesis screenshots of every screen (or dark)
 ```
 
 ## Caveats

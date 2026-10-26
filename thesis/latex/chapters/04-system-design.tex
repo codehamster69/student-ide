@@ -14,6 +14,49 @@
 snapshot), timing precision, tech stack and why. Screenshot in
 \texttt{snapshots/}. Feeds from brain entries tagged 04-system-design.}
 
+\subsection{Student interface}
+The student-facing screens (sign-in, consent, task picker, editor, run
+output) were redesigned once the logger worked
+(\cref{fig:ui-before-after}). The interface is React with Tailwind CSS
+and the Motion animation library, on top of a small shared design system
+(colour tokens with light and dark themes, motion presets and UI
+primitives) that the teacher timeline will reuse.
+
+Motion is deliberately kept away from timing capture. The CodeMirror
+editor is created once and never re-rendered, so a keystroke causes no
+interface work beyond CodeMirror's own; animations run only on discrete
+actions (a run finishing, the finish dialog) and touch only opacity and
+transform so the browser can composite them off the main thread; and key
+times are taken from the browser event timestamp, not from when a handler
+runs. The end-to-end test confirms the event stream is unchanged
+(214 events of the same types before and after) and asserts that no main
+thread task longer than \SI{50}{\milli\second} overlaps the typing window.
+The consent text is unchanged; the motion respects the operating system's
+reduced-motion setting.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{ui-redesign/before-04-editor}
+    \caption{Phase 1 editor}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{ui-redesign/after-light-05-run-output}
+    \caption{Redesigned editor after a run}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{ui-redesign/after-light-01-login}
+    \caption{Sign-in with the keystroke-rhythm illustration}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{ui-redesign/after-light-02-consent}
+    \caption{Consent notice}
+  \end{subfigure}
+  \caption{Student interface before and after the redesign. All screens,
+  in light and dark themes, are in \texttt{snapshots/ui-redesign/}.}
+  \label{fig:ui-before-after}
+\end{figure}
+
 \section{Event schema and storage}
 \todo{Summary here, full schema in \cref{app:schema}.}
 
