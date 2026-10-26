@@ -19,7 +19,7 @@ flowchart LR
 
   subgraph Build["Build pipeline"]
     B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
-    B2 --> B3["3. Teacher timeline dashboard"]:::pend --> B4["4. Evaluation harness"]:::pend
+    B2 --> B3["3. Teacher timeline dashboard<br/>#8"]:::done --> B4["4. Evaluation harness"]:::pend
   end
 
   subgraph Study["Study (months 1 to 12)"]
@@ -44,8 +44,9 @@ flowchart LR
 | 2 Detector | Habit features per 30 s window | ✅ | #6 |
 | 2 Detector | Two-channel CUSUM (identity, process) | ✅ | #6 |
 | 2 Detector | Rework structural build-order features | ✅ | #6 |
-| 3 Dashboard | Evidence timeline per session (alarms, switch estimate, channel) | ⬜ | |
-| 3 Dashboard | Review view leading to a conversation, never a penalty | ⬜ | |
+| 3 Dashboard | Evidence timeline per session (alarms, switch estimate, channel) | ✅ | #8 |
+| 3 Dashboard | Review view leading to a conversation, never a penalty | ✅ | #8 |
+| 3 Dashboard | Code replay at any moment; simulated demo students | ✅ | #8 |
 | 4 Evaluation | Replay staged sessions A to E | ⬜ | |
 | 4 Evaluation | Calibrate alarm threshold on real baseline data | ⬜ | |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ⬜ | |
@@ -53,6 +54,9 @@ flowchart LR
 
 Detector, synthetic results (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
 median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
+
+Dashboard demo (6 simulated students): all 8 non-honest sessions got a moment to discuss on the
+expected channel, none of the 4 honest ones did.
 
 ## Study timeline
 
