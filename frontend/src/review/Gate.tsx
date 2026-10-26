@@ -54,7 +54,7 @@ export function Gate({ onDone }: { onDone: () => void }) {
 
       <Card variants={item} className="w-full p-8">
         <span className="mb-5 grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><KeyRound className="size-5" /></span>
-        <h2 className="text-xl font-semibold tracking-tight text-text">Reviewer access</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-text">Teacher access</h2>
         <p className="mt-1 text-sm text-muted">Enter the research token set on the server (<code className="font-mono text-xs">STUDENTIDE_ADMIN_TOKEN</code>).</p>
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <Field label="Access token">
@@ -71,7 +71,7 @@ export function Gate({ onDone }: { onDone: () => void }) {
           </AnimatePresence>
           <Button type="submit" variant="primary" size="lg" disabled={busy || !value.trim()} className="group w-full">
             {busy ? <Spinner /> : null}
-            Open review
+            Continue
             {!busy && <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />}
           </Button>
         </form>

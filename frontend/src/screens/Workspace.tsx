@@ -165,6 +165,12 @@ export function Workspace({ studentId, task, session, onFinished }: {
           {taskOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
         </Button>
         <div className="flex min-w-0 items-center gap-2 text-sm">
+          {task.lab_title && (
+            <>
+              <span className="hidden truncate text-muted sm:inline">{task.lab_title}</span>
+              <span className="hidden text-faint sm:inline">/</span>
+            </>
+          )}
           <span className="truncate font-semibold text-text">{task.title}</span>
           <span className="text-faint">/</span>
           <span className="font-mono text-xs text-muted">{studentId}</span>
@@ -209,7 +215,9 @@ export function Workspace({ studentId, task, session, onFinished }: {
               className="shrink-0 overflow-hidden border-r border-border bg-surface"
             >
               <div className="h-full w-[320px] overflow-y-auto p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">Task</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
+                  {task.lab_id ? `Question ${(task.position ?? 0) + 1}` : "Task"}
+                </p>
                 <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text">{task.title}</h2>
                 <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{task.prompt}</p>
                 {task.sample_input && (

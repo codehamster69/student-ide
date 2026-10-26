@@ -1,10 +1,11 @@
 """HTTP API for the lab editor.
 
 Student-facing (no auth beyond a roll number, the lab is supervised):
-    GET  /api/tasks
+    GET  /api/tasks                                built-in practice tasks
+    GET  /api/students/{id}/labs                   open labs assigned to this student
     POST /api/login                     {student_id}            -> consent status
     POST /api/consent                   {student_id}
-    POST /api/sessions                  {student_id, task_id, client_meta}
+    POST /api/sessions                  {student_id, task_id | question_id, client_meta}
     POST /api/sessions/{id}/events      {schema_version, events: [...]}
     POST /api/sessions/{id}/run         {code, stdin}
 
@@ -20,6 +21,8 @@ Review timeline (phase 3, same token):
     GET  /api/review/sessions[?student_id=]   per-session summary + flags
     GET  /api/review/sessions/{id}            evidence timeline
     GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
+
+Teacher authoring (same token): /api/teach/*, see teach.py.
 
 Run with:  uvicorn studentide.app:create_app --factory
 (env STUDENTIDE_DB picks the database file)
@@ -40,7 +43,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import runner
+from . import runner, teach
 from .db import Database
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .schema import SCHEMA_VERSION, Event
@@ -57,7 +60,8 @@ class LoginIn(BaseModel):
 
 class SessionIn(BaseModel):
     student_id: str
-    task_id: str
+    task_id: str | None = None      # a built-in practice task, or
+    question_id: str | None = None  # a question from a lab the teacher assigned
     client_meta: dict = Field(default_factory=dict)
 
 
@@ -114,13 +118,27 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     @app.post("/api/sessions")
     def start_session(body: SessionIn) -> dict:
         sid = _student_id(body.student_id)
-        if body.task_id not in TASK_IDS:
+        question = None
+        if body.question_id:
+            q = db.get_question(body.question_id)
+            if q is None or q["lab_id"] not in {l["id"] for l in db.labs_for_student(sid)}:
+                raise HTTPException(403, "this question is not open for you")
+            question = teach.question_json(q)
+            task_id = q["id"]
+        elif body.task_id in TASK_IDS:
+            task_id = body.task_id
+        else:
             raise HTTPException(400, "unknown task")
         if db.get_or_create_student(sid)["consented_at"] is None:
             raise HTTPException(403, "consent required before recording")
         session_id = uuid.uuid4().hex
-        db.create_session(session_id, sid, body.task_id, SCHEMA_VERSION, body.client_meta)
-        return {"session_id": session_id, "schema_version": SCHEMA_VERSION}
+        db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question)
+        return {"session_id": session_id, "schema_version": SCHEMA_VERSION,
+                "lab_id": question and question["lab_id"], "question_id": question and question["id"]}
+
+    @app.get("/api/students/{student_id}/labs")
+    def my_labs(student_id: str) -> list[dict]:
+        return teach.student_labs(db, _student_id(student_id))
 
     @app.post("/api/sessions/{session_id}/events")
     async def ingest(session_id: str, request: Request) -> dict:
@@ -169,11 +187,12 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         }
 
     @app.get("/api/sessions", dependencies=[Depends(require_admin)])
-    def sessions(student_id: str | None = None) -> list[dict]:
+    def sessions(student_id: str | None = None, lab_id: str | None = None) -> list[dict]:
         out = []
-        for r in db.list_sessions(student_id):
+        for r in db.list_sessions(student_id, lab_id):
             d = dict(r)
             d["client_meta"] = json.loads(d["client_meta"])
+            d["question_json"] = json.loads(d["question_json"]) if d["question_json"] else None
             out.append(d)
         return out
 
@@ -221,6 +240,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def review_replay(session_id: str) -> dict:
         live_session(session_id)
         return replay_data(db, session_id)
+
+    app.include_router(teach.router(db, require_admin))
 
     if serve_frontend and FRONTEND_DIST.is_dir():
         app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

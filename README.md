@@ -12,7 +12,7 @@ ever leads to a conversation, never a penalty.
 |-------|--------|
 | 1. Event-logging editor | done |
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
-| 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md) |
+| 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
 
 ## Stack
@@ -95,4 +95,4 @@ python -m studentide.seed --db data/demo.sqlite3     # simulated students to loo
 STUDENTIDE_DB=data/demo.sqlite3 STUDENTIDE_ADMIN_TOKEN=change-me uvicorn studentide.app:create_app --factory
 ```
 
-Open http://localhost:8000/#/review. Details in [docs/review.md](docs/review.md).
+Open http://localhost:8000/#/review for the timeline and http://localhost:8000/#/teach to create labs and questions. Details in [docs/review.md](docs/review.md) and [docs/teaching.md](docs/teaching.md).

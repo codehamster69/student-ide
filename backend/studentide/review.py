@@ -375,6 +375,9 @@ def _session_json(s: dict, duration_s: float, in_baseline: bool) -> dict:
     meta = json.loads(s["client_meta"]) if isinstance(s["client_meta"], str) else s["client_meta"]
     out = {k: s[k] for k in ("id", "student_id", "task_id", "started_at", "ended_at", "end_reason", "n_events")}
     out["duration_s"] = duration_s
+    q = json.loads(s["question_json"]) if s.get("question_json") else None
+    out["lab_id"] = s.get("lab_id")
+    out["task_title"] = q["title"] if q else None  # lab questions carry their own title; practice tasks are looked up client-side
     out["phase"] = "baseline" if in_baseline else "assessed"
     syn = meta.get("synthetic")
     out["synthetic"] = syn if isinstance(syn, dict) else None  # ground truth, demo data only
