@@ -17,7 +17,7 @@ pending. Three views of the same data were added:
 - `thesis/latex/flowcharts/phase-progress.tex`, shown as appendix E.
 
 State on this date: thesis folder (#1), related work (#3), editor (#2) and UI
-redesign (#5) merged; detector (#6) open and being reworked; dashboard and
+redesign (#5) merged; detector (#6) merged (step 2 done); dashboard and
 evaluation harness not started; survey, ethics approval and all real data
 collection not started; official IIIT Surat template pending.
 
@@ -28,11 +28,11 @@ dashboard, evaluation) and a study timeline (phases 0 to 3 over months 1 to
 12). Showing them as two lanes with cross-lane dependencies (logger feeds
 phase 0, ethics gates phase 1, phase 2 data feeds the evaluation harness)
 makes the critical path visible: ethics approval is now the item that blocks
-the study, while the detector is the item that blocks the build.
+the study, while the teacher dashboard is the next build step.
 
 ## Evidence
 
-Files listed above. 26 tracked items: 6 done, 5 in progress, 15 pending.
+Files listed above. 26 tracked items: 10 done, 1 in progress, 15 pending. (Written after #6 merged; threshold calibration moved to step 4, since it needs real baseline data.)
 
 ## Follow-ups
 

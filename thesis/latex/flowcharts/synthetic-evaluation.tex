@@ -1,0 +1,20 @@
+% Synthetic-data evaluation protocol (phase 2). Used in chapter 5/7 via \tikzfig{synthetic-evaluation}.
+% Code: backend/studentide/detector/{synth,evaluate}.py
+\begin{tikzpicture}[
+    node distance=6mm and 6mm,
+    box/.style={rectangle, rounded corners, draw, thick, align=center,
+                minimum width=2.4cm, minimum height=0.95cm, font=\small},
+    arrow/.style={-{Stealth}, thick}]
+  \node[box] (pop) {Simulated typists\\(habit profiles,\\day-to-day drift)};
+  \node[box, right=of pop] (base) {4 honest\\baseline sessions\\each};
+  \node[box, below=of base] (test) {Test sessions:\\A honest$\times$2, B proxy,\\C takeover$\times$2,\\D copying, E paste};
+  \node[box, right=of base] (cal) {Calibration third:\\pick $h$ for\\$\le 0.2$ FA/h};
+  \node[box, right=of test] (eval) {Test two thirds:\\detection, delay,\\switch error, FA/h};
+  \node[box, right=of cal] (abl) {Ablations:\\window length,\\feature groups,\\comments};
+  \draw[arrow] (pop) -- (base);
+  \draw[arrow] (pop) |- (test);
+  \draw[arrow] (base) -- (cal);
+  \draw[arrow] (test) -- (eval);
+  \draw[arrow] (cal) -- (eval);
+  \draw[arrow] (eval) -| (abl);
+\end{tikzpicture}

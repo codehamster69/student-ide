@@ -187,19 +187,19 @@ const BUILD = [
     { t: "FastAPI + SQLite backend, Python runner, export and replay", s: "done", pr: "#2" },
     { t: "Student UI redesign in React, Tailwind and Motion", s: "done", pr: "#5" },
   ]},
-  { n: 2, title: "Features + CUSUM detector", s: "prog", items: [
-    { t: "Synthetic session generator (60 simulated typists)", s: "prog", pr: "#6" },
-    { t: "Habit features per 30 s window", s: "prog", pr: "#6" },
-    { t: "Two-channel CUSUM: identity and process", s: "prog", pr: "#6" },
-    { t: "Rework the structural build-order features", s: "prog", pr: "#6" },
-    { t: "Calibrate the alarm threshold on more typists", s: "pend" },
-  ], note: 'Synthetic, first pass: <span class="mono">72%</span> of takeovers caught, <span class="mono">80 s</span> median delay, <span class="mono">80%</span> of copying caught, <span class="mono">0.42</span> false alarms per hour.' },
+  { n: 2, title: "Features + CUSUM detector", s: "done", items: [
+    { t: "Synthetic session generator (60 simulated typists)", s: "done", pr: "#6" },
+    { t: "Habit features per 30 s window", s: "done", pr: "#6" },
+    { t: "Two-channel CUSUM: identity and process", s: "done", pr: "#6" },
+    { t: "Rework the structural build-order features", s: "done", pr: "#6" },
+  ], note: 'Synthetic results: <span class="mono">72%</span> of takeovers caught, <span class="mono">80 s</span> median delay, <span class="mono">80%</span> of copying caught, <span class="mono">0.42</span> false alarms per hour.' },
   { n: 3, title: "Teacher timeline dashboard", s: "pend", items: [
     { t: "Evidence timeline per session: alarms, estimated switch time, channel", s: "pend" },
     { t: "Review view that leads to a conversation, never a penalty", s: "pend" },
   ]},
   { n: 4, title: "Evaluation harness", s: "pend", items: [
     { t: "Replay staged sessions A to E", s: "pend" },
+    { t: "Calibrate the alarm threshold on real baseline data", s: "pend" },
     { t: "Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm", s: "pend" },
     { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "pend" },
   ]},

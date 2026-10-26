@@ -18,7 +18,7 @@ flowchart LR
   classDef pend fill:#eef0f3,stroke:#7c8696,stroke-dasharray:4 3,color:#18202b
 
   subgraph Build["Build pipeline"]
-    B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6 (open)"]:::prog
+    B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
     B2 --> B3["3. Teacher timeline dashboard"]:::pend --> B4["4. Evaluation harness"]:::pend
   end
 
@@ -40,18 +40,18 @@ flowchart LR
 | 1 Editor | Keystroke, paste, edit, cursor, focus and run logging (event schema v1) | ✅ | #2 |
 | 1 Editor | FastAPI + SQLite backend, Python runner, export and replay | ✅ | #2 |
 | 1 Editor | Student UI redesign (React, Tailwind, Motion) | ✅ | #5 |
-| 2 Detector | Synthetic session generator (60 simulated typists) | 🟧 | #6 |
-| 2 Detector | Habit features per 30 s window | 🟧 | #6 |
-| 2 Detector | Two-channel CUSUM (identity, process) | 🟧 | #6 |
-| 2 Detector | Rework structural build-order features | 🟧 | #6 |
-| 2 Detector | Calibrate alarm threshold on more typists | ⬜ | |
+| 2 Detector | Synthetic session generator (60 simulated typists) | ✅ | #6 |
+| 2 Detector | Habit features per 30 s window | ✅ | #6 |
+| 2 Detector | Two-channel CUSUM (identity, process) | ✅ | #6 |
+| 2 Detector | Rework structural build-order features | ✅ | #6 |
 | 3 Dashboard | Evidence timeline per session (alarms, switch estimate, channel) | ⬜ | |
 | 3 Dashboard | Review view leading to a conversation, never a penalty | ⬜ | |
 | 4 Evaluation | Replay staged sessions A to E | ⬜ | |
+| 4 Evaluation | Calibrate alarm threshold on real baseline data | ⬜ | |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ⬜ | |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ⬜ | |
 
-Detector, synthetic first pass (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
+Detector, synthetic results (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
 median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
 
 ## Study timeline
