@@ -19,7 +19,7 @@ flowchart LR
 
   subgraph Build["Build pipeline"]
     B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
-    B2 --> B3["3. Teacher timeline dashboard<br/>#8"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
+    B2 --> B3["3. Teacher timeline dashboard<br/>#8, #10, #11"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
   end
 
   subgraph Study["Study (months 1 to 12)"]
@@ -49,6 +49,7 @@ flowchart LR
 | 3 Dashboard | Review view leading to a conversation, never a penalty | ✅ | #8 |
 | 3 Dashboard | Code replay at any moment; simulated demo students | ✅ | #8 |
 | 3 Dashboard | Timeline runs the frozen evaluated config (window lengths, prior, calibrated h) | ✅ | #10 |
+| 3 Dashboard | Teacher authoring: labs, questions with starter code, rosters; every session linked to its lab and question | ✅ | #11 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |

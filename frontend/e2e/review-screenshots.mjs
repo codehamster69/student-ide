@@ -26,7 +26,7 @@ const shot = async (name, full = false) => {
 };
 
 await page.goto(`${BASE}/#/review`);
-await page.waitForSelector("text=Reviewer access");
+await page.waitForSelector("text=Teacher access");
 await shot("01-gate");
 await page.fill("input[type=password]", "wrong");
 await page.click("button[type=submit]");

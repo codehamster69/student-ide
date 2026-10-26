@@ -19,7 +19,9 @@ export async function startSession(studentId: string, task: Task): Promise<LiveS
     client_schema_version: SCHEMA_VERSION,
   };
   const { session_id } = await api<{ session_id: string }>("/api/sessions", {
-    student_id: studentId, task_id: task.id, client_meta: meta,
+    student_id: studentId, client_meta: meta,
+    // lab questions are checked against the teacher's roster on the server
+    ...(task.lab_id ? { question_id: task.id } : { task_id: task.id }),
   });
   const rec = new Recorder(session_id);
   (window as any).__studentide = { rec, sessionId: session_id }; // for end-to-end tests

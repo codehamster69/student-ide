@@ -15,6 +15,9 @@ export interface SessionInfo {
   id: string;
   student_id: string;
   task_id: string;
+  /** title of the lab question this session answered; null for practice tasks */
+  task_title: string | null;
+  lab_id: string | null;
   started_at: number;
   ended_at: number | null;
   end_reason: string | null;
@@ -110,4 +113,17 @@ export async function get<T>(path: string, tok = token.get()): Promise<T> {
   }
   if (!res.ok) throw new Error(`request failed (${res.status})`);
   return res.json();
+}
+
+/** Write call for the teacher screens (POST/PUT/PATCH/DELETE), same token. */
+export async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: { "X-Admin-Token": token.get(), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const detail = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 403) throw new AuthError(detail.detail ?? "not allowed");
+  if (!res.ok) throw new Error(typeof detail.detail === "string" ? detail.detail : `request failed (${res.status})`);
+  return detail as T;
 }

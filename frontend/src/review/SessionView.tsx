@@ -112,7 +112,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
             <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-text">
               <span className="font-mono">{s.student_id}</span>
               <span className="text-faint">·</span>
-              <span>{TASKS[s.task_id] ?? s.task_id}</span>
+              <span>{s.task_title ?? TASKS[s.task_id] ?? s.task_id}</span>
             </h1>
             <p className="mt-0.5 text-sm text-muted">
               {dayTime(s.started_at)} · {clock(s.duration_s)} long · compared with {review.baseline.n_sessions} baseline session{review.baseline.n_sessions === 1 ? "" : "s"}

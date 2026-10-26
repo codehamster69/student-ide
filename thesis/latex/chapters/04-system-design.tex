@@ -64,6 +64,47 @@ reduced-motion setting.
 \todo{Raw keystrokes $\rightarrow$ baseline summary $\rightarrow$
 deletion. Retention, consent, DPDP mapping.}
 
+\section{Labs and questions}
+\label{sec:teacher-authoring}
+Teachers set up the sittings students record in from the same token-gated
+area as the review timeline (\cref{fig:teach}). A \emph{lab} is one sitting,
+such as a weekly lab class or one of the staged study sessions of
+\cref{ch:study}. It holds ordered questions, each with a prompt, optional
+starter code that opens in the editor and a sample input, and is assigned to
+a roster of roll numbers or to everyone who signs in. A lab is a draft, open
+(assigned students see it and can start) or closed (hidden, recordings kept).
+
+Each recorded session stores the lab and question it answers, so every
+keystroke, edit and run is tied to them through the session without changing
+the event schema. The session also keeps a copy of the question as the
+student saw it: a teacher may correct a prompt halfway through a lab, and an
+older recording must still say what it was answering, which matters when
+composing and transcribing are compared on the same question (RQ2). Labs and
+questions with recordings can be closed or edited but not deleted. Because
+each staged condition can be its own lab with its own roster, the condition
+label of a study recording can come from the lab it was made in rather than
+from a separate hand-kept list.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{teach/teach-light-08-demo-lab}
+    \caption{Teacher view of a lab: ordered questions with starter code, the
+    roster, and who has started or finished each question.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{teach/teach-light-03-question-form}
+    \caption{Adding a question.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{teach/teach-light-05-student-labs}
+    \caption{What an assigned student sees after consent.}
+  \end{subfigure}
+  \caption{Labs and questions. Light and dark versions of every screen are
+  in \texttt{snapshots/teach/}.}
+  \label{fig:teach}
+\end{figure}
+
 \section{Teacher evidence timeline}
 \label{sec:review-timeline}
 The last part of the pipeline is a review screen for the teacher or

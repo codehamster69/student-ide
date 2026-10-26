@@ -21,6 +21,7 @@ def session_meta(db: Database, session_id: str) -> dict:
         raise KeyError(session_id)
     meta = dict(row)
     meta["client_meta"] = json.loads(meta["client_meta"])
+    meta["question_json"] = json.loads(meta["question_json"]) if meta.get("question_json") else None
     return meta
 
 

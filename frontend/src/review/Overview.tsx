@@ -140,7 +140,7 @@ function Row({ r }: { r: SessionSummary }) {
         {r.phase === "baseline" && <Badge className="h-5 px-2 text-[11px]">baseline</Badge>}
       </span>
       <span className="text-sm">
-        <span className="text-text">{TASKS[r.task_id] ?? r.task_id}</span>
+        <span className="text-text">{r.task_title ?? TASKS[r.task_id] ?? r.task_id}</span>
         <span className="block text-xs text-faint">{dayTime(r.started_at)}</span>
       </span>
       <span className="font-mono text-sm tabular-nums text-muted">{clock(r.duration_s)}</span>

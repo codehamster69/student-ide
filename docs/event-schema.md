@@ -14,7 +14,8 @@ SQLite, one file (`data/studentide.sqlite3` by default, `STUDENTIDE_DB` to chang
 | table      | one row per | key columns |
 |------------|-------------|-------------|
 | `students` | student     | `id` (roll number or pseudonym), `consented_at` |
-| `sessions` | sitting     | `id`, `student_id`, `task_id`, `started_at`, `ended_at`, `end_reason`, `schema_version`, `client_meta` (browser, screen, timezone) |
+| `sessions` | sitting     | `id`, `student_id`, `task_id`, `started_at`, `ended_at`, `end_reason`, `schema_version`, `client_meta` (browser, screen, timezone), `lab_id`, `question_id`, `question_json` (the question as the student saw it; all three NULL for practice tasks) |
+| `labs`, `questions`, `lab_students` | teacher authoring | a lab (title, instructions, status draft/open/closed, `everyone`), its ordered questions (title, prompt, starter code, sample input) and its roster of roll numbers. See [docs/teaching.md](teaching.md). |
 | `events`   | event       | `(session_id, seq)` primary key, `t`, `type`, `data` (JSON), `received_at` |
 | `runs`     | Run click   | full `code`, `stdin`, `stdout`, `stderr`, `exit_code`, `duration_ms`, `error_type` |
 
