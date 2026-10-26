@@ -51,8 +51,8 @@ flowchart LR
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ⬜ | |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ⬜ | |
 
-Detector, synthetic first pass (seed 7, 60 typists): 75% of matched takeovers caught, 86 s
-median delay, 0.42 false alarms per honest hour, 50% of copying caught.
+Detector, synthetic first pass (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
+median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
 
 ## Study timeline
 
