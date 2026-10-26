@@ -198,12 +198,13 @@ const BUILD = [
     { t: "Review view that leads to a conversation, never a penalty", s: "done", pr: "#8" },
     { t: "Code replay at any moment; simulated demo students", s: "done", pr: "#8" },
   ], note: 'Demo on 6 simulated students: all <span class="mono">8</span> non-honest sessions got a moment to discuss, none of the <span class="mono">4</span> honest ones.' },
-  { n: 4, title: "Evaluation harness", s: "pend", items: [
-    { t: "Replay staged sessions A to E", s: "pend" },
-    { t: "Calibrate the alarm threshold on real baseline data", s: "pend" },
-    { t: "Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm", s: "pend" },
-    { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "pend" },
-  ]},
+  { n: 4, title: "Evaluation harness", s: "done", items: [
+    { t: "Harness: student-level dev/test split, frozen config, test ledger", s: "done", pr: "#9" },
+    { t: "Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm", s: "done", pr: "#9" },
+    { t: "Calibrate the alarm threshold (students' own baseline weeks)", s: "done", pr: "#9" },
+    { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "done", pr: "#9" },
+    { t: "Run on the Phase 1 to 2 recordings (labels manifest)", s: "pend" },
+  ], note: 'Synthetic test students: <span class="mono">83%</span> of non-honest sessions caught at <span class="mono">0.28</span> false alarms per hour; precision of a flag about <span class="mono">11%</span> at 1 in 100.' },
 ];
 
 const STUDY = [
