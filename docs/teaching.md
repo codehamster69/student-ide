@@ -67,3 +67,10 @@ sessions) and a draft *Lab 6*. Backend tests: `backend/tests/test_teach.py`.
 Browser check with screenshots: `node frontend/e2e/teach.mjs <dir> [light|dark]`
 (teacher builds and opens a lab, a new student answers question 1, the test
 reads the session back and checks its lab, question and events).
+
+## Tests, languages and platform questions
+
+Questions can carry optional tests (an ungraded Check for students; required
+only in competitions), labs have a subject and a programming language, and
+questions can be picked from Exercism (live) or linked from LeetCode,
+HackerRank and CodeChef. See [question-sources.md](question-sources.md).

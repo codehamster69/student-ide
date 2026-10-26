@@ -105,6 +105,66 @@ from a separate hand-kept list.
   \label{fig:teach}
 \end{figure}
 
+\subsection{Optional tests, languages and question sources}
+\label{sec:question-sources}
+Correctness is deliberately optional. A lab measures effort, so a question
+may carry no tests at all; if the teacher adds some, students can press
+\emph{Check} to see how they are doing, and nothing is scored. Competitions
+are the one place correctness counts, so a question placed in a competition
+must keep at least one test. A test is a standard-input / expected-output
+pair, which works the same in every language; a test can be hidden, in which
+case the student learns only whether it passed. Checks are stored on the
+server against the copy of the question the session started with, so a test
+fixed halfway through a lab never changes how an open session is checked,
+and the event schema stays at version 1.
+
+Each lab also has a subject and a programming language (Python, C, C++, Java
+or JavaScript). The editor's syntax mode, the file name and the runner follow
+the lab; compiled languages are compiled once per check and run against every
+test. The language is part of the session's snapshot, which matters for the
+detector: a student's keystroke rhythm in C++ (braces, semicolons, \texttt{<<})
+is not the rhythm of their Python, so a baseline should only be compared with
+sessions in the same language.
+
+A teacher who does not want to write their own question can pick one from a
+platform (\cref{fig:sources}). Platforms are pluggable providers with one
+interface: list categories, list questions in a category, fetch a question.
+Nothing is pre-stored: the list and the question are fetched when the teacher
+looks, and the pick is copied into the lab as an ordinary question with its
+source and licence recorded. Only platforms that permit it are fetched.
+LeetCode, HackerRank and CodeChef publish no API for problem statements
+(CodeChef closed its public API in 2020, HackerRank's API covers only a
+company's own tests, LeetCode's GraphQL endpoint is internal) and none
+licenses its problems for reuse, so they are \emph{link only}: the teacher
+keeps a link to the original and writes the question in their own words.
+Exercism's exercises are MIT-licensed and served from public repositories, so
+they are fetched live; for Python and JavaScript its shared test data becomes
+input/output tests through a small driver that calls the student's function
+and prints the result as JSON.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{questions/questions-light-03-preview}
+    \caption{Picking an Exercism question, fetched live, with 14 tests.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{questions/questions-light-04-link-only}
+    \caption{A link-only platform: the teacher writes the question.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{questions/questions-light-05-tests-editor}
+    \caption{Optional tests, one hidden.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{questions/questions-light-07-student-check}
+    \caption{A student's ungraded check.}
+  \end{subfigure}
+  \caption{Question sources and optional tests. All screens, light and dark,
+  are in \texttt{snapshots/questions/}.}
+  \label{fig:sources}
+\end{figure}
+
 \section{Teacher evidence timeline}
 \label{sec:review-timeline}
 The last part of the pipeline is a review screen for the teacher or
