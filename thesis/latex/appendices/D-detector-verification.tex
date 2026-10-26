@@ -1,0 +1,107 @@
+\chapter{Detector Verification}
+\label{app:verification}
+% Source: backend/tests/test_detector.py, backend/tests/test_build_order.py,
+% brain entries 2026-10-26-09 to -13.
+
+This appendix records how the phase 2 code was checked before any number
+in \cref{ch:rq1} was trusted: automated tests on generated and hand-made
+sessions, and the development/test protocol used to make design choices.
+
+\section{Automated tests}
+The test suite (\texttt{cd backend \&\& pytest}, 38 tests, all passing)
+covers the editor (12 tests, phase 1) and the detector (26 tests,
+\cref{tab:tests}).
+
+\begin{table}[ht]
+  \centering\small
+  \caption{What the detector tests check.}
+  \label{tab:tests}
+  \begin{tabularx}{\linewidth}{@{}lX@{}}
+    \toprule
+    Area & Check \\
+    \midrule
+    Generator & Every event of all five conditions passes the same schema
+      validation as the ingest API; \texttt{seq} is gapless; replaying the
+      edits reproduces every snapshot; the switch time lies where it was
+      requested; the same seed gives the same session; paste sessions log
+      clipboard and paste edits only after the switch; key codes match the
+      browser's \texttt{KeyboardEvent.code}. \\
+    Features & Comment detection ignores \texttt{\#} inside strings; the
+      L-scale matches its definition; window count and feature ranges are
+      sane; mixing comments in adds their keys to the code stream. \\
+    Baseline & Only summary statistics are stored, and the baseline
+      survives a JSON round trip. \\
+    CUSUM & Alarm index and switch-time estimate on a known step change;
+      restart after an alarm; inactive windows leave $S_t$ unchanged. \\
+    Detection & A clearly different typist raises the identity distance
+      after the switch and triggers an identity alarm after, not before, it. \\
+    Build order & Hand-made mock sessions, \cref{tab:mock-cases}. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Mock sessions and edge cases for build order}
+Build order is the feature most exposed to unusual editing, so its tests
+build sessions by hand: a small helper types or pastes text at given
+positions and emits a valid, replayable event log (\cref{tab:mock-cases}).
+
+\begin{table}[ht]
+  \centering\small
+  \caption{Mock sessions for the build-order features and the expected result.}
+  \label{tab:mock-cases}
+  \begin{tabularx}{\linewidth}{@{}XX@{}}
+    \toprule
+    Case & Expected \\
+    \midrule
+    Linear writer, program typed top to bottom & no line counts as filled in; at most one open block (the header just typed) \\
+    Skeleton writer: \texttt{def} and \texttt{for} headers first, bodies after & 2 of 5 code lines filled in; 2 open blocks at once; higher window value than the linear writer \\
+    Enter pressed in the middle of a line & counts as filling in \\
+    Multi-line paste above existing code & each code line counted, all filled in; blank and comment lines skipped \\
+    Multi-line paste at the end & counted, none filled in \\
+    Only blank lines and comments below the insertion & not filling in \\
+    Deleting lines & nothing recorded \\
+    Two changes in one edit (multi-cursor) & both lines counted at the right positions \\
+    \texttt{if a:  \# comment}; \texttt{s = "x:"}; \texttt{\{1: 2\}}; comment as only body; tab indentation; nested \texttt{class}/\texttt{def} & open-block count 1, 0, 0, 1, 0, and 0 or 1 as appropriate \\
+    Fewer than 3 new lines in the span & feature missing (skipped), not 0 \\
+    Empty session & windows inactive, features missing, no crash \\
+    Simulated skeleton vs linear typist & skeleton typist fills in more, linear never \\
+    Window-to-window spread, 6 honest typists & new feature steadier than the old per-edit one \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Development and test protocol}
+Design choices were made on a development population (30 simulated
+typists, seed 3); every number in \cref{ch:rq1} and \cref{app:ablations}
+comes from a separate population (60 typists, seed 7) run after those
+choices, split into 20 calibration and 40 test typists. The development
+runs that shaped the design (all $W=30$\,s, matched-partner takeover):
+
+\begin{table}[ht]
+  \centering\small
+  \caption{Development-set runs behind the design decisions (not the reported results).}
+  \label{tab:dev-runs}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    Design & Takeover & Copying & FA/h \\
+    \midrule
+    One channel, equal weights, $k=0.5$ & 55\% & 35\% & 0.05 \\
+    One channel, ICC weights, $k=0.5$ & 85\% & 5\% & 0.25 \\
+    Two channels, $k=0.5$ & 85\% & 35\% & 0.20 \\
+    Two channels, identity $k=1$, per-edit build order & 85\% & 35\% & 0.10 \\
+    Two channels, identity $k=1$, line-level build order & 85\% & 75\% & 0.10 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+On the test population the line-level build order raised copying
+detection from 50\% to 80\% at an unchanged 0.42 false alarms per hour
+(row ``Old build order'' in \cref{tab:ablation-feature-groups}).
+
+\section{Reproducing}
+\begin{lstlisting}
+pip install -e 'backend[dev,analysis]'
+cd backend && pytest
+python -m studentide.detector.evaluate --typists 60 --seed 7 \
+    --thesis ../thesis/latex        # about 3 minutes
+\end{lstlisting}
