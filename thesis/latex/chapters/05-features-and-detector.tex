@@ -1,0 +1,24 @@
+\chapter{Habit Features and the Switch Detector}
+\label{ch:detector}
+
+\section{Windowing}
+\todo{30-second windows; overlap; minimum activity per window.}
+
+\section{Habit features}
+\todo{Digraph latency, inter-key-time spread, pause distribution, deletion
+rate, AST build order, run frequency. Table of features with definitions.}
+
+\section{Per-student baseline}
+\todo{First four lab weeks; summary statistics kept; distance measure.}
+
+\section{CUSUM change-point detection}
+\todo{Score $d_t$, CUSUM statistic $S_t = \max(0, S_{t-1} + d_t - k)$,
+threshold $h$, switch time estimate.}
+
+\section{Baselines}
+Scaled Manhattan \cite{killourhy2009comparing}, TypeNet-style
+\cite{acien2022typenet}, Nosi IAT rhythm \cite{nosi_todo}.
+
+\section{Synthetic-data pipeline}
+\todo{Splicing sessions at a known minute to get ground truth; used to
+tune $k$ and $h$ before Phase 2 data exists.}

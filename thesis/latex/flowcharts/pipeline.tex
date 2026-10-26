@@ -1,0 +1,20 @@
+% Student IDE pipeline (TikZ). Used in chapter 4 via \tikzfig{pipeline}.
+\begin{tikzpicture}[
+    node distance=10mm and 8mm,
+    stage/.style={rectangle, rounded corners, draw, thick, align=center,
+                  minimum width=2.5cm, minimum height=1.1cm, font=\small},
+    novel/.style={stage, fill=blue!8},
+    arrow/.style={-{Stealth}, thick}]
+  \node[stage] (rec)  {1. Event\\recorder};
+  \node[stage, right=of rec] (feat) {2. Habit features\\(30\,s windows)};
+  \node[novel, right=of feat] (base) {3. Per-student\\baseline};
+  \node[novel, below=of base] (det) {4. Switch detector\\(distance + CUSUM)};
+  \node[novel, left=of det] (time) {5. Evidence\\timeline};
+  \node[stage, left=of time, dashed] (talk) {Teacher\\conversation};
+  \draw[arrow] (rec) -- (feat);
+  \draw[arrow] (feat) -- (base);
+  \draw[arrow] (base) -- (det);
+  \draw[arrow] (feat.south east) -- node[below left, font=\scriptsize, inner sep=1pt] {current window} (det.north west);
+  \draw[arrow] (det) -- (time);
+  \draw[arrow] (time) -- (talk);
+\end{tikzpicture}
