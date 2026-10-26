@@ -12,7 +12,7 @@ ever leads to a conversation, never a penalty.
 |-------|--------|
 | 1. Event-logging editor | done |
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
-| 3. Teacher timeline dashboard | planned |
+| 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md) |
 | 4. Evaluation harness | planned |
 
 ## Stack
@@ -74,3 +74,12 @@ node frontend/e2e/screenshots.mjs out/ light   # thesis screenshots of every scr
 - The code runner (`runner.py`) uses a timeout and resource limits but is not a
   security sandbox. Keep the server on the lab network, or run code in a container.
 - Student login is just a roll number; the lab is supervised. Teacher auth comes with phase 3.
+
+## Review timeline (phase 3)
+
+```bash
+python -m studentide.seed --db data/demo.sqlite3     # simulated students to look at
+STUDENTIDE_DB=data/demo.sqlite3 STUDENTIDE_ADMIN_TOKEN=change-me uvicorn studentide.app:create_app --factory
+```
+
+Open http://localhost:8000/#/review. Details in [docs/review.md](docs/review.md).

@@ -65,4 +65,84 @@ reduced-motion setting.
 deletion. Retention, consent, DPDP mapping.}
 
 \section{Teacher evidence timeline}
-\todo{Dashboard design, screenshots, how evidence is explained.}
+\label{sec:review-timeline}
+The last part of the pipeline is a review screen for the teacher or
+interviewer (\cref{fig:review-session}). It is opened from the same web
+application under \texttt{\#/review}, but only with the research token
+that also guards the raw-data API; without the token on the server the
+whole review side is switched off. The token is kept in the browser tab
+only.
+
+\paragraph{What it shows.} An overview lists every session with a small
+trace of both detector channels and the moments it found
+(\cref{fig:review-overview}). Opening a session shows one time axis with,
+from top to bottom: for each channel, a strip of per-window scores (how far
+each \SI{30}{\second} window sits from the student's own baseline) and the
+CUSUM trace drawn against its threshold; then pastes, times the student
+left the editor, runs (clean or with an error) and typing activity. A
+playhead can be dragged or played at 1--60$\times$; the code is rebuilt in
+the browser from the recorded edits at that instant, with lines changed in
+the previous \SI{30}{\second} tinted, and a strip of the last key-press
+intervals shows the typing rhythm at that point. The replay was checked
+against all 524 stored snapshots of eight sessions with no mismatch.
+
+\paragraph{From alarms to moments.} CUSUM restarts after every alarm, so a
+lasting change (for example, a second person typing for the rest of the
+session) raises a chain of alarms, each starting where the previous one
+fired. The screen merges such a chain into one \emph{moment to discuss},
+with the detector's estimated start, the time it was first noticed and how
+long the difference lasted. For each moment it lists the habits that moved
+most between the estimated start and the first alarm, in the student's own
+units (``time between keys: usual \SI{158}{\milli\second}, here
+\SI{134}{\milli\second}'') with a bar for how many of the student's usual
+spreads that is. These are the same per-feature $z$ values the detector
+sums, so the explanation is the model rather than a story told about it.
+
+\paragraph{Wording.} Nothing on the screen says ``flag'', ``cheating'' or
+``suspicious''. A session either has \emph{moments worth a conversation}
+or ``nothing stood out''. Every moment comes with three suggested
+questions (walk me through this code; did anything change at that point;
+make a small change while I watch) and the reminder that habits shift for
+ordinary reasons and that no mark or penalty follows from the screen.
+Baseline-week sessions are scored only against the student's other
+baseline sessions and are labelled as a check of the baseline, not of the
+student; students without enough baseline sessions are not scored at all.
+
+\paragraph{Demo data.} \texttt{python -m studentide.seed} fills a fresh
+database with simulated students (four honest baseline weeks, then
+sessions under the study conditions). Their ground truth is stored with
+the session and can be overlaid on the timeline
+(\cref{fig:review-session}b), which made the screen testable before any
+real student was recorded. It is refused on an existing database file so
+demo and real data never mix. On the default demo (six simulated students,
+twelve assessed sessions) every non-honest session got a moment on the
+expected channel, starting within \SI{50}{\second} of the simulated switch,
+and none of the four honest ones did; this is a check that the screen
+shows the detector faithfully, not an evaluation (that is
+\cref{ch:rq1}).
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{review/review-light-02-overview}
+  \caption{Review overview on simulated students: each row shows both
+  channels' accumulated evidence relative to the threshold (dashed) and
+  the moments to discuss, with the channel that found them.}
+  \label{fig:review-overview}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{review/review-light-03-session-takeover}
+    \caption{A simulated takeover: the typing-rhythm channel marks a moment
+    from about 20:30; the replay shows the code at the playhead.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{review/review-light-04-takeover-truth-hover}
+    \caption{Same session with the simulated ground truth (switch at 20:24)
+    overlaid and the hover read-out for one window.}
+  \end{subfigure}
+  \caption{Session review timeline. Light and dark versions of every
+  screen are in \texttt{snapshots/review/}.}
+  \label{fig:review-session}
+\end{figure}

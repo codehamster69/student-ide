@@ -14,6 +14,13 @@ disabled entirely when that variable is unset):
     GET  /api/sessions/{id}/events
     GET  /api/sessions/{id}/runs
 
+Review timeline (phase 3, same token):
+    GET  /api/review/config
+    GET  /api/review/students
+    GET  /api/review/sessions[?student_id=]   per-session summary + flags
+    GET  /api/review/sessions/{id}            evidence timeline
+    GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
+
 Run with:  uvicorn studentide.app:create_app --factory
 (env STUDENTIDE_DB picks the database file)
 """
@@ -24,6 +31,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -34,6 +42,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from . import runner
 from .db import Database
+from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .schema import SCHEMA_VERSION, Event
 
 STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
@@ -69,6 +78,10 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     token = admin_token if admin_token is not None else os.environ.get("STUDENTIDE_ADMIN_TOKEN")
     app = FastAPI(title="Student IDE", version="0.1.0")
     app.state.db = db
+    reviewer = Reviewer(db)
+    app.state.reviewer = reviewer
+    if token:
+        threading.Thread(target=reviewer.warm, daemon=True).start()
 
     def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
         if not token:
@@ -173,6 +186,39 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def session_runs(session_id: str) -> list[dict]:
         live_session(session_id)
         return [dict(r) for r in db.list_runs(session_id)]
+
+    @app.get("/api/review/config", dependencies=[Depends(require_admin)])
+    def review_config() -> dict:
+        return {"h": reviewer.h, "window_s": reviewer.window_s, "baseline_days": BASELINE_DAYS,
+                "min_baseline": MIN_BASELINE,
+                "channels": {ch: {"label": l, "about": a} for ch, (l, a) in CHANNEL_INFO.items()}}
+
+    @app.get("/api/review/students", dependencies=[Depends(require_admin)])
+    def review_students() -> list[dict]:
+        by_student: dict[str, list] = {}
+        for r in db.list_sessions():
+            by_student.setdefault(r["student_id"], []).append(dict(r))
+        out = []
+        for st, ss in sorted(by_student.items()):
+            base = reviewer.baseline_ids(ss)
+            out.append({"student_id": st, "n_sessions": len(ss), "n_baseline": len(base),
+                         "baseline_ready": len(base) >= MIN_BASELINE,
+                         "first": min(s["started_at"] for s in ss), "last": max(s["started_at"] for s in ss)})
+        return out
+
+    @app.get("/api/review/sessions", dependencies=[Depends(require_admin)])
+    def review_sessions(student_id: str | None = None) -> list[dict]:
+        return [reviewer.summary(r["id"]) for r in db.list_sessions(student_id)]
+
+    @app.get("/api/review/sessions/{session_id}", dependencies=[Depends(require_admin)])
+    def review_session(session_id: str) -> dict:
+        live_session(session_id)
+        return reviewer.review(session_id)
+
+    @app.get("/api/review/sessions/{session_id}/replay", dependencies=[Depends(require_admin)])
+    def review_replay(session_id: str) -> dict:
+        live_session(session_id)
+        return replay_data(db, session_id)
 
     if serve_frontend and FRONTEND_DIST.is_dir():
         app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

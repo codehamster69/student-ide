@@ -10,7 +10,7 @@ React 18 + Tailwind CSS v4 + [Motion](https://motion.dev).
 | `tokens.css` | Semantic colour tokens (`--surface`, `--accent`, `--syn-*` …) with light and dark themes, fonts (Inter, JetBrains Mono, self-hosted), keyframes. Exposed to Tailwind as `bg-surface`, `text-muted`, `border-border`, `bg-accent-soft`, etc. Import once at the app entry. |
 | `motion.ts` | Durations, easings, springs and variants (`page`, `stagger`, `item`, `pop`, `fade`). |
 | `Button`, `Input`/`TextArea`/`Field`/`Checkbox`, `Badge`/`LiveDot`/`Kbd`/`Spinner`, `Card`, `Dialog`, `Stepper`, `Logo` | Primitives. |
-| `RhythmBars` | One bar per inter-key interval; pauses drawn muted. Intended for the teacher timeline. |
+| `RhythmBars` | One bar per inter-key interval; pauses drawn muted. Used on sign-in and in the review replay. |
 | `TypingDemo` | Self-typing code card with a live rhythm strip (sign-in screen). |
 
 Everything is re-exported from `ui/index.ts`.
@@ -18,6 +18,9 @@ Everything is re-exported from `ui/index.ts`.
 ## Theme
 
 The theme follows the OS. Force one with `document.documentElement.dataset.theme = "light" | "dark"`.
+`--ch-identity` / `--ch-process` colour the two detector channels on the review timeline (validated as a
+colour-vision-safe pair in both themes); always pair them with the channel name.
+
 Prefer the semantic utilities over raw Tailwind colours so both themes stay correct.
 
 ## Motion rules (important for the research data)
