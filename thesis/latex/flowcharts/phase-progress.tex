@@ -1,0 +1,43 @@
+% Project progress phase diagram (TikZ). Used in appendix E via \tikzfig{phase-progress}.
+% Keep in step with thesis/progress/STATUS.md. Status styles: done / prog / pend.
+\begin{tikzpicture}[
+    node distance=6mm and 6mm,
+    base/.style={rectangle, rounded corners, draw, thick, align=center,
+                 text width=2.7cm, minimum height=1.45cm, font=\footnotesize,
+                 execute at begin node={\hyphenpenalty=10000}},
+    done/.style={base, draw=green!50!black, fill=green!12},
+    prog/.style={base, draw=orange!80!black, fill=orange!18},
+    pend/.style={base, draw=gray, dashed, fill=gray!6},
+    arrow/.style={-{Stealth}, thick},
+    dep/.style={-{Stealth}, thick, dashed, gray},
+    lane/.style={font=\small\bfseries, anchor=west}]
+  % Build lane
+  \node[lane] (bl) at (0,0) {Build pipeline};
+  \node[done, below right=3mm and 0mm of bl.south west] (b1) {1. Event-logging\\editor (\#2, \#5)};
+  \node[done, right=of b1] (b2) {2. Features +\\CUSUM detector (\#6)};
+  \node[pend, right=of b2] (b3) {3. Teacher\\timeline dashboard};
+  \node[pend, right=of b3] (b4) {4. Evaluation\\harness};
+  \draw[arrow] (b1) -- (b2);
+  \draw[arrow] (b2) -- (b3);
+  \draw[arrow] (b3) -- (b4);
+  % Study lane
+  \node[lane, below=34mm of bl.west, anchor=west] (sl) {Study (months 1--12)};
+  \node[prog, below right=3mm and 0mm of sl.south west] (p0) {Phase 0 \textperiodcentered{} M1--2\\survey, ethics, logger};
+  \node[pend, right=of p0] (p1) {Phase 1 \textperiodcentered{} M3--4\\baseline labs};
+  \node[pend, right=of p1] (p2) {Phase 2 \textperiodcentered{} M5--6\\staged sessions A--E};
+  \node[pend, right=of p2] (p3) {Phase 3 \textperiodcentered{} M7\\remote interview};
+  \node[pend, below=of p3] (w) {M8--12\\measure and write};
+  \node[pend, below=of p0] (eth) {Ethics approval};
+  \draw[arrow] (p0) -- (p1);
+  \draw[arrow] (p1) -- (p2);
+  \draw[arrow] (p2) -- (p3);
+  \draw[arrow] (p3) -- (w);
+  % Cross-lane dependencies
+  \draw[dep] (b1) -- node[right, font=\scriptsize, text=gray, pos=0.3] {logger} (p0);
+  \draw[dep] (eth.east) -| node[pos=0.75, right, font=\scriptsize, text=gray] {gates} (p1.south);
+  \draw[dep] (p2.north east) -- node[sloped, below, font=\scriptsize, text=gray] {labelled test set} (b4.south west);
+  % Legend
+  \node[done, text width=1.9cm, minimum height=6mm, below=10mm of eth.south west, anchor=north west] (l1) {Done};
+  \node[prog, text width=1.9cm, minimum height=6mm, right=of l1] (l2) {In progress};
+  \node[pend, text width=1.9cm, minimum height=6mm, right=of l2] {Pending};
+\end{tikzpicture}
