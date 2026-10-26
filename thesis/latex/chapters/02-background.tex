@@ -8,9 +8,36 @@ benchmark of anomaly detectors including scaled Manhattan
 \cite{acien2022typenet}.
 
 \section{Keystroke data in programming education}
-Programmer identification from typing \cite{longi2015identification};
-the Nosi IDE inter-key-time rhythm measure \cite{lueder2026nosi}, the closest
-prior work (N = 5).
+Programmer identification from typing \cite{longi2015identification}.
+In essay writing, keystroke-process features separate original composition
+from transcription with high accuracy, because transcription is more linear
+and bursty \cite{crossley2024plagiarism}.
+
+\subsection{Nosi IDE: the closest prior work}
+Nosi \cite{lueder2026nosi} is a fork of VS Code with LLM features disabled.
+Assignments are distributed as encrypted files that are decrypted only in
+memory, so copying code out produces an encrypted payload and every paste
+is logged with its timestamp and content. This leaves manual retyping
+(``scribing'') of LLM output as the remaining stealthy route, which Nosi
+targets with one feature: the L-scale (an L-moment measure of dispersion)
+of log-transformed inter-arrival times (IAT) between keystrokes, after
+removing pauses over 5 minutes and zero-length intervals. Authentic coding
+has a long-tailed IAT distribution; scribing is flatter.
+
+The evidence is a proof-of-concept with $N = 5$, all authors and proficient
+coders, in an A--B--B--A design (code, scribe, scribe, code) on one
+priority-queue task. A linear SVM on the single feature reached 100\%
+leave-one-participant-out accuracy on whole sessions and about 80\% on
+\SI{150}{\second} slices; typing comments was sometimes misread as
+scribing. In deployment in a course of about 1000 students, staff found 48
+cases of LLM-assisted plagiarism by replaying edit logs.
+
+Nosi differs from this thesis in three ways. It asks whether code was
+\emph{transcribed}, not whether the \emph{author changed}; it uses a
+population-level, subject-independent classifier rather than a per-student
+baseline; and its sample is five expert authors. \RQ{2} replicates its
+measure at larger $N$ with ordinary students, and \RQ{1} addresses the
+switch it does not model.
 
 \section{Academic integrity tooling}
 Identity checks at the start (proctoring), similarity and AI detection at
