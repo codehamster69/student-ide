@@ -1,0 +1,27 @@
+\chapter{Problem Formulation}
+\label{ch:problem}
+
+\section{Threat model}
+In scope: a friend, paid proxy or impersonator takes over for part or all
+of a session (full proxy, takeover at a random minute), copying code out of
+another source, pasting. Out of scope: deliberate imitation of another
+student's typing, deepfakes, engagement scoring, grade prediction,
+deployment.
+
+\section{Formal setting}
+\todo{Session as a stream of events $e_1, e_2, \dots$; windows of
+\SI{30}{\second}; feature vector $x_t$; baseline $B_s$ for student $s$;
+score $d_t = d(x_t, B_s)$; switch time $\tau$; detection delay
+$\hat\tau - \tau$.}
+
+\section{Research questions and hypotheses}
+\todo{Restate RQ1--RQ4 with measurable hypotheses and metrics.}
+
+\section{Design principles}
+\begin{itemize}
+  \item No webcam or screen recording.
+  \item Each student compared only to their own baseline.
+  \item Raw keystrokes deleted after the baseline is built; summary
+    statistics only.
+  \item A flag starts a conversation, never a penalty.
+\end{itemize}

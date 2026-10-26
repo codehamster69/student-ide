@@ -1,0 +1,44 @@
+\chapter{Introduction}
+\label{ch:intro}
+
+\section{Motivation}
+Programming assessments increasingly happen on a computer, in a lab or
+remotely. Identity is checked when a session starts, and the final code is
+checked for copying or generated text when it ends. A student can pass both
+checks while somebody else wrote most of the code: a friend who takes the
+keyboard for twenty minutes, or a paid proxy on a remote call.
+\todo{Evidence of the problem: contract cheating / proxy statistics.}
+
+\section{Authorship continuity}
+\begin{definition}[Authorship continuity]
+A coding session has authorship continuity if the same person produced all
+of its keystrokes and edits.
+\end{definition}
+This thesis asks whether a break in continuity can be detected from how
+code is written (process), without watching the student.
+
+\section{Research questions}
+\begin{description}[leftmargin=2.5em]
+  \item[\RQ{1}] Can a mid-session change of author be detected, and how
+    quickly and with how many false alarms? \emph{(main contribution)}
+  \item[\RQ{2}] Can composing original code be distinguished from
+    transcribing code from another source?
+  \item[\RQ{3}] Does a baseline learned in the lab transfer to a remote
+    interview on the student's own laptop?
+  \item[\RQ{4}] Is the detector fair across subgroups, and what is its
+    precision at realistic cheating rates (1 in 100, 1 in 500)?
+\end{description}
+
+\section{Contributions}
+\begin{enumerate}
+  \item The Student IDE, a privacy-preserving event-logging editor.
+  \item Per-student habit baselines over 30-second windows.
+  \item A CUSUM-based switch detector that also estimates the switch time.
+  \item A teacher-facing evidence timeline designed so a flag leads to a
+    conversation, not a penalty.
+  \item A staged-takeover dataset and evaluation with fairness and
+    prevalence-adjusted precision.
+\end{enumerate}
+
+\section{Thesis outline}
+\todo{One line per chapter once chapters stabilise.}
