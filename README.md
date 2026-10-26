@@ -10,8 +10,8 @@ ever leads to a conversation, never a penalty.
 
 | phase | status |
 |-------|--------|
-| 1. Event-logging editor | **this code** |
-| 2. Feature extraction + CUSUM detector, synthetic data | planned |
+| 1. Event-logging editor | done |
+| 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
 | 3. Teacher timeline dashboard | planned |
 | 4. Evaluation harness | planned |
 
@@ -47,10 +47,21 @@ high-resolution timestamps, every edit with its origin, clipboard paste/copy/cut
 cursor moves, runs with full output, editor/window/tab focus, and periodic code
 snapshots, all per student and per session.
 
+## Detector (phase 2)
+
+```bash
+pip install -e 'backend[analysis]'
+python -m studentide.detector.synth --out synthetic/         # example sessions as JSONL
+cd backend && python -m studentide.detector.evaluate --typists 60 --thesis ../thesis/latex
+```
+
+Simulated typists, 30-second habit features, per-student baselines and a
+two-channel CUSUM switch detector. See [docs/detector.md](docs/detector.md).
+
 ## Tests
 
 ```bash
-cd backend && pytest                    # API, schema validation, runner, edit replay
+cd backend && pytest                    # API, schema, runner, replay, generator, features, detector
 node frontend/e2e/record.mjs            # browser end-to-end (needs a running server)
 ```
 

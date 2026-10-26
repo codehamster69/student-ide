@@ -7,3 +7,7 @@ frontend/dist/
 data/
 *.sqlite3
 *.egg-info/
+
+# detector outputs
+synthetic/
+detector-results/
