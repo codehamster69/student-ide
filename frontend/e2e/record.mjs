@@ -35,7 +35,14 @@ function replay(events) {
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 page.on("dialog", (d) => d.accept());
-const shot = async (name) => SHOTS && page.screenshot({ path: `${SHOTS}/${name}.png` });
+// Main-thread tasks over 50 ms; UI animation must not cause any while typing.
+await page.addInitScript(() => {
+  window.__longTasks = [];
+  new PerformanceObserver((l) => window.__longTasks.push(...l.getEntries().map((e) => [e.startTime, e.duration])))
+    .observe({ type: "longtask", buffered: true });
+});
+// Let entrance animations settle so screenshots show the finished screen.
+const shot = async (name) => SHOTS && (await page.waitForTimeout(800), page.screenshot({ path: `${SHOTS}/${name}.png` }));
 
 await page.goto(BASE);
 await shot("editor-01-login");
@@ -51,6 +58,7 @@ await page.waitForSelector(".cm-content");
 
 // Type like a person: per-key delays, a typo fixed with Backspace.
 await page.click(".cm-content");
+const typingFrom = await page.evaluate(() => performance.now());
 await page.keyboard.press("Control+End");
 await page.keyboard.type("for i in range(1, n + 1):\n", { delay: 35 });
 await page.keyboard.type("if i % 15 == 0:\nprint(\"FizzBuzx", { delay: 45 });
@@ -58,6 +66,9 @@ await page.keyboard.press("Backspace");
 await page.keyboard.type("z\")", { delay: 60 });
 await page.keyboard.press("End");
 await page.keyboard.press("Enter");
+
+const typingTo = await page.evaluate(() => performance.now());
+const longTasks = await page.evaluate(([a, b]) => window.__longTasks.filter(([t, d]) => t + d > a && t < b), [typingFrom, typingTo]);
 
 // Paste the rest, as a student copying from elsewhere would.
 const pasted = 'elif i % 3 == 0:\n        print("Fizz")\n    elif i % 5 == 0:\n        print("Buzz")\n    else:\n        print(i)';
@@ -79,6 +90,7 @@ const output = await page.textContent(".output");
 await shot("editor-03-session");
 const sessionId = await page.evaluate(() => window.__studentide.sessionId);
 await page.click("button:text-is(\"Finish\")");
+await page.click("[role=dialog] button:text-is(\"Finish session\")");
 await page.waitForSelector("text=Session saved");
 await browser.close();
 
@@ -117,7 +129,9 @@ const gaps = t.slice(1).map((x, i) => x - t[i]).sort((a, b) => a - b);
 const median = gaps[gaps.length >> 1];
 assert.ok(median > 20 && median < 200, `median inter-key gap ${median} ms`);
 
+assert.equal(longTasks.length, 0, `long main-thread tasks while typing: ${JSON.stringify(longTasks)}`);
+
 const byType = {};
 for (const e of events) byType[e.type] = (byType[e.type] ?? 0) + 1;
-console.log(JSON.stringify({ session: sessionId, events: events.length, byType, medianKeyGapMs: Math.round(median * 10) / 10 }));
+console.log(JSON.stringify({ session: sessionId, events: events.length, byType, medianKeyGapMs: Math.round(median * 10) / 10, longTasksWhileTyping: longTasks.length }));
 console.log("e2e OK");
