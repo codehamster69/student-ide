@@ -1,0 +1,281 @@
+<title>Student IDE Progress</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a lab-notebook status sheet. Build pipeline as a left-to-right chain,
+   study as a 12-month bar chart, thesis groundwork as a short list. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #18202b;
+  --muted: #5b6574;
+  --rule: #dfe3e9;
+  --accent: #2f4fb8;
+  --done: #1f8a5b;
+  --done-soft: #e2f3ea;
+  --prog: #b86a0b;
+  --prog-soft: #fbefdc;
+  --pend: #7c8696;
+  --pend-soft: #eef0f3;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --surface: #1a2029; --ink: #e6e9ee; --muted: #9aa4b2; --rule: #2c3440;
+    --accent: #8fa8ff; --done: #4cc88f; --done-soft: #183427; --prog: #f0a948; --prog-soft: #3a2b14;
+    --pend: #8b95a5; --pend-soft: #232a34; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --ink: #e6e9ee; --muted: #9aa4b2; --rule: #2c3440;
+  --accent: #8fa8ff; --done: #4cc88f; --done-soft: #183427; --prog: #f0a948; --prog-soft: #3a2b14;
+  --pend: #8b95a5; --pend-soft: #232a34; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 48px;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 17px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Header */
+header { display: grid; gap: 14px; }
+.lede { color: var(--muted); max-width: 68ch; }
+.meter { display: grid; gap: 10px; margin-top: 8px; }
+.bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--pend-soft); border: 1px solid var(--rule); }
+.bar span { display: block; height: 100%; }
+.bar .d { background: var(--done); }
+.bar .p { background: var(--prog); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.legend b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.done { background: var(--done); }
+.dot.prog { background: var(--prog); }
+.dot.pend { background: transparent; border: 2px solid var(--pend); }
+
+section { display: grid; gap: 18px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; border-bottom: 1px solid var(--rule); padding-bottom: 10px; }
+.sec-head p { color: var(--muted); font-size: 13px; }
+
+/* Status chip */
+.chip { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.done { background: var(--done-soft); color: var(--done); }
+.chip.prog { background: var(--prog-soft); color: var(--prog); }
+.chip.pend { background: var(--pend-soft); color: var(--pend); }
+
+/* Build pipeline */
+.chain { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
+.stage { position: relative; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; display: grid; gap: 12px; align-content: start; }
+.stage[data-s="done"] { border-top: 4px solid var(--done); }
+.stage[data-s="prog"] { border-top: 4px solid var(--prog); }
+.stage[data-s="pend"] { border-top: 4px dashed var(--pend); }
+.stage:not(:last-child)::after {
+  content: ""; position: absolute; top: 34px; right: -22px; width: 16px; height: 16px;
+  border-top: 2px solid var(--muted); border-right: 2px solid var(--muted); transform: rotate(45deg);
+}
+.stage-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.num { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+.items li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: start; }
+.items li .dot { margin-top: 5px; }
+.items .pr { font-family: var(--font-mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
+.items .muted { color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; }
+.note .mono { color: var(--ink); }
+
+/* Study timeline */
+.gantt-scroll { overflow-x: auto; }
+.gantt { min-width: 680px; display: grid; grid-template-columns: 210px repeat(12, minmax(0, 1fr)); row-gap: 10px; align-items: center; }
+.gantt .mh { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: center; border-left: 1px solid var(--rule); padding-bottom: 4px; }
+.gantt .label { font-size: 14px; padding-right: 12px; }
+.gantt .label small { display: block; color: var(--muted); font-size: 12px; }
+.gbar { height: 30px; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-family: var(--font-mono); overflow: hidden; white-space: nowrap; }
+.gbar.done { background: var(--done); color: var(--surface); }
+.gbar.prog { background: linear-gradient(90deg, var(--prog) var(--fill, 30%), var(--prog-soft) var(--fill, 30%)); color: var(--ink); border: 1px solid var(--prog); }
+.gbar.pend { background: var(--pend-soft); border: 1px dashed var(--pend); color: var(--muted); }
+.phase-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+
+/* Dependencies */
+.deps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.dep { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+.dep .arrow { color: var(--muted); font-family: var(--font-mono); }
+.dep small { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; }
+footer code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+
+@media (max-width: 860px) {
+  .chain { grid-template-columns: 1fr; gap: 26px; }
+  .stage:not(:last-child)::after { top: auto; bottom: -21px; right: auto; left: 28px; transform: rotate(135deg); }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Who is at the keyboard? · M.Tech thesis, IIIT Surat</p>
+    <h1>Student IDE progress</h1>
+    <p class="lede">Where the build and the study stand. The software is built in four steps, the study runs in four phases over twelve months, and the thesis is written alongside both.</p>
+    <div class="meter" aria-label="Overall progress">
+      <div class="bar" id="overall-bar"></div>
+      <div class="legend" id="overall-legend"></div>
+    </div>
+  </header>
+
+  <section aria-labelledby="build-h">
+    <div class="sec-head">
+      <h2 id="build-h">Build pipeline</h2>
+      <p>Each step consumes the one before it.</p>
+    </div>
+    <div class="chain" id="chain"></div>
+  </section>
+
+  <section aria-labelledby="study-h">
+    <div class="sec-head">
+      <h2 id="study-h">Study timeline</h2>
+      <p>Months counted from the start of the thesis. Ethics approval gates all data collection.</p>
+    </div>
+    <div class="gantt-scroll"><div class="gantt" id="gantt" role="img" aria-label="Twelve-month study timeline"></div></div>
+    <div class="phase-cards" id="phase-cards"></div>
+  </section>
+
+  <section aria-labelledby="thesis-h">
+    <div class="sec-head">
+      <h2 id="thesis-h">Thesis groundwork</h2>
+      <p>Lives in <span class="mono">thesis/</span> in the repo.</p>
+    </div>
+    <div class="card"><ul class="items" id="thesis-items"></ul></div>
+  </section>
+
+  <section aria-labelledby="deps-h">
+    <div class="sec-head">
+      <h2 id="deps-h">What is waiting on what</h2>
+    </div>
+    <div class="deps" id="deps"></div>
+  </section>
+
+  <footer>
+    Updated <span class="mono" id="updated"></span>. Source of truth: <code>thesis/progress/STATUS.md</code> in codehamster69/student-ide, with the same diagram in Mermaid there and in TikZ at <code>thesis/latex/flowcharts/phase-progress.tex</code>.
+  </footer>
+</div>
+
+<script>
+// Edit this block to update the page; keep it in step with thesis/progress/STATUS.md.
+const UPDATED = "26 Oct 2026";
+const LABEL = { done: "Done", prog: "In progress", pend: "Pending" };
+
+const BUILD = [
+  { n: 1, title: "Event-logging editor", s: "done", items: [
+    { t: "Keystroke, paste, edit, cursor, focus and run logging (event schema v1)", s: "done", pr: "#2" },
+    { t: "FastAPI + SQLite backend, Python runner, export and replay", s: "done", pr: "#2" },
+    { t: "Student UI redesign in React, Tailwind and Motion", s: "done", pr: "#5" },
+  ]},
+  { n: 2, title: "Features + CUSUM detector", s: "prog", items: [
+    { t: "Synthetic session generator (60 simulated typists)", s: "prog", pr: "#6" },
+    { t: "Habit features per 30 s window", s: "prog", pr: "#6" },
+    { t: "Two-channel CUSUM: identity and process", s: "prog", pr: "#6" },
+    { t: "Rework the structural build-order features", s: "prog", pr: "#6" },
+    { t: "Calibrate the alarm threshold on more typists", s: "pend" },
+  ], note: 'Synthetic, first pass: <span class="mono">75%</span> of takeovers caught, <span class="mono">86 s</span> median delay, <span class="mono">0.42</span> false alarms per hour.' },
+  { n: 3, title: "Teacher timeline dashboard", s: "pend", items: [
+    { t: "Evidence timeline per session: alarms, estimated switch time, channel", s: "pend" },
+    { t: "Review view that leads to a conversation, never a penalty", s: "pend" },
+  ]},
+  { n: 4, title: "Evaluation harness", s: "pend", items: [
+    { t: "Replay staged sessions A to E", s: "pend" },
+    { t: "Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm", s: "pend" },
+    { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "pend" },
+  ]},
+];
+
+const STUDY = [
+  { id: "P0", title: "Phase 0", sub: "Survey, ethics, logger", from: 1, to: 2, s: "prog", fill: "33%", items: [
+    { t: "Build the logger", s: "done", pr: "#2" },
+    { t: "Student survey", s: "pend" },
+    { t: "Ethics approval", s: "pend" },
+  ]},
+  { id: "P1", title: "Phase 1", sub: "Baseline labs", from: 3, to: 4, s: "pend", items: [
+    { t: "Four weeks of normal labs, 60 to 80 volunteers", s: "pend" },
+    { t: "Per-student baselines; raw keystrokes deleted after", s: "pend" },
+  ]},
+  { id: "P2", title: "Phase 2", sub: "Staged sessions", from: 5, to: 6, s: "pend", items: [
+    { t: "Conditions A honest, B full proxy, C takeover, D copying, E paste", s: "pend" },
+    { t: "Grade-matched proxies", s: "pend" },
+  ]},
+  { id: "P3", title: "Phase 3", sub: "Remote interview", from: 7, to: 7, s: "pend", items: [
+    { t: "Mock interview on own laptop, 20 to 30 people", s: "pend" },
+  ]},
+  { id: "W", title: "Months 8 to 12", sub: "Measure and write", from: 8, to: 12, s: "pend", items: [
+    { t: "Run the evaluation, write up RQ1 to RQ4", s: "pend" },
+  ]},
+];
+
+const THESIS = [
+  { t: "Thesis folder: brain log and LaTeX project", s: "done", pr: "#1" },
+  { t: "Related work, Nosi IDE details confirmed from the paper", s: "done", pr: "#3" },
+  { t: "Chapter drafts (related work drafted, others scaffolded)", s: "prog" },
+  { t: "Official IIIT Surat thesis template", s: "pend" },
+];
+
+const DEPS = [
+  { a: "Ethics approval", b: "Phase 1 labs", why: "No real student data is collected before approval." },
+  { a: "Detector (step 2)", b: "Dashboard (step 3)", why: "The timeline draws the detector's alarms and switch estimates." },
+  { a: "Phase 2 sessions", b: "Evaluation harness", why: "Staged takeovers are the labelled test set." },
+];
+
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const li = it => `<li><span class="dot ${it.s}" role="img" aria-label="${LABEL[it.s]}"></span><span>${esc(it.t)} ${it.pr ? `<span class="pr">${it.pr}</span>` : ""}</span></li>`;
+
+// Overall meter counts every line item.
+const all = [...BUILD.flatMap(b => b.items), ...STUDY.flatMap(p => p.items), ...THESIS];
+const c = { done: 0, prog: 0, pend: 0 };
+all.forEach(i => c[i.s]++);
+const pct = k => (100 * c[k] / all.length).toFixed(1) + "%";
+document.getElementById("overall-bar").innerHTML = `<span class="d" style="width:${pct("done")}"></span><span class="p" style="width:${pct("prog")}"></span>`;
+document.getElementById("overall-legend").innerHTML = ["done", "prog", "pend"].map(k =>
+  `<span class="key"><span class="dot ${k}"></span>${LABEL[k]} <b>${c[k]}</b></span>`).join("") +
+  `<span class="key">of <b>${all.length}</b> tracked items</span>`;
+
+document.getElementById("chain").innerHTML = BUILD.map(b => `
+  <article class="stage" data-s="${b.s}">
+    <div class="stage-top"><span class="num">Step ${b.n}</span><span class="chip ${b.s}">${LABEL[b.s]}</span></div>
+    <h3>${esc(b.title)}</h3>
+    <ul class="items">${b.items.map(li).join("")}</ul>
+    ${b.note ? `<p class="note">${b.note}</p>` : ""}
+  </article>`).join("");
+
+let g = `<div></div>` + Array.from({ length: 12 }, (_, i) => `<div class="mh">M${i + 1}</div>`).join("");
+STUDY.forEach((p, i) => {
+  g += `<div class="label" style="grid-row:${i + 2};grid-column:1">${esc(p.title)}<small>${esc(p.sub)}</small></div>`;
+  g += `<div class="gbar ${p.s}" style="grid-row:${i + 2};grid-column:${p.from + 1} / ${p.to + 2};--fill:${p.fill || "0%"}">${LABEL[p.s]}</div>`;
+});
+document.getElementById("gantt").innerHTML = g;
+
+document.getElementById("phase-cards").innerHTML = STUDY.map(p => `
+  <div class="card">
+    <div class="stage-top"><h3>${esc(p.title)} <span class="num">M${p.from}${p.to > p.from ? "–" + p.to : ""}</span></h3><span class="chip ${p.s}">${LABEL[p.s]}</span></div>
+    <ul class="items">${p.items.map(li).join("")}</ul>
+  </div>`).join("");
+
+document.getElementById("thesis-items").innerHTML = THESIS.map(li).join("");
+document.getElementById("deps").innerHTML = DEPS.map(d =>
+  `<div class="dep"><b>${esc(d.a)}</b><span class="arrow">→</span><span>${esc(d.b)}</span><small>${esc(d.why)}</small></div>`).join("");
+document.getElementById("updated").textContent = UPDATED;
+</script>
