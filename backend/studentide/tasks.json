@@ -1,0 +1,23 @@
+[
+  {
+    "id": "warmup-fizzbuzz",
+    "title": "Warm-up: FizzBuzz",
+    "prompt": "Read an integer n from input. For each number from 1 to n print \"Fizz\" if it is divisible by 3, \"Buzz\" if divisible by 5, \"FizzBuzz\" if divisible by both, and the number otherwise.",
+    "starter_code": "n = int(input())\n",
+    "sample_input": "15"
+  },
+  {
+    "id": "word-frequency",
+    "title": "Word frequency",
+    "prompt": "Read one line of text. Print each distinct word (lower-cased, punctuation stripped) with its count, most frequent first; break ties alphabetically.",
+    "starter_code": "line = input()\n",
+    "sample_input": "The cat and the hat. And the bat!"
+  },
+  {
+    "id": "free",
+    "title": "Free practice",
+    "prompt": "Write any Python program you like.",
+    "starter_code": "",
+    "sample_input": ""
+  }
+]
