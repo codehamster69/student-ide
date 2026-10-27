@@ -105,6 +105,8 @@ export interface Provider {
   license: string;
   can_browse: boolean;
   can_link: boolean;
+  /** lab languages it has questions for; null: every language */
+  languages: Language[] | null;
 }
 
 export interface SourceCategory { id: string; label: string; count: number }

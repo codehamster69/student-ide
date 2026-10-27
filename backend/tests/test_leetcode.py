@@ -120,7 +120,9 @@ def test_browse_by_topic_and_import_without_text(client):
     assert {"topic:dp", "topic:graphs", "topic:linked-lists", "topic:trees", "topic:sliding-window", "level:easy"} <= ids
     trees = client.get("/api/teach/sources/leetcode/questions?language=python&category=topic:trees", headers=ADMIN).json()
     assert trees and trees[0]["difficulty"] == "easy"
-    assert client.get("/api/teach/sources/leetcode/categories?language=c", headers=ADMIN).status_code == 400
+    c_cats = client.get("/api/teach/sources/leetcode/categories?language=c", headers=ADMIN)
+    assert c_cats.status_code == 200 and {"topic:trees", "level:hard"} <= {c["id"] for c in c_cats.json()}
+    assert client.get("/api/teach/sources/leetcode/categories?language=rust", headers=ADMIN).status_code in (400, 422)
 
     lab = client.post("/api/teach/labs", json={"title": "L", "language": "python"}, headers=ADMIN).json()
     lab = client.post(f"/api/teach/labs/{lab['id']}/import", json={"provider": "leetcode", "ref": "two-sum"}, headers=ADMIN).json()

@@ -59,8 +59,8 @@ Dynamic programming, Graphs, Trees, Sorting, Math, ...), then difficulty.
 | Codeforces | **Dataset** + link | 9,097 problems up to 2025, every rating | 19 topics from Codeforces' own tags; 7 rating bands (Beginner 800-1000 ... Master 2700+, Unrated) | every problem has its examples (visible) and up to 10 hidden official or generated tests; 7,873 have 3 or more, 1,219 have 2 (usually multi-case examples); 1,759 problems with several right answers judged by the dataset's checker; real-number answers within 1e-6 | From **open-r1/codeforces** (Penedo et al., Hugging Face 2025), **CC BY 4.0**: every problem the dataset could run (not interactive, standard input). Replaced CodeContests on 2026-10-27, which had half as many problems and no tests for multi-answer ones. Built by `backend/scripts/build_codeforces.py`. Codeforces' own API lists problems and tags but not statements or tests, so it is not used. |
 | CodeChef | **Dataset** + link | 332 easy and medium problems | difficulty only (CodeChef problems carry no tags in the dataset) | yes, as above | Also from **CodeContests** (CC BY 4.0; CodeChef material via the MIT-licensed Description2Code). codechef.com itself can still only be linked. |
 | Exercism | **Live** | ~140 per language | concepts (Python track) and difficulty | Python and JavaScript | MIT-licensed, served from public GitHub repositories. Canonical cases become JSON-argument tests plus a small driver. C, C++ and Java exercises have no `main()`, so they import without tests. |
-| MBPP | **Live** (Python only) | 974 beginner problems | guessed from the wording (labelled as such) | 961 of 974 have tests: the first visible, two hidden | Google Research, Austin et al. 2021; Apache 2.0 repository, CC BY 4.0 dataset card. Only `assert f(literals) == literal` asserts are converted; the reference solution is never shown, only its `def` line. |
-| LeetCode | **Dataset**, text live (Python only) | 2,834 problems | 27 topics from LeetCode's tags; Easy / Medium / Hard | every problem: 2 visible + up to 8 hidden, calling `Solution().method` with lists, linked lists and trees; "any order" answers compared sorted | Tests, tags and starter code from **LeetCodeDataset** (Xia et al. 2025, Apache 2.0), built by `backend/scripts/build_leetcode.py`. **LeetCode's problem text is never stored**: LeetCode claims copyright in it, so an imported question keeps an empty prompt and `source.live_prompt`, and the browser loads the text from the Hugging Face dataset viewer (`datasets-server.huggingface.co`) each time it is shown, checking the row's `task_id`. A teacher can write their own prompt, which then replaces it. Any other problem can still be linked. |
+| MBPP | **Live** (every language; 836 typed problems outside Python) | 974 beginner problems | guessed from the wording (labelled as such) | 961 of 974 have tests: the first visible, two hidden | Google Research, Austin et al. 2021; Apache 2.0 repository, CC BY 4.0 dataset card. Only `assert f(literals) == literal` asserts are converted; the reference solution is never shown, only its `def` line. |
+| LeetCode | **Dataset**, text live (every language) | 2,834 problems (2,828 outside Python) | 27 topics from LeetCode's tags; Easy / Medium / Hard | every problem: 2 visible + up to 8 hidden, calling `Solution().method` with lists, linked lists and trees; "any order" answers compared sorted | Tests, tags and starter code from **LeetCodeDataset** (Xia et al. 2025, Apache 2.0), built by `backend/scripts/build_leetcode.py`. **LeetCode's problem text is never stored**: LeetCode claims copyright in it, so an imported question keeps an empty prompt and `source.live_prompt`, and the browser loads the text from the Hugging Face dataset viewer (`datasets-server.huggingface.co`) each time it is shown, checking the row's `task_id`. A teacher can write their own prompt, which then replaces it. Any other problem can still be linked. |
 | HackerRank | **Link only** | | | | Its API covers a company's own tests only; its terms forbid copying any part of the service. |
 
 Codeforces statements are kept as published, with `$$$` LaTeX made
@@ -79,16 +79,41 @@ same row and keeps only the text in memory for an hour, never on disk. If
 both fail the student sees a link to the original, and the teacher's lab
 editor shows a warning on that question, so it can be fixed (by writing the
 prompt in their own words) before class. For competitions and exams, writing
-the prompt is the safe choice. The harness builds the
-arguments from the test input (`nums=[2, 7], target=9`, with `list_node(...)`
-and `tree_node(...)` for linked lists and trees), calls the method and prints
-the result as JSON; the starter code carries LeetCode's usual imports and
+the prompt is the safe choice. The harness reads one JSON value per argument
+per line from the test input (`[2, 7, 11, 15]` then `9`; linked lists and trees
+as LeetCode writes them, `[1, null, 2]`), builds linked lists and trees, calls
+the method and prints the result as JSON; the starter code carries LeetCode's usual imports and
 the `ListNode`/`TreeNode` classes. Problems that change their input in place
 (26) were left out, since their tests only check the method returns.
 `build_leetcode.py --verify` runs the dataset's reference solutions through
 the harness; that step was not run in the build container (running dataset
 code was blocked there), so the tests were checked with our own solutions
 instead (`tests/test_leetcode.py`).
+
+Every lab language (`providers/polyglot.py`). The tests only pass arguments
+to a function and compare what it returns, so C, C++, Java and JavaScript labs
+get the same tests. Each argument's type comes from LeetCode's Python type hint
+(MBPP has none, so from the test values), narrowed by the values the way
+LeetCode writes its own signatures: `int` becomes `long long`/`long` when a
+value needs 64 bits, a string that is always one character becomes `char`.
+The student gets a LeetCode-style starter (`class Solution` in C++ and Java,
+a plain function in C with `int* returnSize` / `int** returnColumnSizes`, a
+`var f = function(...)` in JavaScript, `ListNode`/`TreeNode` provided) and the
+question's harness, appended after their code, reads the arguments, calls the
+function and prints the answer in the same JSON as the Python harness, so the
+expected outputs are shared. Python questions imported from now on read the
+same JSON lines, so **a problem's tests are identical in every language**
+(any-language competitions rely on that); questions imported earlier keep the
+format they were imported with. Covered: 2,828 of 2,834 LeetCode problems (6
+have a dataset quirk or a non-data argument and stay Python only) and 836 of
+974 MBPP problems (the rest return mixed tuples or dicts). JavaScript drops
+the 33 LeetCode tests whose integers exceed 2^53; MBPP problems are only
+offered where every test fits. `backend/scripts/check_polyglot.py` checks the
+drivers: a function returning its argument unchanged round-trips real test
+values of every type in all five languages (170 checks), and every generated
+C program, plus one per signature shape in C++/Java/JavaScript, compiles
+(5,040 programs with MBPP). `tests/test_polyglot.py` runs our own solutions
+in each language through the grader.
 
 Looked at and not added: **TACO** (Apache 2.0, tags for every problem) and
 **APPS** (MIT) are only distributed through Hugging Face or a university
@@ -114,4 +139,4 @@ Student: `POST /api/sessions/{id}/check {code}` (409 if the question has no test
 The Exercism provider needs outbound HTTPS to `raw.githubusercontent.com`.
 Browser tests: `frontend/e2e/questions.mjs` (screenshots in
 `thesis/latex/snapshots/questions/`) and `frontend/e2e/leetcode.mjs`
-(`snapshots/leetcode/`).
+(`snapshots/leetcode/`, including a C++ lab: `leetcode-light-07-cpp-preview.png`).

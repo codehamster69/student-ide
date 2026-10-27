@@ -140,7 +140,10 @@ export async function get<T>(path: string, tok = token.get()): Promise<T> {
     if (notYours(res)) throw new Error(detail.detail);
     throw new AuthError(detail.detail ?? "not allowed");
   }
-  if (!res.ok) throw new Error(`request failed (${res.status})`);
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(typeof detail.detail === "string" ? detail.detail : `request failed (${res.status})`);
+  }
   return res.json();
 }
 

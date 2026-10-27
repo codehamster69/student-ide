@@ -40,6 +40,10 @@ class Originals(Provider):
     name = "Student IDE sets"
     status = "bundled"
     license = "Same as Student IDE"
+
+    @property
+    def languages(self) -> tuple[str, ...]:  # type: ignore[override]
+        return tuple(sorted({s["language"] for s in _sets()}))
     about = ("Original beginner questions written for this app (C fundamentals so far), each with visible "
              "examples and hidden tests checked against a reference solution: ready for a competition.")
 

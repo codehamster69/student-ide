@@ -16,19 +16,24 @@ dataset viewer when the question is shown. A teacher may write their own
 prompt instead, which then replaces the live text. The original problem is
 linked on leetcode.com either way.
 
-Python only: the tests call a method on `class Solution`, as on LeetCode.
-The harness below builds the arguments (including linked lists and binary
-trees), calls the method and prints its return value as JSON.
+In Python the tests call a method on `class Solution`, as on LeetCode: the
+harness below builds the arguments (including linked lists and binary
+trees), calls the method and prints its return value as JSON. C, C++, Java
+and JavaScript labs get the same tests with one JSON argument per stdin line
+and a starter and harness generated from the method's type hints
+(polyglot.py); the expected outputs are the same.
 """
 
 from __future__ import annotations
 
+import ast
 import gzip
 import json
 import time
 from functools import lru_cache
 from pathlib import Path
 
+from . import polyglot
 from .base import CACHE_TTL_S, Category, Fetcher, Imported, Provider, ProviderError, Summary, http_get, topic_categories
 
 DATA = Path(__file__).parent / "data" / "leetcode.jsonl.gz"
@@ -36,6 +41,7 @@ DATASET = "newfacade/LeetCodeDataset"
 ROWS_URL = "https://datasets-server.huggingface.co/rows"
 ATTRIBUTION = ("Tests, tags and starter code from LeetCodeDataset (Xia et al. 2025, Apache 2.0); "
                "problem text by LeetCode, shown live from the dataset and not stored here")
+LABELS = {"python": "Python", "c": "C", "cpp": "C++", "java": "Java", "javascript": "JavaScript"}
 LEVELS = (("easy", "Easy"), ("medium", "Medium"), ("hard", "Hard"))
 
 # LeetCode tag -> shared topics (base.TOPICS).
@@ -109,7 +115,7 @@ except NameError:
 
 def _list_node(values):
     head = None
-    for v in reversed(values):
+    for v in reversed(values or []):
         head = ListNode(v, head)
     return head
 
@@ -169,6 +175,15 @@ def harness(fn: str, any_order: bool) -> str:
     return HARNESS.format(fn=fn, any_order=any_order)
 
 
+def json_harness(sig: polyglot.Signature) -> str:
+    """The same driver for tests written as one JSON value per argument per line, as every other language reads them."""
+    build = {"ListNode": "_list_node({})", "TreeNode": "_tree_node({})"}
+    call = ", ".join(build.get(t, "{}").format(f"_args[{k}]") for k, (_, t) in enumerate(sig.params))
+    return (HARNESS.rsplit("\n_args", 1)[0].format(fn=sig.fn, any_order=sig.any_order)
+            + "\n_args = [_json.loads(_l) for _l in _sys.stdin.read().splitlines() if _l.strip()]\n"
+            + f"print(_json.dumps(_show(Solution().{sig.fn}({call}), {sig.any_order})))\n")
+
+
 def starter(row: dict) -> str:
     nodes = [n for n, src in (("ListNode", LIST_NODE), ("TreeNode", TREE_NODE)) if n in row["starter_code"]]
     head = PRELUDE.format(nodes=" and the " + " and ".join(f"{n} class" for n in nodes) if nodes else "")
@@ -185,6 +200,65 @@ def _load() -> dict[str, dict]:
         raise ProviderError("the LeetCode question set is missing from this install", 503)
     with gzip.open(DATA, "rt", encoding="utf-8") as f:
         return {r["ref"]: r for r in map(json.loads, f)}
+
+
+MIN_TESTS = 3  # as in scripts/build_leetcode.py
+
+
+def _values(stdin: str) -> dict:
+    """A test's keyword arguments (written by build_leetcode.py from literals only) as plain values."""
+    call = ast.parse(f"f({stdin})", mode="eval").body
+    env = {"__builtins__": {}, "list_node": list, "tree_node": list, "inf": float("inf")}
+    return {k.arg: eval(compile(ast.Expression(k.value), "<test>", "eval"), env) for k in call.keywords}
+
+
+def convert(row: dict) -> tuple[polyglot.Signature, list[dict]] | None:
+    """The method's signature for typed languages and the tests it covers
+    (stdin: one JSON value per argument), or None if it can't be typed."""
+    src = "\n".join(line for line in row["starter_code"].splitlines() if not line.lstrip().startswith("#"))
+    try:
+        fn = next(n for n in ast.walk(ast.parse(src + "\n        pass\n"))
+                  if isinstance(n, ast.FunctionDef) and n.name == row["fn"])
+    except (SyntaxError, StopIteration):
+        return None
+    params = fn.args.args[1:]
+    names = [a.arg for a in params]
+    cases, tests = [], []
+    for t in row["tests"]:
+        try:
+            kw = _values(t["stdin"])
+            cases.append(([kw[n] for n in names], json.loads(t["expected"])))
+            tests.append(t)
+        except (KeyError, ValueError, SyntaxError, TypeError):
+            continue
+    if fn.args.vararg or fn.args.kwarg or fn.args.kwonlyargs:
+        return None
+    built = polyglot.build(row["fn"], names, [polyglot.from_hint(a.annotation) for a in params],
+                           polyglot.from_hint(fn.returns), cases, row["any_order"])
+    if built is None:
+        return None
+    sig, keep = built
+    return sig, [{"stdin": polyglot.stdin(cases[k][0]), "expected": tests[k]["expected"], "values": cases[k]} for k in keep]
+
+
+@lru_cache(maxsize=1)
+def _converted() -> dict[str, tuple[polyglot.Signature, list[dict]]]:
+    return {ref: got for ref, r in _load().items() if (got := convert(r)) is not None}
+
+
+@lru_cache(maxsize=8)
+def _typed(language: str) -> dict[str, tuple[polyglot.Signature, list[dict]]]:
+    """ref -> (signature, tests) for every problem that works in `language`. Python gets the same tests as
+    C, C++ and Java, so a question's tests are the same in every language (JavaScript drops integers
+    beyond 2^53)."""
+    if language == "python":
+        return _typed("c")
+    out = {}
+    for ref, (sig, tests) in _converted().items():
+        tests = [t for t in tests if polyglot.in_range(list(t["values"]), language)]
+        if len(tests) >= MIN_TESTS:
+            out[ref] = (sig, tests)
+    return out
 
 
 def topics(row: dict) -> list[str]:
@@ -210,10 +284,10 @@ class LeetCode(Provider):
     status = "bundled"
     license = "Apache 2.0 (tests and tags); problem text LeetCode's"
     about = ("2,800+ LeetCode problems by topic and difficulty, each with tests, from LeetCodeDataset. LeetCode's "
-             "problem text is not stored: it loads live when the question is shown, or you write your own. Python labs only.")
+             "problem text is not stored: it loads live when the question is shown, or you write your own. Every lab "
+             "language: C, C++, Java and JavaScript get starter code and tests generated from the Python signature.")
     terms_url = "https://huggingface.co/datasets/newfacade/LeetCodeDataset"
     hosts = ("leetcode.com", "leetcode.cn")
-
     def __init__(self, get: Fetcher = http_get, ttl: float = CACHE_TTL_S):
         self.get, self.ttl = get, ttl
         self._texts: dict[str, tuple[float, str]] = {}  # in memory only: the text is never written anywhere
@@ -241,16 +315,20 @@ class LeetCode(Provider):
         return self._texts[ref][1]
 
     def _rows(self, language: str) -> list[dict]:
-        if language != "python":
-            raise ProviderError("LeetCode questions are Python only (the tests call a Solution method); "
-                                "switch the lab to Python to use them, or link a problem instead", 400)
-        return list(_load().values())
+        if language == "python":
+            return list(_load().values())
+        if language not in polyglot.LANGUAGES:
+            raise ProviderError(f"LeetCode questions aren't available in {language}", 400)
+        typed = _typed(language)
+        return [r for ref, r in _load().items() if ref in typed]
 
     def _row(self, language: str, ref: str) -> dict:
-        self._rows(language)
         r = _load().get(ref)
         if r is None:
             raise ProviderError(f"no LeetCode problem '{ref}' in the question set", 404)
+        if language != "python" and ref not in _typed(language):
+            raise ProviderError(f"{r['id']}. {r['title']} can't be set in {language}: its arguments or answer "
+                                "don't map onto that language's types (or its numbers don't fit). It works in Python.", 404)
         return r
 
     def categories(self, language: str) -> list[Category]:
@@ -274,15 +352,29 @@ class LeetCode(Provider):
 
     def fetch(self, language: str, ref: str) -> Imported:
         r = self._row(language, ref)
-        tests = [{"name": f"Example {i + 1}" if i < 2 else f"Test {i + 1}", "stdin": t["stdin"], "expected": t["expected"],
-                  "hidden": i >= 2, "compare": "json"} for i, t in enumerate(r["tests"])]
         notes = ["The problem text isn't stored: students see it loaded live from LeetCodeDataset (or your own "
-                 "words, if you write a prompt). Tests call Solution()." + r["fn"] + " and compare what it returns."]
+                 "words, if you write a prompt)."]
+        if language == "python" and ref not in _typed("python"):  # the few problems no typed language can take
+            raw, code, driver = r["tests"], starter(r), harness(r["fn"], r["any_order"])
+        else:
+            sig, raw = _typed(language)[ref]
+            code = starter(r) if language == "python" else polyglot.starter(sig, language)
+            driver = json_harness(sig) if language == "python" else polyglot.harness(sig, language)
+        if language == "python":
+            notes.append(f"Tests call Solution().{r['fn']} and compare what it returns.")
+        else:
+            notes.append(f"Starter code for {LABELS.get(language, language)} is generated from LeetCode's Python "
+                         f"signature; the tests are the same in every language and compare what {sig.fn} returns.")
+        if len(raw) < len(r["tests"]):
+            notes.append(f"{len(r['tests']) - len(raw)} of the {len(r['tests'])} tests don't fit "
+                         f"{LABELS.get(language, language)}'s types and were left out.")
+        tests = [{"name": f"Example {i + 1}" if i < 2 else f"Test {i + 1}", "stdin": t["stdin"], "expected": t["expected"],
+                  "hidden": i >= 2, "compare": "json"} for i, t in enumerate(raw)]
         if r["any_order"]:
             notes.append("Answers may come in any order, so lists are compared after sorting.")
         return Imported(
-            title=f"{r['id']}. {r['title']}", prompt="", starter_code=starter(r), tests=tests,
-            harness=harness(r["fn"], r["any_order"]),
+            title=f"{r['id']}. {r['title']}", prompt="", starter_code=code, tests=tests,
+            harness=driver,
             source={"provider": self.id, "ref": ref, "url": f"https://leetcode.com/problems/{ref}/",
                     "license": self.license, "attribution": ATTRIBUTION, "tags": r["tags"], "level": r["difficulty"],
                     "live_prompt": live_prompt(r), "fetched_at": time.time()},
