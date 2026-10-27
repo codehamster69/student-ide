@@ -207,6 +207,7 @@ after `BACKUP_KEEP_DAYS`.
 - [ ] Erasure requests are handled with `--erase-student` and logged in your own records.
 - [ ] Backups are restorable (tested once) and kept no longer than needed.
 - [ ] Before using recordings as study data: ethics approval, and the study's consent wording on the consent screen.
+- [ ] Live viewing (`STUDENTIDE_LIVE`, default `editor`) is named in the ethics application, or narrowed to `class` / `off`. See [live.md](live.md).
 
 ## Security notes
 

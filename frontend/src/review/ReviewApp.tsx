@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
-import { Activity, ListChecks, LogOut, MessagesSquare, UsersRound } from "lucide-react";
+import { Activity, ListChecks, LogOut, MessagesSquare, Radio, UsersRound } from "lucide-react";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig, type Me } from "../auth";
 import { Button, Logo, cn, page, spring } from "../ui";
 import { Labs } from "../teach/Labs";
 import { LabEditor } from "../teach/LabEditor";
 import { Users } from "../teach/Users";
 import { LiveBoard } from "../compete/LiveBoard";
+import { LiveClass, LiveLabs } from "../live/LiveClass";
+import { LiveEditor } from "../live/LiveEditor";
 import { token } from "./api";
 import { Gate } from "./Gate";
 import { Overview } from "./Overview";
@@ -14,13 +16,20 @@ import { SessionView } from "./SessionView";
 
 type Route =
   | { name: "overview" } | { name: "session"; id: string }
-  | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string } | { name: "people" };
+  | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string } | { name: "people" }
+  | { name: "live" } | { name: "live-lab"; id: string } | { name: "live-session"; id: string };
 
 // Routes: #/review (overview), #/review/s/<session id>, #/teach (labs) and
-// #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board), #/teach/people (admins).
+// #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board), #/teach/people (admins),
+// #/live (open labs), #/live/l/<lab id> (class view), #/live/s/<session id> (one student's editor).
 // One teacher area, one sign-in.
 function route(): Route {
   if (location.hash.startsWith("#/teach/people")) return { name: "people" };
+  const ll = location.hash.match(/^#\/live\/l\/([A-Za-z0-9_]+)/);
+  if (ll) return { name: "live-lab", id: ll[1] };
+  const ls = location.hash.match(/^#\/live\/s\/([0-9a-f]+)/);
+  if (ls) return { name: "live-session", id: ls[1] };
+  if (location.hash.startsWith("#/live")) return { name: "live" };
   const s = location.hash.match(/^#\/review\/s\/([0-9a-f]+)/);
   if (s) return { name: "session", id: s[1] };
   const l = location.hash.match(/^#\/teach\/l\/([A-Za-z0-9_]+)/);
@@ -32,6 +41,7 @@ function route(): Route {
 
 const TABS = [
   { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" || r.name === "board" },
+  { href: "#/live", label: "Live", icon: Radio, match: (r: Route) => r.name.startsWith("live") },
   { href: "#/review", label: "Review", icon: Activity, match: (r: Route) => r.name === "overview" || r.name === "session" },
 ];
 const ADMIN_TAB = { href: "#/teach/people", label: "People", icon: UsersRound, match: (r: Route) => r.name === "people" };
@@ -61,8 +71,9 @@ export function ReviewApp() {
   }, []);
 
   const teaching = r.name === "labs" || r.name === "lab" || r.name === "board" || r.name === "people";
+  const watching = r.name.startsWith("live");
   const tabs = me?.role === "admin" ? [...TABS, ADMIN_TAB] : TABS;
-  useEffect(() => { document.title = `${teaching ? "Labs" : "Review"} · Student IDE`; }, [teaching]);
+  useEffect(() => { document.title = `${watching ? "Live" : teaching ? "Labs" : "Review"} · Student IDE`; }, [teaching, watching]);
 
   const signOut = () => {
     token.clear();
@@ -79,7 +90,7 @@ export function ReviewApp() {
         <header className="sticky top-0 z-30 border-b border-border/70 bg-bg/80 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-5">
             <div className="flex items-center gap-5">
-              <a href={teaching ? "#/teach" : "#/review"} className="rounded-lg"><Logo subtitle={teaching ? "Labs and questions" : "Review timeline"} /></a>
+              <a href={teaching ? "#/teach" : "#/review"} className="rounded-lg"><Logo subtitle={watching ? "Live class view" : teaching ? "Labs and questions" : "Review timeline"} /></a>
               {authed && (
                 <LayoutGroup id="teacher-nav">
                   <nav className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm">
@@ -116,6 +127,12 @@ export function ReviewApp() {
                 <Gate cfg={cfg} signedInStudent={student} onDone={(u) => { setMe(u); setAuthed(true); }} />
               ) : r.name === "people" && me?.role === "admin" ? (
                 <Users me={me.email} onAuthLost={signOut} />
+              ) : r.name === "live" ? (
+                <LiveLabs onAuthLost={signOut} />
+              ) : r.name === "live-lab" ? (
+                <LiveClass id={r.id} onAuthLost={signOut} />
+              ) : r.name === "live-session" ? (
+                <LiveEditor id={r.id} onAuthLost={signOut} />
               ) : r.name === "session" ? (
                 <SessionView id={r.id} onAuthLost={signOut} />
               ) : r.name === "board" ? (

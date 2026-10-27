@@ -10,7 +10,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, CircleAlert, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
+import { CheckCircle2, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
 import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
 import { LANGUAGES } from "../teach/api";
@@ -71,6 +71,7 @@ export function Workspace({ studentId, task, session, onFinished }: {
   const [checking, setChecking] = useState(false);
   const [grade, setGrade] = useState<CheckResult | null>(null);
   const [pane, setPane] = useState<"output" | "tests">("output");
+  const watching = useViewers(sessionId);
   const language = task.language ?? "python";
   const lang = LANGUAGES[language];
   // Competitions submit for a score instead; a lab's Check is only for the student.
@@ -242,6 +243,7 @@ export function Workspace({ studentId, task, session, onFinished }: {
             <LiveDot tone={link.ok ? "success" : "warn"} />
             {link.ok ? "Recording" : `Offline · ${link.pending} events waiting`}
           </motion.div>
+          <WatchNotice v={watching} />
           <div className="mx-1 h-5 w-px bg-border" />
           <Button variant="primary" size="sm" onClick={() => void runCode()} disabled={running || saving} className="pr-2">
             {running ? <Spinner className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
@@ -449,6 +451,51 @@ export function Workspace({ studentId, task, session, onFinished }: {
           onLeave={() => { setVerdict(null); setConfirming(true); }} />
       )}
     </div>
+  );
+}
+
+interface Viewers { class_view: boolean; editor: { name: string }[] }
+
+const VIEWERS_MS = 5000;
+
+/** Who is watching live, polled every 5 s (the poll also tells the class view this IDE is still open). */
+function useViewers(sessionId: string): Viewers {
+  const [v, setV] = useState<Viewers>({ class_view: false, editor: [] });
+  useEffect(() => {
+    let alive = true;
+    const poll = () => fetch(`/api/sessions/${sessionId}/viewers`).then((r) => (r.ok ? r.json() : null))
+      .then((next: Viewers | null) => { if (alive && next) setV(next); }, () => {});
+    void poll();
+    const t = window.setInterval(poll, VIEWERS_MS);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [sessionId]);
+  return v;
+}
+
+/** Live viewing is never silent: a teacher on your editor gets a named banner, the class view a small pill. */
+function WatchNotice({ v }: { v: Viewers }) {
+  const names = v.editor.map((e) => e.name);
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {names.length > 0 ? (
+        <motion.div key="editor" role="status" aria-live="polite"
+          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: duration.base, ease: ease.out }}
+          title="Your teacher is looking at a read-only copy of your code right now. They cannot type in your editor."
+          className="flex h-7 items-center gap-1.5 rounded-full bg-warn-soft px-3 text-xs font-medium text-warn">
+          <Eye className="size-3.5" />
+          <span className="max-w-56 truncate">{names.join(", ")} {names.length === 1 ? "is" : "are"} viewing your editor</span>
+        </motion.div>
+      ) : v.class_view ? (
+        <motion.div key="class" role="status" aria-live="polite"
+          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: duration.base, ease: ease.out }}
+          title="Your teacher has this lab's live class view open: they can see who is working, on which question, and your runs and checks. Not your code."
+          className="flex h-7 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-xs font-medium text-muted">
+          <Eye className="size-3.5" /> Class view on
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 

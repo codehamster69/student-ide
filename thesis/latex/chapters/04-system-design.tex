@@ -454,3 +454,52 @@ not an evaluation (that is \cref{ch:rq1}).
   screen are in \texttt{snapshots/review/}.}
   \label{fig:review-session}
 \end{figure}
+
+\section{Live classroom view}
+\label{sec:live-view}
+The review timeline is deliberately after the fact. During a lab, though, a
+teacher mostly wants to know who is stuck, and the editor already uploads its
+events every two seconds. A \emph{Live} tab uses those same events while a
+lab is open (\cref{fig:live-class}). The class view shows one card per
+student: whether they are typing, working, quiet, have the editor in a
+background tab, or have closed it; the question they are on; edits per
+30~seconds over the last ten minutes; their runs and the last error; their
+last test check; and any moments worth a conversation the timeline has found
+in this lab so far. It shows no code. From a card, the teacher can open a
+read-only copy of that student's editor, rebuilt on the server from the edit
+events (\cref{sec:privacy}), with the student's caret and recent runs.
+
+Watching live changes what students agree to, and covert watching would sit
+badly with a design whose only consequence is a conversation. So viewing is
+never silent: while a teacher has a student's editor open, that student's
+editor says so with the teacher's name, and while the class view is open every
+student in the lab sees a small notice (\cref{fig:live-editor}). Each view is
+logged, the consent screen names live viewing, students who agreed to the
+earlier text are asked again, and a server setting limits the feature to the
+class view (no code) or turns it off if the ethics committee prefers. No new
+data is recorded for it; the live views only change who can see existing
+events, and when. Whether knowing they may be watched changes how students
+type is an open question for the study; the viewing log lets the analysis
+compare or exclude sessions that had an editor view.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{live/live-light-03-class}
+  \caption{Live class view of the open demo lab: state, question, recent
+  activity, runs, test checks and moments per student. No code is shown.}
+  \label{fig:live-class}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{live/live-light-04-editor}
+    \caption{The teacher's read-only view of one student's editor, two seconds behind.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{live/live-light-05-student-notice}
+    \caption{The same student's editor at that moment: the top bar names who is viewing.}
+  \end{subfigure}
+  \caption{Live editor view and the notice the student sees.}
+  \label{fig:live-editor}
+\end{figure}

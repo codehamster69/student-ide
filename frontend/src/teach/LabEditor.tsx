@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
-  ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, Pencil, Plus, Trash2,
+  ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, Pencil, Plus, Radio, Trash2,
   UserPlus, Users,
 } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, TextArea, cn, item, pop, spring, stagger } from "../ui";
@@ -67,6 +67,9 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
       <motion.div variants={item} className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <LabHeading lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
         <div className="flex items-center gap-2">
+          {lab.status === "open" && (
+            <Button size="sm" onClick={() => { location.hash = `#/live/l/${lab.id}`; }}><Radio className="size-3.5 text-success" /> Watch live</Button>
+          )}
           <StatusSwitch value={lab.status} disabled={!lab.questions.length}
             onChange={(status) => void write("PATCH", `/api/teach/labs/${lab.id}`, { status })} />
           <Button variant="ghost" size="icon" aria-label="Delete lab" onClick={() => setConfirmDelete(true)}

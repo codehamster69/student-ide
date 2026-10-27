@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Ban, ClipboardPaste, Eye, FileDiff, Keyboard, Play, ShieldCheck } from "lucide-react";
+import { ArrowRight, Ban, ClipboardPaste, Eye, FileDiff, Keyboard, MonitorPlay, Play, ShieldCheck } from "lucide-react";
 import { api } from "../api";
+import { authConfig, type LiveMode } from "../auth";
 import { Button, Card, Checkbox, Spinner, cn, item, stagger } from "../ui";
 
 const RECORDED = [
@@ -12,9 +13,17 @@ const RECORDED = [
   { icon: Eye, text: "When you switch away from the editor or this tab" },
 ];
 
+// What a teacher can see live while a lab is running (see backend/studentide/live.py).
+const LIVE: Record<Exclude<LiveMode, "off">, string> = {
+  class: "During a lab your teacher can follow the class live: who is working, on which question, and your runs and checks (not your code). A notice in the editor tells you while they do.",
+  editor: "During a lab your teacher can follow the class live and open a read-only view of your editor. The editor always tells you when they do, with their name.",
+};
+
 export function Consent({ studentId, onDone }: { studentId: string; onDone: () => void }) {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState<LiveMode>("editor");
+  useEffect(() => { void authConfig().then((c) => setLive(c.live ?? "editor")); }, []);
 
   const start = async () => {
     setBusy(true);
@@ -45,6 +54,13 @@ export function Consent({ studentId, onDone }: { studentId: string; onDone: () =
             </motion.li>
           ))}
         </ul>
+
+        {live !== "off" && (
+          <motion.div variants={item} className="mt-4 flex gap-3 rounded-xl border border-border bg-surface-2/60 px-4 py-3 text-sm text-text">
+            <MonitorPlay className="mt-0.5 size-4 shrink-0 text-accent" />
+            <p>{LIVE[live]} Nothing from a live view is ever used to mark your work.</p>
+          </motion.div>
+        )}
 
         <motion.div variants={item} className="mt-4 flex gap-3 rounded-xl bg-success-soft px-4 py-3 text-sm text-text">
           <Ban className="mt-0.5 size-4 shrink-0 text-success" />

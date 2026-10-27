@@ -79,3 +79,5 @@ questions can be picked by topic and difficulty from Codeforces and CodeChef
 (through the openly licensed CodeContests dataset, with tests), Exercism and
 MBPP, or linked from LeetCode and HackerRank. See
 [question-sources.md](question-sources.md).
+
+While a lab is open, **Watch live** on its page opens the live class view; see [live.md](live.md).
