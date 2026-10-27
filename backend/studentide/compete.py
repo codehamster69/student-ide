@@ -11,9 +11,17 @@ Lifecycle: draft -> open (students join the lobby and pick a display name,
 questions stay hidden) -> started (clock runs, questions appear) -> ended
 (board frozen; the teacher can also close the lab as usual).
 
-Teacher (admin token):
+Hand-in at the end: when the clock runs out (or the teacher ends it early),
+each student's current code for every question they worked on is submitted
+for them, so nobody loses the points for code they never got round to
+submitting. The student's editor hands its last edits in as the clock hits
+zero; GRACE_S later the server rebuilds each question's code from the edits
+that reached it in time and grades it like a submission made at the end (see
+hand_in). Until then the board says it is still grading.
+
+Teacher (the owner, co-teachers and admins; admin token in dev mode):
     POST  /api/teach/competitions                  {title, description, subject, language, duration_min, board}
-    GET   /api/teach/competitions/{lab_id}         settings + full board
+    GET   /api/teach/competitions/{lab_id}         settings + full board (owner, co-teachers, admins)
     PATCH /api/teach/competitions/{lab_id}         {duration_min?, board?}
     POST  /api/teach/competitions/{lab_id}/start   opens the lab and starts the clock
                                                    (409 while a question has no tests)
@@ -22,6 +30,7 @@ Teacher (admin token):
 Student (roll number, like the rest of the student API):
     GET   /api/competitions/{lab_id}?student_id=   lobby / live view with the board
     POST  /api/competitions/{lab_id}/join          {student_id, handle?}
+    GET   /api/competitions/{lab_id}/clock?student_id=   state and end time, polled by the editor
     POST  /api/sessions/{session_id}/submit        {code} -> standing after this submission
 
 Scoring (see docs/competitions.md). Each submission is run against the
@@ -42,7 +51,10 @@ behaviour from a normal lab.
 
 from __future__ import annotations
 
+import json
+import logging
 import re
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -53,12 +65,17 @@ from pydantic import BaseModel, Field
 
 from .db import Database
 from .grading import competition_ready, grade, parse_tests
+from .replay import ReplayError, final_text
+
+log = logging.getLogger(__name__)
 
 STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
 SOLVE_PTS = 100
 SPEED_PTS = 50
 TOP_N = 10
+GRACE_S = 20          # wait for the editors' last edits to arrive before the hand-in
+STALE_S = 600         # a hand-in that started this long ago and never finished is retried
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS competitions (
@@ -66,7 +83,9 @@ CREATE TABLE IF NOT EXISTS competitions (
     duration_s    INTEGER,                    -- NULL = no clock, the teacher ends it
     board         TEXT NOT NULL DEFAULT 'top' CHECK (board IN ('top', 'all', 'hidden')),
     started_at    REAL,
-    ends_at       REAL                        -- NULL while untimed and running
+    ends_at       REAL,                       -- NULL while untimed and running
+    handin_started REAL,                      -- the end-of-time hand-in (see hand_in)
+    handin_done   REAL
 );
 
 CREATE TABLE IF NOT EXISTS competition_players (
@@ -86,7 +105,8 @@ CREATE TABLE IF NOT EXISTS submissions (
     created_at    REAL NOT NULL,
     code          TEXT NOT NULL,
     passed        INTEGER NOT NULL,
-    total         INTEGER NOT NULL
+    total         INTEGER NOT NULL,
+    auto          INTEGER NOT NULL DEFAULT 0  -- 1 = handed in for the student when time ran out
 );
 CREATE INDEX IF NOT EXISTS submissions_by_lab ON submissions(lab_id, created_at);
 """
@@ -95,6 +115,15 @@ CREATE INDEX IF NOT EXISTS submissions_by_lab ON submissions(lab_id, created_at)
 def ensure_schema(db: Database) -> None:
     with db.connect() as conn:  # labs.kind itself is added by db.MIGRATIONS
         conn.executescript(SCHEMA)
+        have = {r["name"] for r in conn.execute("PRAGMA table_info(competitions)")}
+        if "handin_done" not in have:
+            conn.execute("ALTER TABLE competitions ADD COLUMN handin_started REAL")
+            conn.execute("ALTER TABLE competitions ADD COLUMN handin_done REAL")
+            # competitions that ended before hand-in existed keep the results already announced
+            conn.execute("UPDATE competitions SET handin_started = ends_at, handin_done = ends_at "
+                         "WHERE ends_at IS NOT NULL AND ends_at <= ?", (time.time(),))
+        if "auto" not in {r["name"] for r in conn.execute("PRAGMA table_info(submissions)")}:
+            conn.execute("ALTER TABLE submissions ADD COLUMN auto INTEGER NOT NULL DEFAULT 0")
 
 
 # scoring ---------------------------------------------------------------------
@@ -107,6 +136,7 @@ class QState:
     total: int | None = None
     points: int = 0
     solved_at: float | None = None
+    auto: bool = False                   # the best submission was handed in when time ran out
 
 
 @dataclass
@@ -164,7 +194,7 @@ def score(comp: dict, question_ids: list[str], players: dict[str, str], runs: li
             pts += round(SPEED_PTS * max(0.0, (start + duration - t) / duration))
         if pts > qs.points:
             gains[s].append((t, pts - qs.points))
-            qs.points, qs.passed, qs.total = pts, sub["passed"], sub["total"]
+            qs.points, qs.passed, qs.total, qs.auto = pts, sub["passed"], sub["total"], bool(sub.get("auto"))
         if solved and not qs.solved:
             qs.solved, qs.solved_at = True, t
 
@@ -208,7 +238,8 @@ def standing_json(p: Standing, rank: int, question_ids: list[str], detail: bool)
     d = {"rank": rank, "handle": p.handle, "points": p.points, "solved": p.solved, "badges": p.badges}
     if detail:
         d.update(student_id=p.student_id, runs=p.runs, fixes=p.fixes, questions=[
-            {"tries": q.tries, "solved": q.solved, "points": q.points, "passed": q.passed, "total": q.total}
+            {"tries": q.tries, "solved": q.solved, "points": q.points, "passed": q.passed, "total": q.total,
+             "auto": q.auto}
             for q in (p.questions.get(qid, QState()) for qid in question_ids)])
     return d
 
@@ -246,8 +277,110 @@ def board(db: Database, comp: dict) -> tuple[list[Standing], list[str]]:
             """SELECT s.student_id, s.question_id, r.created_at, r.error_type
                FROM runs r JOIN sessions s ON s.id = r.session_id WHERE s.lab_id = ?""", (lab_id,))]
         subs = [dict(r) for r in conn.execute(
-            "SELECT student_id, question_id, created_at, passed, total FROM submissions WHERE lab_id = ?", (lab_id,))]
+            "SELECT student_id, question_id, created_at, passed, total, auto FROM submissions WHERE lab_id = ?",
+            (lab_id,))]
     return score(comp, qids, players(db, lab_id), runs, subs), qids
+
+
+# hand-in at the end ---------------------------------------------------------
+
+def code_until(db: Database, session_id: str, cutoff: float) -> str | None:
+    """The session's code as of the last edit that reached the server by `cutoff`."""
+    with db.connect() as conn:
+        events = [{"seq": r["seq"], "type": r["type"], "data": json.loads(r["data"])} for r in conn.execute(
+            """SELECT seq, type, data FROM events WHERE session_id = ? AND type IN ('snapshot', 'edit')
+               AND received_at <= ? ORDER BY seq""", (session_id, cutoff))]
+    if not events:
+        return None
+    try:
+        return final_text(events)
+    except ReplayError:  # lost events: fall back to the last full copy of the code
+        snaps = [e["data"]["text"] for e in events if e["type"] == "snapshot"]
+        return snaps[-1] if snaps else None
+
+
+def hand_in(db: Database, comp: dict) -> int:
+    """Submit each student's current code for every question they worked on,
+    as if they had pressed Submit as time ran out. "Worked on" = their latest
+    code differs from the starter code and is not empty. Code identical to a
+    submission they already made is not graded again (it already counts).
+    Safe to run twice: a question already handed in for a student is skipped.
+    Returns how many answers were handed in."""
+    lab_id, end = comp["lab_id"], comp["ends_at"]
+    starters = {q["id"]: q["starter_code"] or "" for q in db.lab_questions(lab_id)}
+    with db.connect() as conn:
+        sessions = conn.execute(
+            """SELECT id, student_id, question_id FROM sessions WHERE lab_id = ? AND started_at <= ?
+               ORDER BY started_at DESC""", (lab_id, end)).fetchall()
+        done = {(r["student_id"], r["question_id"]) for r in conn.execute(
+            "SELECT student_id, question_id FROM submissions WHERE lab_id = ? AND auto = 1", (lab_id,))}
+        submitted = {(r["student_id"], r["question_id"], r["code"]) for r in conn.execute(
+            "SELECT student_id, question_id, code FROM submissions WHERE lab_id = ?", (lab_id,))}
+    latest: dict[tuple[str, str], tuple[str, str]] = {}
+    for row in sessions:  # newest first: the first session with real code is what the student had open
+        key = (row["student_id"], row["question_id"])
+        if key in latest or key in done or row["question_id"] not in starters:
+            continue
+        code = code_until(db, row["id"], end + GRACE_S)
+        if code is not None and code.strip() and code != starters[row["question_id"]]:
+            latest[key] = (row["id"], code)
+    n = 0
+    for (sid, qid), (session_id, code) in latest.items():
+        if (sid, qid, code) in submitted:
+            continue
+        graded = grade(dict(db.get_question(qid)), code, comp["language"])
+        if not graded or not graded["total"]:
+            continue
+        with db.connect() as conn:
+            conn.execute(
+                """INSERT INTO submissions(id, lab_id, question_id, student_id, session_id, created_at, code,
+                                           passed, total, auto) VALUES (?,?,?,?,?,?,?,?,?,1)""",
+                (uuid.uuid4().hex, lab_id, qid, sid, session_id, end, code, graded["passed"], graded["total"]))
+        n += 1
+    return n
+
+
+def run_in_background(job: Callable[[], None]) -> None:
+    """Grading a whole class takes a while; never hold a request for it. Tests swap this for a direct call."""
+    threading.Thread(target=job, daemon=True, name="competition-hand-in").start()
+
+
+def handing_in(comp: dict, now: float | None = None) -> bool:
+    """True from the end of the clock until the hand-in has been graded."""
+    now = time.time() if now is None else now
+    return comp["ends_at"] is not None and now >= comp["ends_at"] and comp["handin_done"] is None
+
+
+def ensure_hand_in(db: Database, comp: dict, now: float | None = None) -> dict:
+    """Called whenever anyone looks at a competition: once the clock has run out
+    and the editors had GRACE_S to send their last edits, start the hand-in
+    (exactly once, unless an earlier attempt died with the server). Returns the
+    competition as it stands afterwards."""
+    now = time.time() if now is None else now
+    if not handing_in(comp, now) or now < comp["ends_at"] + GRACE_S:
+        return comp
+    with db.connect() as conn:
+        claimed = conn.execute(
+            """UPDATE competitions SET handin_started = ? WHERE lab_id = ? AND handin_done IS NULL
+               AND (handin_started IS NULL OR handin_started < ?)""",
+            (now, comp["lab_id"], now - STALE_S)).rowcount
+    if not claimed:
+        return comp
+    lab_id = comp["lab_id"]
+
+    def job() -> None:
+        fresh = get_comp(db, lab_id)
+        if fresh is None:
+            return
+        try:
+            hand_in(db, fresh)
+        except Exception:  # e.g. the runner is down: leave it unfinished so it is retried after STALE_S
+            log.exception("hand-in for competition %s failed", lab_id)
+            return
+        with db.connect() as conn:
+            conn.execute("UPDATE competitions SET handin_done = ? WHERE lab_id = ?", (time.time(), lab_id))
+    run_in_background(job)
+    return get_comp(db, lab_id) or comp
 
 
 def can_start_session(db: Database, lab_id: str, student_id: str) -> None:
@@ -270,7 +403,7 @@ def on_roster(db: Database, lab_id: str, student_id: str) -> bool:
 
 def student_card(db: Database, lab, student_id: str) -> dict:
     """What the student's lab list shows for a competition (no question text)."""
-    comp = get_comp(db, lab["id"])
+    comp = ensure_hand_in(db, get_comp(db, lab["id"]))
     joined = student_id in players(db, lab["id"])
     return {"id": lab["id"], "kind": "competition", "title": lab["title"], "description": lab["description"],
             "state": state_of(comp), "ends_at": comp["ends_at"], "duration_s": comp["duration_s"],
@@ -321,7 +454,7 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         return comp
 
     def teacher_view(lab_id: str) -> dict:
-        comp = comp_or_404(lab_id)
+        comp = ensure_hand_in(db, comp_or_404(lab_id))
         ranked, qids = board(db, comp)
         qs = db.lab_questions(lab_id)
         return {**settings_json(comp), "now": time.time(),
@@ -334,7 +467,9 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
                 "status": comp["status"], "state": state_of(comp),
                 "duration_min": comp["duration_s"] // 60 if comp["duration_s"] else None,
                 "duration_s": comp["duration_s"], "board_mode": comp["board"],
-                "started_at": comp["started_at"], "ends_at": comp["ends_at"]}
+                "started_at": comp["started_at"], "ends_at": comp["ends_at"],
+                # time is up but the code students had open is still being graded
+                "handing_in": handing_in(comp)}
 
     admin = [Depends(require_admin)]
 
@@ -415,6 +550,7 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         return sid
 
     def student_view(comp: dict, sid: str) -> dict:
+        comp = ensure_hand_in(db, comp)
         lab_id = comp["lab_id"]
         state = state_of(comp)
         ranked, qids = board(db, comp)
@@ -432,6 +568,7 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
             for i, q in enumerate(db.lab_questions(lab_id)):
                 d = question_json(q, for_student=True)  # hidden tests stay on the server
                 qs.append(d | {"lab_title": comp["title"], "language": comp["language"], "competition": True,
+                               "lab_id": lab_id, "ends_at": comp["ends_at"],
                                "progress": mine["questions"][i] if mine else None})
         return {**settings_json(comp), "now": time.time(), "joined": me is not None, "me": mine,
                 "n_players": len(ranked), "board": rows, "questions": qs,
@@ -446,6 +583,15 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         if not on_roster(db, lab_id, sid) and state_of(comp) != "ended":
             raise HTTPException(403, "this competition is not open for you")
         return student_view(comp, sid)
+
+    @r.get("/api/competitions/{lab_id}/clock")
+    def clock(lab_id: str, student_id: str, request: Request) -> dict:
+        """Polled by the editor during a competition, so it hands in on time even
+        when the teacher ends early. Cheap: no board."""
+        sid = student_or_400(student_id)
+        own(request, sid)
+        comp = comp_or_404(lab_id)
+        return {"state": state_of(comp), "ends_at": comp["ends_at"], "now": time.time()}
 
     @r.post("/api/competitions/{lab_id}/join")
     def join(lab_id: str, body: JoinIn, request: Request) -> dict:

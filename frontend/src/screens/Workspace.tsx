@@ -19,8 +19,9 @@ import type { LiveSession } from "../editor/session";
 import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
 import { Badge, Button, Dialog, Kbd, LiveDot, LogoMark, Spinner, TextArea, cn, duration, ease } from "../ui";
-import type { SubmitResult } from "../compete/api";
+import type { CompClock, SubmitResult } from "../compete/api";
 import { SubmitDialog } from "../compete/SubmitDialog";
+import { Countdown } from "../compete/Leaderboard";
 
 export interface SessionSummary {
   runs: number;
@@ -47,6 +48,8 @@ interface Slot {
 }
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+/** How often a competition editor checks the clock (the teacher may end early). */
+const CLOCK_POLL_MS = 5000;
 
 const SYNTAX = { python, c: cpp, cpp, java, javascript: () => javascript() };
 
@@ -309,21 +312,55 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     view.current?.focus();
   }, []);
 
+  // Competitions: when the clock runs out the editor hands its code in by
+  // itself (the server grades what it had at the end, see compete.hand_in).
+  const compLab = competing ? task.lab_id : undefined;
+  const [clockAt, setClockAt] = useState<{ ends_at: number | null; offset: number }>({ ends_at: task.ends_at ?? null, offset: 0 });
+  const [timeUp, setTimeUp] = useState(false);
+  useEffect(() => {
+    if (!compLab) return;
+    let alive = true;
+    const poll = () => api<CompClock>(`/api/competitions/${compLab}/clock?student_id=${encodeURIComponent(studentId)}`).then((c) => {
+      if (!alive) return;
+      setClockAt({ ends_at: c.ends_at, offset: c.now - Date.now() / 1000 });
+      if (c.state !== "live") setTimeUp(true);
+    }, () => {});
+    void poll();
+    const t = window.setInterval(poll, CLOCK_POLL_MS);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [compLab, studentId]);
+  useEffect(() => {
+    if (!compLab || clockAt.ends_at === null) return;
+    const t = window.setInterval(() => {
+      if (clockAt.ends_at! - (Date.now() / 1000 + clockAt.offset) <= 0) setTimeUp(true);
+    }, 250);
+    return () => window.clearInterval(t);
+  }, [compLab, clockAt]);
+  useEffect(() => {
+    if (timeUp) void finishRef2.current("time_up");
+  }, [timeUp]);
+
   /** Questions with code written in this sitting or an earlier one (for the finish dialog). */
   const worked = () => {
     if (view.current) cur().state = view.current.state;
     return [...slots.current.values()].filter((s) => s.state.doc.toString() !== s.initial).length;
   };
 
-  const finish = async () => {
+  const finishing = useRef(false);
+  const finish = async (reason = "submit") => {
+    if (finishing.current) return;
+    finishing.current = true;
     setSaving(true);
     window.removeEventListener("pagehide", onHideRef.current);
     const n = worked();
-    finishRef.current("submit");
+    finishRef.current(reason);
     await Promise.all([...slots.current.values()].map((s) => s.session.rec.close()));
     onFinished({ runs: runsRef.current, minutes: (performance.now() - t0.current) / 60_000,
       questions: sitting ? { worked: n, total: tasks.length } : undefined });
   };
+
+  const finishRef2 = useRef(finish);
+  finishRef2.current = finish;
 
   return (
     <div className="grid h-full grid-rows-[52px_1fr] bg-bg">
@@ -360,6 +397,11 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
             {link.ok ? "Recording" : `Offline · ${link.pending} events waiting`}
           </motion.div>
           <WatchNotice v={watching} />
+          {compLab && clockAt.ends_at !== null && (
+            <span className="flex h-7 items-center rounded-full bg-surface-2 px-3 text-xs" title="When the clock runs out, your code is handed in for you">
+              <Countdown comp={{ ends_at: clockAt.ends_at, state: timeUp ? "ended" : "live" }} offset={clockAt.offset} />
+            </span>
+          )}
           <div className="mx-1 h-5 w-px bg-border" />
           <Button variant="primary" size="sm" onClick={() => void runCode()} disabled={running || saving} className="pr-2">
             {running ? <Spinner className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
@@ -367,7 +409,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
             <Kbd className="ml-1 border-white/30">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
           </Button>
           {competing && (
-            <Button variant="primary" size="sm" onClick={() => void submit()} disabled={submitting || running || saving}
+            <Button variant="primary" size="sm" onClick={() => void submit()} disabled={submitting || running || saving || timeUp}
               className="bg-gold text-accent-fg hover:bg-gold hover:opacity-90">
               {submitting ? <Spinner className="size-3.5" /> : <FlaskConical className="size-3.5" />}
               Submit

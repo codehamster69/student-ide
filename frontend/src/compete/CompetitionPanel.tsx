@@ -75,6 +75,21 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
           <span className="text-xs text-muted">{c.board.length} on the board</span>
         </div>
       )}
+      {started && (
+        <a href={`#/teach/c/${labId}`} className="relative mt-3 grid gap-1 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-surface-2"
+          title="Open the full leaderboard">
+          {c.handing_in && <p className="flex items-center gap-2 text-xs text-muted"><Spinner className="size-3" /> Grading the code students had open…</p>}
+          {c.board.slice(0, 5).map((r) => (
+            <p key={r.handle} className="flex items-center gap-2 text-xs">
+              <span className="w-6 font-mono text-faint">#{r.rank}</span>
+              <span className="flex-1 truncate text-text">{r.handle}</span>
+              <span className="font-semibold tabular-nums text-text">{r.points}</span>
+            </p>
+          ))}
+          {!c.board.length && <p className="text-xs text-muted">Nobody on the board yet.</p>}
+          {c.board.length > 5 && <p className="text-xs text-faint">and {c.board.length - 5} more</p>}
+        </a>
+      )}
 
       <div className="relative mt-4 grid gap-3">
         <label className="flex items-center justify-between gap-3 text-[13px]">
@@ -135,7 +150,7 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
         )}
         <a href={`#/teach/c/${labId}`}
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
-          <MonitorPlay className="size-4" /> Live board
+          <MonitorPlay className="size-4" /> Open leaderboard
         </a>
         {!started && <p className="text-xs text-muted">Tip: set the lab to Open first so students can wait in the lobby and pick their board names.</p>}
       </div>

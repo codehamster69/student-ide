@@ -92,7 +92,15 @@ export function Arena({ studentId, labId, onPick, onBack }: {
           ) : (
             <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
               <section className="grid gap-4">
-                {view.state === "ended" && view.board.length > 0 && (
+                {view.state === "ended" && view.handing_in && (
+                  <Card className="flex items-center gap-3 border-gold/30 px-5 py-4">
+                    <Spinner className="size-4 text-gold" />
+                    <p className="text-sm text-text">
+                      Time is up. The code you had open on each question is being handed in and graded; the final standings follow in a few seconds.
+                    </p>
+                  </Card>
+                )}
+                {view.state === "ended" && !view.handing_in && view.board.length > 0 && (
                   <Card className="px-5 pb-5 pt-4">
                     <h2 className="text-center text-sm font-semibold text-text">Final standings</h2>
                     <Podium rows={view.board} />
@@ -222,6 +230,7 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
         <strong className="block text-sm font-semibold text-text">{q.title}</strong>
         <span className="line-clamp-1 text-[13px] text-muted">{q.prompt}</span>
       </span>
+      {p?.auto && <span title="Your code was handed in for you when time ran out"><Badge>At the bell</Badge></span>}
       {p?.solved ? <Badge tone="success">Solved · {p.points} pts</Badge>
         : partial ? <Badge tone="warn">{p!.passed}/{p!.total} tests · {p!.points} pts</Badge>
         : p?.tries ? <Badge>{p.tries} {p.tries === 1 ? "try" : "tries"}</Badge> : null}
@@ -234,7 +243,7 @@ function Rules() {
   return (
     <div className="grid gap-2 text-[13px] text-muted">
       <p className="flex items-center gap-1.5 font-medium text-text"><FlaskConical className="size-3.5 text-accent" /> How points work</p>
-      <p>Submit runs your code against the question's test cases. You get up to {POINTS.solve} points for the tests you pass, and up to {POINTS.speed} more for solving every test early. Only your best submission counts, and a wrong one costs nothing, so try as often as you like.</p>
+      <p>Submit runs your code against the question's test cases. You get up to {POINTS.solve} points for the tests you pass, and up to {POINTS.speed} more for solving every test early. Only your best submission counts, and a wrong one costs nothing, so try as often as you like. When time runs out, the code you have on each question you worked on is submitted for you.</p>
     </div>
   );
 }

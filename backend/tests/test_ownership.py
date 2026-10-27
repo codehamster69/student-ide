@@ -110,3 +110,8 @@ def test_competitions_are_owned_too(world):
     assert meera.post(f"/api/teach/competitions/{cid}/start").status_code == 403
     assert admin.get(f"/api/teach/competitions/{cid}").status_code == 200
     assert cid in {l["id"] for l in priya.get("/api/teach/labs").json()}
+    # a co-teacher sees the leaderboard too, with the same detail as the owner
+    priya.put(f"/api/teach/labs/{cid}/teachers", json={"co_teachers": [MEERA]})
+    board = meera.get(f"/api/teach/competitions/{cid}")
+    assert board.status_code == 200 and "board" in board.json()
+    assert admin.get(f"/api/teach/competitions/{cid}").json()["board"] == board.json()["board"]
