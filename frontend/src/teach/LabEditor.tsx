@@ -3,7 +3,7 @@ import { useQuestionText, type LivePrompt } from "../questionText";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, GraduationCap, Pencil, Plus, Radio, Trash2,
-  UserPlus, Users,
+  Trophy, UserPlus, Users,
 } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, TextArea, cn, item, pop, spring, stagger } from "../ui";
 import { authConfig } from "../auth";
@@ -69,6 +69,9 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
       <motion.div variants={item} className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <LabHeading lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
         <div className="flex items-center gap-2">
+          {lab.kind === "competition" && (
+            <Button size="sm" onClick={() => { location.hash = `#/teach/c/${lab.id}`; }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
+          )}
           {lab.status === "open" && (
             <Button size="sm" onClick={() => { location.hash = `#/live/l/${lab.id}`; }}><Radio className="size-3.5 text-success" /> Watch live</Button>
           )}

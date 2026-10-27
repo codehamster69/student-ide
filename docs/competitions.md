@@ -28,6 +28,41 @@ Teacher, at `/#/teach`:
    *Present* goes full screen and hides roll numbers. **End now** stops
    submissions early; otherwise the clock does. The podium shows at the end.
 
+## Hand-in when time runs out
+
+Nobody loses points for code they forgot to submit. When the clock runs out,
+or the teacher presses **End now**:
+
+1. Each student's editor sees the end (it checks the clock every 5 s), stops,
+   sends its last edits and returns to the competition screen.
+2. After a 20 s grace period (`compete.GRACE_S`) the server rebuilds each
+   student's code for every question from the edits that reached it in time
+   and grades it as a submission made at the end. A question counts as worked
+   on when the code is not empty and differs from the starter code. Code
+   identical to something the student already submitted is not graded again.
+   Edits that arrive after the grace period are ignored.
+3. Until grading is done, the student screen and the teacher's board say the
+   final standings are coming; then the podium shows. Answers handed in this
+   way are marked *At the bell* for the student and `auto` in the API.
+
+It runs once per competition, in the background, started by whoever looks at
+the competition next (students, the board, the lab page). If the runner fails
+it is retried after 10 minutes. Competitions that had ended before this
+feature shipped keep their results.
+
+Ending early: the hand-in counts as a submission at the moment the clock was
+stopped, so a full solve still earns the speed bonus left on the planned
+clock, just as a last-second Submit would.
+
+## Who sees the leaderboard
+
+The full board (roll numbers, per-question tries and tests) is for the
+competition's owner, its co-teachers and admins. It is linked from the
+*Leaderboard* chip in the labs list, the *Leaderboard* button and top-five
+preview on the competition's page, and the live class view. A competition
+made before lab ownership has no owner and is admins-only until an admin
+hands it over (see `docs/teaching.md`).
+
 ## Scoring
 
 Per question a student keeps their best submission:

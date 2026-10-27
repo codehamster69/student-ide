@@ -22,6 +22,8 @@ export interface Task {
   submitted?: boolean;
   /** set when the question belongs to a class competition (Submit runs its tests) */
   competition?: boolean;
+  /** competition questions: when the clock runs out (unix seconds, server clock) */
+  ends_at?: number | null;
   /** where the question came from; live_prompt: its text is loaded by the browser, never stored */
   source?: { url?: string; live_prompt?: LivePrompt } | null;
 }

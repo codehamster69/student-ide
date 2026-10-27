@@ -79,9 +79,18 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
                 </span>
                 <Count icon={ListChecks} value={l.n_questions} label={l.n_questions === 1 ? "question" : "questions"} />
                 <Count icon={Users} value={l.everyone ? "All" : l.n_roster} label={l.everyone ? "students" : "assigned"} />
-                <span className="text-xs text-faint md:text-right">
-                  {l.n_sessions ? `${l.n_started} started · ${l.n_sessions} sessions` : `edited ${dayTime(l.updated_at)}`}
-                </span>
+                {l.kind === "competition" ? (
+                  // a link of its own inside the row's link: navigate by hand so the row does not open
+                  <span role="link" tabIndex={0} className="inline-flex h-7 items-center gap-1.5 justify-self-start rounded-full bg-gold-soft px-3 text-xs font-medium text-gold transition-opacity hover:opacity-80 md:justify-self-end"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); location.hash = `#/teach/c/${l.id}`; }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); location.hash = `#/teach/c/${l.id}`; } }}>
+                    <Trophy className="size-3.5" /> Leaderboard
+                  </span>
+                ) : (
+                  <span className="text-xs text-faint md:text-right">
+                    {l.n_sessions ? `${l.n_started} started · ${l.n_sessions} sessions` : `edited ${dayTime(l.updated_at)}`}
+                  </span>
+                )}
                 <ChevronRight className="hidden size-4 text-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-text md:block" />
               </a>
             </motion.li>

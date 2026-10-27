@@ -472,6 +472,49 @@ within-student condition: how far a student's competition habits sit from
 their lab habits is itself a measurement, and a takeover during a
 competition is judged against how that student behaves under pressure.
 
+\paragraph{Hand-in at the bell.} Students often have working code in the
+editor that they never got round to submitting when time runs out. When the
+clock ends (or the teacher ends it early), each student's editor stops and
+sends its last edits, and after a grace period of \SI{20}{\second} the server
+rebuilds every question's code from the recorded edits that reached it in
+time and grades it as a submission made at the end
+(\cref{fig:compete-handin}). Only questions the student actually worked on
+are handed in (code that is not empty and differs from the starter), code
+identical to an earlier submission is not graded twice, and edits that arrive
+after the grace period are ignored. Because the hand-in is rebuilt from the
+same edit log the detector reads, it needs no extra data from the student,
+and it runs once per competition, in the background, while the board shows
+that grading is still under way. Competitions that had already ended when
+the feature shipped keep their announced results.
+
+\paragraph{Leaderboard for staff.} The full board (with roll numbers and
+per-question detail) is open to the competition's owner, its co-teachers and
+admins (\cref{sec:ownership}), and is linked from the labs list, the
+competition's page (which also shows the top five) and the live class view.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{handin/handin-light-01-editor-clock}
+    \caption{The editor shows the clock and hands in at zero.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{handin/handin-light-06-board-handing-in}
+    \caption{Teacher's board during the grace period.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{handin/handin-light-04-lab-page}
+    \caption{Competition page: leaderboard link and top five.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{handin/handin-light-08-arena-final}
+    \caption{Student's final standing; ``At the bell'' marks a hand-in.}
+  \end{subfigure}
+  \caption{Hand-in when time runs out, and the staff leaderboard. Light and
+  dark screens are in \texttt{snapshots/handin/}.}
+  \label{fig:compete-handin}
+\end{figure}
+
 \begin{figure}[ht]
   \centering
   \begin{subfigure}{0.49\textwidth}
