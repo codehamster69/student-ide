@@ -49,7 +49,7 @@ services:
     command: ["uvicorn", "studentide.runner_service:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
     networks: [sandbox]          # internal network: reachable from app only, no way out
     read_only: true
-    tmpfs: ["/tmp:size=512m,mode=1777"]
+    tmpfs: ["/tmp:size=512m,mode=1777,exec"]   # exec: compiled C/C++ programs run from here (Docker mounts tmpfs noexec by default)
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     pids_limit: 512

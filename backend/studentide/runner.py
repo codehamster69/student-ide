@@ -88,11 +88,14 @@ def error_type_of(stderr: str, exit_code: int | None) -> str | None:
 
 def _exec(argv: list[str], work: str, stdin: str, env: dict, timeout: float, memory: bool = True):
     """Returns (stdout bytes, stderr bytes, exit code or None on timeout)."""
-    proc = subprocess.Popen(
-        argv, cwd=work, env=env,
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        preexec_fn=_limits(timeout, memory) if sys.platform.startswith("linux") else None,
-    )
+    try:
+        proc = subprocess.Popen(
+            argv, cwd=work, env=env,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            preexec_fn=_limits(timeout, memory) if sys.platform.startswith("linux") else None,
+        )
+    except OSError as e:  # e.g. scratch dir mounted noexec: report it, don't crash the request
+        return b"", f"The server could not start the program: {e.strerror or e}".encode(), 126
     try:
         out, err = proc.communicate(stdin.encode(), timeout=timeout)
         return out, err, proc.returncode
