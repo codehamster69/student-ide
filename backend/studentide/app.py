@@ -5,7 +5,8 @@ Student-facing (no auth beyond a roll number, the lab is supervised):
     GET  /api/students/{id}/labs                   open labs assigned to this student
     POST /api/login                     {student_id}            -> consent status
     POST /api/consent                   {student_id}
-    POST /api/sessions                  {student_id, task_id | question_id, client_meta}
+    POST /api/sessions                  {student_id, task_id | question_id, client_meta, language?}
+                                                   (language: any-language competitions, one session per language)
     POST /api/sessions/{id}/events      {schema_version, events: [...]}
     POST /api/sessions/{id}/run         {code, stdin}   in the lab's language (Python for practice tasks)
     POST /api/sessions/{id}/check       {code}          against the question's tests, if it has any
@@ -98,6 +99,7 @@ class SessionIn(BaseModel):
     task_id: str | None = None      # a built-in practice task, or
     question_id: str | None = None  # a question from a lab the teacher assigned
     sitting_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{8,64}$")  # one opening of that lab
+    language: str | None = None     # an any-language competition: the language the student picked for this question
     client_meta: dict = Field(default_factory=dict)
 
 
@@ -259,6 +261,12 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             lab = db.get_lab(q["lab_id"])
             # The snapshot keeps everything the session ran against, hidden tests included.
             question = teach.question_json(q) | {"language": lab["language"], "subject": lab["subject"]}
+            if lab["language"] == grading.ANY:
+                # one session = one language: switching language opens another session (detector baselines stay per language)
+                allowed = grading.question_languages(q)
+                if body.language not in allowed:
+                    raise HTTPException(400, f"pick one of: {', '.join(allowed)}")
+                question = grading.for_language(question, body.language)
             task_id = q["id"]
         elif body.task_id in TASK_IDS:
             task_id = body.task_id
