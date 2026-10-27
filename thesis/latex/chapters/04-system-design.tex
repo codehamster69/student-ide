@@ -212,6 +212,49 @@ from a separate hand-kept list.
   \label{fig:teach}
 \end{figure}
 
+\subsection{A lab as one sitting}
+\label{sec:sitting}
+At first each question of a lab opened its own editor from the lab list, so a
+student moving from question one to two left the editor, went back to the
+list and started again, and reopening a question started from its starter
+code. A lab is now opened once, as a \emph{sitting}: every question is a tab
+in the same editor, each keeping its own code, undo history, input and output,
+and finishing the lab hands in the sitting (\cref{fig:sitting}). Opening the
+lab again later starts a new sitting in which each question picks up the code
+where the student left it.
+
+Underneath, a sitting is not one recording. Each question the student opens
+gets its own session, and the sessions of a sitting share a sitting
+identifier. One long session with per-question segments was the alternative,
+but every later stage (windowing and the detector, the per-session review
+timeline and code replay, test checks, the live view) assumes that a session
+answers one question with one document, and a mixed session would have to be
+cut apart again before any of them could use it. Linked sessions keep that
+assumption and still let the analysis put a lab visit back together. Two
+details keep the detector honest about switching. Moving to another question
+is logged on both sessions as a question focus change rather than as looking
+away from the editor, and a gap between keystrokes that spans a return from
+another question is not counted as a pause, since the student was working,
+not stuck.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{sitting/sitting-light-03-question-2}
+    \caption{One sitting: the lab's questions as tabs and in the side panel; question one keeps its code while the student works on two.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{sitting/sitting-light-01-labs}
+    \caption{The lab list: one button opens the whole lab.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{sitting/sitting-light-04-finish}
+    \caption{Finishing hands in the whole sitting.}
+  \end{subfigure}
+  \caption{A lab as one sitting. Light and dark versions are in \texttt{snapshots/sitting/}.}
+  \label{fig:sitting}
+\end{figure}
+
 \subsection{Optional tests, languages and question sources}
 \label{sec:question-sources}
 Correctness is deliberately optional. A lab measures effort, so a question

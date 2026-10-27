@@ -62,7 +62,10 @@ per 100 ms: `anchor`, `head`, `line`.
 **`snapshot`** — full document text with `reason`: `start`, `periodic` (every 30 s if
 changed), `run` (just before each run) and `end`. Replay checks itself against these.
 
-**`focus`** — `target` `editor` / `window` / `page` (tab visibility) and `state` `in` / `out`.
+**`focus`** — `target` `editor` / `window` / `page` (tab visibility) and `state` `in` / `out`. `question`
+  (added 2026-10-27, still v1 as every older event stays valid): in a lab
+  sitting, the student moved to another question (`out`) or came back to this
+  one (`in`); see `docs/teaching.md`.
 Long "out" gaps followed by a burst of fluent typing are the classic transcription signature.
 
 **`session_start` / `session_end`** — `wall_clock_ms` anchors `t` to real time;

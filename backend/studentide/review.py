@@ -393,6 +393,7 @@ def _session_json(s: dict, duration_s: float, in_baseline: bool) -> dict:
     out["duration_s"] = duration_s
     q = json.loads(s["question_json"]) if s.get("question_json") else None
     out["lab_id"] = s.get("lab_id")
+    out["sitting_id"] = s.get("sitting_id")  # sessions of one lab opening (one per question visited)
     out["task_title"] = q["title"] if q else None  # lab questions carry their own title; practice tasks are looked up client-side
     out["phase"] = "baseline" if in_baseline else "assessed"
     out["context"] = s.get("context", "lab")

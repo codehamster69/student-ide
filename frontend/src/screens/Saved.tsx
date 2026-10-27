@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
-import { Button, Card, ease, item, stagger } from "../ui";
+import { Button, Card, cn, ease, item, stagger } from "../ui";
 import type { SessionSummary } from "./Workspace";
 
 /** Check mark that draws itself. */
@@ -21,14 +21,17 @@ function DrawnCheck() {
 
 export function Saved({ summary, onAnother }: { summary: SessionSummary; onAnother: () => void }) {
   const mins = Math.max(1, Math.round(summary.minutes));
+  const q = summary.questions;
   return (
     <Card variants={stagger(0.08, 0.2)} initial="initial" animate="animate" className="w-full max-w-md p-10 text-center">
       <div className="mb-5 flex justify-center"><DrawnCheck /></div>
-      <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-text">Session saved</motion.h1>
+      <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-text">{q ? "Lab saved" : "Session saved"}</motion.h1>
       <motion.p variants={item} className="mt-2 text-sm leading-relaxed text-muted">
         Thank you. You can close this tab or start another task.
       </motion.p>
-      <motion.div variants={item} className="mx-auto mt-6 grid max-w-xs grid-cols-2 divide-x divide-border rounded-xl border border-border bg-surface-2/60 py-3">
+      <motion.div variants={item} className={cn("mx-auto mt-6 grid divide-x divide-border rounded-xl border border-border bg-surface-2/60 py-3",
+        q ? "max-w-sm grid-cols-3" : "max-w-xs grid-cols-2")}>
+        {q && <div><div className="text-lg font-semibold text-text">{q.worked}/{q.total}</div><div className="text-xs text-muted">questions</div></div>}
         <div><div className="text-lg font-semibold text-text">{mins}</div><div className="text-xs text-muted">{mins === 1 ? "minute" : "minutes"}</div></div>
         <div><div className="text-lg font-semibold text-text">{summary.runs}</div><div className="text-xs text-muted">{summary.runs === 1 ? "run" : "runs"}</div></div>
       </motion.div>

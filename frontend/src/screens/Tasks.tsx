@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowUpRight, CheckCircle2, Code2, NotebookPen, Trophy } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Code2, NotebookPen, Play, Trophy } from "lucide-react";
 import { api, type Lab, type Task } from "../api";
-import { Badge, LiveDot, Spinner, cn, item, spring, stagger } from "../ui";
+import { Badge, Button, LiveDot, Spinner, cn, item, spring, stagger } from "../ui";
 
-export function Tasks({ studentId, onPick, onCompetition }: {
+/** Where "Start/Continue lab" lands: the first question not finished yet. */
+const firstOpen = (lab: Lab) => Math.max(0, lab.questions.findIndex((q) => !q.submitted));
+
+export function Tasks({ studentId, onPick, onOpenLab, onCompetition }: {
   studentId: string;
   onPick: (task: Task) => Promise<void>;
+  /** opens the whole lab as one sitting, on question `start` */
+  onOpenLab: (lab: Lab, start: number) => Promise<void>;
   onCompetition: (labId: string) => void;
 }) {
   const [tasks, setTasks] = useState<Task[] | null>(null);
@@ -19,11 +24,11 @@ export function Tasks({ studentId, onPick, onCompetition }: {
       .then(([t, l]) => { setLabs(l); setTasks(t); }, (e) => setError((e as Error).message));
   }, [studentId]);
 
-  const pick = async (t: Task) => {
+  const pick = async (t: Task, lab?: Lab, start = 0) => {
     if (opening) return;
     setOpening(t.id);
     try {
-      await onPick(t);
+      await (lab ? onOpenLab(lab, start) : onPick(t));
     } catch (e) {
       setError((e as Error).message);
       setOpening(null);
@@ -55,8 +60,14 @@ export function Tasks({ studentId, onPick, onCompetition }: {
               </h2>
               {lab.description && <p className="mt-0.5 max-w-2xl text-[13px] text-muted">{lab.description}</p>}
             </div>
-            <span className="text-xs text-faint">
-              {lab.questions.filter((q) => q.submitted).length} of {lab.questions.length} finished
+            <span className="flex items-center gap-3">
+              <span className="text-xs text-faint">
+                {lab.questions.filter((q) => q.submitted).length} of {lab.questions.length} finished
+              </span>
+              <Button variant="primary" size="sm" onClick={() => void pick(lab.questions[firstOpen(lab)], lab, firstOpen(lab))} disabled={!!opening}>
+                {opening === lab.questions[firstOpen(lab)].id ? <Spinner className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
+                {lab.questions.some((q) => q.sessions) ? "Continue lab" : "Start lab"}
+              </Button>
             </span>
           </motion.div>
           <div className="grid gap-2.5">
@@ -67,8 +78,9 @@ export function Tasks({ studentId, onPick, onCompetition }: {
                 whileHover={{ x: 3 }}
                 whileTap={{ scale: 0.99 }}
                 transition={spring}
-                onClick={() => void pick(q)}
+                onClick={() => void pick(q, lab, i)}
                 disabled={!!opening}
+                title="Opens the whole lab at this question; you can move between questions in the editor"
                 className="group flex items-center gap-4 rounded-xl border border-border bg-surface px-4 py-3.5 text-left shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-accent/40 hover:shadow-md disabled:cursor-wait"
               >
                 <span className={cn(

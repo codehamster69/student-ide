@@ -100,9 +100,10 @@ await s.keyboard.press("Control+Enter");
 await s.waitForFunction(() => document.querySelector(".output")?.textContent?.trim() === "YES");
 await shot(s, "06-student-editor");
 const sessionId = await s.evaluate(() => window.__studentide.sessionId);
-await s.click("button:text-is(\"Finish\")");
-await s.click("[role=dialog] button:text-is(\"Finish session\")");
-await s.waitForSelector("text=Session saved");
+// A lab with several questions opens as one sitting: "Finish lab" hands in the whole sitting.
+await s.click("header button:text-is(\"Finish lab\"), header button:text-is(\"Finish\")");
+await s.click("[role=dialog] button:text-is(\"Finish lab\"), [role=dialog] button:text-is(\"Finish session\")");
+await s.waitForSelector(":text('Lab saved'), :text('Session saved')");
 
 // --- the recording is linked to the lab and question -------------------------
 const get = async (path) => {
