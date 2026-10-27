@@ -209,7 +209,9 @@ def test_old_question_rows_are_migrated(tmp_path):
 def test_sources_say_what_each_platform_supports(client):
     s = {p["id"]: p for p in client.get("/api/teach/sources", headers=ADMIN).json()}
     assert s["exercism"]["status"] == "live"
-    assert {s[p]["status"] for p in ("leetcode", "hackerrank", "codechef")} == {"link_only"}
+    assert {s[p]["status"] for p in ("leetcode", "hackerrank")} == {"link_only"}
+    assert s["codeforces"]["status"] == s["codechef"]["status"] == "bundled" and s["mbpp"]["status"] == "live"
+    assert s["codechef"]["can_browse"] and s["codechef"]["can_link"] and not s["leetcode"]["can_browse"]
     assert client.get("/api/teach/sources/leetcode/categories", headers=ADMIN).status_code == 409
 
 
@@ -261,3 +263,61 @@ def test_exercism_without_tests_for_c_family():
     ex = Exercism(Cached(lambda url: offline(url.replace("/cpp/", "/python/"))))
     got = ex.fetch("cpp", "isogram")
     assert got.tests == [] and "int main()" in got.starter_code and got.notes
+
+
+# Codeforces and CodeChef (CodeContests, bundled) and MBPP (live) -------------------
+
+def test_codeforces_by_topic_and_rating(client):
+    cats = client.get("/api/teach/sources/codeforces/categories?language=cpp", headers=ADMIN).json()
+    ids = [c["id"] for c in cats]
+    for topic in ("topic:dp", "topic:graphs", "topic:strings", "topic:sorting", "topic:trees", "topic:math"):
+        assert topic in ids
+    assert "level:beginner" in ids and sum(c["count"] for c in cats if c["id"].startswith("level:")) > 4000
+    dp = client.get("/api/teach/sources/codeforces/questions?language=cpp&category=topic:dp", headers=ADMIN).json()
+    assert dp and all("dp" in s["categories"] for s in dp)
+    beginners = client.get("/api/teach/sources/codeforces/questions?language=cpp&category=level:beginner", headers=ADMIN).json()
+    assert beginners and all(800 <= int(s["blurb"]) <= 1000 for s in beginners)
+
+    lab = client.post("/api/teach/labs", json={"title": "L", "language": "python"}, headers=ADMIN).json()
+    lab = client.post(f"/api/teach/labs/{lab['id']}/import", json={"provider": "codeforces", "ref": "cf-1003A"}, headers=ADMIN).json()
+    q = next(q for q in lab["questions"] if q["id"] == lab["imported"])
+    assert q["title"] == "Polycarp's Pockets" and q["source"]["url"].endswith("/1003/A") and q["source"]["license"] == "CC BY 4.0"
+    assert "$$$" not in q["prompt"] and "≤" in q["prompt"] and q["sample_input"].startswith("6")
+    assert len(q["tests"]) >= 3 and any(t["hidden"] for t in q["tests"])
+    answer = "input()\nfrom collections import Counter\nprint(max(Counter(input().split()).values()))\n"
+    g = client.post(f"/api/teach/questions/{q['id']}/check", json={"code": answer}, headers=ADMIN).json()
+    assert g["passed"] == g["total"]
+
+
+def test_codechef_from_codecontests(client):
+    cats = client.get("/api/teach/sources/codechef/categories?language=c", headers=ADMIN).json()
+    assert {c["id"] for c in cats} == {"level:easy", "level:medium"}
+    easy = client.get("/api/teach/sources/codechef/questions?language=c&category=level:easy", headers=ADMIN).json()
+    got = client.get(f"/api/teach/sources/codechef/questions/{easy[0]['ref']}?language=c", headers=ADMIN).json()
+    assert got["source"]["provider"] == "codechef" and "CodeContests" in got["source"]["attribution"]
+    assert client.get("/api/teach/sources/codechef/questions/cf-1003A?language=c", headers=ADMIN).status_code == 404
+
+
+def test_real_number_answers_use_a_tolerance():
+    assert grading.outputs_match("0.3333333\n", "0.333333333", "tokens")
+    assert grading.outputs_match("YES 2.0000001", "YES 2", "tokens")
+    assert not grading.outputs_match("0.34", "0.333333", "tokens")
+    assert not grading.outputs_match("1 2", "1 2 3", "tokens")
+
+
+def test_mbpp_offline(monkeypatch):
+    from studentide.providers.mbpp import MBPP, URL, convert, guess_topics
+    data = (Path(__file__).parent / "fixtures" / "mbpp" / "mbpp-head.jsonl").read_bytes()
+    m = MBPP(Cached(lambda url: data if url == URL else None))
+    assert any(c.id == "topic:strings" for c in m.categories("python"))
+    with pytest.raises(Exception):
+        m.categories("cpp")
+    q = m.fetch("python", "2")
+    assert q.starter_code == "def similar_elements(test_tup1, test_tup2):\n    pass\n" and "tc[" not in q.starter_code
+    assert len(q.tests) == 3 and q.tests[1]["hidden"] and "similar_elements(" in q.harness
+    g = grading.grade(q.as_dict(), "def similar_elements(a, b):\n    return tuple(sorted(set(a) & set(b)))\n")
+    assert g["passed"] == 3
+    assert guess_topics("Write a function to reverse words in a given string.") == ["strings"]
+    fn, tests, skipped = convert({"test_list": ["assert f(1) == 2", "assert math.isclose(f(2), 3)", "assert g(1) == 1"]})
+    assert (fn, len(tests), skipped) == ("f", 1, 2)
+

@@ -17,3 +17,6 @@ detector-results/
 
 # deployment secrets
 deploy/.env
+
+# bundled, openly licensed question sets (see docs/question-sources.md)
+!backend/studentide/providers/data/

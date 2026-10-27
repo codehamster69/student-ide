@@ -272,6 +272,35 @@ and prints the result as JSON.
   \label{fig:sources}
 \end{figure}
 
+A larger, topic-sorted set came next. The legitimate route to Codeforces and
+CodeChef problems is CodeContests \cite{li2022alphacode}, a research
+dataset of competitive-programming problems with statements, tags, difficulty
+and input/output tests, released under CC~BY~4.0. It is published only as
+large record files, not as an API that serves one problem, so a filtered copy
+ships with the app: 4{,}551 Codeforces problems rated 800 to 2000 with their
+tags, and 332 easy and medium CodeChef problems. Codeforces' tags are mapped
+onto one topic vocabulary shared by every source (strings, dynamic
+programming, graphs, trees, sorting, mathematics and so on, 19 in all), so a
+teacher can browse by topic and then by rating. Public examples come in as
+visible tests and up to eight further cases as hidden ones; answers that are
+real numbers are compared within $10^{-6}$, and problems that accept several
+correct answers keep no tests, because exact comparison would mark right
+answers wrong. MBPP \cite{austin2021program}, about a thousand short
+beginner Python problems with three asserts each, is fetched live; its asserts
+become the same JSON-argument tests as Exercism's, and its topics, which the
+dataset does not label, are guessed from the wording and marked as guesses.
+LeetCode and HackerRank remain link only; no openly licensed copy of their
+problems was found.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{sources/sources-light-01-codeforces-topics}
+  \caption{Browsing Codeforces problems by topic and rating (CodeContests
+  dataset, CC~BY~4.0). All screens, light and dark, are in
+  \texttt{snapshots/sources/}.}
+  \label{fig:datasets}
+\end{figure}
+
 \section{Class competitions}
 \label{sec:competitions}
 A competition is a lab run as a timed, class-wide challenge with a live

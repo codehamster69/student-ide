@@ -65,7 +65,7 @@ const labId = (await t.evaluate(() => location.hash)).split("/").at(-1);
 
 // from a platform: Exercism, fetched live
 await t.click("button:has-text('From a platform') >> nth=0");
-await t.waitForSelector("button[role=tab]:has-text('Exercism')");
+await t.click("button[role=tab]:has-text('Exercism')");
 await t.waitForSelector("button[aria-pressed=true]:has-text('Easy')");
 await t.waitForSelector("ul[aria-label=Questions] button");
 await shot(t, "02-picker");

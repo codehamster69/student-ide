@@ -33,23 +33,43 @@ language, since typing C++ is not typing Python.
 ## Platforms
 
 Providers live in `backend/studentide/providers/` behind one interface
-(`categories`, `search`, `fetch`). Nothing is pre-stored: lists and questions
-are fetched when the teacher browses, and the pick is fetched again and copied
-into the lab as an ordinary question with `source` (provider, url, licence).
+(`categories`, `search`, `fetch`). Three kinds:
 
-| Platform | Support | Why |
-|---|---|---|
-| Exercism | **Live**, with tests for Python and JavaScript | MIT-licensed, served from public GitHub repositories (`exercism/<track>`, `exercism/problem-specifications`). Canonical cases become stdin (arguments as JSON) / expected (return value as JSON) tests plus a small driver; cases about errors or other functions are skipped. C, C++ and Java exercises have no `main()`, so they import the statement with a stdin/stdout starter and no tests. |
-| LeetCode | **Link only** | No public API; the GraphQL endpoint the site uses is internal and undocumented, and the problems are LeetCode's copyrighted content. |
-| HackerRank | **Link only** | Its API covers a company's own tests only; its terms forbid copying any part of the service. |
-| CodeChef | **Link only** | Public API shut down in 2020; pages are behind captchas. |
+- **Live**: lists and questions are fetched from the source when the teacher
+  browses, and the pick is fetched again as it is added.
+- **Dataset** (`bundled`): an openly licensed dataset shipped with the app,
+  used where the source publishes no API that serves single problems.
+- **Link only**: no permitted source; the teacher pastes a link (checked
+  against the platform's host) and writes the question in their own words.
 
-Link only means the teacher pastes a link to the original (checked against the
-platform's host) and writes the question in their own words; the link stays
-with the question. If a platform later offers an API or a licence, add a
-provider class and list it in `providers/__init__.py`. A Codeforces provider
-is a candidate: it has an official API for the problem list and tags, but not
-for statements or tests.
+Either way the pick is copied into the lab as an ordinary question with
+`source` (provider, url, licence, attribution), so recordings keep a snapshot.
+Categories use one topic vocabulary across sources (`base.TOPICS`: Strings,
+Dynamic programming, Graphs, Trees, Sorting, Math, ...), then difficulty.
+
+| Platform | Support | Size | Topics | Tests | Licence and why |
+|---|---|---|---|---|---|
+| Codeforces | **Dataset** + link | 4,551 problems rated 800 to 2000 | 19 topics from Codeforces' own tags; 4 rating bands | 3,700+ problems: public examples visible, up to 8 more hidden; real-number answers compared within 1e-6 | From **CodeContests** (DeepMind, Li et al., *Science* 2022), **CC BY 4.0**, which sources its Codeforces problems from codeforces.com. Codeforces' own API lists problems and tags but not statements or tests, so it is not used. |
+| CodeChef | **Dataset** + link | 332 easy and medium problems | difficulty only (CodeChef problems carry no tags in the dataset) | yes, as above | Also from **CodeContests** (CC BY 4.0; CodeChef material via the MIT-licensed Description2Code). codechef.com itself can still only be linked. |
+| Exercism | **Live** | ~140 per language | concepts (Python track) and difficulty | Python and JavaScript | MIT-licensed, served from public GitHub repositories. Canonical cases become JSON-argument tests plus a small driver. C, C++ and Java exercises have no `main()`, so they import without tests. |
+| MBPP | **Live** (Python only) | 974 beginner problems | guessed from the wording (labelled as such) | 961 of 974 have tests: the first visible, two hidden | Google Research, Austin et al. 2021; Apache 2.0 repository, CC BY 4.0 dataset card. Only `assert f(literals) == literal` asserts are converted; the reference solution is never shown, only its `def` line. |
+| LeetCode | **Link only** | | | | No public API; the GraphQL endpoint the site uses is internal and undocumented, and the problems are LeetCode's copyrighted content. |
+| HackerRank | **Link only** | | | | Its API covers a company's own tests only; its terms forbid copying any part of the service. |
+
+Problems in the CodeContests set whose statement accepts several correct
+answers ("print any of them") keep no tests, since exact comparison would mark
+right answers wrong; the teacher can add their own. Statements are kept as
+published, with Codeforces' `$$$` LaTeX made readable and the original link
+kept for attribution. The bundle (`providers/data/codecontests.jsonl.gz`,
+3.6 MB) is rebuilt with `backend/scripts/build_codecontests.py` from
+`gs://dm-code_contests` (see the script's docstring).
+
+Looked at and not added: **TACO** (Apache 2.0, tags for every problem) and
+**APPS** (MIT) are only distributed through Hugging Face or a university
+server, which this build environment cannot reach, and they overlap
+CodeContests; **Project Euler** (CC BY-NC-SA) has no test cases and asks that
+answers not be published; **Rosetta Code** (GFDL) tasks have no tests and are
+written as demonstrations rather than exercises.
 
 ## Endpoints (teacher token)
 

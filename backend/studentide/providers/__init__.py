@@ -12,9 +12,11 @@ which platforms can be supported properly and why.
 from __future__ import annotations
 
 from .base import Category, Imported, Provider, ProviderError, Summary
+from .codecontests import CodeChef, Codeforces
 from .exercism import Exercism
-from .unavailable import CodeChef, HackerRank, LeetCode
+from .mbpp import MBPP
+from .unavailable import HackerRank, LeetCode
 
-PROVIDERS: dict[str, Provider] = {p.id: p for p in (Exercism(), LeetCode(), HackerRank(), CodeChef())}
+PROVIDERS: dict[str, Provider] = {p.id: p for p in (Codeforces(), CodeChef(), Exercism(), MBPP(), LeetCode(), HackerRank())}
 
 __all__ = ["PROVIDERS", "Category", "Imported", "Provider", "ProviderError", "Summary"]
