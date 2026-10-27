@@ -6,8 +6,12 @@ export interface Task {
   prompt: string;
   starter_code: string;
   sample_input: string;
-  /** lab questions run in the lab's language; practice tasks are Python */
-  language?: "python" | "c" | "cpp" | "java" | "javascript";
+  /** lab questions run in the lab's language; practice tasks are Python. "any": a competition where the student picks */
+  language?: "python" | "c" | "cpp" | "java" | "javascript" | "any";
+  /** any-language competitions: the languages this question can be answered in */
+  languages?: ("python" | "c" | "cpp" | "java" | "javascript")[];
+  /** any-language competitions: starter code (and test driver) per language */
+  variants?: Partial<Record<"python" | "c" | "cpp" | "java" | "javascript", { starter_code: string; harness: string }>>;
   subject?: string;
   /** optional tests: the visible ones in full, hidden ones only counted */
   tests?: { name: string; stdin: string; expected: string }[];

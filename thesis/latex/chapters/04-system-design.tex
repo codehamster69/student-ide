@@ -487,6 +487,77 @@ and it runs once per competition, in the background, while the board shows
 that grading is still under way. Competitions that had already ended when
 the feature shipped keep their announced results.
 
+\paragraph{Any language.} For college-level contests a competition can be
+set to \emph{any language}: each student picks C, C++, Java, JavaScript or
+Python per question, from a switcher above the editor
+(\cref{fig:anylang}). The tests are stdin in, stdout out, so one set serves
+every language; what differs is kept per language on the question (starter
+code and, for imported function-style problems, the test driver), and a
+question whose tests need a driver opens only in the languages that have
+one. Each language a student tries on a question is its own recorded session,
+so a session never mixes languages, and a submission is always graded in its
+session's language, never one the browser claims. The hand-in at the bell
+takes the language the student edited last, and the board shows the
+languages each student's points came from. Because typing rhythm differs
+between languages (braces, semicolons, longer keywords), the review timeline
+compares a competition session with the same student's competition sessions
+in the same language once there are enough of them, and with all of them
+until then.
+
+\paragraph{Similar submissions.} Teachers can open a page of \emph{similar
+submissions worth a look} for a competition. It uses the method behind MOSS
+and JPlag: each student's last submission per question and language is
+reduced to normalised tokens (names, layout, comments, literals and
+include/import lines removed), winnowed fingerprints
+\parencite{schleimer2003winnowing} pick candidate pairs, and greedy string
+tiling \parencite{wise1993gst,prechelt2002jplag} finds the common stretches
+of at least eight tokens. Starter code and stretches that most of the class
+wrote identically are masked, C is compared with C++, and the other
+languages within themselves. The page lists pairs with their share of common
+code and shows both programs side by side with matching stretches in the same
+colour, next to how each program got into the editor: characters typed and
+pasted, from the same edit log the detector reads (\cref{fig:anylang}). In
+keeping with the rest of the system it never says ``copied'', never ranks
+students and never touches a score; it says that short answers to small
+problems often look alike and that a pair is a reason to talk. On six contest
+problems solved independently three times each in C/C++ and in Python, no
+independent pair reached 0.4, while every copy disguised by renaming,
+reformatting, rewritten constructs and dead code scored at least 0.67
+(\cref{tab:similarity-separation}, \cref{fig:similarity-separation}). The
+independent solutions were written for this check by one author in
+deliberately different styles; real classmates write more alike, so the
+pilot competitions will tell how often an honest pair crosses 0.5.
+
+\input{ablations/similarity/table}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.85\linewidth]{similarity-separation}
+  \caption{Similarity of every independent pair and every disguised copy in
+  the check of \cref{tab:similarity-separation}. The dashed line is where
+  the page starts to list pairs as a strong overlap.}
+  \label{fig:similarity-separation}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{anylang/anylang-light-04-editor-in-c}
+    \caption{The student switched this question to C; Python stays saved.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{anylang/anylang-light-07-similar-list}
+    \caption{Similar submissions worth a look, per question.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{anylang/anylang-light-08-similar-pair}
+    \caption{A pair side by side: matching stretches, typed and pasted characters.}
+  \end{subfigure}
+  \caption{Any-language competitions and the similar-submissions page.
+  All screens are in \texttt{snapshots/anylang/}.}
+  \label{fig:anylang}
+\end{figure}
+
 \paragraph{Leaderboard for staff.} The full board (with roll numbers and
 per-question detail) is open to the competition's owner, its co-teachers and
 admins (\cref{sec:ownership}), and is linked from the labs list, the

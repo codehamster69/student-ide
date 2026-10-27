@@ -52,6 +52,7 @@ from .db import Database, has_consent
 from .providers import PROVIDERS, ProviderError
 
 Language = Literal["python", "c", "cpp", "java", "javascript"]
+LabLanguage = Literal["python", "c", "cpp", "java", "javascript", "any"]  # "any": competitions only (grading.ANY)
 
 STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
@@ -69,7 +70,7 @@ class LabPatch(BaseModel):
     status: Literal["draft", "open", "closed"] | None = None
     everyone: bool | None = None
     subject: str | None = Field(default=None, max_length=120)
-    language: Language | None = None
+    language: LabLanguage | None = None
 
 
 class QuestionIn(BaseModel):
@@ -79,6 +80,7 @@ class QuestionIn(BaseModel):
     sample_input: str = Field(default="", max_length=20_000)
     tests: list[grading.TestCase] = Field(default_factory=list, max_length=grading.MAX_TESTS)
     harness: str = Field(default="", max_length=20_000)
+    variants: dict[Language, grading.Variant] = Field(default_factory=dict)  # any-language competitions
 
 
 class QuestionPatch(BaseModel):
@@ -88,6 +90,7 @@ class QuestionPatch(BaseModel):
     sample_input: str | None = Field(default=None, max_length=20_000)
     tests: list[grading.TestCase] | None = Field(default=None, max_length=grading.MAX_TESTS)
     harness: str | None = Field(default=None, max_length=20_000)
+    variants: dict[Language, grading.Variant] | None = None
 
 
 class ImportIn(BaseModel):
@@ -103,6 +106,7 @@ class LinkIn(BaseModel):
 
 class CodeIn(BaseModel):
     code: str = Field(max_length=200_000)
+    language: Language | None = None  # any-language competitions: which language the code is in
 
 
 class OrderIn(BaseModel):
@@ -125,6 +129,7 @@ def question_json(q, for_student: bool = False) -> dict:
     d = {k: q[k] for k in ("id", "lab_id", "position", "title", "prompt", "starter_code", "sample_input", "harness", "updated_at")}
     tests = grading.parse_tests(q["tests_json"])
     d["source"] = json.loads(q["source_json"]) if q["source_json"] else None
+    d["variants"] = grading.variants(q)
     if not for_student:  # the checker stays with the teacher and the server, like hidden tests
         d["checker"] = q["checker"] if "checker" in q.keys() else ""
     if for_student:
@@ -141,7 +146,52 @@ def question_fields(body: BaseModel, exclude_none: bool) -> dict:
     f = body.model_dump(exclude_none=exclude_none)
     if "tests" in f:
         f["tests_json"] = json.dumps(f.pop("tests"))
+    if "variants" in f:
+        f["variants_json"] = json.dumps(f.pop("variants"))
     return f
+
+
+def switch_language(db: Database, lab_id: str, old: str, new: str) -> None:
+    """Moving a competition to or from "any language" keeps each question's
+    starter code and harness: they become the old language's variant, or the
+    new language's variant becomes the question's own."""
+    if old == new or grading.ANY not in (old, new):
+        return
+    for q in db.lab_questions(lab_id):
+        vs = grading.variants(q)
+        if new == grading.ANY:
+            if q["starter_code"] or q["harness"]:
+                vs.setdefault(old, {"starter_code": q["starter_code"], "harness": q["harness"]})
+            db.update_question(q["id"], {"variants_json": json.dumps(vs), "starter_code": "", "harness": ""})
+        elif new in vs:
+            db.update_question(q["id"], {"starter_code": vs[new]["starter_code"], "harness": vs[new]["harness"]})
+
+
+def import_any(p, ref: str) -> tuple:
+    """Fetch a platform question for an any-language competition: once per
+    language, keeping each language's starter code and harness. The tests come
+    from the first language that works; a language whose tests differ is left
+    out (its driver could not carry every test), and so is one the source
+    cannot serve. Returns (Imported, variants)."""
+    base, vs, skipped = None, {}, []
+    for lang in grading.LANGUAGES:
+        try:
+            got = p.fetch(lang, ref)
+        except ProviderError:
+            skipped.append(lang)
+            continue
+        if base is None:
+            base = got
+        elif got.tests != base.tests:
+            skipped.append(lang)
+            continue
+        vs[lang] = {"starter_code": got.starter_code, "harness": got.harness}
+    if base is None:
+        raise ProviderError("this source could not serve the question in any language", 404)
+    if skipped and any(v["harness"] for v in vs.values()):  # plain stdin/stdout tests work in every language anyway
+        names = ", ".join(runner.LANGUAGES[l]["label"] for l in skipped)
+        base.notes = [*base.notes, f"Students can't answer this one in {names}: the source has no test driver for it there."]
+    return base, vs
 
 
 def lab_json(lab, co_teachers: list[str] | None = None, me=None) -> dict:
@@ -243,6 +293,11 @@ def router(db: Database, require_admin: Callable, auth) -> APIRouter:
             fields["subject"] = fields["subject"].strip()
         if "everyone" in fields:
             fields["everyone"] = int(fields["everyone"])
+        if "language" in fields:
+            lab = db.get_lab(lab_id)
+            if fields["language"] == grading.ANY and not is_competition(lab):
+                raise HTTPException(400, "any language is for competitions; a lab has one language")
+            switch_language(db, lab_id, lab["language"], fields["language"])
         db.update_lab(lab_id, fields)
         return detail(lab_id, request)
 
@@ -278,12 +333,16 @@ def router(db: Database, require_admin: Callable, auth) -> APIRouter:
         """Fetch the question from the platform now and copy it into the lab."""
         lab = lab_or_404(lab_id, request)
         p = provider_or_404(body.provider)
-        got = from_provider(lambda: p.fetch(lab["language"], body.ref))
+        vs = {}
+        if lab["language"] == grading.ANY:
+            got, vs = from_provider(lambda: import_any(p, body.ref))
+        else:
+            got = from_provider(lambda: p.fetch(lab["language"], body.ref))
         qid = "q_" + uuid.uuid4().hex[:10]
         db.add_question(qid, lab_id, {
-            "title": got.title[:120], "prompt": got.prompt, "starter_code": got.starter_code,
-            "sample_input": got.sample_input, "tests_json": json.dumps(got.tests), "harness": got.harness,
-            "checker": got.checker,
+            "title": got.title[:120], "prompt": got.prompt, "starter_code": "" if vs else got.starter_code,
+            "sample_input": got.sample_input, "tests_json": json.dumps(got.tests), "harness": "" if vs else got.harness,
+            "checker": got.checker, "variants_json": json.dumps(vs),
             "source_json": json.dumps(got.source | {"notes": got.notes}),
         })
         return detail(lab_id, request) | {"imported": qid, "notes": got.notes}
@@ -388,7 +447,13 @@ def router(db: Database, require_admin: Callable, auth) -> APIRouter:
         """Lets a teacher run a model answer through the tests before students do."""
         q = question_or_404(question_id, request)
         lab = lab_or_404(q["lab_id"], request)
-        graded = grading.grade(question_json(q), body.code, lab["language"])
+        question, language = question_json(q), lab["language"]
+        if language == grading.ANY:
+            language = body.language or "python"
+            if language not in grading.question_languages(q):
+                raise HTTPException(400, f"this question has no test driver for {runner.LANGUAGES[language]['label']}")
+            question = grading.for_language(question, language)
+        graded = grading.grade(question, body.code, language)
         if graded is None:
             raise HTTPException(409, "this question has no test cases")
         return graded

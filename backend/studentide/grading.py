@@ -26,6 +26,13 @@ A question's optional `harness` is code appended after the student's before
 the tests run, e.g. a few lines that read a JSON argument list from stdin,
 call the student's function and print the result. Students see that it
 exists, and the tests call the function it names.
+
+Any-language competitions (lab language ANY): each student picks the
+language per question. The tests are shared by every language; what differs
+is kept per language in the question's `variants` ({language: {starter_code,
+harness}}, see for_language). A question whose tests need a harness can only
+be answered in the languages that have one; a plain stdin/stdout question in
+all of them (question_languages).
 """
 
 from __future__ import annotations
@@ -39,6 +46,37 @@ from . import runner
 
 MAX_TESTS = 50
 SHOWN_CHARS = 2000  # stdout/expected echoed back per test
+
+
+LANGUAGES = ("python", "c", "cpp", "java", "javascript")
+ANY = "any"
+
+
+class Variant(BaseModel):
+    starter_code: str = Field(default="", max_length=50_000)
+    harness: str = Field(default="", max_length=20_000)
+
+
+def variants(question) -> dict[str, dict]:
+    """A question's per-language starter code and harness (question row, row dict or API dict)."""
+    keys = question.keys()
+    raw = question["variants"] if "variants" in keys else question["variants_json"] if "variants_json" in keys else None
+    items = (json.loads(raw) if isinstance(raw, str) else raw) or {}
+    return {lang: Variant.model_validate(v).model_dump() for lang, v in items.items() if lang in LANGUAGES}
+
+
+def question_languages(question) -> list[str]:
+    """Languages a student may answer this question in, in an any-language competition."""
+    vs = variants(question)
+    with_driver = [lang for lang in LANGUAGES if vs.get(lang, {}).get("harness")]
+    return with_driver or list(LANGUAGES)
+
+
+def for_language(question: dict, language: str) -> dict:
+    """The question as seen in one language of an any-language competition:
+    that language's starter code and harness in place of the shared ones."""
+    v = variants(question).get(language, {})
+    return {**question, "starter_code": v.get("starter_code", ""), "harness": v.get("harness", ""), "language": language}
 
 
 class TestCase(BaseModel):

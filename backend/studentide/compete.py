@@ -27,6 +27,14 @@ Teacher (the owner, co-teachers and admins; admin token in dev mode):
                                                    (409 while a question has no tests)
     POST  /api/teach/competitions/{lab_id}/end     stops the clock now
 
+Similar submissions (same staff; see similarity.py). A pointer for a conversation, never a score:
+    GET   /api/teach/competitions/{lab_id}/similarity          pairs worth a look, per question
+    GET   /api/teach/competitions/{lab_id}/similarity/{a}/{b}  both submissions side by side, matches highlighted
+
+Any language: a competition whose language is "any" lets each student pick
+the language per question (grading.question_languages); each language they
+try is its own session, and a submission is graded in its session's language.
+
 Student (roll number, like the rest of the student API):
     GET   /api/competitions/{lab_id}?student_id=   lobby / live view with the board
     POST  /api/competitions/{lab_id}/join          {student_id, handle?}
@@ -64,8 +72,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from .db import Database
-from .grading import competition_ready, grade, parse_tests
+from .grading import ANY, competition_ready, for_language, grade, parse_tests, question_languages
 from .replay import ReplayError, final_text
+from . import similarity
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +115,8 @@ CREATE TABLE IF NOT EXISTS submissions (
     code          TEXT NOT NULL,
     passed        INTEGER NOT NULL,
     total         INTEGER NOT NULL,
-    auto          INTEGER NOT NULL DEFAULT 0  -- 1 = handed in for the student when time ran out
+    auto          INTEGER NOT NULL DEFAULT 0, -- 1 = handed in for the student when time ran out
+    language      TEXT                        -- what the code is written in (any-language competitions vary)
 );
 CREATE INDEX IF NOT EXISTS submissions_by_lab ON submissions(lab_id, created_at);
 """
@@ -122,8 +132,12 @@ def ensure_schema(db: Database) -> None:
             # competitions that ended before hand-in existed keep the results already announced
             conn.execute("UPDATE competitions SET handin_started = ends_at, handin_done = ends_at "
                          "WHERE ends_at IS NOT NULL AND ends_at <= ?", (time.time(),))
-        if "auto" not in {r["name"] for r in conn.execute("PRAGMA table_info(submissions)")}:
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(submissions)")}
+        if "auto" not in cols:
             conn.execute("ALTER TABLE submissions ADD COLUMN auto INTEGER NOT NULL DEFAULT 0")
+        if "language" not in cols:
+            conn.execute("ALTER TABLE submissions ADD COLUMN language TEXT")
+            conn.execute("UPDATE submissions SET language = (SELECT language FROM labs WHERE labs.id = submissions.lab_id)")
 
 
 # scoring ---------------------------------------------------------------------
@@ -137,6 +151,7 @@ class QState:
     points: int = 0
     solved_at: float | None = None
     auto: bool = False                   # the best submission was handed in when time ran out
+    language: str | None = None          # of the best submission
 
 
 @dataclass
@@ -195,6 +210,7 @@ def score(comp: dict, question_ids: list[str], players: dict[str, str], runs: li
         if pts > qs.points:
             gains[s].append((t, pts - qs.points))
             qs.points, qs.passed, qs.total, qs.auto = pts, sub["passed"], sub["total"], bool(sub.get("auto"))
+            qs.language = sub.get("language")
         if solved and not qs.solved:
             qs.solved, qs.solved_at = True, t
 
@@ -235,11 +251,13 @@ def _badges(ranked: list[Standing], question_ids: list[str]) -> None:
 
 
 def standing_json(p: Standing, rank: int, question_ids: list[str], detail: bool) -> dict:
-    d = {"rank": rank, "handle": p.handle, "points": p.points, "solved": p.solved, "badges": p.badges}
+    d = {"rank": rank, "handle": p.handle, "points": p.points, "solved": p.solved, "badges": p.badges,
+         # the languages of the answers that score, shown as small chips in an any-language competition
+         "languages": sorted({q.language for q in p.questions.values() if q.language and q.points})}
     if detail:
         d.update(student_id=p.student_id, runs=p.runs, fixes=p.fixes, questions=[
             {"tries": q.tries, "solved": q.solved, "points": q.points, "passed": q.passed, "total": q.total,
-             "auto": q.auto}
+             "auto": q.auto, "language": q.language}
             for q in (p.questions.get(qid, QState()) for qid in question_ids)])
     return d
 
@@ -277,7 +295,7 @@ def board(db: Database, comp: dict) -> tuple[list[Standing], list[str]]:
             """SELECT s.student_id, s.question_id, r.created_at, r.error_type
                FROM runs r JOIN sessions s ON s.id = r.session_id WHERE s.lab_id = ?""", (lab_id,))]
         subs = [dict(r) for r in conn.execute(
-            "SELECT student_id, question_id, created_at, passed, total, auto FROM submissions WHERE lab_id = ?",
+            "SELECT student_id, question_id, created_at, passed, total, auto, language FROM submissions WHERE lab_id = ?",
             (lab_id,))]
     return score(comp, qids, players(db, lab_id), runs, subs), qids
 
@@ -299,43 +317,65 @@ def code_until(db: Database, session_id: str, cutoff: float) -> str | None:
         return snaps[-1] if snaps else None
 
 
+def session_language(sess, comp: dict) -> str:
+    """The language a competition session's code is in: its own pick in an
+    any-language competition, else the competition's."""
+    snap = json.loads(sess["question_json"]) if sess["question_json"] else {}
+    lang = snap.get("language") or comp["language"]
+    return lang if lang != ANY else "python"
+
+
+def graded_question(db: Database, question_id: str, language: str, comp: dict) -> dict:
+    """The live question (a teacher may fix a test mid-competition) as seen in `language`."""
+    q = dict(db.get_question(question_id))
+    return for_language(q, language) if comp["language"] == ANY else q
+
+
 def hand_in(db: Database, comp: dict) -> int:
     """Submit each student's current code for every question they worked on,
     as if they had pressed Submit as time ran out. "Worked on" = their latest
-    code differs from the starter code and is not empty. Code identical to a
+    code differs from the starter code and is not empty. In an any-language
+    competition a question can have one session per language the student
+    tried; the one they last edited is handed in. Code identical to a
     submission they already made is not graded again (it already counts).
     Safe to run twice: a question already handed in for a student is skipped.
     Returns how many answers were handed in."""
     lab_id, end = comp["lab_id"], comp["ends_at"]
-    starters = {q["id"]: q["starter_code"] or "" for q in db.lab_questions(lab_id)}
+    cutoff = end + GRACE_S
+    qs = {q["id"]: dict(q) for q in db.lab_questions(lab_id)}
     with db.connect() as conn:
         sessions = conn.execute(
-            """SELECT id, student_id, question_id FROM sessions WHERE lab_id = ? AND started_at <= ?
-               ORDER BY started_at DESC""", (lab_id, end)).fetchall()
+            """SELECT s.id, s.student_id, s.question_id, s.question_json, s.started_at,
+                      (SELECT MAX(received_at) FROM events e WHERE e.session_id = s.id AND e.type IN ('snapshot', 'edit')
+                       AND e.received_at <= ?) AS last_edit
+               FROM sessions s WHERE s.lab_id = ? AND s.started_at <= ?""", (cutoff, lab_id, end)).fetchall()
         done = {(r["student_id"], r["question_id"]) for r in conn.execute(
             "SELECT student_id, question_id FROM submissions WHERE lab_id = ? AND auto = 1", (lab_id,))}
         submitted = {(r["student_id"], r["question_id"], r["code"]) for r in conn.execute(
             "SELECT student_id, question_id, code FROM submissions WHERE lab_id = ?", (lab_id,))}
-    latest: dict[tuple[str, str], tuple[str, str]] = {}
-    for row in sessions:  # newest first: the first session with real code is what the student had open
+    latest: dict[tuple[str, str], tuple[str, str, str]] = {}
+    # most recently edited first: the first session with real code is what the student had open
+    for row in sorted(sessions, key=lambda r: (r["last_edit"] or 0, r["started_at"]), reverse=True):
         key = (row["student_id"], row["question_id"])
-        if key in latest or key in done or row["question_id"] not in starters:
+        if key in latest or key in done or row["question_id"] not in qs:
             continue
-        code = code_until(db, row["id"], end + GRACE_S)
-        if code is not None and code.strip() and code != starters[row["question_id"]]:
-            latest[key] = (row["id"], code)
+        lang = session_language(row, comp)
+        starter = (for_language(qs[row["question_id"]], lang) if comp["language"] == ANY else qs[row["question_id"]])["starter_code"]
+        code = code_until(db, row["id"], cutoff)
+        if code is not None and code.strip() and code != (starter or ""):
+            latest[key] = (row["id"], code, lang)
     n = 0
-    for (sid, qid), (session_id, code) in latest.items():
+    for (sid, qid), (session_id, code, lang) in latest.items():
         if (sid, qid, code) in submitted:
             continue
-        graded = grade(dict(db.get_question(qid)), code, comp["language"])
+        graded = grade(graded_question(db, qid, lang, comp), code, lang)
         if not graded or not graded["total"]:
             continue
         with db.connect() as conn:
             conn.execute(
                 """INSERT INTO submissions(id, lab_id, question_id, student_id, session_id, created_at, code,
-                                           passed, total, auto) VALUES (?,?,?,?,?,?,?,?,?,1)""",
-                (uuid.uuid4().hex, lab_id, qid, sid, session_id, end, code, graded["passed"], graded["total"]))
+                                           passed, total, auto, language) VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
+                (uuid.uuid4().hex, lab_id, qid, sid, session_id, end, code, graded["passed"], graded["total"], lang))
         n += 1
     return n
 
@@ -410,13 +450,49 @@ def student_card(db: Database, lab, student_id: str) -> dict:
             "n_questions": len(db.lab_questions(lab["id"])), "joined": joined, "questions": []}
 
 
+# similar submissions ---------------------------------------------------------
+
+_similar_cache: dict[str, tuple[tuple, dict]] = {}
+
+
+def similarity_report(db: Database, comp: dict) -> dict:
+    """Pairs of similar submissions per question (see similarity.py), with the
+    matching regions. Compared: the last submission each student made in each
+    language, handed-in ones included. Cached until a submission or question changes."""
+    lab_id = comp["lab_id"]
+    qs = db.lab_questions(lab_id)
+    with db.connect() as conn:
+        subs = [dict(r) for r in conn.execute(
+            """SELECT id, question_id, student_id, session_id, created_at, code, passed, total, auto, language
+               FROM submissions WHERE lab_id = ? ORDER BY created_at""", (lab_id,))]
+    key = (len(subs), max((x["created_at"] for x in subs), default=0), tuple((q["id"], q["updated_at"]) for q in qs))
+    hit = _similar_cache.get(lab_id)
+    if hit and hit[0] == key:
+        return hit[1]
+    last: dict[tuple, dict] = {}
+    for x in subs:  # oldest first, so the last one wins
+        last[(x["question_id"], x["student_id"], x["language"] or comp["language"])] = x
+    out = []
+    for q in qs:
+        langs = question_languages(q) if comp["language"] == ANY else [comp["language"]]
+        starters = {lang: (for_language(dict(q), lang) if comp["language"] == ANY else dict(q))["starter_code"] for lang in langs}
+        entries = [similarity.Entry(x["id"], x["student_id"], lang, x["code"])
+                   for (qid, _, lang), x in last.items() if qid == q["id"] and lang in similarity.FAMILY]
+        pairs = similarity.similar_pairs(entries, starters)
+        out.append({"id": q["id"], "title": q["title"], "n_compared": len(entries),
+                    "n_students": len({e.student_id for e in entries}), "pairs": pairs})
+    report = {"questions": out, "submissions": {x["id"]: x for x in last.values()}}
+    _similar_cache[lab_id] = (key, report)
+    return report
+
+
 # API -------------------------------------------------------------------------
 
 class CompIn(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=4000)
     subject: str = Field(default="", max_length=120)
-    language: Literal["python", "c", "cpp", "java", "javascript"] = "python"
+    language: Literal["python", "c", "cpp", "java", "javascript", "any"] = "python"  # any: each student picks per question
     duration_min: int | None = Field(default=30, ge=1, le=600)
     board: Literal["top", "all", "hidden"] = "top"
 
@@ -458,13 +534,15 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         ranked, qids = board(db, comp)
         qs = db.lab_questions(lab_id)
         return {**settings_json(comp), "now": time.time(),
-                "questions": [{"id": q["id"], "title": q["title"], "n_tests": len(parse_tests(q["tests_json"]))} for q in qs],
+                "questions": [{"id": q["id"], "title": q["title"], "n_tests": len(parse_tests(q["tests_json"])),
+                               "languages": question_languages(q) if comp["language"] == ANY else [comp["language"]]}
+                              for q in qs],
                 "roster": db.lab_roster(lab_id),
                 "board": [standing_json(p, i + 1, qids, detail=True) for i, p in enumerate(ranked)]}
 
     def settings_json(comp: dict) -> dict:
         return {"lab_id": comp["lab_id"], "title": comp["title"], "description": comp["description"],
-                "status": comp["status"], "state": state_of(comp),
+                "status": comp["status"], "state": state_of(comp), "language": comp["language"],
                 "duration_min": comp["duration_s"] // 60 if comp["duration_s"] else None,
                 "duration_s": comp["duration_s"], "board_mode": comp["board"],
                 "started_at": comp["started_at"], "ends_at": comp["ends_at"],
@@ -543,6 +621,56 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
             conn.execute("UPDATE competitions SET ends_at = ? WHERE lab_id = ?", (time.time(), lab_id))
         return teacher_view(lab_id)
 
+    @r.get("/api/teach/competitions/{lab_id}/similarity", dependencies=admin)
+    def similar(lab_id: str, request: Request) -> dict:
+        """Similar submissions worth a look, per question. Never shown to students, never scored."""
+        mine(request, lab_id)
+        comp = comp_or_404(lab_id)
+        rep = similarity_report(db, comp)
+        handles = players(db, lab_id)
+
+        def side(sub_id: str) -> dict:
+            x = rep["submissions"][sub_id]
+            return {"submission_id": sub_id, "student_id": x["student_id"], "handle": handles.get(x["student_id"], x["student_id"]),
+                    "language": x["language"] or comp["language"], "session_id": x["session_id"],
+                    "passed": x["passed"], "total": x["total"], "auto": bool(x["auto"])}
+        return {"lab_id": lab_id, "title": comp["title"], "language": comp["language"],
+                "settings": {"k": similarity.K, "window": similarity.W, "min_match": similarity.MIN_MATCH,
+                             "min_tokens": similarity.MIN_TOKENS, "common_share": similarity.COMMON_SHARE,
+                             "report_at": similarity.REPORT_AT},
+                "questions": [{k: v for k, v in q.items() if k != "pairs"} | {"pairs": [
+                    {k: v for k, v in p.items() if k not in ("a", "b", "regions")} | {"a": side(p["a"]), "b": side(p["b"])}
+                    for p in q["pairs"]]} for q in rep["questions"]]}
+
+    @r.get("/api/teach/competitions/{lab_id}/similarity/{a}/{b}", dependencies=admin)
+    def similar_pair(lab_id: str, a: str, b: str, request: Request) -> dict:
+        """Both submissions side by side with the matching stretches, and how each
+        piece of code arrived in the editor (typed or pasted)."""
+        mine(request, lab_id)
+        comp = comp_or_404(lab_id)
+        rep = similarity_report(db, comp)
+        pair = next((p for q in rep["questions"] for p in q["pairs"] if {p["a"], p["b"]} == {a, b}), None)
+        if pair is None:
+            raise HTTPException(404, "these two submissions are not on the list of similar pairs")
+        flip = pair["a"] != a
+        handles = players(db, lab_id)
+
+        def side(sub_id: str) -> dict:
+            x = rep["submissions"][sub_id]
+            with db.connect() as conn:
+                events = [{"type": r["type"], "data": r["data"]} for r in conn.execute(
+                    "SELECT type, data FROM events WHERE session_id = ? AND type = 'edit' AND received_at <= ? ORDER BY seq",
+                    (x["session_id"], x["created_at"] + GRACE_S))]
+            return {"submission_id": sub_id, "student_id": x["student_id"], "handle": handles.get(x["student_id"], x["student_id"]),
+                    "language": x["language"] or comp["language"], "session_id": x["session_id"], "code": x["code"],
+                    "created_at": x["created_at"], "passed": x["passed"], "total": x["total"], "auto": bool(x["auto"]),
+                    **similarity.paste_stats(events)}
+        regions = [{"a": r["b"], "b": r["a"], "tokens": r["tokens"]} for r in pair["regions"]] if flip else pair["regions"]
+        return {"a": side(a), "b": side(b), "similarity": pair["similarity"],
+                "share_a": pair["share_b"] if flip else pair["share_a"], "share_b": pair["share_a"] if flip else pair["share_b"],
+                "matched_tokens": pair["matched_tokens"], "longest_run": pair["longest_run"],
+                "regions": sorted(regions, key=lambda r: r["a"][0])}
+
     def student_or_400(raw: str) -> str:
         sid = raw.strip()
         if not STUDENT_ID.match(sid):
@@ -568,6 +696,7 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
             for i, q in enumerate(db.lab_questions(lab_id)):
                 d = question_json(q, for_student=True)  # hidden tests stay on the server
                 qs.append(d | {"lab_title": comp["title"], "language": comp["language"], "competition": True,
+                               "languages": question_languages(q) if comp["language"] == ANY else [comp["language"]],
                                "lab_id": lab_id, "ends_at": comp["ends_at"],
                                "progress": mine["questions"][i] if mine else None})
         return {**settings_json(comp), "now": time.time(), "joined": me is not None, "me": mine,
@@ -625,16 +754,17 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
             raise HTTPException(400, "this session is not part of a competition")
         if state_of(comp) != "live":
             raise HTTPException(409, "time is up: this competition has ended")
-        q = dict(db.get_question(sess["question_id"]))
-        graded = grade(q, body.code, comp["language"])
+        lang = session_language(sess, comp)  # the session's own language, never one the client claims now
+        q = graded_question(db, sess["question_id"], lang, comp)
+        graded = grade(q, body.code, lang)
         if not graded or not graded["total"]:
             raise HTTPException(409, "this question has no test cases yet; ask your teacher")
         with db.connect() as conn:
             conn.execute(
-                """INSERT INTO submissions(id, lab_id, question_id, student_id, session_id, created_at, code, passed, total)
-                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                """INSERT INTO submissions(id, lab_id, question_id, student_id, session_id, created_at, code, passed, total,
+                                           language) VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (uuid.uuid4().hex, comp["lab_id"], q["id"], sess["student_id"], session_id, time.time(), body.code,
-                 graded["passed"], graded["total"]))
+                 graded["passed"], graded["total"], lang))
         view_ = student_view(comp_or_404(comp["lab_id"]), sess["student_id"])
         # grade() already leaves out a hidden test's input and outputs
         results = [{k: r.get(k) for k in ("name", "passed", "hidden", "error_type", "stdout", "expected")}

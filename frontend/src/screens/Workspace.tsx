@@ -10,12 +10,12 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
 import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
-import { LANGUAGES } from "../teach/api";
+import { LANGUAGES, type Language } from "../teach/api";
 import { captureExtension, captureWindow, SNAPSHOT_EVERY_MS } from "../capture";
-import type { LiveSession } from "../editor/session";
+import { rememberLanguage, type LiveSession } from "../editor/session";
 import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
 import { QuestionText } from "../questionText";
@@ -39,9 +39,11 @@ interface Outcome {
   errorType: string | null;
 }
 
-/** One question of the sitting once opened: its own session, recorder and editor state. */
+/** One question of the sitting once opened: its own session, recorder and editor state.
+ * In an any-language competition each language a question is opened in is its own slot (and session). */
 interface Slot {
   session: LiveSession;
+  language: Language;
   state: EditorState;
   initial: string;
   lastSnapshot: string;
@@ -53,6 +55,17 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const CLOCK_POLL_MS = 5000;
 
 const SYNTAX = { python, c: cpp, cpp, java, javascript: () => javascript() };
+
+/** The language a question is written in: its lab's, or the one picked in an any-language competition. */
+function fixedLanguage(t: Task): Language {
+  return !t.language || t.language === "any" ? "python" : t.language;
+}
+
+function starterFor(t: Task, language: Language): string {
+  return t.language === "any" ? t.variants?.[language]?.starter_code ?? "" : t.starter_code;
+}
+
+const slotKey = (i: number, l: Language) => `${i}:${l}`;
 
 /**
  * The editor screen. CodeMirror lives outside React state: it is created once
@@ -72,15 +85,17 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   start?: number;
   /** the session for tasks[start] */
   session: LiveSession;
-  /** starts the session for another question of the sitting */
-  openSession?: (task: Task) => Promise<LiveSession>;
+  /** starts the session for another question of the sitting, or (any-language competitions) another language */
+  openSession?: (task: Task, language?: Language) => Promise<LiveSession>;
   onFinished: (summary: SessionSummary) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const stdin = useRef<HTMLTextAreaElement>(null);
   const view = useRef<EditorView>();
-  const slots = useRef(new Map<number, Slot>());
+  const slots = useRef(new Map<string, Slot>());
   const activeRef = useRef(start);
+  /** per question: the language it is open in (any-language competitions switch it) */
+  const langOf = useRef(new Map<number, Language>([[start, session.language ?? fixedLanguage(tasks[start])]]));
   const finishRef = useRef<(reason: string) => void>(() => {});
   const onHideRef = useRef<() => void>(() => {});
   const runsRef = useRef(0);
@@ -103,29 +118,37 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const [checking, setChecking] = useState(false);
   const [grades, setGrades] = useState<Record<number, CheckResult>>({});
   const [pane, setPane] = useState<"output" | "tests">("output");
+  const [, setLangTick] = useState(0); // re-render after a language switch (langOf is a ref)
+  const [switchingLang, setSwitchingLang] = useState(false);
 
   const task = tasks[active];
   const sitting = tasks.length > 1;
-  const sessionId = (slots.current.get(active)?.session ?? session).id;
+  const activeLang = langOf.current.get(active) ?? fixedLanguage(task);
+  const sessionId = (slots.current.get(slotKey(active, activeLang))?.session ?? session).id;
   const outcome = outcomes[active] ?? null;
   const grade = grades[active] ?? null;
   const competing = !!task.competition;
   const watching = useViewers(sessionId);
-  const language = task.language ?? "python";
+  const language = activeLang;
   const lang = LANGUAGES[language];
+  const pickLanguage = task.language === "any" && (task.languages?.length ?? 0) > 1;
   // Competitions submit for a score instead; a lab's Check is only for the student.
   const canCheck = (task.n_tests ?? 0) > 0 && !("competition" in task && task.competition);
 
   /** The question on screen. */
-  const cur = () => slots.current.get(activeRef.current)!;
+  const cur = () => {
+    const i = activeRef.current;
+    return slots.current.get(slotKey(i, langOf.current.get(i) ?? fixedLanguage(tasks[i])))!;
+  };
 
-  const makeSlot = useCallback((s: LiveSession, t: Task): Slot => {
-    const doc = s.resumeCode ?? t.starter_code;
+  const makeSlot = useCallback((s: LiveSession, t: Task, language: Language): Slot => {
+    const starter = starterFor(t, language);
+    const doc = s.resumeCode ?? starter;
     const state = EditorState.create({
       doc,
       extensions: [
         basicSetup,
-        SYNTAX[t.language ?? "python"](),
+        SYNTAX[language](),
         indentUnit.of("    "),
         keymap.of([indentWithTab]),
         editorTheme,
@@ -139,7 +162,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
       setLink({ pending: all.reduce((n, x) => n + x.pending, 0), ok: all.every((x) => x.ok) });
     };
     s.rec.log("snapshot", { reason: "start", text: doc });
-    return { session: s, state, initial: t.starter_code, lastSnapshot: doc, stdin: t.sample_input };
+    return { session: s, language, state, initial: starter, lastSnapshot: doc, stdin: t.sample_input };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -234,14 +257,17 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
       from.lastSnapshot = text;
     }
     from.session.rec.log("focus", { target: "question", state: "out" });
-    let next = slots.current.get(to);
+    const toLang = langOf.current.get(to);
+    let next = toLang && slots.current.get(slotKey(to, toLang));
     if (next) {
       next.session.rec.log("focus", { target: "question", state: "in" });
     } else {
       setOpening(to);
       try {
-        next = makeSlot(await openSession!(tasks[to]), tasks[to]);
-        slots.current.set(to, next);
+        const s = await openSession!(tasks[to]);
+        next = makeSlot(s, tasks[to], s.language ?? fixedLanguage(tasks[to]));
+        slots.current.set(slotKey(to, next.language), next);
+        langOf.current.set(to, next.language);
       } catch (err) {
         from.session.rec.log("focus", { target: "question", state: "in" });
         setSwitchError((err as Error).message);
@@ -260,9 +286,54 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     v.focus();
   };
 
+  /** Any-language competitions: answer this question in another language. Each
+   * language keeps its own code (and is its own recorded session), so switching
+   * back finds the code where it was left. */
+  const switchLanguage = async (to: Language) => {
+    const v = view.current;
+    const i = activeRef.current;
+    if (!v || to === langOf.current.get(i) || switchingLang || saving || runningRef.current) return;
+    setSwitchError("");
+    const from = cur();
+    from.state = v.state;
+    from.stdin = stdin.current?.value ?? "";
+    const text = v.state.doc.toString();
+    if (text !== from.lastSnapshot) {
+      from.session.rec.log("snapshot", { reason: "periodic", text });
+      from.lastSnapshot = text;
+    }
+    from.session.rec.log("focus", { target: "question", state: "out" });
+    let next = slots.current.get(slotKey(i, to));
+    if (next) {
+      next.session.rec.log("focus", { target: "question", state: "in" });
+      rememberLanguage(tasks[i], to);
+    } else {
+      setSwitchingLang(true);
+      try {
+        next = makeSlot(await openSession!(tasks[i], to), tasks[i], to);
+        next.stdin = from.stdin;
+        slots.current.set(slotKey(i, to), next);
+      } catch (err) {
+        from.session.rec.log("focus", { target: "question", state: "in" });
+        setSwitchError((err as Error).message);
+        return;
+      } finally {
+        setSwitchingLang(false);
+      }
+    }
+    langOf.current.set(i, to);
+    v.setState(next.state);
+    if (stdin.current) stdin.current.value = next.stdin;
+    (window as any).__studentide = { rec: next.session.rec, sessionId: next.session.id }; // for end-to-end tests
+    setLangTick((n) => n + 1);
+    setVerdict(null);
+    setOutcomes((m) => { const { [i]: _, ...rest } = m; return rest; }); // that output was the other language's
+    v.focus();
+  };
+
   useEffect(() => {
-    const first = makeSlot(session, tasks[start]);
-    slots.current.set(start, first);
+    const first = makeSlot(session, tasks[start], langOf.current.get(start)!);
+    slots.current.set(slotKey(start, first.language), first);
     const v = new EditorView({ state: first.state, parent: host.current! });
     view.current = v;
     const snapTimer = window.setInterval(() => {
@@ -344,7 +415,8 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   /** Questions with code written in this sitting or an earlier one (for the finish dialog). */
   const worked = () => {
     if (view.current) cur().state = view.current.state;
-    return [...slots.current.values()].filter((s) => s.state.doc.toString() !== s.initial).length;
+    const touched = new Set([...slots.current.entries()].filter(([, s]) => s.state.doc.toString() !== s.initial).map(([k]) => k.split(":")[0]));
+    return touched.size;
   };
 
   const finishing = useRef(false);
@@ -465,6 +537,12 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 </p>
                 <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text">{task.title}</h2>
                 <QuestionText prompt={task.prompt} source={task.source} className="mt-3 text-sm leading-relaxed text-muted" />
+                {pickLanguage && (
+                  <p className="mt-3 text-xs text-faint">
+                    Answer in any of {task.languages!.map((l) => LANGUAGES[l].label).join(", ")}: pick it above the editor. Each language keeps its own code.
+                  </p>
+                )}
+                {!sitting && switchError && <p className="mt-2 rounded-md bg-danger-soft px-2 py-1 text-xs text-danger" role="alert">{switchError}</p>}
                 {task.tests && task.tests.length > 0 && (
                   <div className="mt-5 grid gap-2">
                     <p className="text-xs font-medium text-text">Examples</p>
@@ -545,6 +623,20 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 <span className="size-2 rounded-sm" style={{ background: lang.color }} />
                 {lang.file}
               </div>
+            )}
+            {pickLanguage && (
+              <label className="relative mb-1 ml-auto flex shrink-0 items-center gap-2 self-center text-xs text-muted"
+                title="Answer in any of these languages. Each keeps its own code, so you can switch back. Your submission is graded in the language on screen.">
+                {switchingLang ? <Spinner className="size-3" /> : <span>Language</span>}
+                <span className="relative">
+                  <select value={language} onChange={(e) => void switchLanguage(e.target.value as Language)} disabled={switchingLang || saving || running}
+                    aria-label="Language for this question"
+                    className="h-7 appearance-none rounded-md border border-border bg-surface pl-2.5 pr-7 text-xs font-medium text-text shadow-sm outline-none hover:border-border-strong focus:border-accent">
+                    {task.languages!.map((l) => <option key={l} value={l}>{LANGUAGES[l].label}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-faint" />
+                </span>
+              </label>
             )}
           </div>
           <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />

@@ -208,7 +208,9 @@ class Reviewer:
         behaviour with its own baseline), else 'lab'."""
         with self.db.connect() as conn:
             comp = {r[0] for r in conn.execute("SELECT id FROM labs WHERE kind = 'competition'")}
-        return [dict(r) | {"context": "competition" if r["lab_id"] in comp else "lab"} for r in self.db.list_sessions()]
+        return [dict(r) | {"context": "competition" if r["lab_id"] in comp else "lab",
+                           "language": json.loads(r["question_json"]).get("language") if r["question_json"] else None}
+                for r in self.db.list_sessions()]
 
     def windows(self, session: dict, window_s: float | None = None) -> list[dict]:
         W = window_s or self.window_s
@@ -232,15 +234,23 @@ class Reviewer:
             w = add_pair_features(w, pop.vocab, st.pairs.get("normalise", True), st.pairs.get("min_count", 1))
         return w
 
-    def baseline_ids(self, student_sessions: list[dict], context: str = "lab", lab_id: str | None = None) -> list[str]:
+    def baseline_ids(self, student_sessions: list[dict], context: str = "lab", lab_id: str | None = None,
+                     language: str | None = None) -> list[str]:
         """Lab context: the student's lab sessions in the first BASELINE_DAYS
         after their first one. Competition context: the student's sessions
         from their *other* competitions (leave one competition out), so a
         competition is only ever compared with the same student under the
-        same kind of pressure. The two never mix."""
+        same kind of pressure. The two never mix. In an any-language
+        competition the student may type Python one day and C the next, and
+        typing rhythm differs between languages (braces, semicolons, longer
+        keywords), so a competition session is compared with the student's
+        competition sessions in the same `language` once there are
+        MIN_BASELINE of them, and with all of them until then."""
         mine = [s for s in student_sessions if s.get("context", "lab") == context and s["n_events"] > 0]
         if context == "competition":
-            return [s["id"] for s in sorted(mine, key=lambda s: s["started_at"]) if s["lab_id"] != lab_id]
+            others = [s for s in sorted(mine, key=lambda s: s["started_at"]) if s["lab_id"] != lab_id]
+            same = [s for s in others if language and s.get("language") == language]
+            return [s["id"] for s in (same if len(same) >= MIN_BASELINE else others)]
         if not mine:
             return []
         t0 = min(s["started_at"] for s in mine)
@@ -313,7 +323,7 @@ class Reviewer:
         s = by_id[session_id]
         mine = [x for x in sessions if x["student_id"] == s["student_id"]]
         context = s["context"]
-        base_all = self.baseline_ids(mine, context, s["lab_id"])
+        base_all = self.baseline_ids(mine, context, s["lab_id"], s.get("language"))
         in_baseline = context == "lab" and session_id in base_all
         base_ids = [i for i in base_all if i != session_id]
         wins = self.windows(s)
@@ -326,7 +336,9 @@ class Reviewer:
             "window_s": self.window_s,
             "baseline": {"status": "ready" if len(base_ids) >= MIN_BASELINE else "insufficient",
                          "n_sessions": len(base_ids), "needed": MIN_BASELINE, "session_ids": base_ids,
-                         "days": BASELINE_DAYS, "context": context},
+                         "days": BASELINE_DAYS, "context": context, "language": s.get("language"),
+                         # competition baselines are per language once there are enough (see baseline_ids)
+                         "same_language": all(by_id[i].get("language") == s.get("language") for i in base_ids)},
             "channels": {}, "alarms": [], "episodes": [],
         }
         if out["baseline"]["status"] == "ready" and wins:

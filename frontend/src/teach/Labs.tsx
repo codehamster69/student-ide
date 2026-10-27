@@ -6,7 +6,7 @@ import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { dayTime } from "../review/format";
 import { BOARD_MODES, type BoardMode, type TeacherComp } from "../compete/api";
-import { STATUS, type Language, type LabDetail, type LabRow, type LabStatus } from "./api";
+import { STATUS, type LabLanguage, type LabDetail, type LabRow, type LabStatus } from "./api";
 import { LanguageBadge, LanguageSelect } from "./bits";
 
 const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutral", open: "success", closed: "warn" };
@@ -126,7 +126,7 @@ function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; on
   const [board, setBoard] = useState<BoardMode>("top");
   const comp = kind === "competition";
   const [subject, setSubject] = useState("");
-  const [language, setLanguage] = useState<Language>("python");
+  const [language, setLanguage] = useState<LabLanguage>("python");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -186,8 +186,10 @@ function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; on
             <Field label="Subject" hint="Optional.">
               <Input maxLength={120} value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Data Structures" />
             </Field>
-            <Field label="Programming language" hint="What students write and run in this lab.">
-              <LanguageSelect value={language} onChange={setLanguage} />
+            <Field label="Programming language" hint={language === "any"
+              ? "Each student picks C, C++, Java, JavaScript or Python per question. Tests are the same in every language."
+              : comp ? "What students write and run. Pick Any language for an open contest." : "What students write and run in this lab."}>
+              <LanguageSelect<LabLanguage> value={language} onChange={setLanguage} any={comp} />
             </Field>
           </div>
           <Field label="Instructions for students" hint="Optional. Shown above the questions.">

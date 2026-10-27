@@ -7,6 +7,7 @@ import { Labs } from "../teach/Labs";
 import { LabEditor } from "../teach/LabEditor";
 import { Users } from "../teach/Users";
 import { LiveBoard } from "../compete/LiveBoard";
+import { Similar } from "../compete/Similar";
 import { LiveClass, LiveLabs } from "../live/LiveClass";
 import { LiveEditor } from "../live/LiveEditor";
 import { token } from "./api";
@@ -17,11 +18,11 @@ import { SessionView } from "./SessionView";
 
 type Route =
   | { name: "overview" } | { name: "review-lab"; id: string; day?: string } | { name: "review-all" } | { name: "session"; id: string }
-  | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string } | { name: "people" }
+  | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string } | { name: "similar"; id: string } | { name: "people" }
   | { name: "live" } | { name: "live-lab"; id: string } | { name: "live-session"; id: string };
 
 // Routes: #/review (lab sessions), #/review/l/<lab id>[/<day>] (one lab session), #/review/all, #/review/s/<session id>, #/teach (labs) and
-// #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board), #/teach/people (admins),
+// #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board), #/teach/similar/<lab id> (similar submissions), #/teach/people (admins),
 // #/live (open labs), #/live/l/<lab id> (class view), #/live/s/<session id> (one student's editor).
 // One teacher area, one sign-in.
 function route(): Route {
@@ -40,11 +41,13 @@ function route(): Route {
   if (l) return { name: "lab", id: l[1] };
   const c = location.hash.match(/^#\/teach\/c\/([A-Za-z0-9_]+)/);
   if (c) return { name: "board", id: c[1] };
+  const sim = location.hash.match(/^#\/teach\/similar\/([A-Za-z0-9_]+)/);
+  if (sim) return { name: "similar", id: sim[1] };
   return location.hash.startsWith("#/teach") ? { name: "labs" } : { name: "overview" };
 }
 
 const TABS = [
-  { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" || r.name === "board" },
+  { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" || r.name === "board" || r.name === "similar" },
   { href: "#/live", label: "Live", icon: Radio, match: (r: Route) => r.name.startsWith("live") },
   { href: "#/review", label: "Review", icon: Activity, match: (r: Route) => r.name === "overview" || r.name.startsWith("review") || r.name === "session" },
 ];
@@ -74,7 +77,7 @@ export function ReviewApp() {
     return () => window.removeEventListener("hashchange", on);
   }, []);
 
-  const teaching = r.name === "labs" || r.name === "lab" || r.name === "board" || r.name === "people";
+  const teaching = r.name === "labs" || r.name === "lab" || r.name === "board" || r.name === "similar" || r.name === "people";
   const watching = r.name.startsWith("live");
   const tabs = me?.role === "admin" ? [...TABS, ADMIN_TAB] : TABS;
   useEffect(() => { document.title = `${watching ? "Live" : teaching ? "Labs" : "Review"} · Student IDE`; }, [teaching, watching]);
@@ -139,6 +142,8 @@ export function ReviewApp() {
                 <LiveEditor id={r.id} onAuthLost={signOut} />
               ) : r.name === "session" ? (
                 <SessionView id={r.id} onAuthLost={signOut} />
+              ) : r.name === "similar" ? (
+                <Similar id={r.id} onAuthLost={signOut} />
               ) : r.name === "board" ? (
                 <LiveBoard id={r.id} onAuthLost={signOut} />
               ) : r.name === "lab" ? (

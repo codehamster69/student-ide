@@ -11,9 +11,10 @@ import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { CompetitionPanel } from "../compete/CompetitionPanel";
 import {
-  LANGUAGES, parseIds, STATUS, type GradeResult, type Language, type LabDetail, type LabStatus, type Question, type QuestionFields,
+  ANY_LANGUAGE, LANGUAGES, parseIds, questionLanguages, STATUS, type GradeResult, type LabLanguage, type Language, type LabDetail, type LabStatus,
+  type Question, type QuestionFields, type Variants,
 } from "./api";
-import { LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
+import { LanguagePills, LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
 import { SourcePicker } from "./SourcePicker";
 
 const BLANK: QuestionFields = { title: "", prompt: "", starter_code: "", sample_input: "", tests: [] };
@@ -125,18 +126,19 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
                     exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}>
                     {editing === q.id ? (
                       <QuestionForm index={i} initial={q} harness={q.harness} livePrompt={!!q.source?.live_prompt} onCancel={() => setEditing(null)}
-                        onTry={(code) => send<GradeResult>("POST", `/api/teach/questions/${q.id}/check`, { code })}
+                        anyLanguage={lab.language === "any"}
+                        onTry={(code, language) => send<GradeResult>("POST", `/api/teach/questions/${q.id}/check`, { code, language })}
                         onSave={async (f) => { if (await write("PATCH", `/api/teach/questions/${q.id}`, f)) setEditing(null); }}
                         onDelete={q.n_sessions ? undefined : async () => { if (await write("DELETE", `/api/teach/questions/${q.id}`)) setEditing(null); }} />
                     ) : (
-                      <QuestionCard q={q} index={i} first={i === 0} last={i === lab.questions.length - 1}
+                      <QuestionCard q={q} index={i} first={i === 0} last={i === lab.questions.length - 1} anyLanguage={lab.language === "any"}
                         onEdit={() => setEditing(q.id)} onMove={(d) => move(i, d)} />
                     )}
                   </motion.li>
                 ))}
                 {editing === "pick" && (
                   <motion.li key="pick" layout variants={pop} initial="initial" animate="animate" exit="exit">
-                    <SourcePicker language={lab.language} onClose={() => setEditing(null)} onAuthLost={onAuthLost}
+                    <SourcePicker language={lab.language === "any" ? "python" : lab.language} anyLanguage={lab.language === "any"} onClose={() => setEditing(null)} onAuthLost={onAuthLost}
                       onImport={async (provider, ref) => {
                         const next = await write("POST", `/api/teach/labs/${lab.id}/import`, { provider, ref });
                         if (next) { setEditing(null); setNotes(next.notes ?? []); }
@@ -151,7 +153,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
                 )}
                 {editing === "new" && (
                   <motion.li key="new" layout variants={pop} initial="initial" animate="animate" exit="exit">
-                    <QuestionForm index={lab.questions.length} initial={BLANK} onCancel={() => setEditing(null)}
+                    <QuestionForm index={lab.questions.length} initial={BLANK} onCancel={() => setEditing(null)} anyLanguage={lab.language === "any"}
                       onSave={async (f) => { if (await write("POST", `/api/teach/labs/${lab.id}/questions`, f)) setEditing(null); }} />
                   </motion.li>
                 )}
@@ -257,16 +259,23 @@ function StatusSwitch({ value, onChange, disabled }: { value: LabStatus; onChang
   );
 }
 
-function QuestionCard({ q, index, first, last, onEdit, onMove }: {
-  q: Question; index: number; first: boolean; last: boolean; onEdit: () => void; onMove: (d: -1 | 1) => void;
+function QuestionCard({ q, index, first, last, onEdit, onMove, anyLanguage }: {
+  q: Question; index: number; first: boolean; last: boolean; onEdit: () => void; onMove: (d: -1 | 1) => void; anyLanguage?: boolean;
 }) {
+  const langs = anyLanguage ? questionLanguages(q) : [];
+  const starter = anyLanguage ? Object.values(q.variants).find((v) => v?.starter_code)?.starter_code ?? "" : q.starter_code;
   return (
     <Card className="group flex gap-4 p-4 shadow-sm transition-shadow hover:shadow-md">
       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft font-mono text-xs font-semibold text-accent">{index + 1}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <strong className="text-[15px] font-semibold text-text">{q.title}</strong>
-          {q.starter_code && <Badge className="h-5 px-2 text-[11px]">Starter code</Badge>}
+          {starter && <Badge className="h-5 px-2 text-[11px]">Starter code</Badge>}
+          {anyLanguage && (
+            <Badge className="h-5 gap-1 px-2 text-[11px]">
+              {langs.length === Object.keys(LANGUAGES).length ? "All 5 languages" : `Only ${langs.map((l) => LANGUAGES[l].label).join(", ")}`}
+            </Badge>
+          )}
           {q.tests.length > 0 && (
             <Badge tone="accent" className="h-5 gap-1 px-2 text-[11px]"><FlaskConical className="size-3" />{q.tests.length} test{q.tests.length === 1 ? "" : "s"}</Badge>
           )}
@@ -278,8 +287,8 @@ function QuestionCard({ q, index, first, last, onEdit, onMove }: {
             : q.source?.linked_only ? "Linked question: write the prompt in your own words" : "No prompt yet")}
         </p>
         {!q.prompt && q.source?.live_prompt && <LiveTextCheck live={q.source.live_prompt} />}
-        {q.starter_code && (
-          <pre className="mt-2.5 max-h-20 overflow-hidden rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">{q.starter_code}</pre>
+        {starter && (
+          <pre className="mt-2.5 max-h-20 overflow-hidden rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">{starter}</pre>
         )}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -315,14 +324,21 @@ function indentOnTab(e: KeyboardEvent<HTMLTextAreaElement>, set: (v: string) => 
   requestAnimationFrame(() => el.setSelectionRange(a + 4, a + 4));
 }
 
-function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, onDelete, onTry }: {
+function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, onDelete, onTry, anyLanguage }: {
   index: number; initial: QuestionFields; harness?: string; livePrompt?: boolean; onSave: (f: QuestionFields) => Promise<void>; onCancel: () => void;
-  onDelete?: () => Promise<void>; onTry?: (code: string) => Promise<GradeResult>;
+  onDelete?: () => Promise<void>; onTry?: (code: string, language?: Language) => Promise<GradeResult>; anyLanguage?: boolean;
 }) {
   const [f, setF] = useState<QuestionFields>({
     title: initial.title, prompt: initial.prompt, starter_code: initial.starter_code, sample_input: initial.sample_input,
-    tests: initial.tests,
+    tests: initial.tests, ...(anyLanguage ? { variants: initial.variants ?? {} } : {}),
   });
+  // any-language competitions: starter code per language (the test driver, if any, comes from the import and is kept)
+  const langs = questionLanguages({ variants: initial.variants });
+  const [lang, setLang] = useState<Language>(langs[0]);
+  const variants: Variants = f.variants ?? {};
+  const starterOf = (l: Language) => variants[l]?.starter_code ?? "";
+  const setStarter = (v: string) => setF((p) => ({ ...p, variants: { ...p.variants, [lang]: { harness: p.variants?.[lang]?.harness ?? "", starter_code: v } } }));
+  const firstHarness = Object.values(initial.variants ?? {}).find((v) => v?.harness)?.harness;
   const [busy, setBusy] = useState(false);
   const set = (k: Exclude<keyof QuestionFields, "tests">) => (v: string) => setF((p) => ({ ...p, [k]: v }));
   const isNew = !initial.title;
@@ -346,18 +362,33 @@ function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, o
             placeholder={livePrompt ? "Leave empty to show the original text" : "Read two words, one per line. Print YES if they are anagrams of each other, otherwise NO."} />
         </Field>
         <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
+          {anyLanguage ? (
+            <Field label="Starter code" hint={langs.length < Object.keys(LANGUAGES).length
+              ? "Students can answer this one only in the languages that have a test driver."
+              : "Per language; students see the one for the language they pick. Leave empty for a blank file."}>
+              <div className="grid gap-2">
+                <LanguagePills value={lang} options={langs} onChange={setLang} marked={new Set(langs.filter((l) => starterOf(l)))} />
+                <TextArea rows={6} spellCheck={false} value={starterOf(lang)} onChange={(e) => setStarter(e.target.value)}
+                  onKeyDown={(e) => indentOnTab(e, setStarter)} aria-label={`Starter code in ${LANGUAGES[lang].label}`}
+                  className="bg-surface-2 font-mono text-[12.5px] leading-relaxed" />
+              </div>
+            </Field>
+          ) : (
           <Field label="Starter code" hint="Opens in the editor. Leave empty for a blank file.">
             <TextArea rows={6} spellCheck={false} value={f.starter_code} onChange={(e) => set("starter_code")(e.target.value)}
               onKeyDown={(e) => indentOnTab(e, set("starter_code"))} placeholder={"a = input()\nb = input()\n"}
               className="bg-surface-2 font-mono text-[12.5px] leading-relaxed" />
           </Field>
+          )}
           <Field label="Sample input" hint="Prefilled in the input box.">
             <TextArea rows={6} spellCheck={false} value={f.sample_input} onChange={(e) => set("sample_input")(e.target.value)}
               placeholder={"listen\nsilent"} className="bg-surface-2 font-mono text-[12.5px] leading-relaxed" />
           </Field>
         </div>
-        <TestsEditor tests={f.tests} onChange={(tests) => setF((p) => ({ ...p, tests }))} harness={harness} />
-        {!isNew && onTry && initial.tests.length > 0 && <TryAnswer run={onTry} starter={initial.starter_code} />}
+        <TestsEditor tests={f.tests} onChange={(tests) => setF((p) => ({ ...p, tests }))} harness={anyLanguage ? firstHarness : harness} />
+        {!isNew && onTry && initial.tests.length > 0 && (
+          <TryAnswer run={onTry} starter={initial.starter_code} languages={anyLanguage ? langs : undefined} starters={initial.variants} />
+        )}
         {!isNew && (
           <p className="text-xs text-faint">Sessions already recorded keep the version of the question the student saw, tests included.</p>
         )}
@@ -380,7 +411,7 @@ function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, o
 }
 
 /** Subject and programming language for the whole lab. */
-function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: string; language?: Language }) => Promise<unknown> }) {
+function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: string; language?: LabLanguage }) => Promise<unknown> }) {
   const [subject, setSubject] = useState(lab.subject);
   useEffect(() => setSubject(lab.subject), [lab.subject]);
   return (
@@ -391,8 +422,11 @@ function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: str
           <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} placeholder="Data Structures" className="h-9 text-[13px]"
             onBlur={() => subject.trim() !== lab.subject && void onSave({ subject })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
         </Field>
-        <Field label="Programming language" hint={`Students write and run ${LANGUAGES[lab.language].label} in ${LANGUAGES[lab.language].file}.${lab.n_sessions ? " Recorded sessions keep the language they used." : ""}`}>
-          <LanguageSelect value={lab.language} onChange={(language) => void onSave({ language })} className="[&_select]:h-9 [&_select]:text-[13px]" />
+        <Field label="Programming language" hint={`${lab.language === "any"
+          ? `${ANY_LANGUAGE.label}: each student picks C, C++, Java, JavaScript or Python per question, and is graded in it.`
+          : `Students write and run ${LANGUAGES[lab.language].label} in ${LANGUAGES[lab.language].file}.`}${lab.n_sessions ? " Recorded sessions keep the language they used." : ""}`}>
+          <LanguageSelect<LabLanguage> value={lab.language} any={lab.kind === "competition"} onChange={(language) => void onSave({ language })}
+            className="[&_select]:h-9 [&_select]:text-[13px]" />
         </Field>
       </div>
     </Card>

@@ -71,7 +71,8 @@ CREATE TABLE IF NOT EXISTS labs (
     status        TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'closed')),
     everyone      INTEGER NOT NULL DEFAULT 0,  -- 1 = every consented student, roster ignored
     subject       TEXT NOT NULL DEFAULT '',    -- e.g. "Data Structures"; free text
-    language      TEXT NOT NULL DEFAULT 'python',  -- runner.LANGUAGES key the editor and runner use
+    language      TEXT NOT NULL DEFAULT 'python',  -- runner.LANGUAGES key the editor and runner use, or 'any'
+                                                 -- (competitions only: each student picks per question, see grading.ANY)
     kind          TEXT NOT NULL DEFAULT 'lab', -- 'lab' or 'competition' (see compete.py)
     owner_email   TEXT,                        -- teacher who made it; NULL = admins only (labs from before ownership)
     created_at    REAL NOT NULL,
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS questions (
     tests_json    TEXT NOT NULL DEFAULT '[]',  -- optional: [{name, stdin, expected, hidden, compare}], see grading.py
     harness       TEXT NOT NULL DEFAULT '',    -- optional code appended after the student's when tests run
     checker       TEXT NOT NULL DEFAULT '',    -- optional Python checker for tests with compare "checker"
+    variants_json TEXT NOT NULL DEFAULT '{}',  -- any-language competitions: {language: {starter_code, harness}}
     source_json   TEXT,                        -- where an imported question came from (provider, url, license)
     created_at    REAL NOT NULL,
     updated_at    REAL NOT NULL
@@ -134,7 +136,8 @@ MIGRATIONS = {
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
              ("kind", "TEXT NOT NULL DEFAULT 'lab'"), ("owner_email", "TEXT")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
-                  ("source_json", "TEXT"), ("checker", "TEXT NOT NULL DEFAULT ''")),
+                  ("source_json", "TEXT"), ("checker", "TEXT NOT NULL DEFAULT ''"),
+                  ("variants_json", "TEXT NOT NULL DEFAULT '{}'")),
 }
 # Bumped whenever the consent screen promises something new, so every student
 # reads and agrees again. 2: teachers can watch a lab live (live.py).
@@ -146,7 +149,8 @@ def has_consent(row) -> bool:
     return row["consented_at"] is not None and (row["consent_version"] or 1) >= CONSENT_VERSION
 
 
-QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json", "checker")
+QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json", "checker",
+                   "variants_json")
 
 
 class Database:

@@ -3,6 +3,9 @@ import type { LivePrompt } from "../questionText";
 
 export type LabStatus = "draft" | "open" | "closed";
 export type Language = "python" | "c" | "cpp" | "java" | "javascript";
+/** "any": a competition where each student picks the language per question */
+export type LabLanguage = Language | "any";
+export const ANY_LANGUAGE = { label: "Any language", file: "", color: "conic-gradient(#3776ab 0 20%, #5c6bc0 0 40%, #00599c 0 60%, #e76f00 0 80%, #d4b106 0)" };
 
 export const LANGUAGES: Record<Language, { label: string; file: string; color: string }> = {
   python: { label: "Python", file: "main.py", color: "#3776ab" },
@@ -43,7 +46,7 @@ export interface LabRow {
   kind: "lab" | "competition";
   everyone: boolean;
   subject: string;
-  language: Language;
+  language: LabLanguage;
   created_at: number;
   updated_at: number;
   n_questions: number;
@@ -70,6 +73,17 @@ export interface Question {
   harness: string;
   source: QuestionSource | null;
   n_sessions: number;
+  /** any-language competitions: starter code and test driver per language */
+  variants: Variants;
+}
+
+export type Variants = Partial<Record<Language, { starter_code: string; harness: string }>>;
+
+/** Languages a question can be answered in, in an any-language competition (mirrors grading.question_languages). */
+export function questionLanguages(q: { variants?: Variants }): Language[] {
+  const all = Object.keys(LANGUAGES) as Language[];
+  const driven = all.filter((l) => q.variants?.[l]?.harness);
+  return driven.length ? driven : all;
 }
 
 export interface LabDetail extends Omit<LabRow, "n_questions" | "n_roster" | "n_started"> {
@@ -78,7 +92,7 @@ export interface LabDetail extends Omit<LabRow, "n_questions" | "n_roster" | "n_
   progress: { student_id: string; question_id: string; n: number; submitted: boolean; last_at: number }[];
 }
 
-export type QuestionFields = Pick<Question, "title" | "prompt" | "starter_code" | "sample_input" | "tests">;
+export type QuestionFields = Pick<Question, "title" | "prompt" | "starter_code" | "sample_input" | "tests"> & { variants?: Variants };
 
 export interface Provider {
   id: string;

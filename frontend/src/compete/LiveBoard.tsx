@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2, ScanSearch, Trophy, Users } from "lucide-react";
 import { Button, Card, LiveDot, Spinner, cn, item, stagger } from "../ui";
 import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
@@ -98,11 +98,13 @@ export function LiveBoard({ id, onAuthLost }: { id: string; onAuthLost: () => vo
 
       <motion.div variants={item}>
         <Leaderboard rows={rows} nQuestions={c.questions.length} size={present ? "lg" : "md"} showIds={ids && !present}
+          showLanguages={c.language === "any"}
           empty={c.state === "draft" || c.state === "waiting" ? "The board fills up once you start the clock." : "No scores yet."} />
       </motion.div>
       {!present && (
         <p className="mt-6 text-center text-xs text-faint">
           The board ranks tests passed and solving speed only. Nothing from the review timeline is ever shown here.
+          {" "}<a href={`#/teach/similar/${id}`} className="inline-flex items-center gap-1 text-muted hover:text-text"><ScanSearch className="size-3" />Similar submissions</a>
         </p>
       )}
     </motion.div>
