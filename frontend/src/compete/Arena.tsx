@@ -5,6 +5,7 @@ import { api } from "../api";
 import { Badge, Button, Card, Input, LiveDot, Spinner, cn, item, pop, spring, stagger } from "../ui";
 import { POINTS, type ArenaQuestion, type ArenaView } from "./api";
 import { BadgeChip, Countdown, Leaderboard, Podium, RankMark, Ticker } from "./Leaderboard";
+import { LanguageDot } from "../teach/bits";
 
 const POLL_MS = 3000;
 
@@ -120,7 +121,7 @@ export function Arena({ studentId, labId, onPick, onBack }: {
                     <h2 className="text-sm font-semibold text-text">Leaderboard</h2>
                     <span className="flex items-center gap-1 text-xs text-muted"><Users className="size-3.5" />{view.n_players}</span>
                   </div>
-                  <Leaderboard rows={view.board} nQuestions={nQ}
+                  <Leaderboard rows={view.board} nQuestions={nQ} showLanguages={view.language === "any"}
                     empty={view.board_mode === "hidden" ? "The board is revealed when time is up. Your own score is on the left." : "No scores yet. Be the first!"} />
                   {view.board_mode === "top" && view.n_players > view.board.length && (
                     <p className="mt-3 text-center text-xs text-faint">Showing the top {view.board.length} of {view.n_players}.</p>
@@ -229,6 +230,11 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
       <span className="min-w-0 flex-1">
         <strong className="block text-sm font-semibold text-text">{q.title}</strong>
         <span className="line-clamp-1 text-[13px] text-muted">{q.prompt}</span>
+        {q.language === "any" && (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {(q.languages ?? []).map((l) => <LanguageDot key={l} language={l} className={cn(p?.language === l && "bg-accent-soft text-text")} />)}
+          </span>
+        )}
       </span>
       {p?.auto && <span title="Your code was handed in for you when time ran out"><Badge>At the bell</Badge></span>}
       {p?.solved ? <Badge tone="success">Solved · {p.points} pts</Badge>
@@ -243,7 +249,7 @@ function Rules() {
   return (
     <div className="grid gap-2 text-[13px] text-muted">
       <p className="flex items-center gap-1.5 font-medium text-text"><FlaskConical className="size-3.5 text-accent" /> How points work</p>
-      <p>Submit runs your code against the question's test cases. You get up to {POINTS.solve} points for the tests you pass, and up to {POINTS.speed} more for solving every test early. Only your best submission counts, and a wrong one costs nothing, so try as often as you like. When time runs out, the code you have on each question you worked on is submitted for you.</p>
+      <p>Submit runs your code against the question's test cases, in the language on screen. You get up to {POINTS.solve} points for the tests you pass, and up to {POINTS.speed} more for solving every test early. Only your best submission counts, and a wrong one costs nothing, so try as often as you like. When time runs out, the code you have on each question you worked on is submitted for you.</p>
     </div>
   );
 }

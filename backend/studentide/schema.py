@@ -110,7 +110,9 @@ class SnapshotData(_Payload):
 class FocusData(_Payload):
     """Editor focus, window focus, and tab visibility changes. In a lab with
     several questions, target "question" marks the student switching to
-    another question of the same sitting ("out") and back to this one ("in")."""
+    another question of the same sitting ("out") and back to this one ("in"),
+    and in an any-language competition the student switching this question to
+    another language (each language is its own session) and back."""
 
     target: Literal["editor", "window", "page", "question"]
     state: Literal["in", "out"]

@@ -3,6 +3,7 @@
 // question's test cases. The board never shows anything from the review timeline.
 
 import type { Task } from "../api";
+import type { LabLanguage, Language } from "../teach/api";
 
 export type CompState = "draft" | "waiting" | "live" | "ended" | "closed";
 export type BoardMode = "top" | "all" | "hidden";
@@ -15,6 +16,8 @@ export interface QuestionProgress {
   points: number;
   passed: number | null;
   total: number | null;
+  /** language of the best submission */
+  language?: Language | null;
   /** the best submission was handed in for the student when time ran out */
   auto?: boolean;
 }
@@ -25,6 +28,8 @@ export interface BoardRow {
   points: number;
   solved: number;
   badges: BadgeInfo[];
+  /** languages of the answers that score (any-language competitions show them) */
+  languages?: Language[];
   me?: boolean;
   /** teacher view only */
   student_id?: string;
@@ -39,6 +44,8 @@ export interface CompSettings {
   description: string;
   status: "draft" | "open" | "closed";
   state: CompState;
+  /** "any": each student picks the language per question */
+  language: LabLanguage;
   duration_min: number | null;
   duration_s: number | null;
   board_mode: BoardMode;
@@ -51,7 +58,7 @@ export interface CompSettings {
 }
 
 export interface TeacherComp extends CompSettings {
-  questions: { id: string; title: string; n_tests: number }[];
+  questions: { id: string; title: string; n_tests: number; languages: Language[] }[];
   roster: string[];
   board: BoardRow[];
 }

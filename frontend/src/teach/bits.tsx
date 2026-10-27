@@ -2,18 +2,20 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, ChevronDown, CircleX, EyeOff, FlaskConical, Link2, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Checkbox, Spinner, TextArea, cn, spring } from "../ui";
-import { BLANK_TEST, LANGUAGES, type GradeResult, type Language, type QuestionSource, type TestCase } from "./api";
+import { ANY_LANGUAGE, BLANK_TEST, LANGUAGES, type GradeResult, type LabLanguage, type Language, type QuestionSource, type TestCase } from "./api";
 
 const select =
   "h-11 w-full appearance-none rounded-lg border border-border bg-surface pl-3 pr-9 text-sm text-text shadow-sm outline-none " +
   "transition-[border-color,box-shadow] duration-150 hover:border-border-strong focus:border-accent focus:ring-4 focus:ring-accent/15";
 
-export function LanguageSelect({ value, onChange, className, id }: {
-  value: Language; onChange: (l: Language) => void; className?: string; id?: string;
+/** `any`: also offer "Any language" (competitions only). */
+export function LanguageSelect<L extends LabLanguage = Language>({ value, onChange, className, id, any = false }: {
+  value: L; onChange: (l: L) => void; className?: string; id?: string; any?: boolean;
 }) {
   return (
     <span className={cn("relative block", className)}>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value as Language)} className={select} aria-label="Programming language">
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value as L)} className={select} aria-label="Programming language">
+        {any && <option value="any">{ANY_LANGUAGE.label} (each student picks)</option>}
         {(Object.keys(LANGUAGES) as Language[]).map((l) => <option key={l} value={l}>{LANGUAGES[l].label}</option>)}
       </select>
       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
@@ -21,12 +23,23 @@ export function LanguageSelect({ value, onChange, className, id }: {
   );
 }
 
-export function LanguageBadge({ language }: { language: Language }) {
-  const l = LANGUAGES[language] ?? LANGUAGES.python;
+export function LanguageBadge({ language }: { language: LabLanguage }) {
+  const l = language === "any" ? ANY_LANGUAGE : LANGUAGES[language] ?? LANGUAGES.python;
   return (
     <Badge className="h-5 gap-1 px-2 text-[11px]">
       <span className="size-1.5 rounded-sm" style={{ background: l.color }} />{l.label}
     </Badge>
+  );
+}
+
+/** A small language chip (board rows, similar pairs). */
+export function LanguageDot({ language, className }: { language: Language; className?: string }) {
+  const l = LANGUAGES[language] ?? LANGUAGES.python;
+  return (
+    <span className={cn("inline-flex h-5 items-center gap-1 rounded-md bg-surface-2 px-1.5 font-mono text-[10.5px] text-muted", className)}
+      title={`Answered in ${l.label}`}>
+      <span className="size-1.5 rounded-sm" style={{ background: l.color }} />{l.label}
+    </span>
   );
 }
 
@@ -164,9 +177,14 @@ function Pre({ label, text }: { label: string; text: string }) {
   );
 }
 
-/** Teacher-side: run a model answer through the question's tests. */
-export function TryAnswer({ run, starter }: { run: (code: string) => Promise<GradeResult>; starter: string }) {
-  const [code, setCode] = useState(starter);
+/** Teacher-side: run a model answer through the question's tests. `languages`: an any-language
+ * competition, where the answer can be tried in each language the question allows. */
+export function TryAnswer({ run, starter, languages, starters }: {
+  run: (code: string, language?: Language) => Promise<GradeResult>; starter: string;
+  languages?: Language[]; starters?: Partial<Record<Language, { starter_code: string }>>;
+}) {
+  const [language, setLanguage] = useState<Language | undefined>(languages?.[0]);
+  const [code, setCode] = useState(language ? starters?.[language]?.starter_code ?? "" : starter);
   const [busy, setBusy] = useState(false);
   const [grade, setGrade] = useState<GradeResult | null>(null);
   const [error, setError] = useState("");
@@ -174,11 +192,17 @@ export function TryAnswer({ run, starter }: { run: (code: string) => Promise<Gra
     <details className="rounded-xl border border-border px-4 py-3">
       <summary className="cursor-pointer text-[13px] font-medium text-text">Try an answer against the saved tests</summary>
       <div className="mt-3 grid gap-2">
+        {languages && language && (
+          <LanguagePills value={language} options={languages} onChange={(l) => {
+            if (code === (starters?.[language]?.starter_code ?? "")) setCode(starters?.[l]?.starter_code ?? "");
+            setLanguage(l); setGrade(null);
+          }} />
+        )}
         <TextArea rows={6} spellCheck={false} value={code} onChange={(e) => setCode(e.target.value)} className={box} aria-label="Model answer" />
         <Button size="sm" className="justify-self-start" disabled={busy}
           onClick={async () => {
             setBusy(true); setError("");
-            try { setGrade(await run(code)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+            try { setGrade(await run(code, language)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
           }}>
           {busy ? <Spinner className="size-3.5" /> : <FlaskConical className="size-3.5" />} Run tests
         </Button>
@@ -186,5 +210,23 @@ export function TryAnswer({ run, starter }: { run: (code: string) => Promise<Gra
         {grade && <GradeView grade={grade} />}
       </div>
     </details>
+  );
+}
+
+/** A row of language tabs (per-language starter code, trying an answer). `marked`: languages with content. */
+export function LanguagePills({ value, options, onChange, marked }: {
+  value: Language; options: Language[]; onChange: (l: Language) => void; marked?: Set<Language>;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1" role="tablist" aria-label="Language">
+      {options.map((l) => (
+        <button type="button" key={l} role="tab" aria-selected={l === value} onClick={() => onChange(l)}
+          className={cn("flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+            l === value ? "border-accent/50 bg-accent-soft text-text" : "border-border text-muted hover:text-text")}>
+          <span className="size-1.5 rounded-sm" style={{ background: LANGUAGES[l].color }} />{LANGUAGES[l].label}
+          {marked?.has(l) && <span className="size-1 rounded-full bg-accent" />}
+        </button>
+      ))}
+    </div>
   );
 }

@@ -114,6 +114,61 @@ normal lab, so the review timeline never mixes the two:
 The population-level settings (key-pair vocabulary, feature weights, prior)
 still come from lab baselines.
 
+## Any language
+
+Set a competition's language to **Any language** (when creating it, or under
+Session settings) for an open contest: each student picks C, C++, Java,
+JavaScript or Python per question from the switcher above the editor.
+
+- Tests are stdin/stdout, shared by every language. Starter code (and the test
+  driver of an imported function-style problem) is kept per language in
+  `questions.variants_json` (`{language: {starter_code, harness}}`); the
+  question form shows one starter-code tab per language. A question whose
+  tests need a driver opens only in the languages that have one
+  (`grading.question_languages`).
+- Importing from a platform fetches the problem in every language and keeps
+  each language whose tests match the first one.
+- Each language a student tries on a question is its own session
+  (`POST /api/sessions {..., language}`), so switching back keeps the code.
+  Submissions are graded in the session's language and store it
+  (`submissions.language`); the hand-in at the bell takes the language edited
+  last. The board shows the languages each row's points came from.
+- Switching an existing competition to or from Any language moves each
+  question's starter code into, or out of, that language's variant.
+- Review timeline: a competition session is compared with the student's
+  competition sessions in the same language once there are at least two,
+  otherwise with all of them (`review.Reviewer.baseline_ids`).
+
+## Similar submissions
+
+Staff open **Similar submissions** from the competition panel or the board
+(`#/teach/similar/<lab id>`). It is a pointer for a conversation, never a
+verdict: it never says "copied", students never see it, and nothing on it
+changes a score.
+
+How (`backend/studentide/similarity.py`): the last submission of each student
+per question and language is tokenised with names, layout, comments, string
+and number literals and include/import lines normalised away; winnowing
+fingerprints (8-token windows, window 4) pick candidate pairs; greedy string
+tiling (runs of at least 8 tokens) measures them. Starter code and stretches
+shared by half the class (at least 5 submissions) are masked; programs with
+fewer than 15 tokens of their own are skipped. C and C++ are compared with
+each other, other languages within themselves; a hand translation between
+languages is not detected. Pairs from 30% are reported, the page shows 50%+
+by default. The side-by-side view colours matching stretches alike on both
+sides and shows typed vs pasted characters from the session's edit log, with
+a link to each session's timeline.
+
+Accuracy check: `python backend/scripts/eval_similarity.py` (corpus in
+`backend/tests/fixtures/similarity/`, 6 problems x 3 independent solutions in
+C/C++ and in Python) writes `thesis/latex/ablations/similarity/`. Independent
+pairs: median 0.00, max 0.36. Disguised copies (renamed + reformatted,
++ rewritten constructs, + dead code every third statement): min 0.67, 97% at
+0.7 or more.
+
+API: `GET /api/teach/competitions/{lab_id}/similarity` and
+`GET /api/teach/competitions/{lab_id}/similarity/{a}/{b}` (owner, co-teachers, admins).
+
 ## API
 
 Teacher (admin token): `POST /api/teach/competitions`,
@@ -131,3 +186,6 @@ roster, scoring with partial credit, speed and ties, ending early, badges, no
 detector imports). Browser: `node frontend/e2e/compete.mjs <dir> [light|dark]`
 plays a whole competition with one browser student and six API students and
 writes the screenshots in `thesis/latex/snapshots/compete/`.
+`backend/tests/test_any_language.py` and `test_similarity.py` cover any-language
+competitions and the similarity check; `node frontend/e2e/anylang.mjs <dir>`
+runs both in the browser (screenshots in `thesis/latex/snapshots/anylang/`).

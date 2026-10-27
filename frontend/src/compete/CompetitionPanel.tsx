@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, CheckCircle2, MonitorPlay, Play, Square, Trophy } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MonitorPlay, Play, ScanSearch, Square, Trophy } from "lucide-react";
 import { Badge, Button, Card, Dialog, Input, LiveDot, Spinner, cn } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { BOARD_MODES, type BoardMode, type CompState, type TeacherComp } from "./api";
@@ -152,6 +152,12 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
           <MonitorPlay className="size-4" /> Open leaderboard
         </a>
+        {started && (
+          <a href={`#/teach/similar/${labId}`} title="Pairs of submissions that look alike: something to talk about, never a score"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
+            <ScanSearch className="size-4" /> Similar submissions
+          </a>
+        )}
         {!started && <p className="text-xs text-muted">Tip: set the lab to Open first so students can wait in the lobby and pick their board names.</p>}
       </div>
 

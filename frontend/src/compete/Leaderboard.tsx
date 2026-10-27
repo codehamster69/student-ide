@@ -3,6 +3,7 @@ import { AnimatePresence, LayoutGroup, animate, motion, useMotionValue, useTrans
 import { ArrowDown, ArrowUp, Award, Bug, Crown, Medal, Sparkles, Timer, Zap } from "lucide-react";
 import { cn, duration, ease, spring } from "../ui";
 import { clock, secondsLeft, type BadgeInfo, type BoardRow, type CompSettings } from "./api";
+import { LanguageDot } from "../teach/bits";
 
 const MEDAL = [
   "bg-gold-soft text-gold ring-gold/30",
@@ -51,12 +52,14 @@ export function BadgeChip({ b }: { b: BadgeInfo }) {
  * Live ranking. Rows glide to their new place (layout animation) when the
  * order changes, points count up, and a small arrow shows who just moved.
  */
-export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, empty }: {
+export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, empty, showLanguages = false }: {
   rows: BoardRow[];
   nQuestions: number;
   size?: "md" | "lg";
   showIds?: boolean;
   empty?: string;
+  /** any-language competitions: chips for the languages each row's points came from */
+  showLanguages?: boolean;
 }) {
   const prev = useRef(new Map<string, number>());
   const [moves, setMoves] = useState(new Map<string, number>());
@@ -110,7 +113,12 @@ export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, em
                       )}
                     </AnimatePresence>
                   </span>
-                  {r.badges.length > 0 && <span className="mt-1 flex flex-wrap gap-1">{r.badges.map((b) => <BadgeChip key={b.id} b={b} />)}</span>}
+                  {(r.badges.length > 0 || (showLanguages && r.languages?.length)) && (
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {r.badges.map((b) => <BadgeChip key={b.id} b={b} />)}
+                      {showLanguages && r.languages?.map((l) => <LanguageDot key={l} language={l} />)}
+                    </span>
+                  )}
                 </span>
                 <SolvedDots solved={r.solved} n={nQuestions} />
                 <span className={cn("w-16 text-right font-semibold text-text", big ? "text-2xl" : "text-base")}>

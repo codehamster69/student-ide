@@ -102,7 +102,7 @@ export function App() {
           tasks={screen.tasks}
           start={screen.start}
           session={screen.session}
-          openSession={screen.sitting ? (task) => startSession(screen.studentId, task, screen.sitting) : undefined}
+          openSession={(task, language) => startSession(screen.studentId, task, screen.sitting, language)}
           onFinished={(summary) => setScreen(screen.arena
             ? { name: "arena", studentId: screen.studentId, labId: screen.arena }
             : { name: "saved", studentId: screen.studentId, summary })}

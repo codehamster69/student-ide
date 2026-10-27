@@ -20,8 +20,10 @@ const STATUS_CHIP: Record<Provider["status"], [string, string]> = {
  * openly licensed copies shipped with the app. Either way the pick is copied
  * into the lab as an ordinary question.
  */
-export function SourcePicker({ language, onImport, onLink, onClose, onAuthLost }: {
+export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose, onAuthLost }: {
   language: Language;
+  /** an any-language competition: browse in `language`, import in every language the source serves */
+  anyLanguage?: boolean;
   onImport: (provider: string, ref: string) => Promise<boolean>;
   onLink: (provider: string, url: string, title: string) => Promise<boolean>;
   onClose: () => void;
@@ -44,7 +46,9 @@ export function SourcePicker({ language, onImport, onLink, onClose, onAuthLost }
         <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg"><Globe className="size-4" /></span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-text">Add a question from a platform</h3>
-          <p className="text-xs text-muted">Only sources whose licence allows it, for this lab's language ({LANGUAGES[language].label}). Test cases come along where the source has them, and stay optional.</p>
+          <p className="text-xs text-muted">{anyLanguage
+            ? `Only sources whose licence allows it. Previews show the ${LANGUAGES[language].label} version; importing brings starter code for every language the source has, and the same tests for all of them.`
+            : `Only sources whose licence allows it, for this lab's language (${LANGUAGES[language].label}). Test cases come along where the source has them, and stay optional.`}</p>
         </div>
         <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose} aria-label="Close"><X className="size-4" /></Button>
       </div>
