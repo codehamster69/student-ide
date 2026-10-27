@@ -11,7 +11,7 @@ import { LanguageBadge, LanguageSelect } from "./bits";
 
 const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutral", open: "success", closed: "warn" };
 
-/** #/teach: every lab the teacher has made, and a form to start a new one. */
+/** #/teach: the labs this teacher made or was added to (admins: every lab), and a form to start a new one. */
 export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
   const [labs, setLabs] = useState<LabRow[] | null>(null);
   const [error, setError] = useState("");
@@ -71,6 +71,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
                     <strong className="truncate text-[15px] font-semibold text-text">{l.title}</strong>
                     <Badge tone={TONE[l.status]} className="h-5 px-2 text-[11px]">{STATUS[l.status].label}</Badge>
                     <LanguageBadge language={l.language} />
+                    <OwnerBadge lab={l} />
                   </span>
                   <span className="mt-0.5 block truncate text-[13px] text-muted">
                     {l.subject && <span className="font-medium text-text/80">{l.subject} · </span>}{l.description || "No description"}
@@ -89,6 +90,15 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
       )}
     </motion.div>
   );
+}
+
+/** Whose lab this is, when it isn't simply yours. */
+export function OwnerBadge({ lab }: { lab: Pick<LabRow, "access" | "owner_email"> }) {
+  if (lab.access === "co_teacher") return <Badge className="h-5 px-2 text-[11px]">Shared with you · {lab.owner_email?.split("@")[0]}</Badge>;
+  if (lab.access !== "admin") return null;
+  return lab.owner_email
+    ? <Badge className="h-5 px-2 font-mono text-[11px]">{lab.owner_email.split("@")[0]}</Badge>
+    : <Badge tone="warn" className="h-5 px-2 text-[11px]">No owner yet</Badge>;
 }
 
 function Count({ icon: Icon, value, label }: { icon: typeof Users; value: number | string; label: string }) {

@@ -22,8 +22,10 @@ every student endpoint acts only for the signed-in student:
     DELETE /api/admin/users/{email}/role           drop the override
 
 Research-facing (a teacher or admin account in Google mode; otherwise header
-X-Admin-Token = $STUDENTIDE_ADMIN_TOKEN, disabled when that variable is unset):
-    GET  /api/sessions[?student_id=]
+X-Admin-Token = $STUDENTIDE_ADMIN_TOKEN, disabled when that variable is unset).
+A teacher sees only sessions recorded in their own or shared labs; admins, the
+token and dev mode see everything (auth.Auth.check_lab):
+    GET  /api/sessions[?student_id=&lab_id=]
     GET  /api/sessions/{id}/events
     GET  /api/sessions/{id}/runs
     GET  /api/sessions/{id}/checks
@@ -34,8 +36,9 @@ Live classroom view (same access, see live.py; $STUDENTIDE_LIVE = editor | class
 
 Review timeline (phase 3, same access):
     GET  /api/review/config
+    GET  /api/review/labs                     lab sessions: when they ran, students, moments
     GET  /api/review/students
-    GET  /api/review/sessions[?student_id=]   per-session summary + flags
+    GET  /api/review/sessions[?student_id=&lab_id=]   per-session summary + flags (lab_id=practice: outside labs)
     GET  /api/review/sessions/{id}            evidence timeline
     GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
 
@@ -331,10 +334,26 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         db.insert_check(check_id, session_id, body.code, graded)
         return graded | {"check_id": check_id, "code_sha256": hashlib.sha256(body.code.encode()).hexdigest()}
 
+    def teacher_session(session_id: str, request: Request):
+        """A session row for a teacher endpoint: only from the teacher's own or shared labs."""
+        row = live_session(session_id)
+        auth.check_lab(request, row["lab_id"])
+        return row
+
+    def visible_sessions(request: Request, student_id: str | None = None, lab_id: str | None = None) -> list:
+        """Sessions a teacher may see; lab_id 'practice' = sessions outside any lab (admins only)."""
+        if lab_id:
+            auth.check_lab(request, None if lab_id == "practice" else lab_id)
+        rows = db.list_sessions(student_id, None if lab_id == "practice" else lab_id)
+        if lab_id == "practice":
+            rows = [r for r in rows if r["lab_id"] is None]
+        ids = auth.lab_ids(request)
+        return rows if ids is None else [r for r in rows if r["lab_id"] in ids]
+
     @app.get("/api/sessions", dependencies=[Depends(require_admin)])
-    def sessions(student_id: str | None = None, lab_id: str | None = None) -> list[dict]:
+    def sessions(request: Request, student_id: str | None = None, lab_id: str | None = None) -> list[dict]:
         out = []
-        for r in db.list_sessions(student_id, lab_id):
+        for r in visible_sessions(request, student_id, lab_id):
             d = dict(r)
             d["client_meta"] = json.loads(d["client_meta"])
             d["question_json"] = json.loads(d["question_json"]) if d["question_json"] else None
@@ -342,18 +361,18 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return out
 
     @app.get("/api/sessions/{session_id}/events", dependencies=[Depends(require_admin)])
-    def session_events(session_id: str, type: str | None = None) -> list[dict]:
-        live_session(session_id)
+    def session_events(session_id: str, request: Request, type: str | None = None) -> list[dict]:
+        teacher_session(session_id, request)
         return list(db.iter_events(session_id, tuple(type.split(",")) if type else None))
 
     @app.get("/api/sessions/{session_id}/runs", dependencies=[Depends(require_admin)])
-    def session_runs(session_id: str) -> list[dict]:
-        live_session(session_id)
+    def session_runs(session_id: str, request: Request) -> list[dict]:
+        teacher_session(session_id, request)
         return [dict(r) for r in db.list_runs(session_id)]
 
     @app.get("/api/sessions/{session_id}/checks", dependencies=[Depends(require_admin)])
-    def session_checks(session_id: str) -> list[dict]:
-        live_session(session_id)
+    def session_checks(session_id: str, request: Request) -> list[dict]:
+        teacher_session(session_id, request)
         return [dict(r) | {"results_json": json.loads(r["results_json"])} for r in db.list_checks(session_id)]
 
     @app.get("/api/review/config", dependencies=[Depends(require_admin)])
@@ -365,33 +384,69 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                              for ch, (l, a) in CHANNEL_INFO.items() if ch in st.channels}}
 
     @app.get("/api/review/students", dependencies=[Depends(require_admin)])
-    def review_students() -> list[dict]:
+    def review_students(request: Request) -> list[dict]:
+        ids = auth.lab_ids(request)
         by_student: dict[str, list] = {}
         for r in reviewer._sessions():  # tagged with context, so competitions stay out of the lab baseline
             by_student.setdefault(r["student_id"], []).append(r)
         out = []
         for st, ss in sorted(by_student.items()):
+            seen = ss if ids is None else [s for s in ss if s["lab_id"] in ids]
+            if not seen:
+                continue
+            # The baseline is the student's, built from all their lab sessions; a
+            # teacher only sees the sessions from their own labs.
             base = reviewer.baseline_ids(ss)
-            out.append({"student_id": st, "n_sessions": len(ss), "n_baseline": len(base),
+            out.append({"student_id": st, "n_sessions": len(seen), "n_baseline": len(base),
                          "baseline_ready": len(base) >= MIN_BASELINE,
-                         "first": min(s["started_at"] for s in ss), "last": max(s["started_at"] for s in ss)})
+                         "first": min(s["started_at"] for s in seen), "last": max(s["started_at"] for s in seen)})
         return out
 
+    @app.get("/api/review/labs", dependencies=[Depends(require_admin)])
+    def review_labs(request: Request) -> list[dict]:
+        """The Review tab's first screen: one row per lab session the teacher
+        may see (when it ran, who came, how many moments), newest first."""
+        by_lab: dict[str | None, list] = {}
+        for r in visible_sessions(request):
+            by_lab.setdefault(r["lab_id"], []).append(r)
+        labs = {l["id"]: l for l in db.list_labs(auth.lab_ids(request))}
+        out = []
+        for lab_id, ss in by_lab.items():
+            if lab_id is not None and lab_id not in labs:
+                continue
+            lab = labs.get(lab_id)
+            sums = [reviewer.summary(s["id"]) for s in ss]
+            out.append({
+                "id": lab_id or "practice", "title": lab["title"] if lab else "Practice tasks",
+                "kind": lab["kind"] if lab else "practice", "subject": lab["subject"] if lab else "",
+                "status": lab["status"] if lab else None,
+                "started_at": min(s["started_at"] for s in ss),
+                "ended_at": max(x["started_at"] + x["duration_s"] for x in sums),
+                # when each class sitting began, so the browser can show the days in local time
+                "sittings_at": sorted({k: min(x["started_at"] for x in ss if (x["sitting_id"] or x["id"]) == k)
+                                       for k in {s["sitting_id"] or s["id"] for s in ss}}.values()),
+                "n_students": len({s["student_id"] for s in ss}), "n_sessions": len(ss),
+                "n_assessed": sum(x["phase"] == "assessed" for x in sums),
+                "n_with_moments": sum(bool(x["episodes"]) for x in sums),
+                "students_with_moments": len({x["student_id"] for x in sums if x["episodes"]}),
+            })
+        return sorted(out, key=lambda d: d["started_at"], reverse=True)
+
     @app.get("/api/review/sessions", dependencies=[Depends(require_admin)])
-    def review_sessions(student_id: str | None = None) -> list[dict]:
-        return [reviewer.summary(r["id"]) for r in db.list_sessions(student_id)]
+    def review_sessions(request: Request, student_id: str | None = None, lab_id: str | None = None) -> list[dict]:
+        return [reviewer.summary(r["id"]) for r in visible_sessions(request, student_id, lab_id)]
 
     @app.get("/api/review/sessions/{session_id}", dependencies=[Depends(require_admin)])
-    def review_session(session_id: str) -> dict:
-        live_session(session_id)
+    def review_session(session_id: str, request: Request) -> dict:
+        teacher_session(session_id, request)
         return reviewer.review(session_id)
 
     @app.get("/api/review/sessions/{session_id}/replay", dependencies=[Depends(require_admin)])
-    def review_replay(session_id: str) -> dict:
-        live_session(session_id)
+    def review_replay(session_id: str, request: Request) -> dict:
+        teacher_session(session_id, request)
         return replay_data(db, session_id)
 
-    app.include_router(teach.router(db, require_admin, cfg))
+    app.include_router(teach.router(db, require_admin, auth))
     app.include_router(compete.router(db, require_admin, auth))
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))
 

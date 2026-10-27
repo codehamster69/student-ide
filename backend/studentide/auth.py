@@ -27,6 +27,12 @@ mistaken for a teacher.
 
 In Google mode $STUDENTIDE_ADMIN_TOKEN still works for scripts if set; leave
 it unset in production.
+
+Lab ownership: a teacher sees and manages only the labs (and competitions) they
+made or were added to as a co-teacher, and only the sessions, review
+timelines, live views and results recorded in those labs. Admins, the admin
+token and dev mode see everything. A lab with no owner (made before ownership
+existed) is visible to admins only until an admin hands it to a teacher.
 """
 
 from __future__ import annotations
@@ -102,6 +108,19 @@ class Config:
     def student_pattern(self) -> re.Pattern:
         branch = "|".join(sorted(map(re.escape, self.branch_codes), key=len, reverse=True)) or "[a-z]{2,4}"
         return re.compile(rf"^(ug|pg)(\d{{2}})({branch})(\d{{1,4}})$", re.I)
+
+
+def not_yours(detail: str) -> HTTPException:
+    """403 for a lab the teacher may not touch. The header tells the browser it
+    is not a sign-in problem, so it shows the message instead of signing out."""
+    return HTTPException(403, detail, headers={"X-Refusal": "not-yours"})
+
+
+@dataclass(frozen=True)
+class Teacher:
+    """Who is asking on a teacher endpoint. `email` is None for the admin token and dev mode."""
+    email: str | None
+    admin: bool
 
 
 def parse_address(email: str, cfg: Config) -> dict:
@@ -280,6 +299,28 @@ class Auth:
             raise HTTPException(401, "sign in first")
         if user["role"] not in ("teacher", "admin"):
             raise HTTPException(403, "this needs a teacher account")
+
+    def teacher(self, request: Request) -> Teacher:
+        """The teacher behind a request that already passed require_teacher."""
+        if self.token_ok(request) or not self.cfg.google:
+            return Teacher(None, True)
+        user = self.current(request)
+        if user is None or user["role"] not in ("teacher", "admin"):
+            raise HTTPException(403, "this needs a teacher account")
+        return Teacher(user["email"], user["role"] == "admin")
+
+    def lab_ids(self, request: Request) -> set[str] | None:
+        """Labs this teacher may see; None = all (admins)."""
+        t = self.teacher(request)
+        return None if t.admin else self.db.teacher_lab_ids(t.email)
+
+    def check_lab(self, request: Request, lab_id: str | None) -> Teacher:
+        """403 unless the lab is the teacher's own or shared with them. A session
+        outside any lab (practice tasks) is for admins only."""
+        t = self.teacher(request)
+        if not t.admin and (lab_id is None or lab_id not in self.db.teacher_lab_ids(t.email)):
+            raise not_yours("this lab belongs to another teacher" if lab_id else "only admins see practice sessions")
+        return t
 
     def require_admin(self, request: Request) -> dict:
         user = self.current(request) if self.cfg.google else None

@@ -229,11 +229,11 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
         return lab
 
     @r.get("/labs")
-    def labs() -> list[dict]:
+    def labs(request: Request) -> list[dict]:
         allowed("class")
         now = time.time()
         out = []
-        for lab in db.list_labs():
+        for lab in db.list_labs(auth.lab_ids(request)):
             if lab["status"] != "open":
                 continue
             open_ = [s for s in db.list_sessions(lab_id=lab["id"]) if s["ended_at"] is None]
@@ -247,6 +247,7 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
     def lab_view(lab_id: str, request: Request) -> dict:
         allowed("class")
         lab = lab_or_404(lab_id)
+        auth.check_lab(request, lab_id)
         live.heartbeat(viewer(request), lab_id=lab_id)
         now = time.time()
         questions = {q["id"]: q for q in db.lab_questions(lab_id)}
@@ -306,6 +307,7 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
         s = db.get_session(session_id)
         if s is None:
             raise HTTPException(404, "unknown session")
+        auth.check_lab(request, s["lab_id"])
         live.heartbeat(viewer(request), lab_id=s["lab_id"], session_id=session_id, student_id=s["student_id"])
         now = time.time()
         text, caret = live.code(session_id)
