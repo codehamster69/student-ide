@@ -15,8 +15,9 @@ from .base import Category, Imported, Provider, ProviderError, Summary
 from .codecontests import CodeChef, Codeforces
 from .exercism import Exercism
 from .mbpp import MBPP
+from .originals import Originals
 from .unavailable import HackerRank, LeetCode
 
-PROVIDERS: dict[str, Provider] = {p.id: p for p in (Codeforces(), CodeChef(), Exercism(), MBPP(), LeetCode(), HackerRank())}
+PROVIDERS: dict[str, Provider] = {p.id: p for p in (Originals(), Codeforces(), CodeChef(), Exercism(), MBPP(), LeetCode(), HackerRank())}
 
 __all__ = ["PROVIDERS", "Category", "Imported", "Provider", "ProviderError", "Summary"]
