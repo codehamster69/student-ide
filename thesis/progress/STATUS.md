@@ -19,7 +19,7 @@ flowchart LR
 
   subgraph Build["Build pipeline"]
     B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
-    B2 --> B3["3. Teacher timeline dashboard<br/>#8, #10, #11, #12, #13, #15, #16"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
+    B2 --> B3["3. Teacher timeline dashboard<br/>#8, #10, #11, #12, #13, #15, #16, #17"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
     B4 --> B5["5. College deployment, pilot<br/>#14"]:::prog
   end
 
@@ -55,6 +55,7 @@ flowchart LR
 | 3 Dashboard | Optional tests (ungraded Check in labs; required in competitions), lab subject and language (Python, C, C++, Java, JS), questions from platforms: Exercism live, LeetCode/HackerRank/CodeChef link only | ✅ | #13 |
 | 3 Dashboard | Larger question sets by topic: Codeforces (4,551) and CodeChef (332) from the CC BY 4.0 CodeContests dataset with tests, MBPP (974 beginner Python) live; 19 shared topics | ✅ | #15 |
 | 3 Dashboard | Live classroom view: class grid per open lab, read-only student editor; students always see who is watching, views logged, consent v2 | 🟧 | #16 |
+| 3 Dashboard | A lab opens as one sitting: question tabs in one editor, each question keeps its code (resumed in a later sitting); one session per question visited, linked by a sitting id | 🟧 | #17 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
