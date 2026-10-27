@@ -6,28 +6,42 @@ import { cn } from "./ui";
  * Where a question's text is loaded from when the app may not store it
  * (LeetCode problems: the server keeps tests and topics, never LeetCode's
  * text). The browser fetches one row of the public dataset and checks it is
- * the right problem before showing it.
+ * the right problem before showing it; if it can't reach the dataset (a campus
+ * network that blocks it), it asks our server, which fetches the same row and
+ * keeps the text in memory only.
  */
 export interface LivePrompt {
   url: string;
   field: string;
   match: Record<string, string>;
   credit: string;
+  /** our server's copy of the same fetch, tried when the browser can't reach `url` */
+  fallback?: string;
 }
 
 const cache = new Map<string, Promise<string>>();
 
+async function direct(lp: LivePrompt): Promise<string> {
+  const r = await fetch(lp.url, { signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const row = (await r.json())?.rows?.[0]?.row ?? {};
+  if (!Object.entries(lp.match).every(([k, v]) => row[k] === v)) throw new Error("dataset row moved");
+  const text = String(row[lp.field] ?? "").trim();
+  if (!text) throw new Error("empty");
+  return text;
+}
+
+async function viaServer(lp: LivePrompt): Promise<string> {
+  if (!lp.fallback) throw new Error("no fallback");
+  const r = await fetch(lp.fallback); // same origin: the sign-in cookie goes along
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return String((await r.json()).text ?? "");
+}
+
 function fetchLive(lp: LivePrompt): Promise<string> {
   let p = cache.get(lp.url);
   if (!p) {
-    p = fetch(lp.url).then(async (r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const row = (await r.json())?.rows?.[0]?.row ?? {};
-      if (!Object.entries(lp.match).every(([k, v]) => row[k] === v)) throw new Error("dataset row moved");
-      const text = String(row[lp.field] ?? "").trim();
-      if (!text) throw new Error("empty");
-      return text;
-    });
+    p = direct(lp).catch(() => viaServer(lp));
     p.catch(() => cache.delete(lp.url)); // try again next time
     cache.set(lp.url, p);
   }

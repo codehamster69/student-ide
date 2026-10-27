@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useQuestionText, type LivePrompt } from "../questionText";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, GraduationCap, Pencil, Plus, Radio, Trash2,
@@ -273,6 +274,7 @@ function QuestionCard({ q, index, first, last, onEdit, onMove }: {
           {q.prompt || (q.source?.live_prompt ? "Problem text loads live from the dataset when students open it"
             : q.source?.linked_only ? "Linked question: write the prompt in your own words" : "No prompt yet")}
         </p>
+        {!q.prompt && q.source?.live_prompt && <LiveTextCheck live={q.source.live_prompt} />}
         {q.starter_code && (
           <pre className="mt-2.5 max-h-20 overflow-hidden rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">{q.starter_code}</pre>
         )}
@@ -289,6 +291,18 @@ function QuestionCard({ q, index, first, last, onEdit, onMove }: {
 }
 
 /** Tab in the starter-code box indents (four spaces) instead of leaving the field. */
+/** Warn before class when a question's live text can't be loaded from here (students would see only a link). */
+function LiveTextCheck({ live }: { live: LivePrompt }) {
+  const { status } = useQuestionText("", live);
+  if (status !== "failed") return null;
+  return (
+    <p className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+      The problem text can't be loaded right now, so students would see only a link to the original. Write the prompt in
+      your own words (Edit) to be safe.
+    </p>
+  );
+}
+
 function indentOnTab(e: KeyboardEvent<HTMLTextAreaElement>, set: (v: string) => void) {
   if (e.key !== "Tab" || e.shiftKey) return;
   e.preventDefault();

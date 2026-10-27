@@ -29,7 +29,7 @@ import time
 from functools import lru_cache
 from pathlib import Path
 
-from .base import Category, Imported, Provider, ProviderError, Summary, topic_categories
+from .base import CACHE_TTL_S, Category, Fetcher, Imported, Provider, ProviderError, Summary, http_get, topic_categories
 
 DATA = Path(__file__).parent / "data" / "leetcode.jsonl.gz"
 DATASET = "newfacade/LeetCodeDataset"
@@ -200,6 +200,7 @@ def live_prompt(row: dict) -> dict:
     return {"url": f"{ROWS_URL}?dataset={DATASET.replace('/', '%2F')}&config=default&split={row['split']}"
                    f"&offset={row['offset']}&length=1",
             "field": "problem_description", "match": {"task_id": row["ref"]},
+            "fallback": f"/api/live-prompt/leetcode/{row['ref']}",
             "credit": "Problem text by LeetCode, loaded live from LeetCodeDataset on Hugging Face"}
 
 
@@ -212,6 +213,32 @@ class LeetCode(Provider):
              "problem text is not stored: it loads live when the question is shown, or you write your own. Python labs only.")
     terms_url = "https://huggingface.co/datasets/newfacade/LeetCodeDataset"
     hosts = ("leetcode.com", "leetcode.cn")
+
+    def __init__(self, get: Fetcher = http_get, ttl: float = CACHE_TTL_S):
+        self.get, self.ttl = get, ttl
+        self._texts: dict[str, tuple[float, str]] = {}  # in memory only: the text is never written anywhere
+
+    def live_text(self, ref: str) -> str:
+        """LeetCode's text for one problem, fetched from the dataset viewer when a
+        browser couldn't reach it itself (e.g. a campus network that blocks it)."""
+        hit = self._texts.get(ref)
+        if hit and time.time() - hit[0] < self.ttl:
+            return hit[1]
+        r = _load().get(ref)
+        if r is None:
+            raise ProviderError(f"no LeetCode problem '{ref}' in the question set", 404)
+        lp = live_prompt(r)
+        body = self.get(lp["url"])
+        try:
+            row = json.loads(body or b"{}")["rows"][0]["row"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            row = {}
+        if row.get("task_id") != ref or not row.get(lp["field"]):
+            raise ProviderError("the problem text is not available right now")
+        if len(self._texts) > 500:
+            self._texts.clear()
+        self._texts[ref] = (time.time(), row[lp["field"]].strip())
+        return self._texts[ref][1]
 
     def _rows(self, language: str) -> list[dict]:
         if language != "python":

@@ -144,3 +144,27 @@ def test_json_compare_allows_float_rounding():
     assert grading.outputs_match("[1, 2.5000001]", "[1, 2.5]", "json")
     assert not grading.outputs_match("[1, 2.6]", "[1, 2.5]", "json")
     assert not grading.outputs_match("true", "1.0", "json")
+
+
+def test_server_fallback_for_the_text(client):
+    calls = []
+    row = {"rows": [{"row": {"task_id": "two-sum", "problem_description": "  Text from the dataset.  "}}]}
+
+    def fake(url):
+        calls.append(url)
+        return json.dumps(row).encode()
+
+    from studentide.providers import PROVIDERS
+    PROVIDERS["leetcode"].get, saved = fake, PROVIDERS["leetcode"].get
+    try:
+        PROVIDERS["leetcode"]._texts.clear()
+        r = client.get("/api/live-prompt/leetcode/two-sum").json()
+        assert r == {"text": "Text from the dataset."}
+        client.get("/api/live-prompt/leetcode/two-sum")
+        assert len(calls) == 1 and "offset=" in calls[0]  # cached in memory
+        assert client.get("/api/live-prompt/leetcode/add-two-numbers").status_code == 502  # row is not that problem
+        assert client.get("/api/live-prompt/leetcode/nope").status_code == 404
+        assert client.get("/api/live-prompt/mbpp/1").status_code == 404
+    finally:
+        PROVIDERS["leetcode"].get = saved
+        PROVIDERS["leetcode"]._texts.clear()

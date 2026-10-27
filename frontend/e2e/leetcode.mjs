@@ -2,7 +2,9 @@
 // teacher browses LeetCode problems by topic (tests and tags bundled from
 // LeetCodeDataset), previews one whose text loads live from the Hugging Face
 // dataset viewer (never stored by the server), adds it; a student opens it,
-// reads the live text and checks a solution against the bundled tests.
+// reads the live text and checks a solution against the bundled tests. Then
+// the worst cases: Hugging Face blocked (text comes via our server), and both
+// paths down (students get a link, the teacher sees a warning).
 //
 //   BASE=http://127.0.0.1:8000 TOKEN=demo node frontend/e2e/leetcode.mjs [screenshot-dir] [light|dark]
 //
@@ -94,6 +96,31 @@ await s.keyboard.type("return next([j, i] for i in range(len(nums)) for j in ran
 await s.click("button:has-text('Check')");
 await s.waitForSelector(`text=${q.tests.length} of ${q.tests.length} passed`);
 await shot(s, "04-student-check");
+
+// worst case 1: the student's network blocks Hugging Face -> the text comes through our server
+const blocked = await open();
+await blocked.route("**/datasets-server.huggingface.co/**", (r) => r.abort());
+await blocked.goto(BASE);
+await blocked.fill("input", `${STUDENT}B`);
+await blocked.click("button[type=submit]");
+await blocked.waitForSelector("text=Before you start");
+await blocked.check("input[type=checkbox]");
+await blocked.click("button:text-is(\"Start\")");
+await blocked.click("button:has-text('1. Two Sum')");
+await blocked.waitForSelector("text=indices of the two numbers");
+await shot(blocked, "05-hf-blocked-server-fallback");
+
+// worst case 2: neither path works -> students get a link; the teacher is warned in the lab editor
+const off = await open();
+await off.route("**/datasets-server.huggingface.co/**", (r) => r.abort());
+await off.route("**/api/live-prompt/**", (r) => r.fulfill({ status: 502, body: "{}" }));
+await off.goto(`${BASE}/#/teach`);
+await off.fill("input[type=password]", TOKEN);
+await off.click("button[type=submit]");
+await off.waitForSelector("text=A lab is one sitting");
+await off.goto(`${BASE}/#/teach/l/${labId}`);
+await off.waitForSelector("text=The problem text can't be loaded right now");
+await shot(off, "06-teacher-warning");
 
 await browser.close();
 assert.deepEqual(errors, [], `page errors: ${errors.join("; ")}`);

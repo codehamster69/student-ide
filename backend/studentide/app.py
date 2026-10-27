@@ -9,6 +9,8 @@ Student-facing (no auth beyond a roll number, the lab is supervised):
     POST /api/sessions/{id}/events      {schema_version, events: [...]}
     POST /api/sessions/{id}/run         {code, stdin}   in the lab's language (Python for practice tasks)
     POST /api/sessions/{id}/check       {code}          against the question's tests, if it has any
+    GET  /api/live-prompt/{provider}/{ref}             a question's text when the browser can't fetch it
+                                                       itself (LeetCode; kept in memory only, never stored)
 
 Sign-in (see auth.py). With $STUDENTIDE_GOOGLE_CLIENT_ID set, students and
 teachers sign in with their college Google account, /api/login is off and
@@ -68,6 +70,7 @@ from pydantic import BaseModel, Field, ValidationError
 from . import compete, grading, live as live_mod, retention, runner, teach
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
+from .providers import PROVIDERS, ProviderError
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .replay import ReplayError, final_text
 from .schema import SCHEMA_VERSION, Event
@@ -163,6 +166,21 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     @app.get("/api/tasks")
     def tasks() -> list[dict]:
         return TASKS
+
+    @app.get("/api/live-prompt/{provider_id}/{ref}")
+    def live_prompt(provider_id: str, ref: str, request: Request) -> dict:
+        """Fallback for questions whose text the app may not store: the server
+        fetches it from the same public source the browser tries first, holds it
+        in memory for a while and passes it on. Signed-in users only."""
+        if auth.cfg.google and auth.current(request) is None and not auth.token_ok(request):
+            raise HTTPException(401, "sign in first")
+        p = PROVIDERS.get(provider_id)
+        if p is None or not hasattr(p, "live_text"):
+            raise HTTPException(404, "this source has no live text")
+        try:
+            return {"text": p.live_text(ref)}
+        except ProviderError as e:
+            raise HTTPException(e.status, str(e)) from e
 
     # -- sign-in
 

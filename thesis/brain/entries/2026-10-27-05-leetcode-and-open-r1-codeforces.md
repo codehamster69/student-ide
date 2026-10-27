@@ -39,8 +39,13 @@ more problems.
   statement: an imported question has an empty prompt plus
   `source.live_prompt` (a Hugging Face dataset-viewer rows URL and the
   `task_id` to check), and the browser fetches the text each time. A teacher
-  prompt replaces it. If the viewer is unreachable, students get a link to
-  leetcode.com.
+  prompt replaces it.
+- Worst case (Rohan asked): if a student's network blocks Hugging Face, the
+  browser falls back to our server (`/api/live-prompt/leetcode/{ref}`), which
+  fetches the same row and keeps the text in memory only (1 h, never on
+  disk). If both fail, students get a link to leetcode.com and the teacher's
+  lab editor warns on that question before class. For competitions and exams
+  the advice is to write the prompt in your own words.
 - open-r1 over CodeContests: twice the problems, newer contests, checkers for
   multi-answer problems, and generated tests for problems whose official tests
   Codeforces truncates.
@@ -76,4 +81,7 @@ more problems.
   (10^4 shows as 104 in constraints).
 - Session snapshots of LeetCode questions do not contain the text (by
   design); the review timeline links to the original instead.
-- Students' browsers need to reach `datasets-server.huggingface.co`.
+- The server fallback needs the app container to reach Hugging Face (it
+  does: same network as the MBPP fetch).
+- If a student deletes the provided imports at the top of the starter code,
+  type hints like `List[int]` fail before the tests start.

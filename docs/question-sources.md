@@ -71,9 +71,15 @@ readable and the original link kept for attribution
 `build_codecontests.py`); its problems that accept several answers keep no
 tests.
 
-LeetCode problems need a browser that can reach
-`datasets-server.huggingface.co` to show their text; if it can't, the
-student sees a link to the original instead. The harness builds the
+LeetCode text, worst cases: the browser first fetches the row from
+`datasets-server.huggingface.co`; if that fails (a campus network that
+blocks Hugging Face, a timeout after 8 s), it asks our server
+(`GET /api/live-prompt/leetcode/{ref}`, signed-in users), which fetches the
+same row and keeps only the text in memory for an hour, never on disk. If
+both fail the student sees a link to the original, and the teacher's lab
+editor shows a warning on that question, so it can be fixed (by writing the
+prompt in their own words) before class. For competitions and exams, writing
+the prompt is the safe choice. The harness builds the
 arguments from the test input (`nums=[2, 7], target=9`, with `list_node(...)`
 and `tree_node(...)` for linked lists and trees), calls the method and prints
 the result as JSON; the starter code carries LeetCode's usual imports and

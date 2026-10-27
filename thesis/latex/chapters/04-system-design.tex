@@ -392,7 +392,10 @@ do not hold. The app therefore stores the tests, tags and starter code
 an empty prompt and a pointer to the dataset row, and the student's browser
 loads the text from the public Hugging Face dataset viewer each time the
 question is shown, checking that the row is the right problem
-(\cref{fig:leetcode}). A teacher may instead write the problem in their own
+(\cref{fig:leetcode}). Where a campus network blocks the dataset viewer, the
+browser falls back to the app's server, which fetches the same row and holds
+only the text in memory; if neither path works the student gets a link to
+the original and the teacher's lab editor flags the question before class. A teacher may instead write the problem in their own
 words, which then replaces the live text. The tests call the method on
 LeetCode's \texttt{class Solution} with the same arguments, building linked
 lists and binary trees where the problem takes them, and print the return
