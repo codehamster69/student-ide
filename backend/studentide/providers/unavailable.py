@@ -1,6 +1,9 @@
 """Platforms with no permitted way to fetch questions automatically.
 
-None of these three publishes an API for reading problem statements or test
+(CodeChef and Codeforces problems are browsable through the CodeContests
+dataset instead, see codecontests.py; their own sites still cannot be fetched.)
+
+None of LeetCode, HackerRank and CodeChef publishes an API for reading problem statements or test
 data, and none licenses its problems for reuse in another product. LeetCode's
 GraphQL endpoint is internal and undocumented; HackerRank's API covers only a
 company's own tests and its terms forbid copying any part of the service;
@@ -32,13 +35,3 @@ class HackerRank(Provider):
              "Link a challenge and write the question in your own words.")
     terms_url = "https://www.hackerrank.com/terms-of-service"
     hosts = ("hackerrank.com",)
-
-
-class CodeChef(Provider):
-    id = "codechef"
-    name = "CodeChef"
-    status = "link_only"
-    about = ("Its public API was shut down in 2020 and pages are behind captchas. "
-             "Link a problem and write the question in your own words.")
-    terms_url = "https://www.codechef.com/terms"
-    hosts = ("codechef.com",)

@@ -13,7 +13,9 @@ A test is stdin in, stdout out, which works the same in every language:
 compare "text" (default): trailing spaces on each line and trailing blank
 lines are ignored. compare "json": both sides are parsed as JSON and compared
 as values (used by imported function-style questions, whose harness prints
-the function's return value as JSON).
+the function's return value as JSON). compare "tokens": whitespace-separated
+tokens, with numbers equal within 1e-6 absolute or relative error (for
+problems whose answers are real numbers).
 
 A question's optional `harness` is code appended after the student's before
 the tests run, e.g. a few lines that read a JSON argument list from stdin,
@@ -39,7 +41,7 @@ class TestCase(BaseModel):
     stdin: str = Field(default="", max_length=100_000)
     expected: str = Field(default="", max_length=100_000)
     hidden: bool = False  # the student sees pass/fail only, never the input or expected output
-    compare: Literal["text", "json"] = "text"
+    compare: Literal["text", "json", "tokens"] = "text"
 
 
 def parse_tests(raw: str | list | None) -> list[dict]:
@@ -54,7 +56,20 @@ def _text(s: str) -> str:
     return "\n".join(line.rstrip() for line in s.replace("\r\n", "\n").split("\n")).rstrip("\n")
 
 
+def _same_token(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    try:
+        x, y = float(a), float(b)
+    except ValueError:
+        return False
+    return abs(x - y) <= 1e-6 * max(1.0, abs(y))
+
+
 def outputs_match(got: str, expected: str, compare: str = "text") -> bool:
+    if compare == "tokens":
+        g, e = got.split(), expected.split()
+        return len(g) == len(e) and all(_same_token(a, b) for a, b in zip(g, e))
     if compare == "json":
         try:
             return json.loads(got) == json.loads(expected)
