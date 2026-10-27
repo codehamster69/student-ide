@@ -28,3 +28,13 @@ gcloud compute instances get-serial-port-output studentide $A | grep SMOKE
 Use stop/start, not `reset`: a hard reset while Caddy is writing a
 certificate leaves a truncated file (startup.sh detects and clears that case).
 Change settings by editing `deploy.env` in the bucket the same way.
+
+`startup.sh` lives in instance metadata, not in the release, so after editing it:
+
+```bash
+gcloud compute instances add-metadata studentide $A --metadata-from-file startup-script=deploy/gcp/startup.sh
+```
+
+The boot smoke test runs a small program in each lab language through the
+runner and lists the question platforms (`SMOKE languages:` on the serial
+console).

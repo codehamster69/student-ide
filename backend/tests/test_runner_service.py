@@ -49,3 +49,14 @@ def test_unreachable_runner_says_so(monkeypatch):
     monkeypatch.setenv("STUDENTIDE_RUNNER_URL", "http://127.0.0.1:9")
     r = runner.run("print(1)")
     assert r.error_type == "Unavailable" and "runner" in r.stderr
+
+
+def test_program_that_cannot_start_is_reported(monkeypatch):
+    """A scratch dir mounted noexec once made every C run a 500; now it is a normal failed run."""
+    def refuse(*a, **k):
+        raise PermissionError(13, "Permission denied")
+    with runner.Program('#include <stdio.h>\nint main(){puts("hi");}', "c") as p:
+        assert p.failed is None
+        monkeypatch.setattr(runner.subprocess, "Popen", refuse)
+        r = p.run()
+    assert r.exit_code == 126 and "could not start" in r.stderr
