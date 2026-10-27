@@ -10,21 +10,32 @@ Student-facing (no auth beyond a roll number, the lab is supervised):
     POST /api/sessions/{id}/run         {code, stdin}   in the lab's language (Python for practice tasks)
     POST /api/sessions/{id}/check       {code}          against the question's tests, if it has any
 
-Research-facing (needs header X-Admin-Token = $STUDENTIDE_ADMIN_TOKEN;
-disabled entirely when that variable is unset):
+Sign-in (see auth.py). With $STUDENTIDE_GOOGLE_CLIENT_ID set, students and
+teachers sign in with their college Google account, /api/login is off and
+every student endpoint acts only for the signed-in student:
+    GET  /api/auth/config                          {mode: google | dev, client_id, domain}
+    POST /api/auth/google               {credential}            -> account, sets the session cookie
+    GET  /api/me                                   the signed-in account (401 if none)
+    POST /api/auth/logout
+    GET  /api/admin/users                          admins only
+    PUT  /api/admin/users/{email}       {role}     admin override (TAs, odd addresses)
+    DELETE /api/admin/users/{email}/role           drop the override
+
+Research-facing (a teacher or admin account in Google mode; otherwise header
+X-Admin-Token = $STUDENTIDE_ADMIN_TOKEN, disabled when that variable is unset):
     GET  /api/sessions[?student_id=]
     GET  /api/sessions/{id}/events
     GET  /api/sessions/{id}/runs
     GET  /api/sessions/{id}/checks
 
-Review timeline (phase 3, same token):
+Review timeline (phase 3, same access):
     GET  /api/review/config
     GET  /api/review/students
     GET  /api/review/sessions[?student_id=]   per-session summary + flags
     GET  /api/review/sessions/{id}            evidence timeline
     GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
 
-Teacher authoring (same token): /api/teach/*, see teach.py.
+Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
 POST /api/sessions/{id}/submit, see compete.py.
 
@@ -43,11 +54,12 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import compete, grading, runner, teach
+from . import compete, grading, retention, runner, teach
+from .auth import Auth, Config
 from .db import Database
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .schema import SCHEMA_VERSION, Event
@@ -60,6 +72,14 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 class LoginIn(BaseModel):
     student_id: str
+
+
+class GoogleIn(BaseModel):
+    credential: str = Field(max_length=8192)
+
+
+class RoleIn(BaseModel):
+    role: str
 
 
 class SessionIn(BaseModel):
@@ -85,47 +105,105 @@ def _student_id(raw: str) -> str:
     return sid
 
 
-def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True) -> FastAPI:
+def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True,
+               auth_config: Config | None = None, verify_google=None) -> FastAPI:
+    """`auth_config` / `verify_google` replace the environment and Google's token check in tests."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
-    token = admin_token if admin_token is not None else os.environ.get("STUDENTIDE_ADMIN_TOKEN")
-    app = FastAPI(title="Student IDE", version="0.1.0")
+    cfg = auth_config or Config.from_env(admin_token)
+    auth = Auth(db, cfg, verify_google)
+    app = FastAPI(title="Student IDE", version="0.2.0")
     app.state.db = db
+    app.state.auth = auth
     reviewer = Reviewer(db)
     app.state.reviewer = reviewer
-    if token:
+    if cfg.admin_token or cfg.google:
         threading.Thread(target=reviewer.warm, daemon=True).start()
+    retention.ensure_schema(db)
+    retention.start_background(db, reviewer.settings)
 
-    def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
-        if not token:
-            raise HTTPException(403, "research endpoints are disabled: set STUDENTIDE_ADMIN_TOKEN")
-        if x_admin_token != token:
-            raise HTTPException(401, "bad admin token")
+    require_admin = auth.require_teacher  # every teacher / research endpoint
 
-    def live_session(session_id: str):
+    def live_session(session_id: str, request: Request | None = None):
+        """The session row; with `request`, only for the student who owns it."""
         row = db.get_session(session_id)
         if row is None:
             raise HTTPException(404, "unknown session")
+        if request is not None:
+            auth.own_session(request, row)
         return row
 
     @app.get("/api/tasks")
     def tasks() -> list[dict]:
         return TASKS
 
+    # -- sign-in
+
+    def me_json(user: dict) -> dict:
+        st = db.get_or_create_student(user["student_id"])
+        return {k: user[k] for k in ("email", "name", "role", "student_id", "program", "year", "branch", "roll")} | {
+            "consented": st["consented_at"] is not None}
+
+    @app.get("/api/auth/config")
+    def auth_config_json() -> dict:
+        return {"mode": "google" if cfg.google else "dev", "client_id": cfg.client_id, "domain": cfg.domain}
+
+    @app.post("/api/auth/google")
+    def google_sign_in(body: GoogleIn, response: Response) -> dict:
+        if not cfg.google:
+            raise HTTPException(404, "Google sign-in is not configured on this server")
+        claims = auth.verify(body.credential)
+        user = auth.upsert_user(claims["email"], str(claims.get("name", "")))
+        auth.sign_in(response, user["email"])
+        return me_json(user)
+
+    @app.get("/api/me")
+    def me(request: Request) -> dict:
+        user = auth.current(request)
+        if user is None:
+            raise HTTPException(401, "not signed in")
+        return me_json(user)
+
+    @app.post("/api/auth/logout")
+    def logout(request: Request, response: Response) -> dict:
+        auth.sign_out(request, response)
+        return {"ok": True}
+
+    @app.get("/api/admin/users")
+    def admin_users(request: Request) -> list[dict]:
+        auth.require_admin(request)
+        return auth.list_users()
+
+    @app.put("/api/admin/users/{email}")
+    def admin_set_role(email: str, body: RoleIn, request: Request) -> dict:
+        admin = auth.require_admin(request)
+        return auth.set_role(email, body.role, admin["email"])
+
+    @app.delete("/api/admin/users/{email}/role")
+    def admin_reset_role(email: str, request: Request) -> dict:
+        auth.require_admin(request)
+        return auth.reset_role(email)
+
+    # -- students
+
     @app.post("/api/login")
     def login(body: LoginIn) -> dict:
+        if cfg.google:
+            raise HTTPException(410, "sign in with your college Google account")
         row = db.get_or_create_student(_student_id(body.student_id))
         return {"student_id": row["id"], "consented": row["consented_at"] is not None}
 
     @app.post("/api/consent")
-    def consent(body: LoginIn) -> dict:
+    def consent(body: LoginIn, request: Request) -> dict:
         sid = _student_id(body.student_id)
+        auth.own_student(request, sid)
         db.get_or_create_student(sid)
         db.record_consent(sid)
         return {"student_id": sid, "consented": True}
 
     @app.post("/api/sessions")
-    def start_session(body: SessionIn) -> dict:
+    def start_session(body: SessionIn, request: Request) -> dict:
         sid = _student_id(body.student_id)
+        auth.own_student(request, sid)
         question = None
         if body.question_id:
             q = db.get_question(body.question_id)
@@ -149,13 +227,15 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                 "lab_id": question and question["lab_id"], "question_id": question and question["id"]}
 
     @app.get("/api/students/{student_id}/labs")
-    def my_labs(student_id: str) -> list[dict]:
-        return teach.student_labs(db, _student_id(student_id))
+    def my_labs(student_id: str, request: Request) -> list[dict]:
+        sid = _student_id(student_id)
+        auth.own_student(request, sid)
+        return teach.student_labs(db, sid)
 
     @app.post("/api/sessions/{session_id}/events")
     async def ingest(session_id: str, request: Request) -> dict:
         # Parsed by hand so navigator.sendBeacon (text/plain body) works on page close.
-        live_session(session_id)
+        live_session(session_id, request)
         try:
             body = json.loads(await request.body())
             raw_events = body["events"]
@@ -186,8 +266,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return json.loads(row["question_json"]) if row["question_json"] else {}
 
     @app.post("/api/sessions/{session_id}/run")
-    def run(session_id: str, body: RunIn) -> dict:
-        row = live_session(session_id)
+    def run(session_id: str, body: RunIn, request: Request) -> dict:
+        row = live_session(session_id, request)
         res = runner.run(body.code, body.stdin, snapshot(row).get("language", "python"))
         run_id = uuid.uuid4().hex
         db.insert_run({
@@ -203,10 +283,10 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         }
 
     @app.post("/api/sessions/{session_id}/check")
-    def check(session_id: str, body: CheckIn) -> dict:
+    def check(session_id: str, body: CheckIn, request: Request) -> dict:
         """Checks against the tests in the session's snapshot, so a question edited
         mid-session never changes what an open session is checked against."""
-        q = snapshot(live_session(session_id))
+        q = snapshot(live_session(session_id, request))
         graded = grading.grade(q, body.code, q.get("language", "python")) if q else None
         if graded is None:
             raise HTTPException(409, "this question has no test cases")
@@ -274,8 +354,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         live_session(session_id)
         return replay_data(db, session_id)
 
-    app.include_router(teach.router(db, require_admin))
-    app.include_router(compete.router(db, require_admin))
+    app.include_router(teach.router(db, require_admin, cfg))
+    app.include_router(compete.router(db, require_admin, auth))
 
     if serve_frontend and FRONTEND_DIST.is_dir():
         app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

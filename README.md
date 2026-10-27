@@ -14,6 +14,7 @@ ever leads to a conversation, never a penalty.
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
+| 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
 
 ## Stack
 
@@ -41,6 +42,8 @@ uvicorn studentide.app:create_app --factory --host 0.0.0.0 --port 8000
 ```
 
 Open http://localhost:8000, enter a roll number, accept the consent notice, pick a task.
+This is dev mode. For a real deployment (college Google sign-in, HTTPS, isolated
+code runner, backups, raw-keystroke deletion) see [docs/deploy.md](docs/deploy.md).
 For frontend development run `npm run dev` in `frontend/` (proxies `/api` to port 8000).
 
 ## What gets recorded

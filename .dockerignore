@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/__pycache__
+**/*.sqlite3*
+backend/data
+data
+thesis/latex/build
+.git
+deploy/.env
+deploy/backups

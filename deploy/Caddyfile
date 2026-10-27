@@ -1,0 +1,24 @@
+# HTTPS in front of Student IDE. Caddy gets and renews a Let's Encrypt
+# certificate for STUDENTIDE_DOMAIN by itself: the domain's DNS A record must
+# point at this VM and ports 80 and 443 must be open.
+{
+	email {$ACME_EMAIL}
+}
+
+{$STUDENTIDE_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		# Google's sign-in popup needs to talk back to this page
+		Cross-Origin-Opener-Policy same-origin-allow-popups
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), display-capture=()"
+		-Server
+	}
+	request_body {
+		max_size 4MB
+	}
+	reverse_proxy app:8000
+}

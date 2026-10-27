@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type { Task } from "./api";
+import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig } from "./auth";
 import { startSession, type LiveSession } from "./editor/session";
 import { page } from "./ui";
 import { Shell } from "./screens/Shell";
@@ -12,6 +13,7 @@ import { Saved } from "./screens/Saved";
 import { Arena } from "./compete/Arena";
 
 type Screen =
+  | { name: "loading" }
   | { name: "login" }
   | { name: "consent"; studentId: string }
   | { name: "tasks"; studentId: string }
@@ -20,15 +22,34 @@ type Screen =
   | { name: "saved"; studentId: string; summary: SessionSummary };
 
 export function App() {
-  const [screen, setScreen] = useState<Screen>({ name: "login" });
-  const signOut = () => setScreen({ name: "login" });
+  const [screen, setScreen] = useState<Screen>({ name: "loading" });
+  const [cfg, setCfg] = useState<AuthConfig | null>(null);
+  const signedIn = (studentId: string, consented: boolean) =>
+    setScreen(consented ? { name: "tasks", studentId } : { name: "consent", studentId });
+  const signOut = () => {
+    if (cfg?.mode === "google") void endGoogleSession();
+    setScreen({ name: "login" });
+  };
+
+  // With Google sign-in the session cookie survives a reload, so pick up where the student was.
+  useEffect(() => {
+    authConfig().then(async (c) => {
+      setCfg(c);
+      const me = c.mode === "google" ? await currentUser() : null;
+      if (me && me.role === "student") signedIn(me.student_id, me.consented);
+      else setScreen({ name: "login" });
+    });
+  }, []);
 
   let content;
   switch (screen.name) {
+    case "loading":
+      content = <Shell step={0}>{null}</Shell>;
+      break;
     case "login":
       content = (
         <Shell step={0}>
-          <Login onDone={(studentId, consented) => setScreen(consented ? { name: "tasks", studentId } : { name: "consent", studentId })} />
+          <Login cfg={cfg!} onDone={signedIn} onTeacher={() => { location.hash = "#/teach"; }} />
         </Shell>
       );
       break;

@@ -61,8 +61,115 @@ reduced-motion setting.
 \todo{Summary here, full schema in \cref{app:schema}.}
 
 \section{Privacy and data lifecycle}
-\todo{Raw keystrokes $\rightarrow$ baseline summary $\rightarrow$
-deletion. Retention, consent, DPDP mapping.}
+\label{sec:privacy}
+Nothing is recorded before a student accepts the consent notice, which lists
+what is recorded (key timing, edits, pastes, runs, focus changes), what is
+not (webcam, microphone, screen), that the only consequence of a flag is a
+conversation, and that raw keystrokes are deleted once summary statistics
+exist. The system keeps that last promise mechanically rather than by
+policy.
+
+The detector never needs single key presses after they have been turned into
+window features: a baseline is a per-feature median and spread over windows,
+and a session is scored window by window (\cref{ch:detector}). So raw key
+events have a short life. When they are due, the server first computes the
+session's window features at every window length the frozen configuration
+uses (30 and 90\,s) and stores them, then deletes the session's key events in
+the same transaction, so keys are never gone without their summaries. A
+window holds aggregates only: medians and spreads of key timing, rates of
+pauses, deletions, runs and looks away, and for each frequent key pair its
+mean log time and count. Raw keys are due for a student's baseline sessions
+as soon as the four baseline weeks are over, and for every session after
+28~days at the latest; a session still open is never touched. Baselines,
+scores and the review timeline then read the stored windows. On the
+synthetic demo class, every session's scores, alarms and episodes were
+identical before and after purging (\texttt{tests/test\_retention.py}).
+
+Two things are kept on purpose. Edit events stay, because they are the
+student's code and drive the replay; they carry a time per change, so if the
+ethics committee reads ``keystroke data'' to include them, their timestamps
+can be coarsened after the same deadline. And once a session is purged, it
+cannot be re-analysed at a window length that was not stored, which is the
+price of the promise and one more reason the configuration is frozen before
+real data arrives (\cref{ch:study}).
+
+\Cref{tab:dpdp} maps the design onto the Digital Personal Data Protection
+Act, 2023, which governs the college as a data fiduciary.
+
+\begin{table}[ht]
+  \centering\small
+  \begin{tabular}{p{0.3\linewidth}p{0.62\linewidth}}
+    \toprule
+    Requirement & How Student IDE meets it \\
+    \midrule
+    Notice and consent & Consent screen before any recording; consent time stored per student. \\
+    Purpose limitation & Data serve only the authorship-continuity check and the study; no grades are computed from it. \\
+    Data minimisation & No video, audio or screen; raw keys replaced by window summaries on a schedule. \\
+    Storage limitation & Raw keys deleted after the baseline or 28 days; backups kept 14 days. \\
+    Erasure & One command removes everything recorded about a student (\texttt{--erase-student}). \\
+    Security safeguards & College Google accounts only, role-based access, HTTPS, student code isolated from the data. \\
+    Data location & Hosted on one VM in an Indian cloud region; backups stay there. \\
+    \bottomrule
+  \end{tabular}
+  \caption{The pilot deployment against the main duties of the DPDP Act 2023.}
+  \label{tab:dpdp}
+\end{table}
+
+\section{Deployment at IIIT Surat}
+\label{sec:deployment}
+For a pilot with real classes the editor runs on one virtual machine in an
+Indian cloud region as four containers (\cref{fig:deployment}). A reverse
+proxy (Caddy) terminates HTTPS with an automatically renewed certificate.
+The application holds the SQLite database on a volume and purges raw keys
+every six hours. Student programs, which are arbitrary code, run in a
+separate runner container with a read-only file system, no Linux
+capabilities, process and memory limits and an internal network with no route
+to the internet; it never sees the database or any secret, so a hostile
+program can at worst crash the runner, which restarts. A backup container
+copies the database every 24~hours through SQLite's online backup API,
+checks each copy's integrity and keeps two weeks.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{\tikzfig{deployment}}
+  \caption{Pilot deployment: one VM in an India region, four containers
+  (\texttt{deploy/docker-compose.yml}).}
+  \label{fig:deployment}
+\end{figure}
+
+Sign-in uses the college's Google accounts. The browser obtains an ID token
+from Google, and the server checks its signature, audience and expiry, that
+the address is verified, and that both the address and the Workspace domain
+claim are \texttt{iiitsurat.ac.in}; it then sets an HttpOnly session cookie
+whose hash alone is stored. Roles follow the college's address format: an
+address of the form \texttt{<ug|pg><year><branch><roll>} is a student, and
+its local part (for example \texttt{PG25CS07}) becomes the student identifier
+used in rosters, baselines and the timeline, so a student's sessions follow
+their account rather than whatever roll number they type. Any other college
+address is a teacher. Administrators, named in the server configuration, can
+override a role for teaching assistants and unusual addresses
+(\cref{fig:deploy-signin}). This replaced the single shared research token of
+the earlier phases with personal teacher accounts, so access to recordings is
+tied to a person. Every student endpoint acts only for the signed-in student,
+and every teacher endpoint needs a teacher account.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{deploy/deploy-01-google-sign-in}
+    \caption{Student sign-in with the college account.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{deploy/deploy-02-people}
+    \caption{Administrators override roles, e.g.\ for a TA.}
+  \end{subfigure}
+  \caption{Google sign-in and roles in the pilot deployment.}
+  \label{fig:deploy-signin}
+\end{figure}
+
+Using these recordings as study data still requires ethics approval; until
+then the deployment is a pilot that checks the system in real labs, and its
+recordings are kept out of the results in \cref{ch:rq1,ch:rq2,ch:rq3,ch:rq4}.
 
 \section{Labs and questions}
 \label{sec:teacher-authoring}

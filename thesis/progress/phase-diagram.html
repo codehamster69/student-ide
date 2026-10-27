@@ -40,7 +40,7 @@ body {
   font-size: 15px; line-height: 1.5;
 }
 .wrap {
-  max-width: 1120px; margin: 0 auto;
+  max-width: 1280px; margin: 0 auto;
   padding-block: 40px 64px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -81,7 +81,7 @@ section { display: grid; gap: 18px; }
 .chip.pend { background: var(--pend-soft); color: var(--pend); }
 
 /* Build pipeline */
-.chain { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
+.chain { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; }
 .stage { position: relative; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; display: grid; gap: 12px; align-content: start; }
 .stage[data-s="done"] { border-top: 4px solid var(--done); }
 .stage[data-s="prog"] { border-top: 4px solid var(--prog); }
@@ -122,7 +122,7 @@ section { display: grid; gap: 18px; }
 footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; }
 footer code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
 
-@media (max-width: 860px) {
+@media (max-width: 1100px) {
   .chain { grid-template-columns: 1fr; gap: 26px; }
   .stage:not(:last-child)::after { top: auto; bottom: -21px; right: auto; left: 28px; transform: rotate(135deg); }
 }
@@ -132,7 +132,7 @@ footer code { font-family: var(--font-mono); font-size: 12px; color: var(--ink);
   <header>
     <p class="eyebrow">Who is at the keyboard? · M.Tech thesis, IIIT Surat</p>
     <h1>Student IDE progress</h1>
-    <p class="lede">Where the build and the study stand. The software is built in four steps, the study runs in four phases over twelve months, and the thesis is written alongside both.</p>
+    <p class="lede">Where the build and the study stand. The software is built in four steps and then deployed for a pilot, the study runs in four phases over twelve months, and the thesis is written alongside both.</p>
     <div class="meter" aria-label="Overall progress">
       <div class="bar" id="overall-bar"></div>
       <div class="legend" id="overall-legend"></div>
@@ -211,6 +211,13 @@ const BUILD = [
     { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "done", pr: "#9" },
     { t: "Run on the Phase 1 to 2 recordings (labels manifest)", s: "pend" },
   ], note: 'Synthetic test students, with key-pair timing: <span class="mono">92%</span> of non-honest sessions caught at <span class="mono">0.19</span> false alarms per hour (matched takeovers <span class="mono">86%</span>, scaled Manhattan 89%); precision of a flag about <span class="mono">12%</span> at 1 in 100.' },
+  { n: 5, title: "College deployment (pilot)", s: "prog", items: [
+    { t: "Google sign-in for @iiitsurat.ac.in; roles from the address, admin override", s: "done", pr: "#14" },
+    { t: "Raw keystrokes deleted after the baseline (window summaries kept); erase a student", s: "done", pr: "#14" },
+    { t: "Docker Compose: HTTPS, isolated code runner, nightly backups; deploy guide", s: "done", pr: "#14" },
+    { t: "Google OAuth client, India-region VM and domain set up", s: "pend" },
+    { t: "Pilot in a real lab", s: "pend" },
+  ], note: 'Pilot only: recordings become study data only after ethics approval.' },
 ];
 
 const STUDY = [
@@ -246,6 +253,7 @@ const DEPS = [
   { a: "Ethics approval", b: "Phase 1 labs", why: "No real student data is collected before approval." },
   { a: "Detector (step 2)", b: "Dashboard (step 3)", why: "The timeline draws the detector's alarms and switch estimates." },
   { a: "Phase 2 sessions", b: "Evaluation harness", why: "Staged takeovers are the labelled test set." },
+  { a: "Pilot deployment (step 5)", b: "Phase 1 labs", why: "Baseline labs run on the deployed editor; the pilot checks it first." },
 ];
 
 const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));

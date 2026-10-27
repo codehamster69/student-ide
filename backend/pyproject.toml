@@ -8,6 +8,8 @@ dependencies = [
   "uvicorn[standard]>=0.29",
   "pydantic>=2.6",
   "numpy>=1.26",
+  "google-auth>=2.29",  # verifies Google sign-in tokens (auth.py)
+  "requests>=2.31",     # transport google-auth uses to fetch Google's keys
 ]
 
 [project.optional-dependencies]

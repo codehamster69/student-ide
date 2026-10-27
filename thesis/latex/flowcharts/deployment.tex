@@ -1,0 +1,31 @@
+% Pilot deployment at IIIT Surat (TikZ). Used in chapter 4 via \tikzfig{deployment}.
+% Source of truth: deploy/docker-compose.yml.
+\begin{tikzpicture}[
+    node distance=7mm and 9mm,
+    box/.style={rectangle, rounded corners, draw, thick, align=center,
+                minimum width=2.6cm, minimum height=1.1cm, font=\small},
+    store/.style={box, fill=blue!8},
+    ext/.style={box, dashed},
+    zone/.style={draw, gray, rounded corners, inner sep=4mm},
+    arrow/.style={-{Stealth}, thick},
+    lab/.style={font=\scriptsize, align=center}]
+  \node[ext] (br) {Browser\\(student, teacher)};
+  \node[ext, above=of br] (g) {Google sign-in\\(\texttt{@iiitsurat.ac.in})};
+  \node[box, right=18mm of br] (caddy) {Caddy\\HTTPS, HSTS};
+  \node[box, right=of caddy] (app) {App + API\\roles, consent};
+  \node[store, above=of app] (db) {SQLite\\(volume)};
+  \node[box, right=14mm of app] (run) {Runner\\student code};
+  \node[box, below=of app] (purge) {Purge every 6\,h\\raw keys $\rightarrow$ windows};
+  \node[store, right=of db] (bk) {Backups\\24\,h, 14 days};
+  \draw[arrow] (br) -- node[above, lab] {443} (caddy);
+  \draw[arrow] (g) -- node[left, lab] {ID token} (br);
+  \draw[arrow] (caddy) -- (app);
+  \draw[arrow] (app) -- (db);
+  \draw[arrow] (app) -- node[above, lab] {internal,\\no internet} (run);
+  \draw[arrow] (purge) -- (app);
+  \draw[arrow] (db) -- node[above, lab] {online\\backup API} (bk);
+  \begin{scope}[on background layer]
+    \node[zone, fit=(caddy) (app) (db) (run) (purge) (bk),
+          label={[font=\scriptsize, text=gray]above:One VM in an India region (Docker Compose)}] {};
+  \end{scope}
+\end{tikzpicture}

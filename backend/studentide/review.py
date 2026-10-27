@@ -39,6 +39,7 @@ from pathlib import Path
 import numpy as np
 
 from .db import Database
+from .retention import stored_windows
 from .detector.detector import (CHANNELS, Baseline, channel_features, detect, feature_weights, pair_block_weights,
                                 population_prior)
 from .detector.features import (COMMENT_FEATURES, PAIR_PREFIX, add_pair_features, feature_group,
@@ -216,8 +217,10 @@ class Reviewer:
             hit = self._windows.get((sid, W))
         if hit and hit[0] == n:
             return hit[1]
-        events = list(self.db.iter_events(sid))
-        w = window_features(streams(events), W) if events else []
+        w = stored_windows(self.db, sid, W) if session.get("keys_purged_at") else None
+        if w is None:  # still has its raw keys (or a window length nobody stored before the purge)
+            events = list(self.db.iter_events(sid))
+            w = window_features(streams(events), W) if events else []
         with self._lock:
             self._windows[(sid, W)] = (n, w)
         return w

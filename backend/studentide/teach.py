@@ -43,6 +43,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from . import grading, runner
+from .auth import roster_id
 from .db import Database
 from .providers import PROVIDERS, ProviderError
 
@@ -167,7 +168,8 @@ def student_labs(db: Database, student_id: str) -> list[dict]:
     return out
 
 
-def router(db: Database, require_admin: Callable) -> APIRouter:
+def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
+    """`auth_cfg`: an auth.Config; in Google mode roster entries may be full addresses and are upper-cased."""
     r = APIRouter(prefix="/api/teach", dependencies=[Depends(require_admin)])
 
     def lab_or_404(lab_id: str):
@@ -314,7 +316,8 @@ def router(db: Database, require_admin: Callable) -> APIRouter:
     @r.put("/labs/{lab_id}/roster")
     def roster(lab_id: str, body: RosterIn) -> dict:
         lab_or_404(lab_id)
-        ids = sorted({s.strip() for s in body.student_ids if s.strip()})
+        clean = (lambda s: roster_id(s, auth_cfg)) if auth_cfg is not None else str.strip
+        ids = sorted({clean(s) for s in body.student_ids if s.strip()})
         bad = [s for s in ids if not STUDENT_ID.match(s)]
         if bad:
             raise HTTPException(400, f"not a valid student id: {', '.join(bad[:5])}")

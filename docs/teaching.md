@@ -8,8 +8,9 @@ lab is assigned to a roster of roll numbers, or to everyone who signs in.
 
 ## Using it
 
-Open `/#/teach` and enter the research token (`STUDENTIDE_ADMIN_TOKEN`, the
-same one the review timeline uses). The header switches between **Labs** and
+Open `/#/teach` and sign in with a teacher account (college Google sign-in, see
+[deploy.md](deploy.md)); in dev mode enter the research token instead
+(`STUDENTIDE_ADMIN_TOKEN`, the same one the review timeline uses). The header switches between **Labs** and
 **Review**.
 
 1. **New lab**: title and instructions for students.
@@ -18,7 +19,9 @@ same one the review timeline uses). The header switches between **Labs** and
    student has recorded on them.
 3. **Assigned to**: paste roll numbers (commas, spaces or new lines), click
    students who have already signed in, or tick *Everyone who signs in*.
-   Roll numbers can be assigned before those students ever log in.
+   Roll numbers can be assigned before those students ever log in. With Google
+   sign-in, full addresses work too and everything is upper-cased
+   (`pg25cs07@iiitsurat.ac.in` becomes `PG25CS07`).
 4. **Status**: *Draft* (only the teacher sees it), *Open* (assigned students
    see it and can start; needs at least one question), *Closed* (hidden from
    students, recordings kept). A lab with recordings cannot be deleted, only

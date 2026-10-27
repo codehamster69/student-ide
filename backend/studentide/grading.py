@@ -98,20 +98,20 @@ def grade(question: dict, code: str, language: str = "python") -> dict | None:
     harness = question.get("harness") or ""
     source = code if not harness else code.rstrip("\n") + "\n\n" + harness
     results = []
-    with runner.Program(source, language) as prog:
-        for i, t in enumerate(tests):
-            r = prog.run(t["stdin"])
-            ok = r.error_type is None and outputs_match(r.stdout, t["expected"], t["compare"])
-            res = {"name": t["name"] or f"Test {i + 1}", "passed": ok, "hidden": t["hidden"],
-                   "error_type": r.error_type, "duration_ms": round(r.duration_ms, 1)}
-            if not t["hidden"]:
-                res.update(stdin=t["stdin"][:SHOWN_CHARS], stdout=r.stdout[:SHOWN_CHARS],
-                           expected=t["expected"][:SHOWN_CHARS], stderr=r.stderr[:SHOWN_CHARS])
-            results.append(res)
-            if prog.failed:  # a compile error fails every test the same way; say it once
-                res["stderr"] = r.stderr[:SHOWN_CHARS]
-                results.extend({"name": u["name"] or f"Test {j + 1}", "passed": False, "hidden": u["hidden"],
-                                "error_type": r.error_type, "duration_ms": 0.0}
-                               for j, u in enumerate(tests[i + 1:], start=i + 1))
-                break
+    failed, outs, _ = runner.run_many(source, language, [t["stdin"] for t in tests])
+    for i, t in enumerate(tests):
+        r = failed or outs[i]
+        ok = r.error_type is None and outputs_match(r.stdout, t["expected"], t["compare"])
+        res = {"name": t["name"] or f"Test {i + 1}", "passed": ok, "hidden": t["hidden"],
+               "error_type": r.error_type, "duration_ms": round(r.duration_ms, 1)}
+        if not t["hidden"]:
+            res.update(stdin=t["stdin"][:SHOWN_CHARS], stdout=r.stdout[:SHOWN_CHARS],
+                       expected=t["expected"][:SHOWN_CHARS], stderr=r.stderr[:SHOWN_CHARS])
+        results.append(res)
+        if failed:  # a compile error fails every test the same way; say it once
+            res["stderr"] = r.stderr[:SHOWN_CHARS]
+            results.extend({"name": u["name"] or f"Test {j + 1}", "passed": False, "hidden": u["hidden"],
+                            "error_type": r.error_type, "duration_ms": 0.0}
+                           for j, u in enumerate(tests[i + 1:], start=i + 1))
+            break
     return {"passed": sum(r["passed"] for r in results), "total": len(results), "results": results}

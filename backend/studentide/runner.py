@@ -3,9 +3,10 @@ the result.
 
 This is a lab-machine runner, not a security sandbox: it isolates the
 interpreter (-I), uses a throwaway working directory, a wall-clock timeout
-and, on Linux, CPU / memory / file-size limits. Before exposing the server
-beyond a trusted lab network, run code inside a container (e.g. nsjail or
-a locked-down Docker image) instead.
+and, on Linux, CPU / memory / file-size limits. On a deployment, set
+$STUDENTIDE_RUNNER_URL and student code runs in the separate runner container
+(runner_service.py, see deploy/), which has no database, no secrets and no
+internet; this process then never executes student code itself.
 """
 
 from __future__ import annotations
@@ -15,9 +16,12 @@ import re
 import shutil
 import subprocess
 import sys
+import json
 import tempfile
 import time
-from dataclasses import dataclass
+import urllib.error
+import urllib.request
+from dataclasses import asdict, dataclass
 
 TIMEOUT_S = 5.0
 COMPILE_TIMEOUT_S = 20.0
@@ -177,10 +181,49 @@ class Program:
         return RunResult(_clip(out), stderr, exit_code, duration_ms, error_type_of(stderr, exit_code))
 
 
+def run_many(code: str, language: str, inputs: list[str]) -> tuple[RunResult | None, list[RunResult], float]:
+    """Compile once, run once per input. Returns (failure that stops every run,
+    e.g. a compile error, or None; one result per input; compile ms)."""
+    if os.environ.get("STUDENTIDE_RUNNER_URL"):
+        return _remote(code, language, inputs)
+    with Program(code, language) as p:
+        if p.failed:
+            return p.failed, [], p.compile_ms
+        return None, [p.run(i) for i in inputs], p.compile_ms
+
+
+def _remote(code: str, language: str, inputs: list[str]) -> tuple[RunResult | None, list[RunResult], float]:
+    url = os.environ["STUDENTIDE_RUNNER_URL"].rstrip("/") + "/run"
+    req = urllib.request.Request(url, json.dumps({"code": code, "language": language, "inputs": inputs}).encode(),
+                                 {"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=COMPILE_TIMEOUT_S + TIMEOUT_S * len(inputs) + 15) as res:
+            body = json.loads(res.read())
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        return RunResult("", f"The code runner is not reachable right now ({e}). Tell your teacher.", 127, 0.0,
+                         "Unavailable"), [], 0.0
+    failed = RunResult(**body["failed"]) if body["failed"] else None
+    return failed, [RunResult(**r) for r in body["results"]], body["compile_ms"]
+
+
+def serve_many(code: str, language: str, inputs: list[str]) -> dict:
+    """The runner service's answer to run_many, as JSON."""
+    with Program(code, language) as p:
+        if p.failed:
+            return {"failed": asdict(p.failed), "results": [], "compile_ms": p.compile_ms}
+        return {"failed": None, "results": [asdict(p.run(i)) for i in inputs], "compile_ms": p.compile_ms}
+
+
 def run(code: str, stdin: str = "", language: str = "python") -> RunResult:
     """Compile (when the language needs it) and run once. A compile failure comes
     back as error_type "CompileError" with the compiler's messages on stderr;
     duration_ms includes compile time, since that is what the student waited."""
+    if os.environ.get("STUDENTIDE_RUNNER_URL"):
+        failed, results, compile_ms = _remote(code, language, [stdin])
+        if failed:
+            return failed
+        results[0].duration_ms += compile_ms
+        return results[0]
     with Program(code, language) as p:
         r = p.run(stdin)
         if not p.failed:

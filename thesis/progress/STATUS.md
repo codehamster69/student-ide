@@ -20,6 +20,7 @@ flowchart LR
   subgraph Build["Build pipeline"]
     B1["1. Event-logging editor<br/>#2, #5"]:::done --> B2["2. Features + CUSUM detector<br/>#6"]:::done
     B2 --> B3["3. Teacher timeline dashboard<br/>#8, #10, #11, #12, #13, #15"]:::done --> B4["4. Evaluation harness<br/>#9"]:::done
+    B4 --> B5["5. College deployment, pilot<br/>#14"]:::prog
   end
 
   subgraph Study["Study (months 1 to 12)"]
@@ -58,6 +59,11 @@ flowchart LR
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ✅ | #9 |
 | 4 Evaluation | Run on the Phase 1-2 recordings (labels manifest) | ⬜ | |
+| 5 Deployment | Google sign-in limited to @iiitsurat.ac.in; roles from the address format, admin override (People page) | ✅ | #14 |
+| 5 Deployment | Raw keystrokes deleted after the 4-week baseline or 28 days, window summaries kept; erase a student on request | ✅ | #14 |
+| 5 Deployment | Docker Compose: Caddy HTTPS, isolated code runner, nightly backups; deploy guide for an India-region VM | ✅ | #14 |
+| 5 Deployment | Google OAuth client, VM and domain set up (Rohan) | ⬜ | |
+| 5 Deployment | Pilot in a real lab (study data only after ethics approval) | ⬜ | |
 
 Detector, synthetic results (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
 median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
