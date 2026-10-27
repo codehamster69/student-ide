@@ -48,6 +48,7 @@ class Imported:
     sample_input: str = ""
     tests: list[dict] = field(default_factory=list)
     harness: str = ""
+    checker: str = ""  # Python checker for tests whose compare is "checker" (several right answers)
     source: dict = field(default_factory=dict)  # provider, ref, url, license, attribution, fetched_at
     notes: list[str] = field(default_factory=list)  # what could not be imported, for the teacher
 
@@ -90,6 +91,9 @@ TOPICS: dict[str, str] = {
     "data-structures": "Data structures", "dictionaries": "Dictionaries and sets", "graphs": "Graphs", "trees": "Trees",
     "bits": "Bit manipulation", "geometry": "Geometry", "constructive": "Constructive", "games": "Games",
     "divide-conquer": "Divide and conquer", "recursion": "Recursion", "regex": "Regular expressions", "tuples": "Tuples",
+    "linked-lists": "Linked lists", "stacks-queues": "Stacks and queues", "heaps": "Heaps", "matrices": "Matrices",
+    "sliding-window": "Sliding window", "prefix-sums": "Prefix sums", "backtracking": "Backtracking",
+    "simulation": "Simulation",
 }
 
 

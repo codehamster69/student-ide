@@ -4,6 +4,7 @@ import { ArrowLeft, Check, ExternalLink, FlaskConical, Globe, Link2, Search, X }
 import { Badge, Button, Card, Field, Input, Spinner, cn, spring } from "../ui";
 import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
+import { QuestionText } from "../questionText";
 import { LANGUAGES, type Language, type Provider, type SourceCategory, type SourcePreview, type SourceSummary } from "./api";
 
 const DIFF_TONE: Record<string, "success" | "warn" | "danger"> = { beginner: "success", easy: "success", medium: "warn", hard: "danger" };
@@ -134,7 +135,8 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
                 </a>
               )}
             </div>
-            <div className="max-h-56 overflow-auto whitespace-pre-line rounded-lg border border-border bg-surface-2/60 px-4 py-3 text-[13px] leading-relaxed text-muted">{preview.prompt}</div>
+            <QuestionText prompt={preview.prompt} source={preview.source}
+              className="max-h-56 overflow-auto rounded-lg border border-border bg-surface-2/60 px-4 py-3 text-[13px] leading-relaxed text-muted" />
             {preview.starter_code && (
               <pre className="max-h-32 overflow-auto rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] text-muted">{preview.starter_code}</pre>
             )}

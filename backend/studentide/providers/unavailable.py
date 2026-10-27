@@ -1,7 +1,8 @@
 """Platforms with no permitted way to fetch questions automatically.
 
 (CodeChef and Codeforces problems are browsable through the CodeContests
-dataset instead, see codecontests.py; their own sites still cannot be fetched.)
+dataset instead, see codecontests.py, and LeetCode problems through
+LeetCodeDataset, see leetcode.py; their own sites still cannot be fetched.)
 
 None of LeetCode, HackerRank and CodeChef publishes an API for reading problem statements or test
 data, and none licenses its problems for reuse in another product. LeetCode's
@@ -15,16 +16,6 @@ to the original and writes the question themselves. See docs/question-sources.md
 from __future__ import annotations
 
 from .base import Provider
-
-
-class LeetCode(Provider):
-    id = "leetcode"
-    name = "LeetCode"
-    status = "link_only"
-    about = ("No public API (its GraphQL endpoint is internal) and the problems are LeetCode's copyrighted content. "
-             "Link a problem and write the question in your own words.")
-    terms_url = "https://leetcode.com/terms/"
-    hosts = ("leetcode.com", "leetcode.cn")
 
 
 class HackerRank(Provider):

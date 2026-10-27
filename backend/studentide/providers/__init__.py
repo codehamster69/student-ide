@@ -14,10 +14,11 @@ from __future__ import annotations
 from .base import Category, Imported, Provider, ProviderError, Summary
 from .codecontests import CodeChef, Codeforces
 from .exercism import Exercism
+from .leetcode import LeetCode
 from .mbpp import MBPP
 from .originals import Originals
-from .unavailable import HackerRank, LeetCode
+from .unavailable import HackerRank
 
-PROVIDERS: dict[str, Provider] = {p.id: p for p in (Originals(), Codeforces(), CodeChef(), Exercism(), MBPP(), LeetCode(), HackerRank())}
+PROVIDERS: dict[str, Provider] = {p.id: p for p in (Originals(), Codeforces(), CodeChef(), LeetCode(), Exercism(), MBPP(), HackerRank())}
 
 __all__ = ["PROVIDERS", "Category", "Imported", "Provider", "ProviderError", "Summary"]

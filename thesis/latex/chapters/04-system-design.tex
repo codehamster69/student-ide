@@ -355,32 +355,74 @@ and prints the result as JSON.
   \label{fig:sources}
 \end{figure}
 
-A larger, topic-sorted set came next. The legitimate route to Codeforces and
-CodeChef problems is CodeContests \cite{li2022alphacode}, a research
-dataset of competitive-programming problems with statements, tags, difficulty
-and input/output tests, released under CC~BY~4.0. It is published only as
-large record files, not as an API that serves one problem, so a filtered copy
-ships with the app: 4{,}551 Codeforces problems rated 800 to 2000 with their
-tags, and 332 easy and medium CodeChef problems. Codeforces' tags are mapped
-onto one topic vocabulary shared by every source (strings, dynamic
-programming, graphs, trees, sorting, mathematics and so on, 19 in all), so a
-teacher can browse by topic and then by rating. Public examples come in as
-visible tests and up to eight further cases as hidden ones; answers that are
-real numbers are compared within $10^{-6}$, and problems that accept several
-correct answers keep no tests, because exact comparison would mark right
-answers wrong. MBPP \cite{austin2021program}, about a thousand short
-beginner Python problems with three asserts each, is fetched live; its asserts
-become the same JSON-argument tests as Exercism's, and its topics, which the
-dataset does not label, are guessed from the wording and marked as guesses.
-LeetCode and HackerRank remain link only; no openly licensed copy of their
-problems was found.
+A larger, topic-sorted set came next. The legitimate route to Codeforces
+problems is an openly licensed research copy. The first version used
+CodeContests \cite{li2022alphacode} (4{,}551 problems rated 800 to 2000);
+it was replaced by the open-r1 Codeforces dataset \cite{penedo2025codeforces}
+(CC~BY~4.0), which covers twice as many problems, up to 2025, and solves the
+first version's main gap. About a third of Codeforces problems accept several
+correct answers (``print any of them''), and exact comparison marks right
+answers wrong, so CodeContests problems of that kind had to ship without
+tests. open-r1 provides, for each such problem, a checker program validated
+against accepted human solutions. The app now bundles every problem its
+runner can execute (9{,}097: not interactive, reading standard input), at
+every rating, and judges the 1{,}759 multi-answer problems by running the
+checker on the student's output, through the same sandboxed runner as
+student code, never in the server process. Codeforces' tags are mapped onto
+one topic vocabulary shared by every source (strings, dynamic programming,
+graphs, trees, sorting, mathematics and so on), so a teacher can browse by
+topic and then by rating band. Examples come in as visible tests and up to
+ten small official or generated cases as hidden ones; answers that are real
+numbers are compared within $10^{-6}$. CodeChef problems (332, easy and
+medium) still come from CodeContests. MBPP \cite{austin2021program}, about a
+thousand short beginner Python problems with three asserts each, is fetched
+live; its asserts become the same JSON-argument tests as Exercism's, and its
+topics, which the dataset does not label, are guessed from the wording and
+marked as guesses.
+
+LeetCode needed a different arrangement. LeetCodeDataset
+\cite{xia2025leetcodedataset} (Apache~2.0) gives 2{,}869 LeetCode problems with
+LeetCode's topic tags, difficulty, starter code and about a hundred test
+asserts each, written and checked by the dataset's authors. Its problem
+descriptions, however, are LeetCode's own text, which LeetCode claims and
+enforces copyright in, and a dataset licence cannot grant rights its authors
+do not hold. The app therefore stores the tests, tags and starter code
+(2{,}834 problems, after dropping the 26 that modify their input in place and
+9 without enough usable tests) but never the text: an imported question keeps
+an empty prompt and a pointer to the dataset row, and the student's browser
+loads the text from the public Hugging Face dataset viewer each time the
+question is shown, checking that the row is the right problem
+(\cref{fig:leetcode}). Where a campus network blocks the dataset viewer, the
+browser falls back to the app's server, which fetches the same row and holds
+only the text in memory; if neither path works the student gets a link to
+the original and the teacher's lab editor flags the question before class. A teacher may instead write the problem in their own
+words, which then replaces the live text. The tests call the method on
+LeetCode's \texttt{class Solution} with the same arguments, building linked
+lists and binary trees where the problem takes them, and print the return
+value as JSON; results that may come ``in any order'' are compared after
+sorting, and real numbers within $10^{-5}$. HackerRank remains link only.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{leetcode/leetcode-light-02-preview-live-text}
+    \caption{Preview: text loaded live, tests bundled.}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{leetcode/leetcode-light-04-student-check}
+    \caption{A student checks a solution.}
+  \end{subfigure}
+  \caption{LeetCode problems: the server keeps LeetCodeDataset's tests and
+  topics; LeetCode's text is fetched by the browser and never stored. All
+  screens are in \texttt{snapshots/leetcode/}.}
+  \label{fig:leetcode}
+\end{figure}
 
 \begin{figure}[ht]
   \centering
   \includegraphics[width=\linewidth]{sources/sources-light-01-codeforces-topics}
-  \caption{Browsing Codeforces problems by topic and rating (CodeContests
-  dataset, CC~BY~4.0). All screens, light and dark, are in
-  \texttt{snapshots/sources/}.}
+  \caption{Browsing Codeforces problems by topic and rating. All screens,
+  light and dark, are in \texttt{snapshots/sources/}.}
   \label{fig:datasets}
 \end{figure}
 

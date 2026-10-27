@@ -30,7 +30,10 @@ export function LanguageBadge({ language }: { language: Language }) {
   );
 }
 
-const PROVIDER_NAMES: Record<string, string> = { exercism: "Exercism", leetcode: "LeetCode", hackerrank: "HackerRank", codechef: "CodeChef" };
+const PROVIDER_NAMES: Record<string, string> = {
+  exercism: "Exercism", leetcode: "LeetCode", hackerrank: "HackerRank", codechef: "CodeChef", codeforces: "Codeforces", mbpp: "MBPP",
+  originals: "Student IDE",
+};
 
 export function SourceBadge({ source }: { source: QuestionSource | null }) {
   if (!source) return null;
@@ -101,7 +104,8 @@ export function TestsEditor({ tests, onChange, harness }: { tests: TestCase[]; o
                       <TextArea rows={2} spellCheck={false} value={t.expected} onChange={(e) => set(i, { expected: e.target.value })}
                         placeholder="Expected output" aria-label={`Test ${i + 1} expected output`} className={box} />
                     </div>
-                    {t.compare !== "text" && <p className="text-[11px] text-faint">{t.compare === "json" ? "Compared as JSON values." : "Numbers compared within 1e-6."}</p>}
+                    {t.compare !== "text" && <p className="text-[11px] text-faint">{t.compare === "json" ? "Compared as JSON values."
+                      : t.compare === "checker" ? "Judged by the problem's checker: any right answer passes." : "Numbers compared within 1e-6."}</p>}
                   </motion.div>
                 ))}
               </AnimatePresence>

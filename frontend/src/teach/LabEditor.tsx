@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useQuestionText, type LivePrompt } from "../questionText";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, GraduationCap, Pencil, Plus, Radio, Trash2,
@@ -123,7 +124,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
                   <motion.li key={q.id} layout transition={spring} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}>
                     {editing === q.id ? (
-                      <QuestionForm index={i} initial={q} harness={q.harness} onCancel={() => setEditing(null)}
+                      <QuestionForm index={i} initial={q} harness={q.harness} livePrompt={!!q.source?.live_prompt} onCancel={() => setEditing(null)}
                         onTry={(code) => send<GradeResult>("POST", `/api/teach/questions/${q.id}/check`, { code })}
                         onSave={async (f) => { if (await write("PATCH", `/api/teach/questions/${q.id}`, f)) setEditing(null); }}
                         onDelete={q.n_sessions ? undefined : async () => { if (await write("DELETE", `/api/teach/questions/${q.id}`)) setEditing(null); }} />
@@ -273,8 +274,10 @@ function QuestionCard({ q, index, first, last, onEdit, onMove }: {
           {q.n_sessions > 0 && <Badge tone="accent" className="h-5 px-2 text-[11px]">{q.n_sessions} session{q.n_sessions === 1 ? "" : "s"}</Badge>}
         </div>
         <p className="mt-1 line-clamp-2 whitespace-pre-line text-[13px] leading-relaxed text-muted">
-          {q.prompt || (q.source?.linked_only ? "Linked question: write the prompt in your own words" : "No prompt yet")}
+          {q.prompt || (q.source?.live_prompt ? "Problem text loads live from the dataset when students open it"
+            : q.source?.linked_only ? "Linked question: write the prompt in your own words" : "No prompt yet")}
         </p>
+        {!q.prompt && q.source?.live_prompt && <LiveTextCheck live={q.source.live_prompt} />}
         {q.starter_code && (
           <pre className="mt-2.5 max-h-20 overflow-hidden rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted [mask-image:linear-gradient(to_bottom,black_60%,transparent)]">{q.starter_code}</pre>
         )}
@@ -291,6 +294,18 @@ function QuestionCard({ q, index, first, last, onEdit, onMove }: {
 }
 
 /** Tab in the starter-code box indents (four spaces) instead of leaving the field. */
+/** Warn before class when a question's live text can't be loaded from here (students would see only a link). */
+function LiveTextCheck({ live }: { live: LivePrompt }) {
+  const { status } = useQuestionText("", live);
+  if (status !== "failed") return null;
+  return (
+    <p className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+      The problem text can't be loaded right now, so students would see only a link to the original. Write the prompt in
+      your own words (Edit) to be safe.
+    </p>
+  );
+}
+
 function indentOnTab(e: KeyboardEvent<HTMLTextAreaElement>, set: (v: string) => void) {
   if (e.key !== "Tab" || e.shiftKey) return;
   e.preventDefault();
@@ -300,8 +315,8 @@ function indentOnTab(e: KeyboardEvent<HTMLTextAreaElement>, set: (v: string) => 
   requestAnimationFrame(() => el.setSelectionRange(a + 4, a + 4));
 }
 
-function QuestionForm({ index, initial, harness, onSave, onCancel, onDelete, onTry }: {
-  index: number; initial: QuestionFields; harness?: string; onSave: (f: QuestionFields) => Promise<void>; onCancel: () => void;
+function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, onDelete, onTry }: {
+  index: number; initial: QuestionFields; harness?: string; livePrompt?: boolean; onSave: (f: QuestionFields) => Promise<void>; onCancel: () => void;
   onDelete?: () => Promise<void>; onTry?: (code: string) => Promise<GradeResult>;
 }) {
   const [f, setF] = useState<QuestionFields>({
@@ -324,9 +339,11 @@ function QuestionForm({ index, initial, harness, onSave, onCancel, onDelete, onT
         <Field label="Title">
           <Input autoFocus required maxLength={120} value={f.title} onChange={(e) => set("title")(e.target.value)} placeholder="Anagram check" />
         </Field>
-        <Field label="Prompt" hint="What the student reads beside the editor.">
+        <Field label="Prompt" hint={livePrompt
+          ? "Optional. Leave empty and students see the original problem text, loaded live (it is never stored here); or write it in your own words."
+          : "What the student reads beside the editor."}>
           <TextArea rows={4} value={f.prompt} onChange={(e) => set("prompt")(e.target.value)}
-            placeholder="Read two words, one per line. Print YES if they are anagrams of each other, otherwise NO." />
+            placeholder={livePrompt ? "Leave empty to show the original text" : "Read two words, one per line. Print YES if they are anagrams of each other, otherwise NO."} />
         </Field>
         <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
           <Field label="Starter code" hint="Opens in the editor. Leave empty for a blank file.">

@@ -8,6 +8,7 @@ import { CodeReplay } from "../review/CodeReplay";
 import { LANGUAGES } from "../teach/api";
 import { STATE, ago, leaveView, type LiveEditor as LiveEditorData } from "./api";
 import { ActivityBars } from "./LiveClass";
+import { QuestionText } from "../questionText";
 
 const POLL_MS = 2000;
 const MARK_MS = 10_000;
@@ -152,10 +153,10 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
             )}
           </Card>
 
-          {s.prompt && (
+          {(s.prompt || s.source?.live_prompt) && (
             <Card className="p-4">
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-faint">Question</p>
-              <p className="max-h-48 overflow-auto whitespace-pre-line text-[13px] leading-relaxed text-muted">{s.prompt}</p>
+              <QuestionText prompt={s.prompt} source={s.source} className="max-h-48 overflow-auto text-[13px] leading-relaxed text-muted" />
             </Card>
           )}
         </motion.aside>
