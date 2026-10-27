@@ -1,5 +1,9 @@
 """Build the bundled CodeContests question set (studentide/providers/data/codecontests.jsonl.gz).
 
+Since 2026-10-27 only its CodeChef problems are used: Codeforces comes from
+the larger open-r1 dataset instead (scripts/build_codeforces.py), so
+Codeforces problems are no longer written here.
+
 CodeContests (DeepMind, 2022) is a dataset of competitive-programming problems
 from Codeforces, CodeChef, HackerEarth, AtCoder and Aizu with statements, tags,
 difficulty and stdin/stdout tests, released under CC BY 4.0. It is published as
@@ -10,9 +14,8 @@ API serves problem by problem, so a filtered copy is bundled with the app.
     pip install zstandard
     python scripts/build_codecontests.py /tmp/cc studentide/providers/data/codecontests.jsonl.gz
 
-Kept: Codeforces problems rated 800 to MAX_RATING with tags (the topic
-categories), not interactive, and CodeChef / HackerEarth / AtCoder / Aizu
-problems marked easy or medium. Tests: every public test, then up to
+Kept: CodeChef / HackerEarth / AtCoder / Aizu problems marked easy or
+medium (only CodeChef's are listed in the app). Tests: every public test, then up to
 MAX_HIDDEN private or generated tests, each small. Problems whose statement
 accepts several correct answers keep no tests, since exact comparison would
 mark right answers wrong.
@@ -31,7 +34,6 @@ import struct
 import sys
 from pathlib import Path
 
-MAX_RATING = 2000
 MAX_HIDDEN = 8
 MAX_TEST_BYTES = 4000  # input + output of one test
 MAX_STATEMENT = 12_000
@@ -168,9 +170,6 @@ def keep(p: dict) -> bool:
     src = SOURCES.get(p.get("source", 0))
     if not p.get("description") or not p["public"] or p.get("translated"):
         return False
-    if src == "codeforces":
-        r = p.get("cf_rating", 0)
-        return bool(p["tags"]) and 800 <= r <= MAX_RATING and "interactive" not in p["tags"] and "*special" not in p["tags"]
     return src in ("codechef", "hackerearth", "atcoder", "aizu") and DIFFICULTY.get(p.get("difficulty", 0)) in ("easy", "medium")
 
 

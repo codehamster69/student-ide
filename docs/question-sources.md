@@ -12,7 +12,13 @@ least one test (`grading.competition_ready`, and `PATCH` with `tests: []` is
 refused for a competition lab).
 
 - Comparison `text` (default): trailing spaces per line and trailing blank
-  lines ignored. `json`: both sides parsed and compared as JSON values.
+  lines ignored. `json`: both sides parsed and compared as JSON values, real
+  numbers within 1e-5. `tokens`: whitespace-separated, numbers within 1e-6.
+  `checker`: for problems with several right answers, the question's
+  `checker` (a Python program from the open-r1 Codeforces dataset, run as
+  `checker.py input.txt correct_output.txt solution_output.txt`, printing 1
+  for right) judges the output. It runs through the same runner as student
+  code (the runner container on a deployment), and is never sent to students.
 - `harness`: optional code appended after the student's code when tests run
   (used by imported function-style questions).
 - Checks run against the session's snapshot of the question, so editing tests
@@ -50,20 +56,33 @@ Dynamic programming, Graphs, Trees, Sorting, Math, ...), then difficulty.
 | Platform | Support | Size | Topics | Tests | Licence and why |
 |---|---|---|---|---|---|
 | Student IDE sets | **Bundled**, original | 13 C questions (C fundamentals) | Input and output, Operators, Conditionals, Loops, Patterns, Arrays, Strings, Functions; warm-up/easy/medium | every question: 2 visible examples + 3 to 10 hidden | Written for this app (`providers/data/sets/*.json`, built by `backend/scripts/build_question_sets.py`). Every reference solution passes every test and every starter fails (`tests/test_question_sets.py`); solutions are never sent to the browser. Lists only for its language. |
-| Codeforces | **Dataset** + link | 4,551 problems rated 800 to 2000 | 19 topics from Codeforces' own tags; 4 rating bands | 3,700+ problems: public examples visible, up to 8 more hidden; real-number answers compared within 1e-6 | From **CodeContests** (DeepMind, Li et al., *Science* 2022), **CC BY 4.0**, which sources its Codeforces problems from codeforces.com. Codeforces' own API lists problems and tags but not statements or tests, so it is not used. |
+| Codeforces | **Dataset** + link | 9,103 problems up to 2025, every rating | 19 topics from Codeforces' own tags; 7 rating bands (Beginner 800-1000 ... Master 2700+, Unrated) | every problem: examples visible, up to 10 small official or generated tests hidden; 1,761 problems with several right answers judged by the dataset's checker; real-number answers within 1e-6 | From **open-r1/codeforces** (Penedo et al., Hugging Face 2025), **CC BY 4.0**: every problem the dataset could run (not interactive, standard input). Replaced CodeContests on 2026-10-27, which had half as many problems and no tests for multi-answer ones. Built by `backend/scripts/build_codeforces.py`. Codeforces' own API lists problems and tags but not statements or tests, so it is not used. |
 | CodeChef | **Dataset** + link | 332 easy and medium problems | difficulty only (CodeChef problems carry no tags in the dataset) | yes, as above | Also from **CodeContests** (CC BY 4.0; CodeChef material via the MIT-licensed Description2Code). codechef.com itself can still only be linked. |
 | Exercism | **Live** | ~140 per language | concepts (Python track) and difficulty | Python and JavaScript | MIT-licensed, served from public GitHub repositories. Canonical cases become JSON-argument tests plus a small driver. C, C++ and Java exercises have no `main()`, so they import without tests. |
 | MBPP | **Live** (Python only) | 974 beginner problems | guessed from the wording (labelled as such) | 961 of 974 have tests: the first visible, two hidden | Google Research, Austin et al. 2021; Apache 2.0 repository, CC BY 4.0 dataset card. Only `assert f(literals) == literal` asserts are converted; the reference solution is never shown, only its `def` line. |
-| LeetCode | **Link only** | | | | No public API; the GraphQL endpoint the site uses is internal and undocumented, and the problems are LeetCode's copyrighted content. |
+| LeetCode | **Dataset**, text live (Python only) | 2,834 problems | 27 topics from LeetCode's tags; Easy / Medium / Hard | every problem: 2 visible + up to 8 hidden, calling `Solution().method` with lists, linked lists and trees; "any order" answers compared sorted | Tests, tags and starter code from **LeetCodeDataset** (Xia et al. 2025, Apache 2.0), built by `backend/scripts/build_leetcode.py`. **LeetCode's problem text is never stored**: LeetCode claims copyright in it, so an imported question keeps an empty prompt and `source.live_prompt`, and the browser loads the text from the Hugging Face dataset viewer (`datasets-server.huggingface.co`) each time it is shown, checking the row's `task_id`. A teacher can write their own prompt, which then replaces it. Any other problem can still be linked. |
 | HackerRank | **Link only** | | | | Its API covers a company's own tests only; its terms forbid copying any part of the service. |
 
-Problems in the CodeContests set whose statement accepts several correct
-answers ("print any of them") keep no tests, since exact comparison would mark
-right answers wrong; the teacher can add their own. Statements are kept as
-published, with Codeforces' `$$$` LaTeX made readable and the original link
-kept for attribution. The bundle (`providers/data/codecontests.jsonl.gz`,
-3.6 MB) is rebuilt with `backend/scripts/build_codecontests.py` from
-`gs://dm-code_contests` (see the script's docstring).
+Codeforces statements are kept as published, with `$$$` LaTeX made
+readable and the original link kept for attribution
+(`providers/data/codeforces.jsonl.gz`, about 9 MB, see
+`build_codeforces.py`). CodeChef still comes from CodeContests
+(`providers/data/codecontests.jsonl.gz`, CodeChef rows only, from
+`build_codecontests.py`); its problems that accept several answers keep no
+tests.
+
+LeetCode problems need a browser that can reach
+`datasets-server.huggingface.co` to show their text; if it can't, the
+student sees a link to the original instead. The harness builds the
+arguments from the test input (`nums=[2, 7], target=9`, with `list_node(...)`
+and `tree_node(...)` for linked lists and trees), calls the method and prints
+the result as JSON; the starter code carries LeetCode's usual imports and
+the `ListNode`/`TreeNode` classes. Problems that change their input in place
+(26) were left out, since their tests only check the method returns.
+`build_leetcode.py --verify` runs the dataset's reference solutions through
+the harness; that step was not run in the build container (running dataset
+code was blocked there), so the tests were checked with our own solutions
+instead (`tests/test_leetcode.py`).
 
 Looked at and not added: **TACO** (Apache 2.0, tags for every problem) and
 **APPS** (MIT) are only distributed through Hugging Face or a university
@@ -87,5 +106,6 @@ POST /api/teach/questions/{id}/check   {code}    try a model answer
 Student: `POST /api/sessions/{id}/check {code}` (409 if the question has no tests).
 
 The Exercism provider needs outbound HTTPS to `raw.githubusercontent.com`.
-Browser test: `frontend/e2e/questions.mjs` (screenshots in
-`thesis/latex/snapshots/questions/`).
+Browser tests: `frontend/e2e/questions.mjs` (screenshots in
+`thesis/latex/snapshots/questions/`) and `frontend/e2e/leetcode.mjs`
+(`snapshots/leetcode/`).

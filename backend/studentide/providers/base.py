@@ -48,6 +48,7 @@ class Imported:
     sample_input: str = ""
     tests: list[dict] = field(default_factory=list)
     harness: str = ""
+    checker: str = ""  # Python checker for tests whose compare is "checker" (several right answers)
     source: dict = field(default_factory=dict)  # provider, ref, url, license, attribution, fetched_at
     notes: list[str] = field(default_factory=list)  # what could not be imported, for the teacher
 

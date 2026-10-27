@@ -13,6 +13,17 @@ from studentide.app import create_app
 from studentide.providers import PROVIDERS
 from studentide.providers.base import Cached
 from studentide.providers.exercism import RAW, Exercism, excluded_uuids, snake
+from studentide.teach import question_json
+
+
+def teach_question_for_student(q: dict) -> dict:
+    row = {**q, "tests_json": __import__("json").dumps(q["tests"]), "source_json": None}
+    return question_json(_Row(row), for_student=True)
+
+
+class _Row(dict):
+    def keys(self):
+        return super().keys()
 
 TOKEN = "test-token"
 ADMIN = {"X-Admin-Token": TOKEN}
@@ -288,6 +299,35 @@ def test_codeforces_by_topic_and_rating(client):
     answer = "input()\nfrom collections import Counter\nprint(max(Counter(input().split()).values()))\n"
     g = client.post(f"/api/teach/questions/{q['id']}/check", json={"code": answer}, headers=ADMIN).json()
     assert g["passed"] == g["total"]
+
+
+def test_codeforces_checker_for_several_right_answers(client):
+    """cf-1170A accepts any of several triples: the dataset's checker judges it, not text comparison."""
+    lab = client.post("/api/teach/labs", json={"title": "L", "language": "python"}, headers=ADMIN).json()
+    lab = client.post(f"/api/teach/labs/{lab['id']}/import", json={"provider": "codeforces", "ref": "cf-1170A"}, headers=ADMIN).json()
+    q = next(q for q in lab["questions"] if q["id"] == lab["imported"])
+    assert q["checker"] and all(t["compare"] == "checker" for t in q["tests"]) and q["source"]["license"] == "CC BY 4.0"
+    # the expected output prints (m-n+1, 1, n-1); (n-1, 1, m-n+1) is right too but differs as text
+    reverse = ("for _ in range(int(input())):\n    n, m = sorted(map(int, input().split()))\n"
+               "    print(n - 1, 1, m - n + 1)\n")
+    g = client.post(f"/api/teach/questions/{q['id']}/check", json={"code": reverse}, headers=ADMIN).json()
+    assert g["passed"] == g["total"] >= 2
+    wrong = "for _ in range(int(input())):\n    input()\n    print(1, 1, 1)\n"
+    g = client.post(f"/api/teach/questions/{q['id']}/check", json={"code": wrong}, headers=ADMIN).json()
+    assert g["passed"] < g["total"]
+    # students never receive the checker
+    assert "checker" not in teach_question_for_student(q)
+
+
+def test_codeforces_every_rating(client):
+    cats = {c["id"]: c["count"] for c in client.get("/api/teach/sources/codeforces/categories?language=c", headers=ADMIN).json()}
+    assert cats["level:expert"] > 1000 and cats["level:master"] > 500 and sum(v for k, v in cats.items() if k.startswith("level:")) > 9000
+
+
+def test_checker_verdicts():
+    checker = "import sys\nprint(1 if open(sys.argv[3]).read().split() == open(sys.argv[2]).read().split()[::-1] else 0)\n"
+    assert grading._checker_verdicts(checker, [("x", "1 2", "2 1\n"), ("x", "1 2", "1 2\n")]) == [True, False]
+    assert grading._checker_verdicts("", [("x", "1", "1")]) == [False]
 
 
 def test_codechef_from_codecontests(client):

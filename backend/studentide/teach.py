@@ -125,6 +125,8 @@ def question_json(q, for_student: bool = False) -> dict:
     d = {k: q[k] for k in ("id", "lab_id", "position", "title", "prompt", "starter_code", "sample_input", "harness", "updated_at")}
     tests = grading.parse_tests(q["tests_json"])
     d["source"] = json.loads(q["source_json"]) if q["source_json"] else None
+    if not for_student:  # the checker stays with the teacher and the server, like hidden tests
+        d["checker"] = q["checker"] if "checker" in q.keys() else ""
     if for_student:
         d["tests"] = [t for t in tests if not t["hidden"]]
         d["n_hidden_tests"] = len(tests) - len(d["tests"])
@@ -281,6 +283,7 @@ def router(db: Database, require_admin: Callable, auth) -> APIRouter:
         db.add_question(qid, lab_id, {
             "title": got.title[:120], "prompt": got.prompt, "starter_code": got.starter_code,
             "sample_input": got.sample_input, "tests_json": json.dumps(got.tests), "harness": got.harness,
+            "checker": got.checker,
             "source_json": json.dumps(got.source | {"notes": got.notes}),
         })
         return detail(lab_id, request) | {"imported": qid, "notes": got.notes}

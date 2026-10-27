@@ -15,7 +15,12 @@ lines are ignored. compare "json": both sides are parsed as JSON and compared
 as values, real numbers within 1e-5 (used by imported function-style
 questions, whose harness prints the function's return value as JSON). compare "tokens": whitespace-separated
 tokens, with numbers equal within 1e-6 absolute or relative error (for
-problems whose answers are real numbers).
+problems whose answers are real numbers). compare "checker": for problems
+that accept several right answers, the question's `checker` (a Python
+program, as in the open-r1 Codeforces dataset) is run as
+`checker.py input.txt correct_output.txt solution_output.txt` and passes the
+test when it prints 1 (or 100). It runs through the same runner as student
+code, never in the server process.
 
 A question's optional `harness` is code appended after the student's before
 the tests run, e.g. a few lines that read a JSON argument list from stdin,
@@ -41,7 +46,7 @@ class TestCase(BaseModel):
     stdin: str = Field(default="", max_length=100_000)
     expected: str = Field(default="", max_length=100_000)
     hidden: bool = False  # the student sees pass/fail only, never the input or expected output
-    compare: Literal["text", "json", "tokens"] = "text"
+    compare: Literal["text", "json", "tokens", "checker"] = "text"
 
 
 def parse_tests(raw: str | list | None) -> list[dict]:
@@ -90,6 +95,39 @@ def outputs_match(got: str, expected: str, compare: str = "text") -> bool:
     return _text(got) == _text(expected)
 
 
+# Put in front of a checker: writes the three files it expects and sets its argv.
+CHECKER_DRIVER = '''\
+import json as _json, sys as _sys
+_d = _json.loads(_sys.stdin.read())
+for _name, _key in (("input.txt", "input"), ("correct_output.txt", "expected"), ("solution_output.txt", "got")):
+    with open(_name, "w") as _f:
+        _f.write(_d[_key])
+_sys.argv = ["checker.py", "input.txt", "correct_output.txt", "solution_output.txt"]
+_sys.stdin = open("input.txt")
+del _d, _name, _key, _f
+'''
+
+
+def _checker_verdicts(checker: str, cases: list[tuple[str, str, str]]) -> list[bool]:
+    """Run the checker once per (input, expected, got); True where it prints 1 or 100."""
+    if not cases:
+        return []
+    if not checker.strip():
+        return [False] * len(cases)
+    payloads = [json.dumps({"input": i, "expected": e, "got": g}) for i, e, g in cases]
+    failed, outs, _ = runner.run_many(CHECKER_DRIVER + "\n" + checker, "python", payloads)
+    if failed:
+        return [False] * len(cases)
+    verdicts = []
+    for r in outs:
+        try:
+            score = float(r.stdout.split()[0])
+        except (IndexError, ValueError):
+            score = 0.0
+        verdicts.append(r.error_type is None and score in (1.0, 100.0))
+    return verdicts
+
+
 def competition_ready(question: dict) -> str | None:
     """None when the question can be used in a competition, else why not."""
     if not parse_tests(question.get("tests") if "tests" in question else question.get("tests_json")):
@@ -111,9 +149,17 @@ def grade(question: dict, code: str, language: str = "python") -> dict | None:
     source = code if not harness else code.rstrip("\n") + "\n\n" + harness
     results = []
     failed, outs, _ = runner.run_many(source, language, [t["stdin"] for t in tests])
+    checked = {}
+    if not failed:
+        idx = [i for i, t in enumerate(tests) if t["compare"] == "checker" and outs[i].error_type is None]
+        verdicts = _checker_verdicts(question.get("checker") or "", [(tests[i]["stdin"], tests[i]["expected"], outs[i].stdout) for i in idx])
+        checked = dict(zip(idx, verdicts))
     for i, t in enumerate(tests):
         r = failed or outs[i]
-        ok = r.error_type is None and outputs_match(r.stdout, t["expected"], t["compare"])
+        if t["compare"] == "checker":
+            ok = checked.get(i, False)
+        else:
+            ok = r.error_type is None and outputs_match(r.stdout, t["expected"], t["compare"])
         res = {"name": t["name"] or f"Test {i + 1}", "passed": ok, "hidden": t["hidden"],
                "error_type": r.error_type, "duration_ms": round(r.duration_ms, 1)}
         if not t["hidden"]:

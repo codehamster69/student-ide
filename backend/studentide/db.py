@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS questions (
     sample_input  TEXT NOT NULL DEFAULT '',
     tests_json    TEXT NOT NULL DEFAULT '[]',  -- optional: [{name, stdin, expected, hidden, compare}], see grading.py
     harness       TEXT NOT NULL DEFAULT '',    -- optional code appended after the student's when tests run
+    checker       TEXT NOT NULL DEFAULT '',    -- optional Python checker for tests with compare "checker"
     source_json   TEXT,                        -- where an imported question came from (provider, url, license)
     created_at    REAL NOT NULL,
     updated_at    REAL NOT NULL
@@ -133,7 +134,7 @@ MIGRATIONS = {
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
              ("kind", "TEXT NOT NULL DEFAULT 'lab'"), ("owner_email", "TEXT")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
-                  ("source_json", "TEXT")),
+                  ("source_json", "TEXT"), ("checker", "TEXT NOT NULL DEFAULT ''")),
 }
 # Bumped whenever the consent screen promises something new, so every student
 # reads and agrees again. 2: teachers can watch a lab live (live.py).
@@ -145,7 +146,7 @@ def has_consent(row) -> bool:
     return row["consented_at"] is not None and (row["consent_version"] or 1) >= CONSENT_VERSION
 
 
-QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json")
+QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json", "checker")
 
 
 class Database:

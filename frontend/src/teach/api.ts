@@ -18,7 +18,7 @@ export interface TestCase {
   stdin: string;
   expected: string;
   hidden: boolean;
-  compare: "text" | "json" | "tokens";
+  compare: "text" | "json" | "tokens" | "checker";
 }
 
 /** Where an imported or linked question came from. */
