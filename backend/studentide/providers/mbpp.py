@@ -94,6 +94,7 @@ class MBPP(Provider):
     about = ("About 1,000 short beginner Python problems (Google Research), each with three tests. "
              "Topics are guessed from the wording. Python labs only.")
     terms_url = "https://github.com/google-research/google-research/tree/master/mbpp"
+    languages = ("python",)
 
     def __init__(self, http: Cached | None = None):
         self.http = http or Cached()

@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Callable, ClassVar, Literal
 
 USER_AGENT = "StudentIDE/0.1 (lab editor for a thesis study; https://github.com/codehamster69/student-ide)"
-TIMEOUT_S = 8.0
+TIMEOUT_S = 15.0
 CACHE_TTL_S = 3600.0
 
 
@@ -67,11 +67,13 @@ class Provider:
     terms_url: ClassVar[str] = ""
     hosts: ClassVar[tuple[str, ...]] = ()  # hostnames a source link may point at (empty: no linking)
     license: ClassVar[str] = ""
+    languages: ClassVar[tuple[str, ...] | None] = None  # lab languages it has questions for; None: all
 
     def info(self) -> dict:
         return {"id": self.id, "name": self.name, "status": self.status, "about": self.about,
                 "terms_url": self.terms_url, "hosts": list(self.hosts), "license": self.license,
-                "can_browse": self.status != "link_only", "can_link": bool(self.hosts)}
+                "can_browse": self.status != "link_only", "can_link": bool(self.hosts),
+                "languages": list(self.languages) if self.languages is not None else None}
 
     def categories(self, language: str) -> list[Category]:
         raise ProviderError(f"{self.name} questions cannot be browsed here", 409)
@@ -136,7 +138,12 @@ class Cached:
         hit = self._cache.get(url)
         if hit and not fresh and time.time() - hit[0] < self.ttl:
             return hit[1]
-        body = self.fetch(url)
+        try:
+            body = self.fetch(url)
+        except ProviderError:
+            if hit and hit[1] is not None:  # the source hiccuped: an hour-old copy beats an error mid-class
+                return hit[1]
+            raise
         self._cache[url] = (time.time(), body)
         return body
 

@@ -55,7 +55,7 @@ export function SourcePicker({ language, onImport, onLink, onClose, onAuthLost }
             className={cn("relative flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors",
               pid === x.id ? "text-text" : "text-muted hover:text-text")}>
             {pid === x.id && <motion.span layoutId="source-tab" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
-            <span className="relative">{x.name}</span>
+            <span className={cn("relative", x.languages && !x.languages.includes(language) && "opacity-50")}>{x.name}</span>
             <span className={cn("relative rounded-full px-1.5 text-[10px] font-semibold uppercase tracking-wide", STATUS_CHIP[x.status][1])}>
               {STATUS_CHIP[x.status][0]}
             </span>
@@ -65,7 +65,24 @@ export function SourcePicker({ language, onImport, onLink, onClose, onAuthLost }
       </div>
 
       {error && <p className="mx-5 mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
-      {p && (p.can_browse ? (
+      {p && p.can_browse && p.languages && !p.languages.includes(language) ? (
+        <>
+          <div className="mx-5 my-4 rounded-xl border border-border bg-surface-2/60 px-4 py-3 text-[13px] text-muted" role="status">
+            <p className="font-medium text-text">
+              {p.name} questions are for {p.languages.map((l) => LANGUAGES[l].label).join(" and ")} labs only
+            </p>
+            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or switch the lab's language in Session settings.</p>
+          </div>
+          {p.can_link && (
+            <details className="border-t border-border">
+              <summary className="cursor-pointer px-5 py-3 text-xs font-medium text-muted hover:text-text">
+                Link a {p.name} problem and write it yourself
+              </summary>
+              <LinkOnly key={p.id} provider={p} onLink={onLink} compact />
+            </details>
+          )}
+        </>
+      ) : p && (p.can_browse ? (
         <>
           <LiveBrowser key={p.id + language} provider={p} language={language} onImport={onImport} onAuthLost={onAuthLost} />
           {p.can_link && (

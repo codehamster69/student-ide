@@ -362,3 +362,28 @@ def test_mbpp_offline(monkeypatch):
     fn, tests, skipped = convert({"test_list": ["assert f(1) == 2", "assert math.isclose(f(2), 3)", "assert g(1) == 1"]})
     assert (fn, len(tests), skipped) == ("f", 1, 2)
 
+
+
+def test_sources_say_which_languages_they_serve(client):
+    s = {p["id"]: p for p in client.get("/api/teach/sources", headers=ADMIN).json()}
+    assert s["leetcode"]["languages"] == ["python"] and s["mbpp"]["languages"] == ["python"]
+    assert s["originals"]["languages"] == ["c"] and s["codeforces"]["languages"] is None
+    r = client.get("/api/teach/sources/leetcode/categories?language=c", headers=ADMIN)
+    assert r.status_code == 400 and "Python only" in r.json()["detail"]
+
+
+def test_live_source_keeps_a_stale_copy_when_the_source_hiccups():
+    from studentide.providers.base import ProviderError
+    up = {"ok": True}
+
+    def fetch(url):
+        if not up["ok"]:
+            raise ProviderError("could not reach the question source")
+        return b"data"
+
+    c = Cached(fetch, ttl=0)
+    assert c.get("u") == b"data"
+    up["ok"] = False
+    assert c.get("u", fresh=True) == b"data"
+    with pytest.raises(ProviderError):
+        c.get("other")

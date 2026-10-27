@@ -213,6 +213,7 @@ class LeetCode(Provider):
              "problem text is not stored: it loads live when the question is shown, or you write your own. Python labs only.")
     terms_url = "https://huggingface.co/datasets/newfacade/LeetCodeDataset"
     hosts = ("leetcode.com", "leetcode.cn")
+    languages = ("python",)
 
     def __init__(self, get: Fetcher = http_get, ttl: float = CACHE_TTL_S):
         self.get, self.ttl = get, ttl
