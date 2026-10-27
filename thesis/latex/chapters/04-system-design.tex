@@ -384,6 +384,21 @@ problems was found.
   \label{fig:datasets}
 \end{figure}
 
+Platform problems suit practice but are often too long or too tricky for a
+first-year class competition, so the app also ships original question sets
+written for it. The first, \emph{C fundamentals}, has thirteen short
+problems in teaching order: input and output, operators, conditionals,
+loops, a number pattern, arrays, strings and one function to complete
+(\cref{tab:set-c-fundamentals}). Each has two visible examples and three to
+ten hidden tests aimed at the usual slips (a leap-year rule without the
+century case, 1 counted as prime, a grade boundary off by one). Expected
+outputs are computed from a small model of each problem when the set is
+built, and a test runs every reference C solution, compiled with the same
+runner the students use, against every test, and checks that the bare
+starter code fails. The reference solutions never leave the server.
+
+\input{tables/question-set-c-fundamentals}
+
 \section{Class competitions}
 \label{sec:competitions}
 A competition is a lab run as a timed, class-wide challenge with a live
