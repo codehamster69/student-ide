@@ -338,10 +338,17 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
 
     admin = [Depends(require_admin)]
 
+    def mine(request: Request, lab_id: str) -> None:
+        """Teacher routes: only the competition's owner, co-teachers and admins."""
+        if auth is not None:
+            comp_or_404(lab_id)
+            auth.check_lab(request, lab_id)
+
     @r.post("/api/teach/competitions", dependencies=admin)
-    def create(body: CompIn) -> dict:
+    def create(body: CompIn, request: Request) -> dict:
         lab_id = "lab_" + uuid.uuid4().hex[:10]
-        db.create_lab(lab_id, body.title.strip(), body.description.strip())
+        db.create_lab(lab_id, body.title.strip(), body.description.strip(),
+                      auth.teacher(request).email if auth is not None else None)
         db.update_lab(lab_id, {"subject": body.subject.strip(), "language": body.language})
         with db.connect() as conn:
             conn.execute("UPDATE labs SET kind = 'competition' WHERE id = ?", (lab_id,))
@@ -350,11 +357,13 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         return teacher_view(lab_id)
 
     @r.get("/api/teach/competitions/{lab_id}", dependencies=admin)
-    def get(lab_id: str) -> dict:
+    def get(lab_id: str, request: Request) -> dict:
+        mine(request, lab_id)
         return teacher_view(lab_id)
 
     @r.patch("/api/teach/competitions/{lab_id}", dependencies=admin)
-    def patch(lab_id: str, body: CompPatch) -> dict:
+    def patch(lab_id: str, body: CompPatch, request: Request) -> dict:
+        mine(request, lab_id)
         comp = comp_or_404(lab_id)
         sets: dict = {}
         if body.duration_min is not None:
@@ -370,7 +379,8 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         return teacher_view(lab_id)
 
     @r.post("/api/teach/competitions/{lab_id}/start", dependencies=admin)
-    def start(lab_id: str) -> dict:
+    def start(lab_id: str, request: Request) -> dict:
+        mine(request, lab_id)
         comp = comp_or_404(lab_id)
         if comp["started_at"] is not None:
             raise HTTPException(409, "already started")
@@ -389,7 +399,8 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         return teacher_view(lab_id)
 
     @r.post("/api/teach/competitions/{lab_id}/end", dependencies=admin)
-    def end(lab_id: str) -> dict:
+    def end(lab_id: str, request: Request) -> dict:
+        mine(request, lab_id)
         comp = comp_or_404(lab_id)
         if state_of(comp) != "live":
             raise HTTPException(409, "the competition is not running")

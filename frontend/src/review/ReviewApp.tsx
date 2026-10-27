@@ -11,15 +11,16 @@ import { LiveClass, LiveLabs } from "../live/LiveClass";
 import { LiveEditor } from "../live/LiveEditor";
 import { token } from "./api";
 import { Gate } from "./Gate";
+import { LabSessions } from "./LabSessions";
 import { Overview } from "./Overview";
 import { SessionView } from "./SessionView";
 
 type Route =
-  | { name: "overview" } | { name: "session"; id: string }
+  | { name: "overview" } | { name: "review-lab"; id: string; day?: string } | { name: "review-all" } | { name: "session"; id: string }
   | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string } | { name: "people" }
   | { name: "live" } | { name: "live-lab"; id: string } | { name: "live-session"; id: string };
 
-// Routes: #/review (overview), #/review/s/<session id>, #/teach (labs) and
+// Routes: #/review (lab sessions), #/review/l/<lab id>[/<day>] (one lab session), #/review/all, #/review/s/<session id>, #/teach (labs) and
 // #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board), #/teach/people (admins),
 // #/live (open labs), #/live/l/<lab id> (class view), #/live/s/<session id> (one student's editor).
 // One teacher area, one sign-in.
@@ -32,6 +33,9 @@ function route(): Route {
   if (location.hash.startsWith("#/live")) return { name: "live" };
   const s = location.hash.match(/^#\/review\/s\/([0-9a-f]+)/);
   if (s) return { name: "session", id: s[1] };
+  const rl = location.hash.match(/^#\/review\/l\/([A-Za-z0-9_]+)(?:\/(\d{4}-\d{2}-\d{2}))?/);
+  if (rl) return { name: "review-lab", id: rl[1], day: rl[2] };
+  if (location.hash.startsWith("#/review/all")) return { name: "review-all" };
   const l = location.hash.match(/^#\/teach\/l\/([A-Za-z0-9_]+)/);
   if (l) return { name: "lab", id: l[1] };
   const c = location.hash.match(/^#\/teach\/c\/([A-Za-z0-9_]+)/);
@@ -42,7 +46,7 @@ function route(): Route {
 const TABS = [
   { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" || r.name === "board" },
   { href: "#/live", label: "Live", icon: Radio, match: (r: Route) => r.name.startsWith("live") },
-  { href: "#/review", label: "Review", icon: Activity, match: (r: Route) => r.name === "overview" || r.name === "session" },
+  { href: "#/review", label: "Review", icon: Activity, match: (r: Route) => r.name === "overview" || r.name.startsWith("review") || r.name === "session" },
 ];
 const ADMIN_TAB = { href: "#/teach/people", label: "People", icon: UsersRound, match: (r: Route) => r.name === "people" };
 
@@ -81,7 +85,7 @@ export function ReviewApp() {
     setMe(null);
     setAuthed(false);
   };
-  const key = !cfg ? "loading" : !authed ? "gate" : "id" in r ? `${r.name}-${r.id}` : r.name;
+  const key = !cfg ? "loading" : !authed ? "gate" : "id" in r ? `${r.name}-${r.id}-${"day" in r ? r.day : ""}` : r.name;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -141,8 +145,12 @@ export function ReviewApp() {
                 <LabEditor id={r.id} onAuthLost={signOut} />
               ) : r.name === "labs" ? (
                 <Labs onAuthLost={signOut} />
-              ) : (
+              ) : r.name === "review-lab" ? (
+                <Overview labId={r.id} day={r.day} onAuthLost={signOut} />
+              ) : r.name === "review-all" ? (
                 <Overview onAuthLost={signOut} />
+              ) : (
+                <LabSessions onAuthLost={signOut} />
               )}
             </motion.div>
           </AnimatePresence>

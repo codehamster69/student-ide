@@ -1,26 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { ChevronRight, FlaskConical, MessageCircleQuestion, Search, Users } from "lucide-react";
+import { ArrowLeft, CalendarClock, ChevronRight, FlaskConical, MessageCircleQuestion, Search, Users } from "lucide-react";
 import { Badge, Card, cn, item, stagger, spring } from "../ui";
-import { AuthError, get, type SessionSummary, type StudentRow } from "./api";
+import { AuthError, get, type LabSessionRow, type SessionSummary, type StudentRow } from "./api";
 import { ChannelTag, CountUp, Skeleton, Spark } from "./bits";
-import { clock, dayTime, TASKS } from "./format";
+import { clock, dayKey, dayTime, span, TASKS } from "./format";
 
 type Filter = "all" | "moments" | "assessed";
 
-export function Overview({ onAuthLost }: { onAuthLost: () => void }) {
+/** #/review/l/<lab>/<day>: the sessions of one lab session (a lab on one day),
+ * student by student; without a day, every day of that lab. Without `labId`
+ * (#/review/all): every session the teacher may see. */
+export function Overview({ labId, day, onAuthLost }: { labId?: string; day?: string; onAuthLost: () => void }) {
   const [rows, setRows] = useState<SessionSummary[] | null>(null);
-  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [allStudents, setStudents] = useState<StudentRow[]>([]);
+  const [lab, setLab] = useState<LabSessionRow | null>(null);
   const [error, setError] = useState("");
   const [student, setStudent] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("assessed");
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    Promise.all([get<SessionSummary[]>("/api/review/sessions"), get<StudentRow[]>("/api/review/students")])
-      .then(([s, st]) => { setRows(s); setStudents(st); })
+    const q = labId ? `?lab_id=${encodeURIComponent(labId)}` : "";
+    Promise.all([get<SessionSummary[]>(`/api/review/sessions${q}`), get<StudentRow[]>("/api/review/students"),
+      labId ? get<LabSessionRow[]>("/api/review/labs") : Promise.resolve([])])
+      .then(([s, st, labs]) => { setRows(day ? s.filter((r) => dayKey(r.started_at) === day) : s); setStudents(st); setLab(labs.find((l) => l.id === labId) ?? null); })
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(e.message)));
-  }, [onAuthLost]);
+  }, [labId, day, onAuthLost]);
+
+  // In one lab, only the students who worked in it.
+  const students = useMemo(() => {
+    if (!labId || !rows) return allStudents;
+    const here = new Set(rows.map((r) => r.student_id));
+    return allStudents.filter((s) => here.has(s.student_id));
+  }, [labId, rows, allStudents]);
 
   const shown = useMemo(() => {
     if (!rows) return [];
@@ -29,8 +42,9 @@ export function Overview({ onAuthLost }: { onAuthLost: () => void }) {
       .filter((r) => filter === "all" || r.phase === "assessed")
       .filter((r) => filter !== "moments" || r.episodes.length > 0)
       .filter((r) => !q || r.student_id.toLowerCase().includes(q.toLowerCase()))
-      .sort((a, b) => b.started_at - a.started_at);
-  }, [rows, student, filter, q]);
+      // a lab session reads student by student, each student's questions in the order they did them
+      .sort((a, b) => labId ? a.student_id.localeCompare(b.student_id) || a.started_at - b.started_at : b.started_at - a.started_at);
+  }, [rows, student, filter, q, labId]);
 
   const assessed = rows?.filter((r) => r.phase === "assessed") ?? [];
   const withMoments = assessed.filter((r) => r.episodes.length > 0);
@@ -38,9 +52,21 @@ export function Overview({ onAuthLost }: { onAuthLost: () => void }) {
 
   return (
     <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-20 pt-8">
+      <motion.a variants={item} href="#/review" className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
+        <ArrowLeft className="size-4" /> All lab sessions
+      </motion.a>
       <motion.div variants={item} className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Sessions</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-text">{labId ? lab?.title ?? "Lab session" : "All sessions"}</h1>
+          {lab && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-text/80">
+              <CalendarClock className="size-4 text-faint" />
+              {day && rows?.length
+                ? span(Math.min(...rows.map((r) => r.started_at)), Math.max(...rows.map((r) => r.started_at + r.duration_s)), [rows[0].started_at])
+                : span(lab.started_at, lab.ended_at, lab.sittings_at)}
+              {lab.subject && <span className="text-muted">· {lab.subject}</span>}
+            </p>
+          )}
           <p className="mt-1 max-w-2xl text-sm text-muted">
             Each session is compared with the same student's baseline weeks. Open one to see the evidence timeline and replay the code.
           </p>

@@ -27,7 +27,7 @@ Screenshots for the thesis: `BASE=http://127.0.0.1:8000 TOKEN=change-me node fro
 |-------|------|
 | evidence for a session (channels, moments, events) | `backend/studentide/review.py` (`Reviewer`) |
 | replay data (initial text, edits, key times) | `review.replay_data` |
-| API (admin token) | `/api/review/{config,students,sessions,sessions/{id},sessions/{id}/replay}` in `app.py` |
+| API (admin token) | `/api/review/{config,labs,students,sessions,sessions/{id},sessions/{id}/replay}`; teachers see only their own labs (see `docs/teaching.md`) in `app.py` |
 | demo data | `backend/studentide/seed.py` |
 | screens | `frontend/src/review/` (lazy-loaded at `#/review`) |
 

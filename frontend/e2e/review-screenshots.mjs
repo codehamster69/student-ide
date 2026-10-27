@@ -25,7 +25,7 @@ const shot = async (name, full = false) => {
   await page.screenshot({ path: `${OUT}/review-${SCHEME}-${name}.png`, fullPage: full });
 };
 
-await page.goto(`${BASE}/#/review`);
+await page.goto(`${BASE}/#/review/all`);
 await page.waitForSelector("text=Teacher access");
 await shot("01-gate");
 await page.fill("input[type=password]", "wrong");

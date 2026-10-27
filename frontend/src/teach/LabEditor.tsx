@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
-  ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, Pencil, Plus, Radio, Trash2,
+  ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, GraduationCap, Pencil, Plus, Radio, Trash2,
   UserPlus, Users,
 } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, TextArea, cn, item, pop, spring, stagger } from "../ui";
+import { authConfig } from "../auth";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { CompetitionPanel } from "../compete/CompetitionPanel";
@@ -175,6 +176,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
               onChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
           )}
           <Settings lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
+          <Teachers lab={lab} onSave={(body) => write("PUT", `/api/teach/labs/${lab.id}/teachers`, body)} />
           <Assign lab={lab} onSave={(student_ids, everyone) => write("PUT", `/api/teach/labs/${lab.id}/roster`, { student_ids, everyone })} onAuthLost={onAuthLost} />
           <Progress lab={lab} />
         </motion.aside>
@@ -377,6 +379,64 @@ function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: str
   );
 }
 
+/** Who teaches this lab. Only they (and admins) see it, its sessions, live view and review. */
+function Teachers({ lab, onSave }: {
+  lab: LabDetail; onSave: (body: { co_teachers: string[]; owner_email?: string }) => Promise<unknown>;
+}) {
+  const [draft, setDraft] = useState("");
+  const [owner, setOwner] = useState(lab.owner_email ?? "");
+  const [google, setGoogle] = useState(false); // dev mode has no teacher accounts, so nothing to share
+  useEffect(() => setOwner(lab.owner_email ?? ""), [lab.owner_email]);
+  useEffect(() => { void authConfig().then((c) => setGoogle(c.mode === "google")); }, []);
+  const canShare = lab.access !== "co_teacher";
+  const admin = lab.access === "admin";
+  const add = async () => {
+    const ids = parseIds(draft);
+    if (ids.length && await onSave({ co_teachers: [...lab.co_teachers, ...ids] })) setDraft("");
+  };
+  if (!google) return null;
+
+  return (
+    <Card className="p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><GraduationCap className="size-4 text-accent" /> Teachers</h2>
+      <p className="mt-1 text-xs text-muted">Only these teachers and admins see this lab, its live view, sessions and review.</p>
+      <div className="mt-4 grid gap-1.5 text-[13px]">
+        <span className="flex items-center gap-2">
+          <span className="w-20 text-xs text-faint">Owner</span>
+          {lab.owner_email ? <span className="font-mono text-text">{lab.owner_email}</span>
+            : <Badge tone="warn" className="h-5 px-2 text-[11px]">No owner: admins only</Badge>}
+        </span>
+      </div>
+      {admin && (
+        <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); void onSave({ co_teachers: lab.co_teachers, owner_email: owner }); }}>
+          <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="teacher@college address" aria-label="Owner"
+            className="h-9 font-mono text-[13px]" />
+          <Button type="submit" size="sm" className="h-9" disabled={owner.trim().toLowerCase() === (lab.owner_email ?? "")}>Hand over</Button>
+        </form>
+      )}
+      <div className="mt-4 flex min-h-8 flex-wrap gap-1.5">
+        {lab.co_teachers.map((t) => (
+          <button key={t} disabled={!canShare} title={canShare ? "Stop sharing" : undefined}
+            onClick={() => void onSave({ co_teachers: lab.co_teachers.filter((x) => x !== t) })}
+            className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft pl-2.5 pr-1.5 font-mono text-xs text-accent disabled:pr-2.5">
+            {t}{canShare && <span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:bg-accent group-hover:text-accent-fg">×</span>}
+          </button>
+        ))}
+        {lab.co_teachers.length === 0 && <span className="self-center text-xs text-faint">Not shared with anyone.</span>}
+      </div>
+      {canShare ? (
+        <form onSubmit={(e) => { e.preventDefault(); void add(); }} className="mt-3 flex gap-2">
+          <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Co-teacher's college address"
+            className="h-9 font-mono text-[13px]" aria-label="Share with a co-teacher" />
+          <Button type="submit" size="sm" className="h-9" disabled={!parseIds(draft).length}><UserPlus className="size-3.5" /> Share</Button>
+        </form>
+      ) : (
+        <p className="mt-3 text-xs text-faint">Shared with you by the owner, who decides who else can see it.</p>
+      )}
+    </Card>
+  );
+}
+
 function Assign({ lab, onSave, onAuthLost }: {
   lab: LabDetail; onSave: (ids: string[], everyone: boolean) => Promise<unknown>; onAuthLost: () => void;
 }) {
@@ -461,7 +521,7 @@ function Progress({ lab }: { lab: LabDetail }) {
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
         <h2 className="text-sm font-semibold text-text">Progress</h2>
-        <a href="#/review" className="text-xs font-medium text-accent hover:underline">Open review timeline</a>
+        <a href={`#/review/l/${lab.id}`} className="text-xs font-medium text-accent hover:underline">Open review timeline</a>
       </div>
       {students.length === 0 || lab.questions.length === 0 ? (
         <p className="px-5 pb-5 text-xs text-muted">Once students start, you'll see who has started and finished each question.</p>

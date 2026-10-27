@@ -47,6 +47,12 @@ export interface LabRow {
   n_roster: number;
   n_sessions: number;
   n_started: number;
+  /** the teacher who made it; null = from before ownership, admins only until handed over */
+  owner_email: string | null;
+  /** colleagues it is shared with: same rights as the owner except resharing */
+  co_teachers: string[];
+  /** how the signed-in teacher reaches it */
+  access: "owner" | "co_teacher" | "admin";
 }
 
 export interface Question {
