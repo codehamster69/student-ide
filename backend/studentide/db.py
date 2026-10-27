@@ -116,12 +116,23 @@ CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
 
 # Columns added after phase 1. Older database files get them on open.
 MIGRATIONS = {
+    "students": (("consent_version", "INTEGER"),),
     "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT"), ("keys_purged_at", "REAL")),
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
              ("kind", "TEXT NOT NULL DEFAULT 'lab'")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
                   ("source_json", "TEXT")),
 }
+# Bumped whenever the consent screen promises something new, so every student
+# reads and agrees again. 2: teachers can watch a lab live (live.py).
+CONSENT_VERSION = 2
+
+
+def has_consent(row) -> bool:
+    """Agreed to the current consent text (a NULL version is the original text, 1)."""
+    return row["consented_at"] is not None and (row["consent_version"] or 1) >= CONSENT_VERSION
+
+
 QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json")
 
 
@@ -163,9 +174,12 @@ class Database:
 
     def record_consent(self, student_id: str) -> None:
         with self.connect() as conn:
+            # Agreeing to a newer text restarts the clock: consented_at is when they agreed to what applies now.
             conn.execute(
-                "UPDATE students SET consented_at = COALESCE(consented_at, ?) WHERE id = ?",
-                (time.time(), student_id),
+                """UPDATE students SET consented_at = CASE WHEN COALESCE(consent_version, 1) >= ? AND consented_at IS NOT NULL
+                                                           THEN consented_at ELSE ? END,
+                                       consent_version = ? WHERE id = ?""",
+                (CONSENT_VERSION, time.time(), CONSENT_VERSION, student_id),
             )
 
     # sessions ---------------------------------------------------------------

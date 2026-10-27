@@ -44,7 +44,7 @@ from pydantic import BaseModel, Field
 
 from . import grading, runner
 from .auth import roster_id
-from .db import Database
+from .db import Database, has_consent
 from .providers import PROVIDERS, ProviderError
 
 Language = Literal["python", "c", "cpp", "java", "javascript"]
@@ -353,6 +353,6 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
 
     @r.get("/students")
     def students() -> list[dict]:
-        return [{"student_id": s["id"], "consented": s["consented_at"] is not None} for s in db.list_students()]
+        return [{"student_id": s["id"], "consented": has_consent(s)} for s in db.list_students()]
 
     return r

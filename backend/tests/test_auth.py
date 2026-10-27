@@ -54,7 +54,8 @@ def test_address_pattern():
 
 def test_only_college_accounts(app):
     c = TestClient(app)
-    assert c.get("/api/auth/config").json() == {"mode": "google", "client_id": "test-client", "domain": DOMAIN}
+    assert c.get("/api/auth/config").json() == {"mode": "google", "client_id": "test-client", "domain": DOMAIN,
+                                               "live": "editor", "consent_version": 2}
     assert c.post("/api/auth/google", json={"credential": "someone@gmail.com"}).status_code == 403
     # an address on the domain but from another Workspace (hd) is refused too
     assert c.post("/api/auth/google", json={"credential": f"pg25cs07@{DOMAIN}|evil.com"}).status_code == 403

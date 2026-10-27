@@ -28,6 +28,10 @@ X-Admin-Token = $STUDENTIDE_ADMIN_TOKEN, disabled when that variable is unset):
     GET  /api/sessions/{id}/runs
     GET  /api/sessions/{id}/checks
 
+Live classroom view (same access, see live.py; $STUDENTIDE_LIVE = editor | class | off):
+    GET  /api/live/labs, /api/live/labs/{lab_id}, /api/live/sessions/{id}
+    GET  /api/sessions/{id}/viewers                student: who is watching now
+
 Review timeline (phase 3, same access):
     GET  /api/review/config
     GET  /api/review/students
@@ -58,9 +62,9 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import compete, grading, retention, runner, teach
+from . import compete, grading, live as live_mod, retention, runner, teach
 from .auth import Auth, Config
-from .db import Database
+from .db import CONSENT_VERSION, Database, has_consent
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .schema import SCHEMA_VERSION, Event
 
@@ -106,7 +110,7 @@ def _student_id(raw: str) -> str:
 
 
 def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True,
-               auth_config: Config | None = None, verify_google=None) -> FastAPI:
+               auth_config: Config | None = None, verify_google=None, live_mode: str | None = None) -> FastAPI:
     """`auth_config` / `verify_google` replace the environment and Google's token check in tests."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
     cfg = auth_config or Config.from_env(admin_token)
@@ -119,6 +123,9 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     if cfg.admin_token or cfg.google:
         threading.Thread(target=reviewer.warm, daemon=True).start()
     retention.ensure_schema(db)
+    live_mod.ensure_schema(db)
+    live = live_mod.Live(db, live_mode or live_mod.mode_from_env())
+    app.state.live = live
     retention.start_background(db, reviewer.settings)
 
     require_admin = auth.require_teacher  # every teacher / research endpoint
@@ -141,11 +148,12 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def me_json(user: dict) -> dict:
         st = db.get_or_create_student(user["student_id"])
         return {k: user[k] for k in ("email", "name", "role", "student_id", "program", "year", "branch", "roll")} | {
-            "consented": st["consented_at"] is not None}
+            "consented": has_consent(st)}
 
     @app.get("/api/auth/config")
     def auth_config_json() -> dict:
-        return {"mode": "google" if cfg.google else "dev", "client_id": cfg.client_id, "domain": cfg.domain}
+        return {"mode": "google" if cfg.google else "dev", "client_id": cfg.client_id, "domain": cfg.domain,
+                "live": live.mode, "consent_version": CONSENT_VERSION}
 
     @app.post("/api/auth/google")
     def google_sign_in(body: GoogleIn, response: Response) -> dict:
@@ -190,7 +198,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         if cfg.google:
             raise HTTPException(410, "sign in with your college Google account")
         row = db.get_or_create_student(_student_id(body.student_id))
-        return {"student_id": row["id"], "consented": row["consented_at"] is not None}
+        return {"student_id": row["id"], "consented": has_consent(row)}
 
     @app.post("/api/consent")
     def consent(body: LoginIn, request: Request) -> dict:
@@ -217,7 +225,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             task_id = body.task_id
         else:
             raise HTTPException(400, "unknown task")
-        if db.get_or_create_student(sid)["consented_at"] is None:
+        if not has_consent(db.get_or_create_student(sid)):
             raise HTTPException(403, "consent required before recording")
         if question:
             compete.can_start_session(db, question["lab_id"], sid)
@@ -260,6 +268,13 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             if ev["type"] == "session_end":
                 db.end_session(session_id, ev["data"].get("reason") or "end")
         return {"accepted": len(good), "inserted": inserted, "rejected": rejected, "max_seq": db.max_seq(session_id)}
+
+    @app.get("/api/sessions/{session_id}/viewers")
+    def viewers(session_id: str, request: Request) -> dict:
+        """Polled by the student's IDE: who is watching live (shown as a banner). Also its presence heartbeat."""
+        row = live_session(session_id, request)
+        live.seen(session_id)
+        return live.viewers(row) | {"live": live.mode}
 
     def snapshot(row) -> dict:
         """The question as the student saw it when the session started (empty for practice tasks)."""
@@ -356,6 +371,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
 
     app.include_router(teach.router(db, require_admin, cfg))
     app.include_router(compete.router(db, require_admin, auth))
+    app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))
 
     if serve_frontend and FRONTEND_DIST.is_dir():
         app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
