@@ -29,8 +29,13 @@ Open `/#/teach` and sign in with a teacher account (college Google sign-in, see
 5. **Progress** shows, per student and question, who has started and who has
    finished (pressed Finish).
 
-Students see their open labs above the practice tasks after consent. Picking
-a question opens the editor with its starter code and sample input.
+Students see their open labs above the practice tasks after consent. A lab
+opens as **one sitting**: "Start lab" / "Continue lab" (or any question row)
+opens the editor with every question of the lab as a tab, plus a question list
+and Previous / Next in the side panel. Each question keeps its own code, undo
+history, input, output and test results while the student moves between them.
+"Finish lab" hands in the sitting. Opening the lab again later starts a new
+sitting in which each question picks up the code where the student left it.
 
 ## How recordings link to it
 
@@ -43,6 +48,31 @@ to a lab and question through it; the event schema is unchanged (still v1).
 Editing a question later changes what new sessions see, never what an old
 recording was answering. Practice tasks from `tasks.json` still work and have
 all three columns NULL. Older database files gain the columns on open.
+
+### One sitting, one session per question
+
+A sitting is not one session. Each question the student opens in a sitting
+gets its own session (created on first visit), and all of them share a
+`sitting_id` on the session row. So one session is still one question: the
+detector's windows, the review timeline, the code replay, Check and the live
+view all work per question exactly as before, and nothing has to split a
+session by question afterwards. The `sitting_id` groups them back into the
+lab visit for analysis.
+
+- Switching questions logs `focus {target: "question", state: "out"}` on the
+  session being left and `"in"` on the one returned to (a new question starts
+  with its own `session_start` and `snapshot`). Window/page focus events go to
+  the question on screen. The detector does not count a question switch as
+  looking away, and a key gap that spans one is not a pause (the student was
+  working on another question, not stuck).
+- On "Finish lab" every session of the sitting ends; questions with code
+  (different from the starter code) end as `submit`, untouched ones as `left`.
+- In a later sitting, `POST /api/sessions` returns `resume_code`: the code of
+  the student's latest session on that question, rebuilt from its edits. The
+  new session's start snapshot holds it, so replay still starts from it.
+  Competitions keep one question per session from their board and do not
+  resume.
+- Older sessions have `sitting_id` NULL (one question per visit).
 
 Research API: `GET /api/sessions?lab_id=...`; the export includes the same
 fields. The review timeline titles lab sessions by their question.

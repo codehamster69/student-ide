@@ -7,9 +7,16 @@ import { Recorder, SCHEMA_VERSION } from "../recorder";
 export interface LiveSession {
   id: string;
   rec: Recorder;
+  /** a lab question opened again in a later sitting: the code as the student left it */
+  resumeCode?: string | null;
 }
 
-export async function startSession(studentId: string, task: Task): Promise<LiveSession> {
+/** One opening of a lab. Every question visited gets its own session, all sharing this id. */
+export function newSittingId(): string {
+  return crypto.randomUUID?.().replace(/-/g, "") ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function startSession(studentId: string, task: Task, sittingId?: string): Promise<LiveSession> {
   const meta = {
     user_agent: navigator.userAgent,
     language: navigator.language,
@@ -18,13 +25,13 @@ export async function startSession(studentId: string, task: Task): Promise<LiveS
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     client_schema_version: SCHEMA_VERSION,
   };
-  const { session_id } = await api<{ session_id: string }>("/api/sessions", {
+  const { session_id, resume_code } = await api<{ session_id: string; resume_code?: string | null }>("/api/sessions", {
     student_id: studentId, client_meta: meta,
     // lab questions are checked against the teacher's roster on the server
-    ...(task.lab_id ? { question_id: task.id } : { task_id: task.id }),
+    ...(task.lab_id ? { question_id: task.id, sitting_id: sittingId } : { task_id: task.id }),
   });
   const rec = new Recorder(session_id);
   (window as any).__studentide = { rec, sessionId: session_id }; // for end-to-end tests
   rec.log("session_start", { wall_clock_ms: Date.now() });
-  return { id: session_id, rec };
+  return { id: session_id, rec, resumeCode: resume_code };
 }

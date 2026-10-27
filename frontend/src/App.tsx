@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import type { Task } from "./api";
+import type { Lab, Task } from "./api";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig } from "./auth";
-import { startSession, type LiveSession } from "./editor/session";
+import { newSittingId, startSession, type LiveSession } from "./editor/session";
 import { page } from "./ui";
 import { Shell } from "./screens/Shell";
 import { Login } from "./screens/Login";
@@ -18,7 +18,8 @@ type Screen =
   | { name: "consent"; studentId: string }
   | { name: "tasks"; studentId: string }
   | { name: "arena"; studentId: string; labId: string }
-  | { name: "session"; studentId: string; task: Task; session: LiveSession; arena?: string }
+  // One practice task or competition question, or a whole lab sitting (tasks = its questions).
+  | { name: "session"; studentId: string; tasks: Task[]; start: number; session: LiveSession; sitting?: string; arena?: string }
   | { name: "saved"; studentId: string; summary: SessionSummary };
 
 export function App() {
@@ -67,7 +68,12 @@ export function App() {
             studentId={screen.studentId}
             onPick={async (task) => {
               const session = await startSession(screen.studentId, task);
-              setScreen({ name: "session", studentId: screen.studentId, task, session });
+              setScreen({ name: "session", studentId: screen.studentId, tasks: [task], start: 0, session });
+            }}
+            onOpenLab={async (lab: Lab, start: number) => {
+              const sitting = newSittingId();
+              const session = await startSession(screen.studentId, lab.questions[start], sitting);
+              setScreen({ name: "session", studentId: screen.studentId, tasks: lab.questions, start, session, sitting });
             }}
             onCompetition={(labId) => setScreen({ name: "arena", studentId: screen.studentId, labId })}
           />
@@ -83,7 +89,7 @@ export function App() {
             onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })}
             onPick={async (task) => {
               const session = await startSession(screen.studentId, task);
-              setScreen({ name: "session", studentId: screen.studentId, task, session, arena: screen.labId });
+              setScreen({ name: "session", studentId: screen.studentId, tasks: [task], start: 0, session, arena: screen.labId });
             }}
           />
         </Shell>
@@ -93,8 +99,10 @@ export function App() {
       content = (
         <Workspace
           studentId={screen.studentId}
-          task={screen.task}
+          tasks={screen.tasks}
+          start={screen.start}
           session={screen.session}
+          openSession={screen.sitting ? (task) => startSession(screen.studentId, task, screen.sitting) : undefined}
           onFinished={(summary) => setScreen(screen.arena
             ? { name: "arena", studentId: screen.studentId, labId: screen.arena }
             : { name: "saved", studentId: screen.studentId, summary })}

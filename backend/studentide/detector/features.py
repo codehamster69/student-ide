@@ -96,6 +96,9 @@ class Streams:
     e_paste: np.ndarray
     run_t: np.ndarray
     focus_out_t: np.ndarray
+    # times the student came back to this question from another one in the same
+    # lab sitting; a key gap across one is time spent elsewhere, not a pause
+    switch_t: np.ndarray = field(default_factory=lambda: np.zeros(0))
     # build order, at line level
     l_t: np.ndarray = field(default_factory=lambda: np.zeros(0))  # a code line was completed
     l_fill: np.ndarray = field(default_factory=lambda: np.zeros(0, bool))  # ... above existing code
@@ -173,7 +176,7 @@ def streams(events: list[dict]) -> Streams:
     k_t, k_code, k_cls, k_shift, k_hold, k_comment, k_hand = [], [], [], [], [], [], []
     open_down: dict[str, int] = {}
     e_t, e_app, e_line, e_ins, e_paste = [], [], [], [], []
-    run_t, focus_t = [], []
+    run_t, focus_t, switch_t = [], [], []
     l_t, l_fill, b_t, b_open = [], [], [], []
     end = 0.0
     for ev in events:
@@ -240,6 +243,8 @@ def streams(events: list[dict]) -> Streams:
         elif typ == "focus":
             if d["state"] == "out" and d["target"] in ("window", "page"):
                 focus_t.append(t)
+            elif d["state"] == "in" and d["target"] == "question":
+                switch_t.append(t)
     a = np.asarray
     return Streams(
         duration_ms=end,
@@ -247,7 +252,7 @@ def streams(events: list[dict]) -> Streams:
         k_hold=a(k_hold, float), k_comment=a(k_comment, bool), k_hand=k_hand,
         e_t=a(e_t, float), e_append=a(e_app, bool), e_line=a(e_line, float),
         e_inserted=a(e_ins, float), e_paste=a(e_paste, bool),
-        run_t=a(run_t, float), focus_out_t=a(focus_t, float),
+        run_t=a(run_t, float), focus_out_t=a(focus_t, float), switch_t=a(switch_t, float),
         l_t=a(l_t, float), l_fill=a(l_fill, bool), b_t=a(b_t, float), b_open=a(b_open, float),
     )
 
@@ -268,6 +273,13 @@ def _logmed(x: np.ndarray, min_n: int = MIN_PAIRS) -> float:
     return float(np.log(np.median(x))) if len(x) >= min_n else math.nan
 
 
+def _across_switch(s: Streams, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """For key pairs (a[i], b[i]): did the student come back from another question in between?"""
+    if not len(s.switch_t):
+        return np.zeros(len(a), bool)
+    return np.searchsorted(s.switch_t, b, side="right") > np.searchsorted(s.switch_t, a, side="right")
+
+
 def _window(s: Streams, lo: float, hi: float, comments: str) -> dict:
     W_min = (hi - lo) / 60000
     ki = np.flatnonzero((s.k_t >= lo) & (s.k_t < hi))
@@ -282,13 +294,15 @@ def _window(s: Streams, lo: float, hi: float, comments: str) -> dict:
     # digraphs: consecutive code keys, neither a deletion, gap below the pause threshold
     typing = code_i[~is_del]
     lat_all = np.diff(s.k_t[code_i]) if len(code_i) > 1 else np.zeros(0)
+    if len(lat_all):
+        lat_all = lat_all[~_across_switch(s, s.k_t[code_i[:-1]], s.k_t[code_i[1:]])]
     pairs_a, pairs_b = typing[:-1], typing[1:]
     # keep only pairs that were adjacent in the full key stream (no deletion between)
     pos = {k: j for j, k in enumerate(ki)}
     adj = np.array([pos[b] - pos[a] == 1 for a, b in zip(pairs_a, pairs_b)], bool) if len(typing) > 1 else np.zeros(0, bool)
     pa, pb = pairs_a[adj], pairs_b[adj]
     lat = s.k_t[pb] - s.k_t[pa]
-    flow = lat < PAUSE_MS
+    flow = (lat < PAUSE_MS) & ~_across_switch(s, s.k_t[pa], s.k_t[pb])
     pa, pb, lat = pa[flow], pb[flow], lat[flow]
     f["dg_median"] = _logmed(lat)
     f["dg_lscale"] = lscale(np.log(lat)) if len(lat) >= MIN_PAIRS else math.nan

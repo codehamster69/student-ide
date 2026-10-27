@@ -66,6 +66,7 @@ from . import compete, grading, live as live_mod, retention, runner, teach
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
+from .replay import ReplayError, final_text
 from .schema import SCHEMA_VERSION, Event
 
 STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
@@ -90,6 +91,7 @@ class SessionIn(BaseModel):
     student_id: str
     task_id: str | None = None      # a built-in practice task, or
     question_id: str | None = None  # a question from a lab the teacher assigned
+    sitting_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{8,64}$")  # one opening of that lab
     client_meta: dict = Field(default_factory=dict)
 
 
@@ -107,6 +109,22 @@ def _student_id(raw: str) -> str:
     if not STUDENT_ID.match(sid):
         raise HTTPException(400, "student id must be 1-32 letters, digits, '-' or '_'")
     return sid
+
+
+def latest_code(db: Database, student_id: str, question_id: str) -> str | None:
+    """The code of this student's most recent session on the question, rebuilt
+    from its edits (or its last snapshot if events were lost); None if none."""
+    for row in db.previous_sessions(student_id, question_id):
+        events = list(db.iter_events(row["id"], ("snapshot", "edit")))
+        if not events:
+            continue
+        try:
+            return final_text(events)
+        except ReplayError:
+            snaps = [e["data"]["text"] for e in events if e["type"] == "snapshot"]
+            if snaps:
+                return snaps[-1]
+    return None
 
 
 def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True,
@@ -229,10 +247,14 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             raise HTTPException(403, "consent required before recording")
         if question:
             compete.can_start_session(db, question["lab_id"], sid)
+        # Coming back to a question in a later sitting picks up the code where the student left it.
+        resume = latest_code(db, sid, question["id"]) if question and lab["kind"] != "competition" else None
         session_id = uuid.uuid4().hex
-        db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question)
+        db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question,
+                          body.sitting_id if question else None)
         return {"session_id": session_id, "schema_version": SCHEMA_VERSION,
-                "lab_id": question and question["lab_id"], "question_id": question and question["id"]}
+                "lab_id": question and question["lab_id"], "question_id": question and question["id"],
+                "sitting_id": question and body.sitting_id, "resume_code": resume}
 
     @app.get("/api/students/{student_id}/labs")
     def my_labs(student_id: str, request: Request) -> list[dict]:

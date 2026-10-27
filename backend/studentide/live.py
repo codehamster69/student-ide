@@ -264,7 +264,7 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
         rows = []
         for st in students:
             ss = by_student.get(st, [])
-            cur = max(ss, key=lambda s: s["started_at"]) if ss else None
+            cur = _current(ss, live, now)
             row = {"student_id": st, "state": "not_started", "session_id": None, "question_id": None,
                    "question_title": None, "position": None, "started_at": None, "last_edit_at": None,
                    "activity": [0] * ACTIVITY_BINS, "tab_away": False, "pastes": 0,
@@ -341,6 +341,19 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
     return r
 
 
+def _current(ss: list, live: Live, now: float):
+    """The session the student is on now. In a lab sitting every question
+    visited has its own open session, and only the one on screen polls
+    /viewers, so prefer an open session that is polling, then the newest."""
+    if not ss:
+        return None
+    open_ = [s for s in ss if s["ended_at"] is None and live.online(s["id"], now)]
+    if open_:
+        with live._lock:
+            return max(open_, key=lambda s: live._presence.get(s["id"], 0))
+    return max(ss, key=lambda s: s["started_at"])
+
+
 def _state(s, es: dict, online: bool, now: float) -> str:
     if s["ended_at"] is not None:
         return "submitted" if s["end_reason"] == "submit" else "left"
@@ -383,7 +396,7 @@ def _event_stats(db: Database, ids: list[str], now: float) -> dict[str, dict]:
         for r in conn.execute(f"""SELECT e.session_id, e.data FROM events e
                                   JOIN (SELECT session_id, MAX(seq) AS seq FROM events
                                         WHERE session_id IN ({_marks(len(ids))}) AND type = 'focus'
-                                          AND json_extract(data, '$.target') != 'editor'
+                                          AND json_extract(data, '$.target') IN ('window', 'page')
                                         GROUP BY session_id) m ON m.session_id = e.session_id AND m.seq = e.seq""", ids):
             out[r["session_id"]]["away"] = json.loads(r["data"]).get("state") == "out"
     return out

@@ -7,15 +7,16 @@ import { cpp } from "@codemirror/lang-cpp";
 import { java } from "@codemirror/lang-java";
 import { javascript } from "@codemirror/lang-javascript";
 import { EditorView, keymap } from "@codemirror/view";
-import { Prec } from "@codemirror/state";
+import { EditorState, Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
 import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
 import { LANGUAGES } from "../teach/api";
 import { captureExtension, captureWindow, SNAPSHOT_EVERY_MS } from "../capture";
 import type { LiveSession } from "../editor/session";
+import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
 import { Badge, Button, Dialog, Kbd, LiveDot, LogoMark, Spinner, TextArea, cn, duration, ease } from "../ui";
 import type { SubmitResult } from "../compete/api";
@@ -24,6 +25,8 @@ import { SubmitDialog } from "../compete/SubmitDialog";
 export interface SessionSummary {
   runs: number;
   minutes: number;
+  /** a lab sitting: how many of its questions the student wrote code for */
+  questions?: { worked: number; total: number };
 }
 
 interface Outcome {
@@ -34,6 +37,15 @@ interface Outcome {
   errorType: string | null;
 }
 
+/** One question of the sitting once opened: its own session, recorder and editor state. */
+interface Slot {
+  session: LiveSession;
+  state: EditorState;
+  initial: string;
+  lastSnapshot: string;
+  stdin: string;
+}
+
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 
 const SYNTAX = { python, c: cpp, cpp, java, javascript: () => javascript() };
@@ -42,55 +54,107 @@ const SYNTAX = { python, c: cpp, cpp, java, javascript: () => javascript() };
  * The editor screen. CodeMirror lives outside React state: it is created once
  * in an effect and never re-rendered, so typing triggers no React work at all.
  * Recording (captureExtension) is attached exactly as before the redesign.
+ *
+ * A lab opens as one sitting: `tasks` holds all its questions and the student
+ * moves between them here. Each question visited is still its own recorded
+ * session (created on first visit by `openSession`), so everything downstream
+ * (detector, review, live view) keeps one session = one question. Switching
+ * swaps the editor state, so each question keeps its code, undo history and
+ * caret, and logs focus {target: "question"} out/in on the sessions involved.
  */
-export function Workspace({ studentId, task, session, onFinished }: {
+export function Workspace({ studentId, tasks, start = 0, session, openSession, onFinished }: {
   studentId: string;
-  task: Task;
+  tasks: Task[];
+  start?: number;
+  /** the session for tasks[start] */
   session: LiveSession;
+  /** starts the session for another question of the sitting */
+  openSession?: (task: Task) => Promise<LiveSession>;
   onFinished: (summary: SessionSummary) => void;
 }) {
-  const { rec, id: sessionId } = session;
   const host = useRef<HTMLDivElement>(null);
   const stdin = useRef<HTMLTextAreaElement>(null);
   const view = useRef<EditorView>();
+  const slots = useRef(new Map<number, Slot>());
+  const activeRef = useRef(start);
   const finishRef = useRef<(reason: string) => void>(() => {});
   const onHideRef = useRef<() => void>(() => {});
-  const lastSnapshot = useRef(task.starter_code);
   const runsRef = useRef(0);
+  const t0 = useRef(performance.now());
+  const linkState = useRef(new Map<string, { pending: number; ok: boolean }>());
 
+  const [active, setActive] = useState(start);
+  const [visited, setVisited] = useState<Set<number>>(() => new Set([start]));
+  const [opening, setOpening] = useState<number | null>(null);
+  const [switchError, setSwitchError] = useState("");
   const [running, setRunning] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [outcomes, setOutcomes] = useState<Record<number, Outcome>>({});
   const [runs, setRuns] = useState(0);
   const [link, setLink] = useState({ pending: 0, ok: true });
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [taskOpen, setTaskOpen] = useState(true);
-  const competing = !!task.competition;
   const [submitting, setSubmitting] = useState(false);
   const [verdict, setVerdict] = useState<SubmitResult | { error: string } | null>(null);
   const [checking, setChecking] = useState(false);
-  const [grade, setGrade] = useState<CheckResult | null>(null);
+  const [grades, setGrades] = useState<Record<number, CheckResult>>({});
   const [pane, setPane] = useState<"output" | "tests">("output");
+
+  const task = tasks[active];
+  const sitting = tasks.length > 1;
+  const sessionId = (slots.current.get(active)?.session ?? session).id;
+  const outcome = outcomes[active] ?? null;
+  const grade = grades[active] ?? null;
+  const competing = !!task.competition;
   const watching = useViewers(sessionId);
   const language = task.language ?? "python";
   const lang = LANGUAGES[language];
   // Competitions submit for a score instead; a lab's Check is only for the student.
   const canCheck = (task.n_tests ?? 0) > 0 && !("competition" in task && task.competition);
 
+  /** The question on screen. */
+  const cur = () => slots.current.get(activeRef.current)!;
+
+  const makeSlot = useCallback((s: LiveSession, t: Task): Slot => {
+    const doc = s.resumeCode ?? t.starter_code;
+    const state = EditorState.create({
+      doc,
+      extensions: [
+        basicSetup,
+        SYNTAX[t.language ?? "python"](),
+        indentUnit.of("    "),
+        keymap.of([indentWithTab]),
+        editorTheme,
+        captureExtension(s.rec),
+        Prec.highest(keymap.of([{ key: "Mod-Enter", run: () => (void runRef.current(), true) }])),
+      ],
+    });
+    s.rec.onStatus = (pending, ok) => {
+      linkState.current.set(s.id, { pending, ok });
+      const all = [...linkState.current.values()];
+      setLink({ pending: all.reduce((n, x) => n + x.pending, 0), ok: all.every((x) => x.ok) });
+    };
+    s.rec.log("snapshot", { reason: "start", text: doc });
+    return { session: s, state, initial: t.starter_code, lastSnapshot: doc, stdin: t.sample_input };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const checkCode = useCallback(async () => {
     const v = view.current;
     if (!v) return;
+    const at = activeRef.current;
     setChecking(true);
     setPane("tests");
     try {
-      setGrade(await api<CheckResult>(`/api/sessions/${sessionId}/check`, { code: v.state.doc.toString() }));
+      const g = await api<CheckResult>(`/api/sessions/${cur().session.id}/check`, { code: v.state.doc.toString() });
+      setGrades((m) => ({ ...m, [at]: g }));
     } catch (err) {
-      setGrade({ check_id: "", passed: 0, total: 0, results: [{ name: `Could not check: ${(err as Error).message}`, passed: false,
-        hidden: false, error_type: "network", duration_ms: 0 }] });
+      setGrades((m) => ({ ...m, [at]: { check_id: "", passed: 0, total: 0, results: [{ name: `Could not check: ${(err as Error).message}`,
+        passed: false, hidden: false, error_type: "network", duration_ms: 0 }] } }));
     } finally {
       setChecking(false);
     }
-  }, [sessionId]);
+  }, []);
 
   const runningRef = useRef(false);
   const runCode = useCallback(async () => {
@@ -100,31 +164,36 @@ export function Workspace({ studentId, task, session, onFinished }: {
     // Commit "Running…" synchronously so the output never shows a stale result.
     flushSync(() => setRunning(true));
     setPane("output");
+    const at = activeRef.current;
+    const slot = cur();
+    const { rec, id } = slot.session;
     const code = v.state.doc.toString();
     rec.log("snapshot", { reason: "run", text: code });
-    lastSnapshot.current = code;
+    slot.lastSnapshot = code;
+    let out: Outcome;
     try {
-      const r = await api<RunResult>(`/api/sessions/${sessionId}/run`, { code, stdin: stdin.current?.value ?? "" });
+      const r = await api<RunResult>(`/api/sessions/${id}/run`, { code, stdin: stdin.current?.value ?? "" });
       rec.log("run", {
         run_id: r.run_id, code_sha256: r.code_sha256, exit_code: r.exit_code,
         duration_ms: r.duration_ms, error_type: r.error_type,
       });
-      setOutcome({
+      out = {
         text: r.stdout + (r.stderr ? (r.stdout ? "\n" : "") + r.stderr : "") || "(no output)",
         failed: r.error_type !== null,
         exitCode: r.exit_code,
         durationMs: r.duration_ms,
         errorType: r.error_type,
-      });
+      };
     } catch (err) {
-      setOutcome({ text: `Could not run: ${(err as Error).message}`, failed: true, exitCode: null, durationMs: null, errorType: "network" });
+      out = { text: `Could not run: ${(err as Error).message}`, failed: true, exitCode: null, durationMs: null, errorType: "network" };
     } finally {
       runsRef.current += 1;
       setRuns(runsRef.current);
       runningRef.current = false;
       setRunning(false);
     }
-  }, [rec, sessionId]);
+    setOutcomes((m) => ({ ...m, [at]: out }));
+  }, []);
 
   const runRef = useRef(runCode);
   runRef.current = runCode;
@@ -134,52 +203,91 @@ export function Workspace({ studentId, task, session, onFinished }: {
     const v = view.current;
     if (!v || runningRef.current) return;
     setSubmitting(true);
+    const slot = cur();
     const code = v.state.doc.toString();
-    rec.log("snapshot", { reason: "run", text: code });
-    lastSnapshot.current = code;
+    slot.session.rec.log("snapshot", { reason: "run", text: code });
+    slot.lastSnapshot = code;
     try {
-      setVerdict(await api<SubmitResult>(`/api/sessions/${sessionId}/submit`, { code }));
+      setVerdict(await api<SubmitResult>(`/api/sessions/${slot.session.id}/submit`, { code }));
     } catch (err) {
       setVerdict({ error: (err as Error).message });
     } finally {
       setSubmitting(false);
     }
-  }, [rec, sessionId]);
+  }, []);
+
+  /** Move to another question of the sitting, opening its session on first visit. */
+  const switchTo = async (to: number) => {
+    const v = view.current;
+    if (!v || to === activeRef.current || opening !== null || saving || runningRef.current) return;
+    setSwitchError("");
+    const from = cur();
+    from.state = v.state;
+    from.stdin = stdin.current?.value ?? "";
+    const text = v.state.doc.toString();
+    if (text !== from.lastSnapshot) {
+      from.session.rec.log("snapshot", { reason: "periodic", text });
+      from.lastSnapshot = text;
+    }
+    from.session.rec.log("focus", { target: "question", state: "out" });
+    let next = slots.current.get(to);
+    if (next) {
+      next.session.rec.log("focus", { target: "question", state: "in" });
+    } else {
+      setOpening(to);
+      try {
+        next = makeSlot(await openSession!(tasks[to]), tasks[to]);
+        slots.current.set(to, next);
+      } catch (err) {
+        from.session.rec.log("focus", { target: "question", state: "in" });
+        setSwitchError((err as Error).message);
+        return;
+      } finally {
+        setOpening(null);
+      }
+    }
+    activeRef.current = to;
+    v.setState(next.state);
+    if (stdin.current) stdin.current.value = next.stdin;
+    (window as any).__studentide = { rec: next.session.rec, sessionId: next.session.id }; // for end-to-end tests
+    setActive(to);
+    setVisited((s) => new Set(s).add(to));
+    setPane("output");
+    v.focus();
+  };
 
   useEffect(() => {
-    rec.onStatus = (pending, ok) => setLink({ pending, ok });
-
-    const v = new EditorView({
-      doc: task.starter_code,
-      parent: host.current!,
-      extensions: [
-        basicSetup,
-        SYNTAX[language](),
-        indentUnit.of("    "),
-        keymap.of([indentWithTab]),
-        editorTheme,
-        captureExtension(rec),
-        Prec.highest(keymap.of([{ key: "Mod-Enter", run: () => (void runRef.current(), true) }])),
-      ],
-    });
+    const first = makeSlot(session, tasks[start]);
+    slots.current.set(start, first);
+    const v = new EditorView({ state: first.state, parent: host.current! });
     view.current = v;
-    rec.log("snapshot", { reason: "start", text: v.state.doc.toString() });
     const snapTimer = window.setInterval(() => {
+      const slot = cur();
       const text = v.state.doc.toString();
-      if (text !== lastSnapshot.current) {
-        rec.log("snapshot", { reason: "periodic", text });
-        lastSnapshot.current = text;
+      if (text !== slot.lastSnapshot) {
+        slot.session.rec.log("snapshot", { reason: "periodic", text });
+        slot.lastSnapshot = text;
       }
     }, SNAPSHOT_EVERY_MS);
-    const stopWindow = captureWindow(rec);
+    // Window focus and tab visibility belong to whichever question is on screen.
+    const stopWindow = captureWindow({ log: (...a: Parameters<Recorder["log"]>) => cur().session.rec.log(...a) } as Recorder);
 
     finishRef.current = (reason: string) => {
       window.clearInterval(snapTimer);
       stopWindow();
-      rec.log("snapshot", { reason: "end", text: v.state.doc.toString() });
-      rec.log("session_end", { wall_clock_ms: Date.now(), reason });
+      cur().state = v.state;
+      for (const slot of slots.current.values()) {
+        const text = slot.state.doc.toString();
+        slot.session.rec.log("snapshot", { reason: "end", text });
+        // In a sitting, a question the student never wrote anything for is left, not handed in.
+        const end = reason === "submit" && sitting && text === slot.initial ? "left" : reason;
+        slot.session.rec.log("session_end", { wall_clock_ms: Date.now(), reason: end });
+      }
     };
-    const onHide = () => { finishRef.current("pagehide"); rec.beacon(); };
+    const onHide = () => {
+      finishRef.current("pagehide");
+      for (const slot of slots.current.values()) slot.session.rec.beacon();
+    };
     onHideRef.current = onHide;
     window.addEventListener("pagehide", onHide, { once: true });
     v.focus();
@@ -188,11 +296,11 @@ export function Workspace({ studentId, task, session, onFinished }: {
       window.clearInterval(snapTimer);
       stopWindow();
       window.removeEventListener("pagehide", onHide);
-      rec.onStatus = () => {};
+      for (const slot of slots.current.values()) slot.session.rec.onStatus = () => {};
       v.destroy();
       view.current = undefined;
     };
-    // The session and task are fixed for the lifetime of this screen.
+    // The sitting is fixed for the lifetime of this screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -201,12 +309,20 @@ export function Workspace({ studentId, task, session, onFinished }: {
     view.current?.focus();
   }, []);
 
+  /** Questions with code written in this sitting or an earlier one (for the finish dialog). */
+  const worked = () => {
+    if (view.current) cur().state = view.current.state;
+    return [...slots.current.values()].filter((s) => s.state.doc.toString() !== s.initial).length;
+  };
+
   const finish = async () => {
     setSaving(true);
     window.removeEventListener("pagehide", onHideRef.current);
+    const n = worked();
     finishRef.current("submit");
-    await rec.close();
-    onFinished({ runs: runsRef.current, minutes: (performance.now() - rec.t0) / 60_000 });
+    await Promise.all([...slots.current.values()].map((s) => s.session.rec.close()));
+    onFinished({ runs: runsRef.current, minutes: (performance.now() - t0.current) / 60_000,
+      questions: sitting ? { worked: n, total: tasks.length } : undefined });
   };
 
   return (
@@ -266,7 +382,7 @@ export function Workspace({ studentId, task, session, onFinished }: {
           )}
           <Button size="sm" onClick={() => setConfirming(true)} disabled={saving}>
             {competing ? <Trophy className="size-3.5" /> : <Flag className="size-3.5" />}
-            {competing ? "Back to board" : "Finish"}
+            {competing ? "Back to board" : sitting ? "Finish lab" : "Finish"}
           </Button>
         </div>
       </header>
@@ -283,8 +399,26 @@ export function Workspace({ studentId, task, session, onFinished }: {
               className="shrink-0 overflow-hidden border-r border-border bg-surface"
             >
               <div className="h-full w-[320px] overflow-y-auto p-5">
+                {sitting && (
+                  <nav aria-label="Questions in this lab" className="-mx-2 mb-5 grid gap-0.5 border-b border-border pb-4">
+                    {tasks.map((q, i) => (
+                      <button key={q.id} onClick={() => void switchTo(i)} disabled={opening !== null || saving}
+                        aria-current={i === active ? "true" : undefined}
+                        className={cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-wait",
+                          i === active ? "bg-accent-soft text-text" : "text-muted hover:bg-surface-2 hover:text-text")}>
+                        <span className={cn("grid size-6 shrink-0 place-items-center rounded-md font-mono text-[11px] font-semibold",
+                          i === active ? "bg-accent text-accent-fg" : q.submitted ? "bg-success-soft text-success" : "bg-surface-2 text-muted")}>
+                          {opening === i ? <Spinner className="size-3" /> : q.submitted && i !== active ? <CheckCircle2 className="size-3.5" /> : i + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-medium">{q.title}</span>
+                        {visited.has(i) && i !== active && <span className="size-1.5 shrink-0 rounded-full bg-accent/60" title="Opened in this sitting" />}
+                      </button>
+                    ))}
+                    {switchError && <p className="mt-1 rounded-md bg-danger-soft px-2 py-1 text-xs text-danger">{switchError}</p>}
+                  </nav>
+                )}
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
-                  {task.lab_id ? `Question ${(task.position ?? 0) + 1}` : "Task"}
+                  {task.lab_id ? `Question ${active + 1}${sitting ? ` of ${tasks.length}` : ""}` : "Task"}
                 </p>
                 <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text">{task.title}</h2>
                 <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{task.prompt}</p>
@@ -320,6 +454,16 @@ export function Workspace({ studentId, task, session, onFinished }: {
                     <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-text">{task.sample_input}</pre>
                   </div>
                 )}
+                {sitting && (
+                  <div className="mt-6 flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={() => void switchTo(active - 1)} disabled={active === 0 || opening !== null}>
+                      <ChevronLeft className="size-3.5" />Previous
+                    </Button>
+                    <Button size="sm" className="flex-1" onClick={() => void switchTo(active + 1)} disabled={active === tasks.length - 1 || opening !== null}>
+                      Next<ChevronRight className="size-3.5" />
+                    </Button>
+                  </div>
+                )}
                 <div className="mt-6 border-t border-border pt-5">
                   <p className="mb-2.5 text-xs font-medium text-text">Shortcuts</p>
                   <dl className="grid gap-2 text-xs text-muted">
@@ -343,11 +487,22 @@ export function Workspace({ studentId, task, session, onFinished }: {
 
         {/* Editor + console */}
         <div className="grid min-w-0 flex-1 grid-rows-[38px_minmax(0,1fr)_minmax(200px,34%)]">
-          <div className="flex items-end gap-1 border-b border-border bg-surface-2 px-2">
-            <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-border bg-surface px-3 font-mono text-xs text-text">
-              <span className="size-2 rounded-sm" style={{ background: lang.color }} />
-              {lang.file}
-            </div>
+          <div className="flex items-end gap-1 overflow-x-auto border-b border-border bg-surface-2 px-2" role={sitting ? "tablist" : undefined}>
+            {sitting ? tasks.map((q, i) => (
+              <button key={q.id} role="tab" aria-selected={i === active} onClick={() => void switchTo(i)}
+                disabled={opening !== null || saving} title={q.title}
+                className={cn("flex h-[31px] shrink-0 items-center gap-2 rounded-t-lg border border-b-0 px-3 font-mono text-xs transition-colors disabled:cursor-wait",
+                  i === active ? "border-border bg-surface text-text" : "border-transparent text-muted hover:text-text")}>
+                {opening === i ? <Spinner className="size-3" /> : <span className="size-2 rounded-sm" style={{ background: i === active ? lang.color : "var(--text-faint)" }} />}
+                q{i + 1}{lang.file.slice(lang.file.lastIndexOf("."))}
+                <span className="max-w-32 truncate font-sans text-faint">{q.title}</span>
+              </button>
+            )) : (
+              <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-border bg-surface px-3 font-mono text-xs text-text">
+                <span className="size-2 rounded-sm" style={{ background: lang.color }} />
+                {lang.file}
+              </div>
+            )}
           </div>
           <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />
 
@@ -432,16 +587,18 @@ export function Workspace({ studentId, task, session, onFinished }: {
         open={confirming}
         onClose={saving ? () => {} : closeDialog}
         icon={<Flag className="size-4" />}
-        title={competing ? "Leave this question?" : "Finish this session?"}
+        title={competing ? "Leave this question?" : sitting ? "Finish this lab?" : "Finish this session?"}
         description={competing
           ? "Your best submission keeps its points. You can open the question again from the board while the clock runs."
-          : "You will not be able to edit it afterwards. Your code and activity have been saved as you worked."}
+          : sitting
+            ? `You have written code for ${confirming ? worked() : 0} of ${tasks.length} questions. Everything is saved; while the lab is open you can come back and carry on where you left off.`
+            : "You will not be able to edit it afterwards. Your code and activity have been saved as you worked."}
         actions={
           <>
             <Button onClick={closeDialog} disabled={saving}>Keep working</Button>
             <Button variant="primary" onClick={() => void finish()} disabled={saving} data-autofocus>
               {saving && <Spinner className="size-3.5" />}
-              {competing ? "Back to board" : "Finish session"}
+              {competing ? "Back to board" : sitting ? "Finish lab" : "Finish session"}
             </Button>
           </>
         }

@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     lab_id         TEXT,                     -- teacher-made lab this session belongs to (NULL = practice task)
     question_id    TEXT,                     -- question within that lab; task_id holds the same id
     question_json  TEXT,                     -- JSON copy of the question as the student saw it
-    keys_purged_at REAL                      -- raw key events deleted at this time, see retention.py
+    keys_purged_at REAL,                     -- raw key events deleted at this time, see retention.py
+    sitting_id     TEXT                      -- one opening of a lab: its questions' sessions share it
 );
 CREATE INDEX IF NOT EXISTS sessions_by_student ON sessions(student_id, started_at);
 
@@ -117,7 +118,8 @@ CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
 # Columns added after phase 1. Older database files get them on open.
 MIGRATIONS = {
     "students": (("consent_version", "INTEGER"),),
-    "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT"), ("keys_purged_at", "REAL")),
+    "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT"), ("keys_purged_at", "REAL"),
+                 ("sitting_id", "TEXT")),
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
              ("kind", "TEXT NOT NULL DEFAULT 'lab'")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
@@ -185,16 +187,23 @@ class Database:
     # sessions ---------------------------------------------------------------
 
     def create_session(self, session_id: str, student_id: str, task_id: str, schema_version: int, client_meta: dict,
-                       question: dict | None = None) -> None:
-        """`question`: the lab question row (as a dict) when the session answers one."""
+                       question: dict | None = None, sitting_id: str | None = None) -> None:
+        """`question`: the lab question row (as a dict) when the session answers one.
+        `sitting_id`: shared by the sessions of one opening of a lab (one per question visited)."""
         q = question or {}
         with self.connect() as conn:
             conn.execute(
                 """INSERT INTO sessions(id, student_id, task_id, started_at, schema_version, client_meta,
-                                        lab_id, question_id, question_json) VALUES (?,?,?,?,?,?,?,?,?)""",
+                                        lab_id, question_id, question_json, sitting_id) VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (session_id, student_id, task_id, time.time(), schema_version, json.dumps(client_meta),
-                 q.get("lab_id"), q.get("id"), json.dumps(q) if q else None),
+                 q.get("lab_id"), q.get("id"), json.dumps(q) if q else None, sitting_id),
             )
+
+    def previous_sessions(self, student_id: str, question_id: str) -> list[sqlite3.Row]:
+        """This student's earlier sessions on a question, newest first."""
+        with self.connect() as conn:
+            return conn.execute("""SELECT * FROM sessions WHERE student_id = ? AND question_id = ?
+                                   ORDER BY started_at DESC""", (student_id, question_id)).fetchall()
 
     def get_session(self, session_id: str) -> sqlite3.Row | None:
         with self.connect() as conn:
