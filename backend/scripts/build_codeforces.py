@@ -9,9 +9,9 @@ checker validated against accepted human solutions.
 
     pip install pyarrow
     huggingface-cli download open-r1/codeforces --repo-type=dataset --include='data/*.parquet' --local-dir cf
-    python scripts/build_codeforces.py cf/data studentide/providers/data/codeforces.jsonl.gz [generated.jsonl]
+    python scripts/build_codeforces.py cf/data studentide/providers/data/codeforces.jsonl.gz [generated.jsonl ...]
 
-generated.jsonl (optional) tops up problems that have fewer than three small
+generated*.jsonl (optional) top up problems that have fewer than three small
 tests: one line per contest, {"contest": id, "tests": {problem_id: [[in, out], ...]}},
 already cut down from the dataset's generated_tests/*.parquet (110 GB in all,
 so only the contests needed are fetched and only small tests kept).
@@ -37,7 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_codecontests import clean  # noqa: E402  (same $$$ LaTeX clean-up)
 
 MAX_HIDDEN = 10
-MAX_TEST_BYTES = 4000  # input + output of one test
+MAX_TEST_BYTES = 4000  # input + output of one example or official test
+MAX_GENERATED_BYTES = 20_000  # hidden generated tests may be larger: nobody reads them
 MAX_STATEMENT = 14_000
 COLUMNS = ["id", "contest_id", "index", "title", "description", "input_format", "output_format", "note", "examples",
            "rating", "tags", "official_tests", "input_mode", "generated_checker", "executable", "interaction_format",
@@ -60,8 +61,10 @@ def entry(p: dict, generated: list[list[str]]) -> dict:
     examples = [(t["input"], t["output"]) for t in p["examples"] or [] if small(t["input"], t["output"])]
     seen = {i for i, _ in examples}
     tests = [{"stdin": i, "expected": o, "hidden": False} for i, o in examples]
-    for i, o in [(t["input"], t["output"]) for t in p["official_tests"] or []] + [tuple(x) for x in generated]:
-        if small(i, o) and i not in seen and sum(t["hidden"] for t in tests) < MAX_HIDDEN:
+    official = [(t["input"], t["output"]) for t in p["official_tests"] or [] if small(t["input"], t["output"])]
+    extra = sorted((tuple(x) for x in generated if len(x[0]) + len(x[1]) <= MAX_GENERATED_BYTES), key=lambda t: len(t[0]) + len(t[1]))
+    for i, o in official + extra:
+        if i not in seen and sum(t["hidden"] for t in tests) < MAX_HIDDEN:
             seen.add(i)
             tests.append({"stdin": i, "expected": o, "hidden": True})
     contest, index = p["contest_id"], p["index"]
@@ -71,11 +74,12 @@ def entry(p: dict, generated: list[list[str]]) -> dict:
             "sample_input": examples[0][0] if examples else "", "tests": tests, "checker": p["generated_checker"] or ""}
 
 
-def main(src_dir: str, out: str, generated_path: str | None = None) -> None:
+def main(src_dir: str, out: str, *generated_paths: str) -> None:
     generated: dict[str, list] = {}
-    if generated_path:
-        for line in open(generated_path, encoding="utf-8"):
-            generated.update(json.loads(line)["tests"])
+    for path in generated_paths:
+        for line in open(path, encoding="utf-8"):
+            for pid, tests in json.loads(line)["tests"].items():
+                generated.setdefault(pid, []).extend(tests)
     rows, seen, skipped = [], set(), {"not executable": 0, "interactive": 0, "file input": 0, "no statement": 0}
     for f in sorted(Path(src_dir).glob("*.parquet")):
         for p in pq.read_table(f, columns=COLUMNS).to_pylist():
@@ -99,6 +103,6 @@ def main(src_dir: str, out: str, generated_path: str | None = None) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4):
+    if len(sys.argv) < 3:
         sys.exit(__doc__)
     main(*sys.argv[1:])

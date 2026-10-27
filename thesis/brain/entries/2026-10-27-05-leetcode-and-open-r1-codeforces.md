@@ -21,8 +21,8 @@ more problems.
   harness that builds the arguments, calls `Solution().method` and prints the
   result as JSON.
 - **Codeforces** now comes from open-r1/codeforces (Penedo et al. 2025,
-  CC BY 4.0) instead of CodeContests: 9,103 problems up to 2025 at every
-  rating (was 4,551 rated 800-2000), 7 rating bands. 1,761 problems that
+  CC BY 4.0) instead of CodeContests: 9,097 problems up to 2025 at every
+  rating (was 4,551 rated 800-2000), 7 rating bands. 1,759 problems that
   accept several right answers are judged by the dataset's validated Python
   checker (new compare mode `checker`, run through the sandboxed runner), so
   they have tests at last; under CodeContests about 800 such problems had
