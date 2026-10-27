@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   Activity, ArrowLeft, ArrowUpDown, CheckCircle2, CircleAlert, ClipboardPaste, Eye, FlaskConical, Info, MessagesSquare,
-  Play, Radio, Users,
+  Play, Radio, Trophy, Users,
 } from "lucide-react";
 import { Badge, Button, Card, LiveDot, cn, item, spring, stagger } from "../ui";
 import { AuthError, get, token } from "../review/api";
@@ -141,6 +141,9 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
           <Button size="sm" variant="ghost" onClick={() => setSort((s) => (s === "roll" ? "recent" : "roll"))}>
             <ArrowUpDown className="size-3.5" /> {sort === "roll" ? "Roll number" : "Last edit"}
           </Button>
+          {data.lab.kind === "competition" && (
+            <Button size="sm" onClick={() => { location.hash = `#/teach/c/${id}`; }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
+          )}
           <Button size="sm" onClick={() => { location.hash = `#/teach/l/${id}`; }}>Lab settings</Button>
         </div>
       </motion.div>

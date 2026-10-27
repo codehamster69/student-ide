@@ -146,3 +146,110 @@ def test_runs_never_score_but_earn_a_badge():
 def test_board_reads_nothing_from_the_detector():
     imports = [l for l in open(compete.__file__, encoding="utf-8") if l.lstrip().startswith(("from ", "import "))]
     assert not [l for l in imports if "review" in l or "detector" in l or "harness" in l]
+
+
+# hand-in when time runs out --------------------------------------------------
+
+def edits(client, session_id, *texts, after=None):
+    """Post a start snapshot then one full-replace edit per text (what the editor logs).
+    `after`: (last seq, text) of an earlier call, to continue that session instead."""
+    seq, doc = after or (0, "")
+    events = [] if after else [{"seq": 0, "t": 0.0, "type": "snapshot", "data": {"reason": "start", "text": ""}}]
+    for text in texts:
+        seq += 1
+        events.append({"seq": seq, "t": seq * 100.0, "type": "edit", "data": {
+            "changes": [[0, len(doc), text]], "origin": "input.type", "len_before": len(doc), "len_after": len(text)}})
+        doc = text
+    r = client.post(f"/api/sessions/{session_id}/events", json={"schema_version": 1, "events": events})
+    assert r.json()["inserted"] == len(events), r.text
+
+
+def rewind(app, lab_id, s):
+    """Move the whole competition `s` seconds into the past (clock, sessions, edits, submissions)."""
+    with app.state.db.connect() as conn:
+        conn.execute("UPDATE competitions SET started_at = started_at - ?, ends_at = ends_at - ? WHERE lab_id = ?",
+                     (s, s, lab_id))
+        conn.execute("UPDATE sessions SET started_at = started_at - ? WHERE lab_id = ?", (s, lab_id))
+        conn.execute("UPDATE events SET received_at = received_at - ? WHERE session_id IN "
+                     "(SELECT id FROM sessions WHERE lab_id = ?)", (s, lab_id))
+        conn.execute("UPDATE submissions SET created_at = created_at - ? WHERE lab_id = ?", (s, lab_id))
+
+
+@pytest.fixture
+def sync_hand_in(monkeypatch):
+    monkeypatch.setattr(compete, "run_in_background", lambda job: job())
+
+
+def test_time_up_hands_in_unsubmitted_code(client, app, sync_hand_in):
+    lab_id, qid = make_comp(client, app)
+    lab = client.post(f"/api/teach/labs/{lab_id}/questions", headers=ADMIN,
+                      json={"title": "Double", "prompt": "Print 2n", "starter_code": "n = int(input())\n",
+                            "sample_input": "2", "tests": [{"name": "t", "stdin": "4", "expected": "8"}]}).json()
+    q2 = lab["questions"][1]["id"]
+    for s in ("S1", "S2", "S3"):
+        enter(client, s)
+    client.post(f"/api/teach/competitions/{lab_id}/start", headers=ADMIN)
+
+    s1 = session(client, "S1", qid).json()["session_id"]
+    edits(client, s1, "print(", SOLUTION)                    # solved it, never pressed Submit
+    s1b = session(client, "S1", q2).json()["session_id"]
+    edits(client, s1b, "n = int(input())\n")               # opened Q2, code back to the starter: not worked on
+    s2 = session(client, "S2", qid).json()["session_id"]
+    edits(client, s2, "print(3)\n")
+    client.post(f"/api/sessions/{s2}/submit", json={"code": "print(3)\n"})  # same code as submitted: not graded again
+    s3 = session(client, "S3", qid).json()["session_id"]
+    edits(client, s3, "print(3)\n")
+
+    client.post(f"/api/teach/competitions/{lab_id}/end", headers=ADMIN)
+    edits(client, s3, SOLUTION, after=(1, "print(3)\n"))     # fixed it after the end ...
+    with app.state.db.connect() as conn:  # ... and it reached the server only after the grace: too late
+        conn.execute("UPDATE events SET received_at = received_at + 100 WHERE session_id = ? AND seq >= 2", (s3,))
+
+    # within the grace the board says it is still collecting, and nothing is graded yet
+    v = client.get(f"/api/teach/competitions/{lab_id}", headers=ADMIN).json()
+    assert v["state"] == "ended" and v["handing_in"] is True
+    assert [b["points"] for b in v["board"]] == [50, 0, 0]
+
+    rewind(app, lab_id, compete.GRACE_S + 5)
+    v = client.get(f"/api/teach/competitions/{lab_id}", headers=ADMIN).json()
+    assert v["handing_in"] is False
+    by = {b["student_id"]: b for b in v["board"]}
+    # ended early, so the hand-in still earns the speed left on the planned clock, as a last-second Submit would
+    assert by["S1"]["points"] > 140 and by["S1"]["solved"] == 1 and by["S1"]["questions"][0]["auto"] is True
+    assert by["S1"]["questions"][1]["tries"] == 0
+    assert by["S2"]["points"] == 50 and by["S2"]["questions"][0]["tries"] == 1 and not by["S2"]["questions"][0]["auto"]
+    assert by["S3"]["points"] == 50 and by["S3"]["questions"][0]["auto"] is True
+    with app.state.db.connect() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM submissions WHERE auto = 1").fetchone()[0] == 2
+
+    # once only: looking again does not hand in twice
+    with app.state.db.connect() as conn:
+        conn.execute("UPDATE competitions SET handin_done = NULL, handin_started = NULL WHERE lab_id = ?", (lab_id,))
+    client.get(f"/api/competitions/{lab_id}", params={"student_id": "S1"})
+    with app.state.db.connect() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM submissions WHERE auto = 1").fetchone()[0] == 2
+
+
+def test_clock_endpoint(client, app):
+    lab_id, _ = make_comp(client, app)
+    enter(client, "S1")
+    assert client.get(f"/api/competitions/{lab_id}/clock", params={"student_id": "S1"}).json()["state"] == "draft"
+    client.post(f"/api/teach/competitions/{lab_id}/start", headers=ADMIN)
+    c = client.get(f"/api/competitions/{lab_id}/clock", params={"student_id": "S1"}).json()
+    assert c["state"] == "live" and c["ends_at"] > c["now"]
+
+
+def test_competitions_ended_before_hand_in_keep_their_results(tmp_path):
+    from studentide.db import Database
+    db = Database(tmp_path / "old.sqlite3")
+    with db.connect() as conn:
+        conn.execute("CREATE TABLE competitions (lab_id TEXT PRIMARY KEY, duration_s INTEGER, "
+                     "board TEXT NOT NULL DEFAULT 'top', started_at REAL, ends_at REAL)")
+        conn.execute("CREATE TABLE submissions (id TEXT PRIMARY KEY, lab_id TEXT, question_id TEXT, student_id TEXT, "
+                     "session_id TEXT, created_at REAL, code TEXT, passed INTEGER, total INTEGER)")
+        conn.execute("INSERT INTO competitions VALUES ('old', 60, 'top', 1, 61)")
+        conn.execute("INSERT INTO competitions VALUES ('running', 60, 'top', 1, 4e9)")
+    compete.ensure_schema(db)
+    with db.connect() as conn:
+        done = dict(conn.execute("SELECT lab_id, handin_done FROM competitions").fetchall())
+    assert done == {"old": 61, "running": None}

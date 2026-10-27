@@ -15,6 +15,8 @@ export interface QuestionProgress {
   points: number;
   passed: number | null;
   total: number | null;
+  /** the best submission was handed in for the student when time ran out */
+  auto?: boolean;
 }
 
 export interface BoardRow {
@@ -42,6 +44,8 @@ export interface CompSettings {
   board_mode: BoardMode;
   started_at: number | null;
   ends_at: number | null;
+  /** time is up and the code students had open is still being graded */
+  handing_in: boolean;
   /** server clock, to correct the countdown for a skewed lab machine */
   now: number;
 }
@@ -56,6 +60,9 @@ export interface ArenaQuestion extends Task {
   competition: true;
   progress: QuestionProgress | null;
 }
+
+/** GET /api/competitions/<lab>/clock, polled by the editor so it hands in on time. */
+export interface CompClock { state: CompState; ends_at: number | null; now: number }
 
 export interface ArenaView extends CompSettings {
   joined: boolean;

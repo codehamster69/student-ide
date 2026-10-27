@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2, Trophy, Users } from "lucide-react";
-import { Button, Card, LiveDot, cn, item, stagger } from "../ui";
+import { Button, Card, LiveDot, Spinner, cn, item, stagger } from "../ui";
 import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
 import type { TeacherComp } from "./api";
@@ -84,7 +84,15 @@ export function LiveBoard({ id, onAuthLost }: { id: string; onAuthLost: () => vo
         </div>
       </motion.div>
 
-      {ended && c.board.length > 0 && (
+      {c.handing_in && (
+        <motion.div variants={item}>
+          <Card className="mb-5 flex items-center gap-3 border-gold/30 px-5 py-3 text-sm text-text">
+            <Spinner className="size-4 text-gold" />
+            Time is up. Handing in and grading the code each student had open; the final standings follow in a few seconds.
+          </Card>
+        </motion.div>
+      )}
+      {ended && !c.handing_in && c.board.length > 0 && (
         <motion.div variants={item}><Card className="mb-5 px-6 pb-6 pt-4"><Podium rows={c.board} /></Card></motion.div>
       )}
 
