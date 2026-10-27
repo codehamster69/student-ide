@@ -48,4 +48,5 @@ for lang, code in progs.items():
 print("| providers:", ",".join(sorted(PROVIDERS)))
 PY
 echo "SMOKE languages: $(docker compose exec -T app python - < /tmp/langs.py 2>&1 | tr '\n' ' ' | cut -c1-900)"
+echo "SMOKE hugging face from app: $(docker compose exec -T app python -c "import urllib.request as u; print(u.urlopen('https://datasets-server.huggingface.co/is-valid?dataset=newfacade/LeetCodeDataset', timeout=15).status)" 2>&1 | tail -1)"
 echo "STUDENTIDE SMOKE DONE"
