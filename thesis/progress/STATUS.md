@@ -56,6 +56,7 @@ flowchart LR
 | 3 Dashboard | Larger question sets by topic: Codeforces (4,551) and CodeChef (332) from the CC BY 4.0 CodeContests dataset with tests, MBPP (974 beginner Python) live; 19 shared topics | ✅ | #15 |
 | 3 Dashboard | Live classroom view: class grid per open lab, read-only student editor; students always see who is watching, views logged, consent v2 | ✅ | #16 |
 | 3 Dashboard | A lab opens as one sitting: question tabs in one editor, each question keeps its code (resumed in a later sitting); one session per question visited, linked by a sitting id | ✅ | #17 |
+| 3 Dashboard | Competitions hand in each student's code when time runs out; leaderboard linked for owner, co-teachers and admins | 🟡 | #21 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
