@@ -402,6 +402,32 @@ lists and binary trees where the problem takes them, and print the return
 value as JSON; results that may come ``in any order'' are compared after
 sorting, and real numbers within $10^{-5}$. HackerRank remains link only.
 
+Nothing in such a test is specific to Python: it passes arguments to a
+function and compares the value returned. The LeetCode and MBPP problems
+are therefore offered in every lab language. Each argument's type is read from
+the dataset's Python type hint (for MBPP, which has none, from the test
+values) and narrowed by the values the way LeetCode writes its own
+signatures: an integer that needs 64 bits becomes 	exttt{long long}, a string
+that is always one character becomes 	exttt{char}. From that signature the
+app generates a LeetCode-style starter for C, C++, Java and JavaScript and a
+driver that reads one JSON value per argument, calls the student's function
+and prints the answer in the same JSON as the Python driver, so one set of
+tests and expected outputs serves all five languages
+(\cref{fig:leetcode-cpp}). This covers 2{,}828 of the 2{,}834 LeetCode problems
+and 836 of 974 MBPP problems; the rest return values with no single type
+outside Python (a mixed tuple, a dictionary). The drivers were checked by
+round-tripping real test values of every type through a function that returns
+its argument (170 language and type combinations), by compiling a program for
+every signature shape, and with our own solutions in each language.
+
+egin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\linewidth]{leetcode/leetcode-light-07-cpp-preview}
+  \caption{The same LeetCode problem in a C++ lab: starter generated from the
+  Python signature, the same ten tests.}
+  \label{fig:leetcode-cpp}
+\end{figure}
+
 \begin{figure}[ht]
   \centering
   \begin{subfigure}{0.49\textwidth}

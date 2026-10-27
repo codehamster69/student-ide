@@ -352,7 +352,8 @@ def test_mbpp_offline(monkeypatch):
     m = MBPP(Cached(lambda url: data if url == URL else None))
     assert any(c.id == "topic:strings" for c in m.categories("python"))
     with pytest.raises(Exception):
-        m.categories("cpp")
+        m.categories("rust")
+    assert m.categories("cpp")  # types from the test values (polyglot.py)
     q = m.fetch("python", "2")
     assert q.starter_code == "def similar_elements(test_tup1, test_tup2):\n    pass\n" and "tc[" not in q.starter_code
     assert len(q.tests) == 3 and q.tests[1]["hidden"] and "similar_elements(" in q.harness
@@ -366,10 +367,8 @@ def test_mbpp_offline(monkeypatch):
 
 def test_sources_say_which_languages_they_serve(client):
     s = {p["id"]: p for p in client.get("/api/teach/sources", headers=ADMIN).json()}
-    assert s["leetcode"]["languages"] == ["python"] and s["mbpp"]["languages"] == ["python"]
+    assert s["leetcode"]["languages"] is None and s["mbpp"]["languages"] is None  # every language (polyglot.py)
     assert s["originals"]["languages"] == ["c"] and s["codeforces"]["languages"] is None
-    r = client.get("/api/teach/sources/leetcode/categories?language=c", headers=ADMIN)
-    assert r.status_code == 400 and "Python only" in r.json()["detail"]
 
 
 def test_live_source_keeps_a_stale_copy_when_the_source_hiccups():

@@ -122,7 +122,38 @@ await off.goto(`${BASE}/#/teach/l/${labId}`);
 await off.waitForSelector("text=The problem text can't be loaded right now");
 await shot(off, "06-teacher-warning");
 
+// every lab language: the same problem in a C++ lab
+const post = async (path, body) => {
+  const r = await fetch(BASE + path, { method: "POST", headers: { "X-Admin-Token": TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  assert.ok(r.ok, `${path}: ${r.status}`);
+  return r.json();
+};
+const cppLab = await post("/api/teach/labs", { title: "Lab 12: Hashing in C++ (e2e)", language: "cpp" });
+await t.goto(`${BASE}/#/teach/l/${cppLab.id}`);
+await t.waitForSelector("text=Add the first question");
+await t.click("button:has-text('From a platform') >> nth=0");
+await t.click("button[role=tab]:has-text('LeetCode')");
+await t.click("[role=group][aria-label=Topic] button:has-text('Dictionaries and sets')");
+await t.fill("input[aria-label='Search questions']", "two-sum");
+await t.click("ul[aria-label=Questions] button:has-text('1. Two Sum')");
+await t.waitForSelector("text=vector<int> twoSum(vector<int>& nums, int target)");
+await shot(t, "07-cpp-preview");
+await t.click("button:has-text('Add to lab')");
+await t.waitForSelector("strong:text-is('1. Two Sum')");
+const cq = (await get(`/api/teach/labs/${cppLab.id}`)).questions.find((x) => x.source?.provider === "leetcode");
+assert.deepEqual(cq.tests.map((x) => x.stdin), q.tests.map((x) => x.stdin), "same tests in every language");
+const answer = cq.starter_code.replace("{\n        \n    }", `{
+        unordered_map<int, int> seen;
+        for (int i = 0; i < (int) nums.size(); i++) {
+            if (seen.count(target - nums[i])) return {seen[target - nums[i]], i};
+            seen[nums[i]] = i;
+        }
+        return {};
+    }`);
+const graded = await post(`/api/teach/questions/${cq.id}/check`, { code: answer });
+assert.equal(graded.passed, graded.total, JSON.stringify(graded.results?.find((x) => !x.passed)));
+
 await browser.close();
 assert.deepEqual(errors, [], `page errors: ${errors.join("; ")}`);
-console.log(JSON.stringify({ lab: labId, tests: q.tests.length }));
+console.log(JSON.stringify({ lab: labId, tests: q.tests.length, cpp: `${graded.passed}/${graded.total}` }));
 console.log("leetcode e2e OK");
