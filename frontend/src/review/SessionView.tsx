@@ -11,7 +11,7 @@ import { CH_CHANGED, CH_COLOR, ChannelTag, Skeleton } from "./bits";
 import { CodeReplay } from "./CodeReplay";
 import { Timeline } from "./Timeline";
 import { changedLines, Replayer } from "./replay";
-import { clock, CONDITION, dayTime, TASKS, value } from "./format";
+import { clock, CONDITION, dayKey, dayTime, TASKS, value } from "./format";
 
 const SPEEDS = [1, 5, 20, 60];
 const RECENT_S = 30;
@@ -99,8 +99,8 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
 
   return (
     <motion.div variants={stagger(0.07)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href="#/review" className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
-        <ArrowLeft className="size-4" /> All sessions
+      <motion.a variants={item} href={`#/review/l/${s.lab_id ?? "practice"}/${dayKey(s.started_at)}`} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
+        <ArrowLeft className="size-4" /> {s.lab_id ? "Back to the lab session" : "Practice sessions"}
       </motion.a>
 
       {/* header */}

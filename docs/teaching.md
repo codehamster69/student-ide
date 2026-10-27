@@ -77,6 +77,31 @@ lab visit for analysis.
 Research API: `GET /api/sessions?lab_id=...`; the export includes the same
 fields. The review timeline titles lab sessions by their question.
 
+## Who sees which lab
+
+Each lab and competition records the teacher who made it (`labs.owner_email`).
+With Google sign-in a teacher sees and manages only the labs they own or were
+added to as a co-teacher (`lab_teachers`), and only the sessions, review
+timelines, replays, live views and competition boards of those labs. Lists
+leave the rest out; a direct link answers 403 with `X-Refusal: not-yours`, and
+the teacher screens show the message without signing out.
+
+- Admins (`STUDENTIDE_ADMINS`, or made admin on `#/teach/people`), the admin
+  token and dev mode see every lab.
+- Labs made before ownership have no owner and are visible to admins only.
+  An admin hands one over in the lab's **Teachers** panel ("Hand over").
+- The owner (or an admin) shares a lab with co-teachers by college address.
+  Co-teachers can do everything the owner can except change the sharing;
+  student addresses are refused. Only admins change the owner.
+- Sessions outside any lab (practice tasks) are admin-only.
+- A student's baseline still uses all their lab sessions, whoever's lab they
+  were in, so a session's evidence is the same for every viewer.
+
+The Review tab opens on **Lab sessions**: one row per lab per day (a class
+meeting) with its time, students and how many are worth a conversation; a row
+opens that class's sessions student by student (`#/review/l/<lab>/<day>`).
+"Every session in one list" (`#/review/all`) keeps the flat list.
+
 ## API (admin token)
 
 | Method | Path | |
@@ -86,6 +111,7 @@ fields. The review timeline titles lab sessions by their question.
 | POST | `/api/teach/labs/{id}/questions` | `{title, prompt, starter_code, sample_input}` |
 | PUT | `/api/teach/labs/{id}/order` | `{question_ids}` |
 | PUT | `/api/teach/labs/{id}/roster` | `{student_ids, everyone}` |
+| PUT | `/api/teach/labs/{id}/teachers` | `{co_teachers, owner_email?}` share; owner change is admin-only |
 | PATCH / DELETE | `/api/teach/questions/{id}` | edit / remove (409 once recorded) |
 | GET | `/api/teach/students` | students who have signed in |
 
@@ -96,7 +122,9 @@ assigned to that student with their own progress per question.
 
 `python -m studentide.seed` now adds two labs: *Lab 5: Strings and
 dictionaries* (open, assigned to DEMO01 to DEMO06, holding their assessed
-sessions) and a draft *Lab 6*. Backend tests: `backend/tests/test_teach.py`.
+sessions) and a draft *Lab 6*, both without an owner (admins only in Google
+mode). Backend tests: `backend/tests/test_teach.py`, ownership in
+`backend/tests/test_ownership.py` (browser check: `frontend/e2e/ownership.mjs`).
 Browser check with screenshots: `node frontend/e2e/teach.mjs <dir> [light|dark]`
 (teacher builds and opens a lab, a new student answers question 1, the test
 reads the session back and checks its lab, question and events).

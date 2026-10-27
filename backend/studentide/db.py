@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS labs (
     subject       TEXT NOT NULL DEFAULT '',    -- e.g. "Data Structures"; free text
     language      TEXT NOT NULL DEFAULT 'python',  -- runner.LANGUAGES key the editor and runner use
     kind          TEXT NOT NULL DEFAULT 'lab', -- 'lab' or 'competition' (see compete.py)
+    owner_email   TEXT,                        -- teacher who made it; NULL = admins only (labs from before ownership)
     created_at    REAL NOT NULL,
     updated_at    REAL NOT NULL
 );
@@ -101,6 +102,15 @@ CREATE TABLE IF NOT EXISTS lab_students (
     PRIMARY KEY (lab_id, student_id)
 ) WITHOUT ROWID;
 
+-- Co-teachers a lab's owner shares it with: same view and edit rights as the
+-- owner, except changing who it is shared with. Addresses, so a colleague can
+-- be added before their first sign-in.
+CREATE TABLE IF NOT EXISTS lab_teachers (
+    lab_id        TEXT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    email         TEXT NOT NULL,
+    PRIMARY KEY (lab_id, email)
+) WITHOUT ROWID;
+
 -- A student pressing "Check": their code against the question's tests. Kept
 -- server side (not as a client event) so the event schema stays at v1.
 CREATE TABLE IF NOT EXISTS checks (
@@ -121,7 +131,7 @@ MIGRATIONS = {
     "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT"), ("keys_purged_at", "REAL"),
                  ("sitting_id", "TEXT")),
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
-             ("kind", "TEXT NOT NULL DEFAULT 'lab'")),
+             ("kind", "TEXT NOT NULL DEFAULT 'lab'"), ("owner_email", "TEXT")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
                   ("source_json", "TEXT")),
 }
@@ -289,25 +299,27 @@ class Database:
 
     # labs and questions (teacher authoring) -----------------------------------
 
-    def create_lab(self, lab_id: str, title: str, description: str) -> None:
+    def create_lab(self, lab_id: str, title: str, description: str, owner_email: str | None = None) -> None:
         now = time.time()
         with self.connect() as conn:
-            conn.execute("INSERT INTO labs(id, title, description, created_at, updated_at) VALUES (?,?,?,?,?)",
-                         (lab_id, title, description, now, now))
+            conn.execute("INSERT INTO labs(id, title, description, owner_email, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+                         (lab_id, title, description, owner_email, now, now))
 
     def get_lab(self, lab_id: str) -> sqlite3.Row | None:
         with self.connect() as conn:
             return conn.execute("SELECT * FROM labs WHERE id = ?", (lab_id,)).fetchone()
 
-    def list_labs(self) -> list[sqlite3.Row]:
+    def list_labs(self, ids: set[str] | None = None) -> list[sqlite3.Row]:
+        """Every lab, or only those in `ids` (a teacher's own and shared labs)."""
         with self.connect() as conn:
-            return conn.execute(
+            rows = conn.execute(
                 """SELECT l.*,
                           (SELECT COUNT(*) FROM questions q WHERE q.lab_id = l.id) AS n_questions,
                           (SELECT COUNT(*) FROM lab_students r WHERE r.lab_id = l.id) AS n_roster,
                           (SELECT COUNT(*) FROM sessions s WHERE s.lab_id = l.id) AS n_sessions,
                           (SELECT COUNT(DISTINCT s.student_id) FROM sessions s WHERE s.lab_id = l.id) AS n_started
                    FROM labs l ORDER BY l.created_at DESC""").fetchall()
+        return rows if ids is None else [r for r in rows if r["id"] in ids]
 
     def update_lab(self, lab_id: str, fields: dict) -> None:
         allowed = {k: v for k, v in fields.items()
@@ -317,6 +329,28 @@ class Database:
         sets = ", ".join(f"{k} = ?" for k in allowed)
         with self.connect() as conn:
             conn.execute(f"UPDATE labs SET {sets}, updated_at = ? WHERE id = ?", (*allowed.values(), time.time(), lab_id))
+
+    def lab_teachers(self, lab_id: str | None = None) -> dict[str, list[str]]:
+        """Co-teacher addresses per lab (of one lab, or of all)."""
+        with self.connect() as conn:
+            rows = conn.execute("SELECT lab_id, email FROM lab_teachers" + (" WHERE lab_id = ?" if lab_id else "") +
+                                " ORDER BY email", (lab_id,) if lab_id else ()).fetchall()
+        out: dict[str, list[str]] = {}
+        for r in rows:
+            out.setdefault(r["lab_id"], []).append(r["email"])
+        return out
+
+    def set_lab_teachers(self, lab_id: str, emails: list[str], owner_email: str | None) -> None:
+        with self.connect() as conn:
+            conn.execute("UPDATE labs SET owner_email = ?, updated_at = ? WHERE id = ?", (owner_email, time.time(), lab_id))
+            conn.execute("DELETE FROM lab_teachers WHERE lab_id = ?", (lab_id,))
+            conn.executemany("INSERT OR IGNORE INTO lab_teachers(lab_id, email) VALUES (?, ?)", [(lab_id, e) for e in emails])
+
+    def teacher_lab_ids(self, email: str) -> set[str]:
+        """Labs a teacher owns or was added to."""
+        with self.connect() as conn:
+            return {r[0] for r in conn.execute(
+                "SELECT id FROM labs WHERE owner_email = ? UNION SELECT lab_id FROM lab_teachers WHERE email = ?", (email, email))}
 
     def delete_lab(self, lab_id: str) -> None:
         with self.connect() as conn:

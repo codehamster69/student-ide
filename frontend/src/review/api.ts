@@ -94,6 +94,25 @@ export interface ReplayData {
   keys: number[];
 }
 
+/** One lab as the Review tab lists it: when it ran, who came, what stood out. */
+export interface LabSessionRow {
+  /** "practice" for sessions outside any lab (admins only) */
+  id: string;
+  title: string;
+  kind: "lab" | "competition" | "practice";
+  subject: string;
+  status: "draft" | "open" | "closed" | null;
+  started_at: number;
+  ended_at: number;
+  /** when each class sitting began */
+  sittings_at: number[];
+  n_students: number;
+  n_sessions: number;
+  n_assessed: number;
+  n_with_moments: number;
+  students_with_moments: number;
+}
+
 export interface StudentRow {
   student_id: string;
   n_sessions: number;
@@ -111,10 +130,14 @@ export const token = {
 
 export class AuthError extends Error {}
 
+/** A lab of another teacher: show the message, stay signed in. */
+const notYours = (res: Response) => res.status === 403 && res.headers.get("X-Refusal") === "not-yours";
+
 export async function get<T>(path: string, tok = token.get()): Promise<T> {
   const res = await fetch(path, { headers: { "X-Admin-Token": tok } });
   if (res.status === 401 || res.status === 403) {
     const detail = await res.json().catch(() => ({}));
+    if (notYours(res)) throw new Error(detail.detail);
     throw new AuthError(detail.detail ?? "not allowed");
   }
   if (!res.ok) throw new Error(`request failed (${res.status})`);
@@ -129,6 +152,7 @@ export async function send<T>(method: string, path: string, body?: unknown): Pro
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const detail = await res.json().catch(() => ({}));
+  if (notYours(res)) throw new Error(detail.detail);
   if (res.status === 401 || res.status === 403) throw new AuthError(detail.detail ?? "not allowed");
   if (!res.ok) throw new Error(typeof detail.detail === "string" ? detail.detail : `request failed (${res.status})`);
   return detail as T;

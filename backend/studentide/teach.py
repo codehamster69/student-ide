@@ -12,6 +12,7 @@ review timeline.
     POST   /api/teach/labs/{id}/link             {provider, url, title}  for platforms that can only be linked
     PUT    /api/teach/labs/{id}/order            {question_ids: [...]}
     PUT    /api/teach/labs/{id}/roster           {student_ids: [...], everyone}
+    PUT    /api/teach/labs/{id}/teachers         {co_teachers: [...], owner_email?}  share a lab; owner change is admin only
     PATCH  /api/teach/questions/{id}             any question field
     DELETE /api/teach/questions/{id}             only while no session has been recorded
     POST   /api/teach/questions/{id}/check       {code}  try code (e.g. a model answer) against the tests
@@ -26,6 +27,9 @@ Test cases are optional (see grading.py): a lab is about effort, and its
 tests are only a self-check. Competitions are scored, so a question in a
 competition lab must keep at least one test.
 
+Every lab route is limited to the teacher's own and shared labs (see
+auth.Auth.check_lab); admins see every lab.
+
 Recorded sessions keep a copy of the question as the student saw it
 (sessions.question_json), so editing a question later never changes what an
 old recording was answering.
@@ -39,11 +43,11 @@ import uuid
 from typing import Callable, Literal
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from . import grading, runner
-from .auth import roster_id
+from .auth import not_yours, parse_address, roster_id
 from .db import Database, has_consent
 from .providers import PROVIDERS, ProviderError
 
@@ -105,6 +109,11 @@ class OrderIn(BaseModel):
     question_ids: list[str]
 
 
+class TeachersIn(BaseModel):
+    co_teachers: list[str] = Field(default_factory=list, max_length=50)
+    owner_email: str | None = None  # admins only; "" leaves the lab with admins
+
+
 class RosterIn(BaseModel):
     student_ids: list[str] = Field(default_factory=list, max_length=2000)
     everyone: bool = False
@@ -133,9 +142,14 @@ def question_fields(body: BaseModel, exclude_none: bool) -> dict:
     return f
 
 
-def lab_json(lab) -> dict:
+def lab_json(lab, co_teachers: list[str] | None = None, me=None) -> dict:
+    """`me`: the auth.Teacher asking, to say how they reach this lab."""
     d = dict(lab)
     d["everyone"] = bool(d["everyone"])
+    d["co_teachers"] = co_teachers or []
+    if me is not None:
+        d["access"] = ("owner" if me.email and me.email == lab["owner_email"] else
+                       "co_teacher" if me.email in d["co_teachers"] else "admin")
     return d
 
 
@@ -168,24 +182,28 @@ def student_labs(db: Database, student_id: str) -> list[dict]:
     return out
 
 
-def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
-    """`auth_cfg`: an auth.Config; in Google mode roster entries may be full addresses and are upper-cased."""
+def router(db: Database, require_admin: Callable, auth) -> APIRouter:
+    """`auth`: an auth.Auth. It limits every lab to its owner, co-teachers and
+    admins; in Google mode roster entries may be full addresses and are upper-cased."""
     r = APIRouter(prefix="/api/teach", dependencies=[Depends(require_admin)])
+    auth_cfg = auth.cfg
 
-    def lab_or_404(lab_id: str):
+    def lab_or_404(lab_id: str, request: Request):
         lab = db.get_lab(lab_id)
         if lab is None:
             raise HTTPException(404, "unknown lab")
+        auth.check_lab(request, lab_id)
         return lab
 
-    def question_or_404(question_id: str):
+    def question_or_404(question_id: str, request: Request):
         q = db.get_question(question_id)
         if q is None:
             raise HTTPException(404, "unknown question")
+        auth.check_lab(request, q["lab_id"])
         return q
 
-    def detail(lab_id: str) -> dict:
-        lab = lab_json(lab_or_404(lab_id))
+    def detail(lab_id: str, request: Request) -> dict:
+        lab = lab_json(lab_or_404(lab_id, request), db.lab_teachers(lab_id).get(lab_id), auth.teacher(request))
         qs = db.lab_questions(lab_id)
         progress = [dict(p) | {"submitted": bool(p["submitted"])} for p in db.lab_progress(lab_id)]
         per_q: dict[str, int] = {}
@@ -198,23 +216,24 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
         return lab
 
     @r.get("/labs")
-    def labs() -> list[dict]:
-        return [lab_json(l) for l in db.list_labs()]
+    def labs(request: Request) -> list[dict]:
+        me, co = auth.teacher(request), db.lab_teachers()
+        return [lab_json(l, co.get(l["id"]), me) for l in db.list_labs(auth.lab_ids(request))]
 
     @r.post("/labs")
-    def create_lab(body: LabIn) -> dict:
+    def create_lab(body: LabIn, request: Request) -> dict:
         lab_id = "lab_" + uuid.uuid4().hex[:10]
-        db.create_lab(lab_id, body.title.strip(), body.description.strip())
+        db.create_lab(lab_id, body.title.strip(), body.description.strip(), auth.teacher(request).email)
         db.update_lab(lab_id, {"subject": body.subject.strip(), "language": body.language})
-        return detail(lab_id)
+        return detail(lab_id, request)
 
     @r.get("/labs/{lab_id}")
-    def get_lab(lab_id: str) -> dict:
-        return detail(lab_id)
+    def get_lab(lab_id: str, request: Request) -> dict:
+        return detail(lab_id, request)
 
     @r.patch("/labs/{lab_id}")
-    def patch_lab(lab_id: str, body: LabPatch) -> dict:
-        lab_or_404(lab_id)
+    def patch_lab(lab_id: str, body: LabPatch, request: Request) -> dict:
+        lab_or_404(lab_id, request)
         fields = body.model_dump(exclude_none=True)
         if fields.get("status") == "open" and not db.lab_questions(lab_id):
             raise HTTPException(409, "add at least one question before opening the lab")
@@ -223,22 +242,22 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
         if "everyone" in fields:
             fields["everyone"] = int(fields["everyone"])
         db.update_lab(lab_id, fields)
-        return detail(lab_id)
+        return detail(lab_id, request)
 
     @r.delete("/labs/{lab_id}")
-    def delete_lab(lab_id: str) -> dict:
-        lab_or_404(lab_id)
+    def delete_lab(lab_id: str, request: Request) -> dict:
+        lab_or_404(lab_id, request)
         if db.count_sessions(lab_id=lab_id):
             raise HTTPException(409, "students have recorded sessions in this lab; close it instead")
         db.delete_lab(lab_id)
         return {"deleted": lab_id}
 
     @r.post("/labs/{lab_id}/questions")
-    def add_question(lab_id: str, body: QuestionIn) -> dict:
-        lab_or_404(lab_id)
+    def add_question(lab_id: str, body: QuestionIn, request: Request) -> dict:
+        lab_or_404(lab_id, request)
         qid = "q_" + uuid.uuid4().hex[:10]
         db.add_question(qid, lab_id, question_fields(body, False) | {"title": body.title.strip()})
-        return detail(lab_id)
+        return detail(lab_id, request)
 
     def provider_or_404(provider_id: str):
         p = PROVIDERS.get(provider_id)
@@ -253,9 +272,9 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
             raise HTTPException(e.status, str(e)) from e
 
     @r.post("/labs/{lab_id}/import")
-    def import_question(lab_id: str, body: ImportIn) -> dict:
+    def import_question(lab_id: str, body: ImportIn, request: Request) -> dict:
         """Fetch the question from the platform now and copy it into the lab."""
-        lab = lab_or_404(lab_id)
+        lab = lab_or_404(lab_id, request)
         p = provider_or_404(body.provider)
         got = from_provider(lambda: p.fetch(lab["language"], body.ref))
         qid = "q_" + uuid.uuid4().hex[:10]
@@ -264,12 +283,12 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
             "sample_input": got.sample_input, "tests_json": json.dumps(got.tests), "harness": got.harness,
             "source_json": json.dumps(got.source | {"notes": got.notes}),
         })
-        return detail(lab_id) | {"imported": qid, "notes": got.notes}
+        return detail(lab_id, request) | {"imported": qid, "notes": got.notes}
 
     @r.post("/labs/{lab_id}/link")
-    def link_question(lab_id: str, body: LinkIn) -> dict:
+    def link_question(lab_id: str, body: LinkIn, request: Request) -> dict:
         """For platforms whose questions can't be fetched: keep the link, the teacher writes the question."""
-        lab_or_404(lab_id)
+        lab_or_404(lab_id, request)
         p = provider_or_404(body.provider)
         url = urlparse(body.url.strip())
         host = (url.hostname or "").lower()
@@ -280,7 +299,7 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
             "title": body.title.strip(), "prompt": "", "starter_code": "", "sample_input": "",
             "source_json": json.dumps({"provider": p.id, "url": url.geturl(), "linked_only": True}),
         })
-        return detail(lab_id) | {"imported": qid}
+        return detail(lab_id, request) | {"imported": qid}
 
     @r.get("/languages")
     def languages() -> list[dict]:
@@ -306,50 +325,78 @@ def router(db: Database, require_admin: Callable, auth_cfg=None) -> APIRouter:
         return from_provider(lambda: p.fetch(language, ref)).as_dict()
 
     @r.put("/labs/{lab_id}/order")
-    def reorder(lab_id: str, body: OrderIn) -> dict:
-        lab_or_404(lab_id)
+    def reorder(lab_id: str, body: OrderIn, request: Request) -> dict:
+        lab_or_404(lab_id, request)
         if sorted(body.question_ids) != sorted(q["id"] for q in db.lab_questions(lab_id)):
             raise HTTPException(400, "question_ids must list every question of this lab exactly once")
         db.reorder_questions(lab_id, body.question_ids)
-        return detail(lab_id)
+        return detail(lab_id, request)
 
     @r.put("/labs/{lab_id}/roster")
-    def roster(lab_id: str, body: RosterIn) -> dict:
-        lab_or_404(lab_id)
-        clean = (lambda s: roster_id(s, auth_cfg)) if auth_cfg is not None else str.strip
+    def roster(lab_id: str, body: RosterIn, request: Request) -> dict:
+        lab_or_404(lab_id, request)
+        clean = lambda s: roster_id(s, auth_cfg)
         ids = sorted({clean(s) for s in body.student_ids if s.strip()})
         bad = [s for s in ids if not STUDENT_ID.match(s)]
         if bad:
             raise HTTPException(400, f"not a valid student id: {', '.join(bad[:5])}")
         db.set_roster(lab_id, ids)
         db.update_lab(lab_id, {"everyone": int(body.everyone)})
-        return detail(lab_id)
+        return detail(lab_id, request)
+
+    @r.put("/labs/{lab_id}/teachers")
+    def teachers(lab_id: str, body: TeachersIn, request: Request) -> dict:
+        """Share a lab with co-teachers. The owner and admins can; only an admin
+        can hand the lab to another owner (e.g. a lab from before ownership)."""
+        lab = lab_or_404(lab_id, request)
+        me = auth.teacher(request)
+        owner = lab["owner_email"]
+        if not me.admin and me.email != owner:
+            raise not_yours("only the lab's owner can change who it is shared with")
+        if body.owner_email is not None and (body.owner_email.strip().lower() or None) != owner:
+            if not me.admin:
+                raise not_yours("only an admin can change a lab's owner")
+            owner = teacher_address(body.owner_email) if body.owner_email.strip() else None
+        co = sorted({teacher_address(e) for e in body.co_teachers if e.strip()} - {owner})
+        db.set_lab_teachers(lab_id, co, owner)
+        return detail(lab_id, request)
+
+    def teacher_address(raw: str) -> str:
+        """A colleague's college address; student addresses are refused."""
+        email = raw.strip().lower()
+        if email.count("@") != 1 or (auth_cfg.google and not email.endswith("@" + auth_cfg.domain)):
+            raise HTTPException(400, f"not a college address: {raw.strip()}")
+        user = auth.get_user(email)
+        role = user["role"] if user else parse_address(email, auth_cfg)["role"]
+        if role == "student":
+            raise HTTPException(400, f"{email} is a student account")
+        return email
 
     @r.patch("/questions/{question_id}")
-    def patch_question(question_id: str, body: QuestionPatch) -> dict:
-        q = question_or_404(question_id)
-        if body.tests == [] and is_competition(lab_or_404(q["lab_id"])):
+    def patch_question(question_id: str, body: QuestionPatch, request: Request) -> dict:
+        q = question_or_404(question_id, request)
+        if body.tests == [] and is_competition(lab_or_404(q["lab_id"], request)):
             raise HTTPException(409, "competition questions need at least one test case")
         db.update_question(question_id, question_fields(body, True))
-        return detail(q["lab_id"])
+        return detail(q["lab_id"], request)
 
     @r.post("/questions/{question_id}/check")
-    def check_question(question_id: str, body: CodeIn) -> dict:
+    def check_question(question_id: str, body: CodeIn, request: Request) -> dict:
         """Lets a teacher run a model answer through the tests before students do."""
-        q = question_or_404(question_id)
-        lab = lab_or_404(q["lab_id"])
+        q = question_or_404(question_id, request)
+        lab = lab_or_404(q["lab_id"], request)
         graded = grading.grade(question_json(q), body.code, lab["language"])
         if graded is None:
             raise HTTPException(409, "this question has no test cases")
         return graded
 
     @r.delete("/questions/{question_id}")
-    def delete_question(question_id: str) -> dict:
-        q = question_or_404(question_id)
+    def delete_question(question_id: str, request: Request) -> dict:
+        q = question_or_404(question_id, request)
         if db.count_sessions(question_id=question_id):
             raise HTTPException(409, "students have recorded sessions on this question; it can be edited but not removed")
         db.delete_question(question_id)
-        return detail(q["lab_id"])
+        return detail(q["lab_id"], request)
 
     @r.get("/students")
     def students() -> list[dict]:
