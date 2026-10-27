@@ -1,5 +1,5 @@
 // End-to-end check of the larger question sets, with screenshots for the
-// thesis: a teacher browses Codeforces problems by topic (CodeContests
+// thesis: a teacher browses Codeforces problems by topic (open-r1 Codeforces
 // dataset, bundled), adds a dynamic-programming problem with its tests, adds
 // a CodeChef problem and an MBPP problem; a student solves the Codeforces one
 // and checks it against the imported tests.
@@ -50,9 +50,9 @@ await t.click("button:has-text('Create and add questions')");
 await t.waitForSelector("text=Add the first question");
 const labId = (await t.evaluate(() => location.hash)).split("/").at(-1);
 
-// Codeforces is the first tab: topics, then levels
+// Codeforces: topics, then rating bands
 await t.click("button:has-text('From a platform') >> nth=0");
-await t.waitForSelector("button[role=tab][aria-selected=true]:has-text('Codeforces')");
+await t.click("button[role=tab]:has-text('Codeforces')");
 await t.waitForSelector("[role=group][aria-label=Topic] button:has-text('Dynamic programming')");
 await t.click("[role=group][aria-label=Topic] button:has-text('Dynamic programming')");
 await t.waitForSelector("ul[aria-label=Questions] button");
