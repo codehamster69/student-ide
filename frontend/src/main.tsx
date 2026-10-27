@@ -3,11 +3,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./ui/tokens.css";
 
-// The teacher area (#/teach labs, #/review timeline) is for teachers and researchers. It is loaded
+// The teacher area (#/teach labs, #/live class view, #/review timeline) is for teachers and researchers. It is loaded
 // on demand so the student editor bundle stays as small as before.
 const ReviewApp = lazy(() => import("./review/ReviewApp").then((m) => ({ default: m.ReviewApp })));
 
-const isTeacher = () => /^#\/(review|teach)/.test(location.hash);
+const isTeacher = () => /^#\/(review|teach|live)/.test(location.hash);
 
 function Root() {
   const [review, setReview] = useState(() => isTeacher());

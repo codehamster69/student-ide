@@ -4,10 +4,14 @@
 // client id the server runs in dev mode: roll number for students, admin
 // token for teachers.
 
+export type LiveMode = "off" | "class" | "editor";
+
 export interface AuthConfig {
   mode: "google" | "dev";
   client_id: string | null;
   domain: string;
+  /** what teachers may watch live during a lab ($STUDENTIDE_LIVE) */
+  live?: LiveMode;
 }
 
 export interface Me {

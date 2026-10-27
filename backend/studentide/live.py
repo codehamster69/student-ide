@@ -270,17 +270,17 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
                    "activity": [0] * ACTIVITY_BINS, "tab_away": False, "pastes": 0,
                    "runs": 0, "run_errors": 0, "last_run": None, "check": None,
                    "submitted": sorted({s["question_id"] for s in ss if s["end_reason"] == "submit"}),
-                   "moments": 0, "last_moment_at": None, "watched": False}
+                   "moments": 0, "last_moment_at": None, "moment_session_id": None, "watched": False}
             if cur is not None:
                 es = stats.get(cur["id"], {})
                 q = questions.get(cur["question_id"])
-                n_moments, last_t = (0, None)
+                n_moments, last_t, moment_sid = 0, None, None
                 if sum(stats.get(s["id"], {}).get("n", 0) for s in ss):
-                    for s in ss:
+                    for s in sorted(ss, key=lambda s: s["started_at"]):
                         n, t = live.moments(reviewer, s["id"], now)
                         n_moments += n
-                        if t is not None and s["id"] == cur["id"]:
-                            last_t = s["started_at"] + t
+                        if n:
+                            moment_sid, last_t = s["id"], s["started_at"] + t
                 row.update({
                     "session_id": cur["id"], "question_id": cur["question_id"],
                     "question_title": q["title"] if q else json.loads(cur["question_json"] or "{}").get("title"),
@@ -291,7 +291,7 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
                     "runs": runs.get(cur["id"], {}).get("n", 0), "run_errors": runs.get(cur["id"], {}).get("errors", 0),
                     "last_run": runs.get(cur["id"], {}).get("last"),
                     "check": checks.get(cur["id"]),
-                    "moments": n_moments, "last_moment_at": last_t, "watched": cur["id"] in watched,
+                    "moments": n_moments, "last_moment_at": last_t, "moment_session_id": moment_sid, "watched": cur["id"] in watched,
                     "state": _state(cur, es, live.online(cur["id"], now), now),
                 })
             rows.append(row)
