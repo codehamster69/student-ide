@@ -30,7 +30,10 @@ export function LanguageBadge({ language }: { language: Language }) {
   );
 }
 
-const PROVIDER_NAMES: Record<string, string> = { exercism: "Exercism", leetcode: "LeetCode", hackerrank: "HackerRank", codechef: "CodeChef" };
+const PROVIDER_NAMES: Record<string, string> = {
+  exercism: "Exercism", leetcode: "LeetCode", hackerrank: "HackerRank", codechef: "CodeChef", codeforces: "Codeforces", mbpp: "MBPP",
+  originals: "Student IDE",
+};
 
 export function SourceBadge({ source }: { source: QuestionSource | null }) {
   if (!source) return null;

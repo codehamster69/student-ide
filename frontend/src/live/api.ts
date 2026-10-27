@@ -1,3 +1,4 @@
+import type { LivePrompt } from "../questionText";
 // Live classroom view (/api/live/*), same teacher sign-in as the review timeline.
 
 import type { Language } from "../teach/api";
@@ -56,7 +57,7 @@ export interface LiveClass {
 export interface LiveEditor {
   session: {
     id: string; student_id: string; lab_id: string | null; lab_title: string | null; question_id: string | null;
-    question_title: string; prompt: string; language: Language; started_at: number; ended_at: number | null; end_reason: string | null;
+    question_title: string; prompt: string; source: { url?: string; live_prompt?: LivePrompt } | null; language: Language; started_at: number; ended_at: number | null; end_reason: string | null;
   };
   state: LiveState;
   text: string;

@@ -320,6 +320,7 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
             "session": {"id": s["id"], "student_id": s["student_id"], "lab_id": s["lab_id"],
                         "lab_title": lab["title"] if lab else None, "question_id": s["question_id"],
                         "question_title": q.get("title") or s["task_id"], "prompt": q.get("prompt", ""),
+                        "source": {k: v for k, v in (q.get("source") or {}).items() if k in ("url", "live_prompt")} or None,
                         "language": q.get("language", "python"), "started_at": s["started_at"],
                         "ended_at": s["ended_at"], "end_reason": s["end_reason"]},
             "state": _state(s, es, live.online(session_id, now), now),

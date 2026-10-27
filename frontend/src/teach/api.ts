@@ -1,3 +1,4 @@
+import type { LivePrompt } from "../questionText";
 // Teacher authoring API (/api/teach/*), same admin token as the review timeline.
 
 export type LabStatus = "draft" | "open" | "closed";
@@ -29,6 +30,8 @@ export interface QuestionSource {
   attribution?: string;
   linked_only?: boolean;
   notes?: string[];
+  /** the text is loaded live by the browser and never stored (LeetCode) */
+  live_prompt?: LivePrompt;
 }
 
 export interface LabRow {

@@ -1,3 +1,5 @@
+import type { LivePrompt } from "./questionText";
+
 export interface Task {
   id: string;
   title: string;
@@ -20,6 +22,8 @@ export interface Task {
   submitted?: boolean;
   /** set when the question belongs to a class competition (Submit runs its tests) */
   competition?: boolean;
+  /** where the question came from; live_prompt: its text is loaded by the browser, never stored */
+  source?: { url?: string; live_prompt?: LivePrompt } | null;
 }
 
 export interface Lab {

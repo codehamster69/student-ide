@@ -12,8 +12,8 @@ A test is stdin in, stdout out, which works the same in every language:
 
 compare "text" (default): trailing spaces on each line and trailing blank
 lines are ignored. compare "json": both sides are parsed as JSON and compared
-as values (used by imported function-style questions, whose harness prints
-the function's return value as JSON). compare "tokens": whitespace-separated
+as values, real numbers within 1e-5 (used by imported function-style
+questions, whose harness prints the function's return value as JSON). compare "tokens": whitespace-separated
 tokens, with numbers equal within 1e-6 absolute or relative error (for
 problems whose answers are real numbers).
 
@@ -66,13 +66,25 @@ def _same_token(a: str, b: str) -> bool:
     return abs(x - y) <= 1e-6 * max(1.0, abs(y))
 
 
+def _same_value(a, b) -> bool:
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_same_value(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same_value(a[k], b[k]) for k in a)
+    if isinstance(a, float) or isinstance(b, float):
+        if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
+            return a == b or abs(a - b) <= 1e-5 * max(1.0, abs(b))
+        return False
+    return a == b
+
+
 def outputs_match(got: str, expected: str, compare: str = "text") -> bool:
     if compare == "tokens":
         g, e = got.split(), expected.split()
         return len(g) == len(e) and all(_same_token(a, b) for a, b in zip(g, e))
     if compare == "json":
         try:
-            return json.loads(got) == json.loads(expected)
+            return _same_value(json.loads(got), json.loads(expected))
         except ValueError:
             return False
     return _text(got) == _text(expected)

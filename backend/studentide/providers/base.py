@@ -90,6 +90,9 @@ TOPICS: dict[str, str] = {
     "data-structures": "Data structures", "dictionaries": "Dictionaries and sets", "graphs": "Graphs", "trees": "Trees",
     "bits": "Bit manipulation", "geometry": "Geometry", "constructive": "Constructive", "games": "Games",
     "divide-conquer": "Divide and conquer", "recursion": "Recursion", "regex": "Regular expressions", "tuples": "Tuples",
+    "linked-lists": "Linked lists", "stacks-queues": "Stacks and queues", "heaps": "Heaps", "matrices": "Matrices",
+    "sliding-window": "Sliding window", "prefix-sums": "Prefix sums", "backtracking": "Backtracking",
+    "simulation": "Simulation",
 }
 
 

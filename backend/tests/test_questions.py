@@ -209,10 +209,11 @@ def test_old_question_rows_are_migrated(tmp_path):
 def test_sources_say_what_each_platform_supports(client):
     s = {p["id"]: p for p in client.get("/api/teach/sources", headers=ADMIN).json()}
     assert s["exercism"]["status"] == "live"
-    assert {s[p]["status"] for p in ("leetcode", "hackerrank")} == {"link_only"}
-    assert s["codeforces"]["status"] == s["codechef"]["status"] == "bundled" and s["mbpp"]["status"] == "live"
-    assert s["codechef"]["can_browse"] and s["codechef"]["can_link"] and not s["leetcode"]["can_browse"]
-    assert client.get("/api/teach/sources/leetcode/categories", headers=ADMIN).status_code == 409
+    assert s["hackerrank"]["status"] == "link_only" and not s["hackerrank"]["can_browse"]
+    assert s["codeforces"]["status"] == s["codechef"]["status"] == s["leetcode"]["status"] == "bundled"
+    assert s["mbpp"]["status"] == "live"
+    assert s["codechef"]["can_browse"] and s["codechef"]["can_link"] and s["leetcode"]["can_link"]
+    assert client.get("/api/teach/sources/hackerrank/categories", headers=ADMIN).status_code == 409
 
 
 def test_browse_and_import_from_exercism(client):

@@ -1,6 +1,6 @@
 // End-to-end check of question sources and optional tests, with screenshots
 // for the thesis: a teacher makes a Python lab with a subject, picks a
-// question from Exercism (fetched live), links a LeetCode problem, writes one
+// question from Exercism (fetched live), links a HackerRank problem, writes one
 // question with a hidden test, and opens the lab; a student checks their code
 // against the tests (failing, then passing). A second lab in C++ shows the
 // language setting reaching the editor and the runner.
@@ -76,18 +76,18 @@ await shot(t, "03-preview");
 await t.click("button:has-text('Add to lab')");
 await t.waitForSelector("strong:text-is('Isogram')");
 
-// LeetCode is link-only
+// HackerRank is link-only
 await t.click("button:has-text('From a platform') >> nth=0");
-await t.click("button[role=tab]:has-text('LeetCode')");
-await t.waitForSelector("text=LeetCode can't be fetched automatically");
-await t.fill("input[placeholder^='https://leetcode.com']", "https://leetcode.com/problems/valid-anagram/");
+await t.click("button[role=tab]:has-text('HackerRank')");
+await t.waitForSelector("text=HackerRank can't be fetched automatically");
+await t.fill("input[placeholder^='https://hackerrank.com']", "https://www.hackerrank.com/challenges/anagram/problem");
 await t.fill("input[placeholder='Two sum']", "Valid anagram");
 await shot(t, "04-link-only");
 await t.click("button:has-text('Add linked question')");
 await t.waitForSelector("text=Edit question"); // opens straight into writing the prompt
 await t.fill("textarea[placeholder^='Read two words']", "Read two words, one per line. Print YES if they are anagrams, otherwise NO.");
 await t.click("form button[type=submit]:has-text('Save')");
-await t.waitForSelector("text=LeetCode link");
+await t.waitForSelector("text=HackerRank link");
 
 // a teacher-written question with one visible and one hidden test
 await t.click("button:has-text('Add question') >> nth=0");

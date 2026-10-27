@@ -18,6 +18,7 @@ import { captureExtension, captureWindow, SNAPSHOT_EVERY_MS } from "../capture";
 import type { LiveSession } from "../editor/session";
 import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
+import { QuestionText } from "../questionText";
 import { Badge, Button, Dialog, Kbd, LiveDot, LogoMark, Spinner, TextArea, cn, duration, ease } from "../ui";
 import type { SubmitResult } from "../compete/api";
 import { SubmitDialog } from "../compete/SubmitDialog";
@@ -421,7 +422,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                   {task.lab_id ? `Question ${active + 1}${sitting ? ` of ${tasks.length}` : ""}` : "Task"}
                 </p>
                 <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text">{task.title}</h2>
-                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{task.prompt}</p>
+                <QuestionText prompt={task.prompt} source={task.source} className="mt-3 text-sm leading-relaxed text-muted" />
                 {task.tests && task.tests.length > 0 && (
                   <div className="mt-5 grid gap-2">
                     <p className="text-xs font-medium text-text">Examples</p>
