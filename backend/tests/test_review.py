@@ -24,7 +24,9 @@ def seeded(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def client(seeded):
-    return TestClient(create_app(seeded, admin_token=TOKEN, serve_frontend=False))
+    c = TestClient(create_app(seeded, admin_token=TOKEN, serve_frontend=False))
+    c.app.state.reviewer.fresh_s = 0  # these tests edit the database directly and expect to see it at once
+    return c
 
 
 def test_review_needs_the_admin_token(seeded):
@@ -156,3 +158,15 @@ def test_review_tags_competition_sessions(client, seeded):
         with db.connect() as conn:
             conn.execute("UPDATE sessions SET lab_id = 'lab_demo1' WHERE id = ?", (sid,))
             conn.execute("DELETE FROM labs WHERE id = 'lab_cmp'")
+
+
+def test_review_list_reads_the_sessions_once(seeded):
+    """Each summary used to re-query every session (with event counts): with a
+    class online the list took tens of seconds and froze the server."""
+    c = TestClient(create_app(seeded, admin_token=TOKEN, serve_frontend=False))
+    rv = c.app.state.reviewer
+    calls = []
+    load = rv._load_sessions
+    rv._load_sessions = lambda: calls.append(1) or load()
+    rows = c.get("/api/review/sessions", headers=ADMIN).json()
+    assert len(rows) > 4 and len(calls) <= 2  # the warm-up thread may load once too

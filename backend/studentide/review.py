@@ -33,6 +33,7 @@ import json
 import math
 import os
 import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -185,6 +186,14 @@ class _Population:
     prior: dict[str, dict | None]
 
 
+# During a class every open session grows by the second, and the review list,
+# the live view and each student's moments all ask for the same detector
+# results. Without these limits each request refitted everything (seconds per
+# session), requests piled up and the whole site stopped answering.
+SESSIONS_TTL_S = 5.0   # one sessions query (it counts every session's events) serves requests this close together
+FRESH_S = 30.0         # a growing session's windows, the class population and baselines are recomputed at most this often
+
+
 class Reviewer:
     """Computes review payloads, caching window features per session."""
 
@@ -196,9 +205,14 @@ class Reviewer:
         self.h = self.settings.h
         self.window_s = self.settings.window_s.get("identity", min(self.settings.window_s.values()))
         self._lock = threading.Lock()
-        self._windows: dict[tuple, tuple[int, list[dict]]] = {}
-        self._models: dict[tuple, dict[str, Baseline]] = {}
-        self._pop: tuple[tuple, _Population] | None = None
+        # One computation at a time: it is CPU-bound (the GIL serialises it anyway), and without this
+        # the warm-up, the live view's background thread and a request all computed the same windows.
+        self._compute = threading.RLock()
+        self.fresh_s = FRESH_S  # 0 recomputes whenever a session has new events (tests)
+        self._windows: dict[tuple, tuple[int, list[dict], float]] = {}
+        self._models: dict[tuple, tuple[tuple, _Population, float, dict[str, Baseline]]] = {}
+        self._pop: tuple[tuple, tuple, _Population, float] | None = None
+        self._sess: tuple[float, list[dict]] | None = None
 
     # -- data
 
@@ -206,6 +220,17 @@ class Reviewer:
         """Every session, tagged with its context: 'competition' for a session
         recorded in a class competition (timed, under pressure: a different
         behaviour with its own baseline), else 'lab'."""
+        now = time.monotonic()
+        with self._lock:
+            hit = self._sess
+        if self.fresh_s and hit and now - hit[0] < SESSIONS_TTL_S:
+            return hit[1]
+        out = self._load_sessions()
+        with self._lock:
+            self._sess = (now, out)
+        return out
+
+    def _load_sessions(self) -> list[dict]:
         with self.db.connect() as conn:
             comp = {r[0] for r in conn.execute("SELECT id FROM labs WHERE kind = 'competition'")}
         return [dict(r) | {"context": "competition" if r["lab_id"] in comp else "lab",
@@ -215,16 +240,26 @@ class Reviewer:
     def windows(self, session: dict, window_s: float | None = None) -> list[dict]:
         W = window_s or self.window_s
         sid, n = session["id"], session["n_events"]
+        now = time.monotonic()
         with self._lock:
             hit = self._windows.get((sid, W))
-        if hit and hit[0] == n:
+        if hit and (hit[0] == n or now - hit[2] < self.fresh_s):
             return hit[1]
+        with self._compute:
+            with self._lock:
+                hit = self._windows.get((sid, W))
+            if hit and (hit[0] == n or now - hit[2] < self.fresh_s):
+                return hit[1]
+            return self._compute_windows(session, W, now)
+
+    def _compute_windows(self, session: dict, W: float, now: float) -> list[dict]:
+        sid, n = session["id"], session["n_events"]
         w = stored_windows(self.db, sid, W) if session.get("keys_purged_at") else None
         if w is None:  # still has its raw keys (or a window length nobody stored before the purge)
             events = list(self.db.iter_events(sid))
             w = window_features(streams(events), W) if events else []
         with self._lock:
-            self._windows[(sid, W)] = (n, w)
+            self._windows[(sid, W)] = (n, w, now)
         return w
 
     def channel_windows(self, session: dict, ch: str, pop: _Population) -> list[dict]:
@@ -267,8 +302,15 @@ class Reviewer:
         base = {st: self.baseline_ids(ss) for st, ss in per_student.items()}
         base = {st: ids for st, ids in base.items() if len(ids) >= MIN_BASELINE}
         key = tuple(sorted((i, by_id[i]["n_events"]) for ids in base.values() for i in ids))
-        if self._pop and self._pop[0] == key:
-            return self._pop[1]
+        ids_key = tuple(i for i, _ in key)
+        now = time.monotonic()
+        with self._compute:
+            if self._pop and (self._pop[1] == key or (self._pop[0] == ids_key and now - self._pop[3] < self.fresh_s)):
+                return self._pop[2]
+            return self._fit_population(base, by_id, key, ids_key, now)
+
+    def _fit_population(self, base: dict[str, list[str]], by_id: dict[str, dict], key: tuple, ids_key: tuple,
+                        now: float) -> _Population:
         st = self.settings
         enough = len(base) >= MIN_POP_STUDENTS
         vocab = list(st.pair_vocab)
@@ -292,7 +334,7 @@ class Reviewer:
             if enough and st.prior_n > 0:
                 full = {s: Baseline.fit(s, bw[s], feats, w) for s in base}
                 pop.prior[ch] = population_prior(full, st.prior_n)
-        self._pop = (key, pop)
+        self._pop = (ids_key, key, pop, now)
         return pop
 
     def weights(self, by_id: dict[str, dict]) -> dict[str, dict[str, float] | None]:
@@ -300,12 +342,16 @@ class Reviewer:
 
     def models(self, student: str, ids: list[str], by_id: dict[str, dict]) -> tuple[dict[str, Baseline], _Population]:
         pop = self.population(by_id)
-        key = (student, tuple((i, by_id[i]["n_events"]) for i in ids), self._pop[0])
-        if key not in self._models:
-            self._models[key] = {ch: Baseline.fit(student, [self.channel_windows(by_id[i], ch, pop) for i in ids],
-                                                  feats, pop.weights[ch], pop.prior[ch])
-                                 for ch, feats in pop.features.items() if feats}
-        return self._models[key], pop
+        key, n = (student, tuple(ids)), tuple(by_id[i]["n_events"] for i in ids)
+        now = time.monotonic()
+        hit = self._models.get(key)
+        if hit and hit[1] is pop and (hit[0] == n or now - hit[2] < self.fresh_s):
+            return hit[3], pop
+        models = {ch: Baseline.fit(student, [self.channel_windows(by_id[i], ch, pop) for i in ids],
+                                   feats, pop.weights[ch], pop.prior[ch])
+                  for ch, feats in pop.features.items() if feats}
+        self._models[key] = (n, pop, now, models)  # one entry per student and baseline: replaced, never piles up
+        return models, pop
 
     def warm(self) -> None:
         """Compute every session's windows ahead of the first list request."""
@@ -318,6 +364,11 @@ class Reviewer:
     def review(self, session_id: str, detail: bool = True) -> dict:
         sessions = self._sessions()
         by_id = {s["id"]: s for s in sessions}
+        if session_id not in by_id:  # started since the cached list: reload once
+            sessions = self._load_sessions()
+            with self._lock:
+                self._sess = (time.monotonic(), sessions)
+            by_id = {s["id"]: s for s in sessions}
         if session_id not in by_id:
             raise KeyError(session_id)
         s = by_id[session_id]

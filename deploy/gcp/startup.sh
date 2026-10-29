@@ -7,6 +7,11 @@ if ! command -v docker >/dev/null; then
   apt-get install -y unattended-upgrades
 fi
 mkdir -p /opt/studentide && cd /opt/studentide
+# What the previous run left behind (container state and last log lines), for diagnosing an outage after the fact.
+if [ -d src/deploy ]; then
+  (cd src/deploy && docker compose ps -a 2>&1 | sed 's/^/PREV ps: /' || true)
+  (cd src/deploy && docker compose logs --no-color --tail 40 app caddy 2>&1 | cut -c1-300 | sed 's/^/PREV log: /' || true)
+fi
 gcloud storage cp $B/studentide.tar.gz $B/deploy.env /tmp/
 rm -rf src.new && mkdir src.new && tar -xzf /tmp/studentide.tar.gz -C src.new
 rm -rf src && mv src.new src
