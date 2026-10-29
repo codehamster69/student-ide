@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import threading
 import time
 from typing import Callable, Literal
@@ -94,6 +95,9 @@ class Live:
         self._presence: dict[str, float] = {}                        # session id -> last IDE poll
         self._code: dict[str, tuple[int, str, int | None]] = {}      # session id -> (seq, text, caret)
         self._moments: dict[str, tuple[float, int, float | None]] = {}  # session id -> (computed at, n, last t)
+        self._queue: queue.Queue = queue.Queue()
+        self._queued: set[str] = set()
+        self._worker: threading.Thread | None = None
 
     # -- presence
 
@@ -182,19 +186,41 @@ class Live:
 
     # -- moments (the review timeline's episodes), recomputed at most every 30 s
 
-    def moments(self, reviewer, session_id: str, now: float) -> tuple[int, float | None]:
+    def moments(self, reviewer, session_id: str, now: float, ended: bool = False) -> tuple[int, float | None]:
+        """Never runs the detector inside the teacher's poll: that took seconds
+        per session and, with a class of them, froze the whole server. A stale
+        or missing count is queued for one background thread and shown on a
+        later poll."""
         with self._lock:
             hit = self._moments.get(session_id)
-        if hit and now - hit[0] < MOMENTS_TTL_S:
-            return hit[1], hit[2]
+            if hit and (ended or now - hit[0] < MOMENTS_TTL_S):  # an ended session's count never changes
+                return hit[1], hit[2]
+            if session_id not in self._queued:
+                self._queued.add(session_id)
+                self._queue.put((reviewer, session_id))
+            if self._worker is None:
+                self._worker = threading.Thread(target=self._compute_moments, name="live-moments", daemon=True)
+                self._worker.start()
+        return (hit[1], hit[2]) if hit else (0, None)
+
+    def moments_now(self, reviewer, session_id: str) -> tuple[int, float | None]:
         try:
             eps = reviewer.summary(session_id)["episodes"]
         except Exception:  # a session with too few events to window yet
             eps = []
         out = (len(eps), max((e["first_alarm"] for e in eps), default=None))
         with self._lock:
-            self._moments[session_id] = (now, *out)
+            self._moments[session_id] = (time.time(), *out)
         return out
+
+    def _compute_moments(self) -> None:
+        while True:
+            reviewer, session_id = self._queue.get()
+            try:
+                self.moments_now(reviewer, session_id)
+            finally:
+                with self._lock:
+                    self._queued.discard(session_id)
 
 
 def _edit_caret(d: dict, caret: int | None) -> int | None:
@@ -278,7 +304,7 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
                 n_moments, last_t, moment_sid = 0, None, None
                 if sum(stats.get(s["id"], {}).get("n", 0) for s in ss):
                     for s in sorted(ss, key=lambda s: s["started_at"]):
-                        n, t = live.moments(reviewer, s["id"], now)
+                        n, t = live.moments(reviewer, s["id"], now, ended=s["ended_at"] is not None)
                         n_moments += n
                         if n:
                             moment_sid, last_t = s["id"], s["started_at"] + t
