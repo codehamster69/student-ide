@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, Eye, EyeOff, FlaskConical, HeartHandshake,
+  ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, RotateCcw, Eye, EyeOff, FlaskConical, HeartHandshake,
   MessageCircleQuestion, Pause, Play, Play as RunIcon, ScanEye, SkipBack,
   Trophy,
 } from "lucide-react";
@@ -192,6 +192,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
             <p className="flex items-center gap-2 text-xs text-muted">
               <span className="inline-block size-2.5 rounded-sm bg-accent/25 ring-1 ring-accent/60" /> changed in the last 30 s
               {code.origin === "input.paste" && <Badge tone="warn" className="h-5 px-2 text-[11px]"><ClipboardPaste className="size-3" /> last change was a paste</Badge>}
+              {code.origin === "reset" && <Badge className="h-5 px-2 text-[11px]"><RotateCcw className="size-3" /> student reset to the starter code</Badge>}
             </p>
           </div>
           <div className="h-[430px]"><CodeReplay doc={code.doc} changed={code.changed} caret={code.caret} /></div>

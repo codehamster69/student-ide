@@ -295,6 +295,30 @@ not stuck.
   \label{fig:sitting}
 \end{figure}
 
+\paragraph{Starting a question again.} Because a question resumes the
+student's latest code, a student who wants a clean slate needs a way back to
+the starter code. A \emph{Reset} button above the editor asks for
+confirmation and then replaces the code with the starter in a single editor
+transaction (Figure~\ref{fig:reset}). It is logged as an ordinary edit event
+with origin \texttt{reset}, so replay and the hand-in stay exact and the
+reset stays visible in the review, where it is labelled. The detector applies
+the edit to its copy of the document but does not count it as writing: no
+inserted characters, no new lines and no caret jump, since nobody typed the
+starter. The reset stays in the editor's undo history, so Ctrl+Z brings the
+old code back (that undo is recorded as an ordinary edit).
+
+\begin{figure}[t]
+  \centering
+  \begin{minipage}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{reset/reset-light-01-confirm}
+  \end{minipage}\hfill
+  \begin{minipage}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{reset/reset-light-02-starter}
+  \end{minipage}
+  \caption{Reset: the student confirms (left) and the question is back at its starter code (right).}
+  \label{fig:reset}
+\end{figure}
+
 \subsection{Optional tests, languages and question sources}
 \label{sec:question-sources}
 Correctness is deliberately optional. A lab measures effort, so a question

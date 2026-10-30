@@ -10,7 +10,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, Terminal, Trophy } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, RotateCcw, Terminal, Trophy } from "lucide-react";
 import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
 import { LANGUAGES, type Language } from "../teach/api";
@@ -120,6 +120,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const [pane, setPane] = useState<"output" | "tests">("output");
   const [, setLangTick] = useState(0); // re-render after a language switch (langOf is a ref)
   const [switchingLang, setSwitchingLang] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const task = tasks[active];
   const sitting = tasks.length > 1;
@@ -221,6 +222,19 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     }
     setOutcomes((m) => ({ ...m, [at]: out }));
   }, []);
+
+  /** Put the question back to its starter code: one edit (origin "reset") the
+   * detector skips and Ctrl+Z can undo, so nothing is lost or hidden. */
+  const resetCode = () => {
+    const v = view.current;
+    setResetting(false);
+    if (!v) return;
+    const starter = cur().initial;
+    if (v.state.doc.toString() !== starter) {
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: starter }, selection: { anchor: 0 }, userEvent: "reset", scrollIntoView: true });
+    }
+    v.focus();
+  };
 
   const runRef = useRef(runCode);
   runRef.current = runCode;
@@ -624,8 +638,14 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 {lang.file}
               </div>
             )}
+            <Button variant="ghost" size="sm" onClick={() => setResetting(true)} disabled={saving || running || timeUp}
+              className={cn("mb-1 shrink-0 self-center text-xs text-muted", !pickLanguage && "ml-auto")}
+              title="Start this question again from the starter code">
+              <RotateCcw className="size-3.5" />
+              Reset
+            </Button>
             {pickLanguage && (
-              <label className="relative mb-1 ml-auto flex shrink-0 items-center gap-2 self-center text-xs text-muted"
+              <label className="relative mb-1 flex shrink-0 items-center gap-2 self-center text-xs text-muted"
                 title="Answer in any of these languages. Each keeps its own code, so you can switch back. Your submission is graded in the language on screen.">
                 {switchingLang ? <Spinner className="size-3" /> : <span>Language</span>}
                 <span className="relative">
@@ -735,6 +755,19 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               {saving && <Spinner className="size-3.5" />}
               {competing ? "Back to board" : sitting ? "Finish lab" : "Finish session"}
             </Button>
+          </>
+        }
+      />
+      <Dialog
+        open={resetting}
+        onClose={() => setResetting(false)}
+        icon={<RotateCcw className="size-4" />}
+        title="Start again from the starter code?"
+        description={`Your code for this question${pickLanguage ? ` in ${lang.label}` : ""} will be replaced by the starter code. If you change your mind, press ${isMac ? "⌘" : "Ctrl"} Z in the editor to get it back.`}
+        actions={
+          <>
+            <Button onClick={() => setResetting(false)}>Keep my code</Button>
+            <Button variant="primary" onClick={resetCode} data-autofocus>Reset to starter code</Button>
           </>
         }
       />
