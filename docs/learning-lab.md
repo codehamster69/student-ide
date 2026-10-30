@@ -19,7 +19,7 @@ dragging its edge: the side panel's width, the output pane's height and the
 input/output split. Sizes are remembered in the browser; double-click a
 handle to reset it. Arrow keys move a focused handle.
 
-Tracks today, beginner to advanced (63 lessons):
+Tracks today, beginner to advanced (57 lessons):
 
 | Track | Lessons |
 |---|---|
