@@ -50,8 +50,8 @@ export async function startSession(studentId: string, task: Task, sittingId?: st
   };
   const { session_id, resume_code } = await api<{ session_id: string; resume_code?: string | null }>("/api/sessions", {
     student_id: studentId, client_meta: meta,
-    // lab questions are checked against the teacher's roster on the server
-    ...(task.lab_id ? { question_id: task.id, sitting_id: sittingId } : { task_id: task.id }),
+    // lab questions are checked against the teacher's roster on the server; lessons are open to everyone
+    ...(task.lesson ? { lesson_id: task.id } : task.lab_id ? { question_id: task.id, sitting_id: sittingId } : { task_id: task.id }),
     ...(language ? { language } : {}),
   });
   if (language) rememberLanguage(task, language);

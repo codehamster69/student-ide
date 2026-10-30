@@ -33,7 +33,7 @@ def load_session(db: Database, session_id: str, types: tuple[str, ...] | None = 
 def export_all(db: Database, out: Path) -> int:
     out.mkdir(parents=True, exist_ok=True)
     sessions = []
-    for row in db.list_sessions():
+    for row in db.list_sessions(include_learn=True):  # learning-lab practice too, marked context "learn"
         meta = session_meta(db, row["id"])
         meta["n_events"] = row["n_events"]
         meta["runs"] = [dict(r) for r in db.list_runs(row["id"])]

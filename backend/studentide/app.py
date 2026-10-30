@@ -5,7 +5,7 @@ Student-facing (no auth beyond a roll number, the lab is supervised):
     GET  /api/students/{id}/labs                   open labs assigned to this student
     POST /api/login                     {student_id}            -> consent status
     POST /api/consent                   {student_id}
-    POST /api/sessions                  {student_id, task_id | question_id, client_meta, language?}
+    POST /api/sessions                  {student_id, task_id | question_id | lesson_id, client_meta, language?}
                                                    (language: any-language competitions, one session per language)
     POST /api/sessions/{id}/events      {schema_version, events: [...]}
     POST /api/sessions/{id}/run         {code, stdin}   in the lab's language (Python for practice tasks)
@@ -45,6 +45,10 @@ Review timeline (phase 3, same access):
     GET  /api/review/sessions/{id}            evidence timeline
     GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
 
+Learning lab (always open, never reviewed; see learn.py):
+    GET  /api/learn[?student_id=]                  tracks and lessons, with the student's progress
+    GET  /api/learn/lessons/{track}/{slug}
+
 Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
 POST /api/sessions/{id}/submit, see compete.py.
@@ -68,7 +72,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import compete, grading, live as live_mod, retention, runner, teach
+from . import compete, grading, learn, live as live_mod, retention, runner, teach
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .providers import PROVIDERS, ProviderError
@@ -97,7 +101,8 @@ class RoleIn(BaseModel):
 class SessionIn(BaseModel):
     student_id: str
     task_id: str | None = None      # a built-in practice task, or
-    question_id: str | None = None  # a question from a lab the teacher assigned
+    question_id: str | None = None  # a question from a lab the teacher assigned, or
+    lesson_id: str | None = Field(default=None, max_length=200)  # a learning-lab lesson
     sitting_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{8,64}$")  # one opening of that lab
     language: str | None = None     # an any-language competition: the language the student picked for this question
     client_meta: dict = Field(default_factory=dict)
@@ -257,8 +262,14 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def start_session(body: SessionIn, request: Request) -> dict:
         sid = _student_id(body.student_id)
         auth.own_student(request, sid)
-        question = None
-        if body.question_id:
+        question, context = None, None
+        if body.lesson_id:
+            lesson = learn.get_lesson(body.lesson_id)
+            if lesson is None:
+                raise HTTPException(404, "no such lesson")
+            question, context = learn.snapshot(lesson), learn.CONTEXT
+            task_id = lesson["id"]
+        elif body.question_id:
             q = db.get_question(body.question_id)
             if q is None or q["lab_id"] not in {l["id"] for l in db.labs_for_student(sid)}:
                 raise HTTPException(403, "this question is not open for you")
@@ -278,14 +289,14 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             raise HTTPException(400, "unknown task")
         if not has_consent(db.get_or_create_student(sid)):
             raise HTTPException(403, "consent required before recording")
-        if question:
+        if question and question["lab_id"]:
             compete.can_start_session(db, question["lab_id"], sid)
-        # Coming back to a question (a later lab sitting, or back from a competition's
-        # board) picks up the code where the student left it, in the same language.
+        # Coming back to a question (a later lab sitting, back from a competition's
+        # board, or a lesson opened again) picks up the code where the student left it, in the same language.
         resume = latest_code(db, sid, question["id"], question["language"]) if question else None
         session_id = uuid.uuid4().hex
         db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question,
-                          body.sitting_id if question else None)
+                          body.sitting_id if question else None, context)
         return {"session_id": session_id, "schema_version": SCHEMA_VERSION,
                 "lab_id": question and question["lab_id"], "question_id": question and question["id"],
                 "sitting_id": question and body.sitting_id, "resume_code": resume}
@@ -477,6 +488,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         teacher_session(session_id, request)
         return replay_data(db, session_id)
 
+    app.include_router(learn.router(db, auth, _student_id))
     app.include_router(teach.router(db, require_admin, auth))
     app.include_router(compete.router(db, require_admin, auth))
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))

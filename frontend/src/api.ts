@@ -28,6 +28,10 @@ export interface Task {
   competition?: boolean;
   /** competition questions: when the clock runs out (unix seconds, server clock) */
   ends_at?: number | null;
+  /** a learning-lab lesson: `prompt` is Markdown, `submitted` means done (Check passed, or ran code if it has no tests) */
+  lesson?: boolean;
+  /** learning lab: one line under the title in the lesson list */
+  summary?: string;
   /** where the question came from; live_prompt: its text is loaded by the browser, never stored */
   source?: { url?: string; live_prompt?: LivePrompt } | null;
 }
@@ -44,6 +48,17 @@ export interface Lab {
   duration_s?: number | null;
   n_questions?: number;
   joined?: boolean;
+}
+
+/** A learning-lab track: lessons in one language, always open (see backend/studentide/learn.py). */
+export interface LearnTrack {
+  id: string;
+  title: string;
+  language: "python" | "c" | "cpp" | "java" | "javascript";
+  /** "beginner" | "intermediate" | "advanced"; tracks come ordered beginner to advanced */
+  level: string;
+  summary: string;
+  lessons: Task[];
 }
 
 export interface RunResult {

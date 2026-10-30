@@ -57,7 +57,8 @@ flowchart LR
 | 3 Dashboard | Live classroom view: class grid per open lab, read-only student editor; students always see who is watching, views logged, consent v2 | ✅ | #16 |
 | 3 Dashboard | A lab opens as one sitting: question tabs in one editor, each question keeps its code (resumed in a later sitting); one session per question visited, linked by a sitting id | ✅ | #17 |
 | 3 Dashboard | Competitions hand in each student's code when time runs out; leaderboard linked for owner, co-teachers and admins | ✅ | #21 |
-| 3 Dashboard | Any-language competitions (each student picks the language per question) and a staff-only similar-submissions check (winnowing + tiling, side by side) | 🟡 | #24 |
+| 3 Dashboard | Any-language competitions (each student picks the language per question) and a staff-only similar-submissions check (winnowing + tiling, side by side) | ✅ | #24 |
+| 3 Dashboard | Always-open learning lab: C and Python lessons with runnable examples and checked exercises; practice recorded but kept out of baselines, detector and review | ✅ | #30 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |

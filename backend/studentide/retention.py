@@ -17,7 +17,7 @@ re-analysis at a window length that was not stored.
 When raw keys are due:
 * a lab session in a student's baseline (the first BASELINE_DAYS after their
   first lab session) once that baseline period is over, and
-* any session (lab or competition) once it is older than
+* any session (lab, competition or learning lab) once it is older than
   $STUDENTIDE_RAW_KEY_DAYS (default 28) days.
 A session still open (no end, started under a day ago) is never touched.
 
@@ -84,12 +84,12 @@ def due(db: Database, now: float | None = None, days: float | None = None) -> li
     with db.connect() as conn:
         comp = {r[0] for r in conn.execute("SELECT id FROM labs WHERE kind = 'competition'")}
         rows = [dict(r) for r in conn.execute(
-            """SELECT s.id, s.student_id, s.lab_id, s.started_at, s.ended_at, s.keys_purged_at,
+            """SELECT s.id, s.student_id, s.lab_id, s.started_at, s.ended_at, s.keys_purged_at, s.context,
                       EXISTS (SELECT 1 FROM events e WHERE e.session_id = s.id) AS has_events
                FROM sessions s ORDER BY s.started_at""")]
     first_lab: dict[str, float] = {}
     for r in rows:
-        if r["has_events"] and r["lab_id"] not in comp:
+        if r["has_events"] and r["lab_id"] not in comp and r["context"] is None:
             first_lab.setdefault(r["student_id"], r["started_at"])
     out = []
     for r in rows:
@@ -98,7 +98,7 @@ def due(db: Database, now: float | None = None, days: float | None = None) -> li
         if r["ended_at"] is None and r["started_at"] > now - OPEN_GRACE_S:
             continue
         t0 = first_lab.get(r["student_id"])
-        in_baseline = r["lab_id"] not in comp and t0 is not None and r["started_at"] < t0 + BASELINE_DAYS * 86400
+        in_baseline = r["lab_id"] not in comp and r["context"] is None and t0 is not None and r["started_at"] < t0 + BASELINE_DAYS * 86400
         if in_baseline and now >= t0 + BASELINE_DAYS * 86400:
             out.append(r | {"reason": "baseline built"})
         elif r["started_at"] < now - days * 86400:

@@ -98,4 +98,6 @@ python -m studentide.seed --db data/demo.sqlite3     # simulated students to loo
 STUDENTIDE_DB=data/demo.sqlite3 STUDENTIDE_ADMIN_TOKEN=change-me uvicorn studentide.app:create_app --factory
 ```
 
+Students also have an always-open learning lab (concept lessons with runnable examples and small exercises), see [docs/learning-lab.md](docs/learning-lab.md).
+
 Open http://localhost:8000/#/review for the timeline and http://localhost:8000/#/teach to create labs and questions. Details in [docs/review.md](docs/review.md) and [docs/teaching.md](docs/teaching.md).
