@@ -216,7 +216,7 @@ stack.
 
 | Mode | What works | Default for |
 | --- | --- | --- |
-| Open | Full internet | Practice labs, projects |
+| Open | Full internet | Practice labs and projects only; **not available for assessed labs** (decided 2026-10-30) |
 | Registries only | apt, pip, npm, Maven, crates, Go proxy, GitHub releases through a small filtering proxy started next to the instance | Assessed labs |
 | Off | Nothing outside the instance | Exams, competitions |
 
@@ -225,6 +225,8 @@ In every mode, traffic leaves through that proxy, which logs host names
 github.com". Open mode is honest about what it allows: a student could
 fetch a solution, which is why assessed labs default to registries only and
 why the evidence check (section 4.4) matters more than the network rule.
+**Decided (Rohan, 2026-10-30):** assessed labs can use registries only or
+off, never open.
 
 **Resources**: defaults of 2 CPUs, 2 GB RAM and a 10 GB disk per instance,
 raised per subject (ML or Java stacks need more), shown live in the status
@@ -643,9 +645,7 @@ D1 to D3 are the student core; D4 can start alongside D2 since it is web-only; D
 
 1. Which subjects should get library presets first (we suggest C
    programming, then Linux and shell)?
-2. Should open network be allowed in assessed labs at all, or only
-   registries-only and off (we suggest registries-only as the floor)?
-3. Can teachers create subjects freely, or should an admin approve new
+2. Can teachers create subjects freely, or should an admin approve new
    subjects (we suggest freely, with admins approving only raw Dockerfiles)?
-4. How many cloud fallback seats is the VM budget comfortable with?
-5. Can IT install Docker or Podman on one lab room's PCs for the pilot?
+3. How many cloud fallback seats is the VM budget comfortable with?
+4. Can IT install Docker or Podman on one lab room's PCs for the pilot?
