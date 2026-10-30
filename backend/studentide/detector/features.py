@@ -206,6 +206,10 @@ def streams(events: list[dict]) -> Streams:
         elif typ == "edit":
             doc = doc or ""
             ch = d["changes"]
+            if d["origin"] == "reset":  # Reset button: back to the starter code, nothing typed
+                doc = apply_edit(doc, d)
+                caret = 0
+                continue
             if ch:
                 frm = ch[0][0]
                 ins = sum(len(c[2]) for c in ch)

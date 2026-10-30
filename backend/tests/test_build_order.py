@@ -152,6 +152,21 @@ def test_two_changes_in_one_edit():
     assert len(s.l_t) == 2 and s.l_fill.all()
 
 
+def test_reset_to_starter_is_not_writing():
+    """The Reset button replaces the code with the starter in one edit: no
+    inserted characters, lines or blocks, and later typing is read on the starter."""
+    starter = "def f():\n    pass\n"
+    before = streams(linear().end())
+    m = linear()
+    m.t += 2000
+    m.edit([(0, len(m.doc), starter)], origin="reset")
+    m.type("x = 1\n")
+    s = streams(m.end())
+    assert len(s.l_t) == len(before.l_t) + 1 and len(s.e_t) == len(before.e_t) + 6
+    assert s.e_inserted.max() == 1  # the starter text is not counted as inserted
+    assert final_text(m.ev) == starter + "x = 1\n"
+
+
 def test_open_blocks_edge_cases():
     assert open_blocks("") == 0
     assert open_blocks("if a:  # done?\n") == 1  # trailing comment ignored
