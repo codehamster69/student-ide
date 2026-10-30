@@ -119,10 +119,14 @@ def _student_id(raw: str) -> str:
     return sid
 
 
-def latest_code(db: Database, student_id: str, question_id: str) -> str | None:
+def latest_code(db: Database, student_id: str, question_id: str, language: str | None = None) -> str | None:
     """The code of this student's most recent session on the question, rebuilt
-    from its edits (or its last snapshot if events were lost); None if none."""
+    from its edits (or its last snapshot if events were lost); None if none.
+    `language`: only sessions in that language count (an any-language competition
+    keeps one session per language, and C code must not come back as Python)."""
     for row in db.previous_sessions(student_id, question_id):
+        if language and row["question_json"] and json.loads(row["question_json"]).get("language", language) != language:
+            continue
         events = list(db.iter_events(row["id"], ("snapshot", "edit")))
         if not events:
             continue
@@ -276,8 +280,9 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             raise HTTPException(403, "consent required before recording")
         if question:
             compete.can_start_session(db, question["lab_id"], sid)
-        # Coming back to a question in a later sitting picks up the code where the student left it.
-        resume = latest_code(db, sid, question["id"]) if question and lab["kind"] != "competition" else None
+        # Coming back to a question (a later lab sitting, or back from a competition's
+        # board) picks up the code where the student left it, in the same language.
+        resume = latest_code(db, sid, question["id"], question["language"]) if question else None
         session_id = uuid.uuid4().hex
         db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question,
                           body.sitting_id if question else None)

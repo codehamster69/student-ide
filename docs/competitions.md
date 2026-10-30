@@ -23,7 +23,10 @@ Teacher, at `/#/teach`:
    (or keep their roll number). Questions stay hidden.
 4. **Start the clock**. Questions appear for everyone at once. Students open
    a question in the normal editor (recorded exactly like a lab), **Run** as
-   often as they like, and **Submit** to run the tests.
+   often as they like, and **Submit** to run the tests. **Back to board**
+   and opening the question again (or a reload) picks up the code where they
+   left it, in the language they were using; each visit is still its own
+   recorded session, starting from a snapshot of that code.
 5. **Live board** (`/#/teach/c/<lab id>`) is made for the projector:
    *Present* goes full screen and hides roll numbers. **End now** stops
    submissions early; otherwise the clock does. The podium shows at the end.

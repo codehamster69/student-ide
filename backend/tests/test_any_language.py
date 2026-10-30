@@ -148,3 +148,16 @@ def test_competition_baseline_prefers_the_same_language(tmp_path):
     got = rv.baseline_ids(many, "competition", "L9", "c")
     assert "s2" not in got and set(got) == {"s1", *(f"s{10 + i}" for i in range(MIN_BASELINE))}
     assert "s1" not in rv.baseline_ids(many, "competition", "L1", "c")  # still leaves its own competition out
+
+
+def test_coming_back_restores_the_code_of_that_language(client, app):
+    lab_id, qid = make_any(client)
+    client.post(f"/api/teach/competitions/{lab_id}/start", headers=ADMIN)
+    s_c = start(client, "S1", qid, "c").json()["session_id"]
+    edits(client, s_c, C)
+    s_py = start(client, "S1", qid, "python").json()
+    assert s_py["resume_code"] is None                     # Python never written: its starter, not the C code
+    edits(client, s_py["session_id"], PY)
+    assert start(client, "S1", qid, "c").json()["resume_code"] == C
+    assert start(client, "S1", qid, "python").json()["resume_code"] == PY
+    assert start(client, "S2", qid, "c").json()["resume_code"] is None   # never another student's code

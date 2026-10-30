@@ -253,3 +253,30 @@ def test_competitions_ended_before_hand_in_keep_their_results(tmp_path):
     with db.connect() as conn:
         done = dict(conn.execute("SELECT lab_id, handin_done FROM competitions").fetchall())
     assert done == {"old": 61, "running": None}
+
+
+def test_back_from_the_board_keeps_the_code(client, app, sync_hand_in):
+    lab_id, qid = make_comp(client, app)
+    lab = client.post(f"/api/teach/labs/{lab_id}/questions", headers=ADMIN,
+                      json={"title": "Double", "prompt": "Print 2n", "starter_code": "n = int(input())\n",
+                            "sample_input": "2", "tests": [{"name": "t", "stdin": "4", "expected": "8"}]}).json()
+    q2 = lab["questions"][1]["id"]
+    enter(client, "S1")
+    client.post(f"/api/teach/competitions/{lab_id}/start", headers=ADMIN)
+
+    first = session(client, "S1", qid).json()
+    assert first["resume_code"] is None                     # first visit: the starter code
+    edits(client, first["session_id"], "a, b = map(int, input().split())\n")
+    client.post(f"/api/sessions/{first['session_id']}/events", json={"schema_version": 1, "events": [
+        {"seq": 2, "t": 300.0, "type": "session_end", "data": {"wall_clock_ms": 1, "reason": "submit"}}]})
+    assert session(client, "S1", q2).json()["resume_code"] is None   # another question: its own starter
+    back = session(client, "S1", qid).json()                # back from the board to the first question
+    assert back["resume_code"] == "a, b = map(int, input().split())\n"
+    assert back["session_id"] != first["session_id"]        # still one session per visit for the detector
+
+    # the editor logs the resumed code as its start snapshot; finishing it then is what time-up hands in
+    edits(client, back["session_id"], SOLUTION)
+    client.post(f"/api/teach/competitions/{lab_id}/end", headers=ADMIN)
+    rewind(app, lab_id, compete.GRACE_S + 5)
+    v = client.get(f"/api/teach/competitions/{lab_id}", headers=ADMIN).json()
+    assert v["board"][0]["solved"] == 1 and v["board"][0]["questions"][0]["auto"] is True
