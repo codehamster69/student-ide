@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     question_json  TEXT,                     -- JSON copy of the question as the student saw it
     keys_purged_at REAL,                     -- raw key events deleted at this time, see retention.py
     sitting_id     TEXT,                     -- one opening of a lab: its questions' sessions share it
-    context        TEXT                      -- 'learn' = learning lab practice (see learn.py); NULL = everything else
+    context        TEXT                      -- 'learn' = learning lab practice (see learn.py); 'preview' = a teacher's
+                                             -- "View as student" (never study data); NULL = everything else
 );
 CREATE INDEX IF NOT EXISTS sessions_by_student ON sessions(student_id, started_at);
 
@@ -236,10 +237,11 @@ class Database:
     def list_sessions(self, student_id: str | None = None, lab_id: str | None = None,
                       include_learn: bool = False) -> list[sqlite3.Row]:
         """Learning-lab sessions are left out unless `include_learn`: the
-        detector, baselines, review, live view and harness never see them."""
+        detector, baselines, review, live view and harness never see them.
+        Teachers' "View as student" sessions are always left out (not study data)."""
         sql = """SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.session_id = s.id) AS n_events
                  FROM sessions s"""
-        where, args = ([], []) if include_learn else (["s.context IS NULL"], [])
+        where, args = (["(s.context IS NULL OR s.context = 'learn')"] if include_learn else ["s.context IS NULL"]), []
         if student_id is not None:
             where.append("s.student_id = ?")
             args.append(student_id)
@@ -326,8 +328,9 @@ class Database:
                 """SELECT l.*,
                           (SELECT COUNT(*) FROM questions q WHERE q.lab_id = l.id) AS n_questions,
                           (SELECT COUNT(*) FROM lab_students r WHERE r.lab_id = l.id) AS n_roster,
-                          (SELECT COUNT(*) FROM sessions s WHERE s.lab_id = l.id) AS n_sessions,
-                          (SELECT COUNT(DISTINCT s.student_id) FROM sessions s WHERE s.lab_id = l.id) AS n_started
+                          (SELECT COUNT(*) FROM sessions s WHERE s.lab_id = l.id AND s.context IS NOT 'preview') AS n_sessions,
+                          (SELECT COUNT(DISTINCT s.student_id) FROM sessions s
+                            WHERE s.lab_id = l.id AND s.context IS NOT 'preview') AS n_started
                    FROM labs l ORDER BY l.created_at DESC""").fetchall()
         return rows if ids is None else [r for r in rows if r["id"] in ids]
 
@@ -406,7 +409,23 @@ class Database:
     def count_sessions(self, *, lab_id: str | None = None, question_id: str | None = None) -> int:
         col, val = ("question_id", question_id) if question_id else ("lab_id", lab_id)
         with self.connect() as conn:
-            return conn.execute(f"SELECT COUNT(*) FROM sessions WHERE {col} = ?", (val,)).fetchone()[0]
+            return conn.execute(f"SELECT COUNT(*) FROM sessions WHERE {col} = ? AND context IS NOT 'preview'",
+                                (val,)).fetchone()[0]
+
+    def delete_preview_sessions(self, *, lab_id: str | None = None, question_id: str | None = None) -> int:
+        """Teachers' "View as student" sessions on a lab or question about to be
+        deleted (they never block the delete), with everything recorded in them."""
+        col, val = ("question_id", question_id) if question_id else ("lab_id", lab_id)
+        with self.connect() as conn:
+            ids = [r[0] for r in conn.execute(f"SELECT id FROM sessions WHERE {col} = ? AND context = 'preview'", (val,))]
+            if not ids:
+                return 0
+            have = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            marks = ",".join("?" * len(ids))
+            for table in ("events", "runs", "checks", "session_windows", "submissions"):
+                if table in have:
+                    conn.execute(f"DELETE FROM {table} WHERE session_id IN ({marks})", ids)
+            return conn.execute(f"DELETE FROM sessions WHERE id IN ({marks})", ids).rowcount
 
     def lab_roster(self, lab_id: str) -> list[str]:
         with self.connect() as conn:
@@ -426,6 +445,13 @@ class Database:
                        (l.everyone = 1 OR EXISTS (SELECT 1 FROM lab_students r WHERE r.lab_id = l.id AND r.student_id = ?))
                    ORDER BY l.created_at DESC""", (student_id,)).fetchall()
 
+    def preview_labs(self, ids: set[str] | None) -> list[sqlite3.Row]:
+        """What "View as student" lists: open and draft labs among `ids` (None = all),
+        so a teacher can try a lab before opening it."""
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM labs WHERE status IN ('open', 'draft') ORDER BY created_at DESC").fetchall()
+        return rows if ids is None else [r for r in rows if r["id"] in ids]
+
     def attempts(self, student_id: str, lab_id: str) -> dict[str, dict]:
         """Per question: how many sessions this student started and whether one was submitted."""
         with self.connect() as conn:
@@ -440,4 +466,5 @@ class Database:
             return conn.execute(
                 """SELECT student_id, question_id, COUNT(*) AS n, MAX(end_reason = 'submit') AS submitted,
                           MAX(started_at) AS last_at
-                   FROM sessions WHERE lab_id = ? GROUP BY student_id, question_id""", (lab_id,)).fetchall()
+                   FROM sessions WHERE lab_id = ? AND context IS NOT 'preview'
+                   GROUP BY student_id, question_id""", (lab_id,)).fetchall()

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
-import { Activity, ListChecks, LogOut, MessagesSquare, Radio, UsersRound } from "lucide-react";
+import { Activity, ListChecks, Eye, LogOut, MessagesSquare, Radio, UsersRound } from "lucide-react";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig, type Me } from "../auth";
 import { Button, Logo, cn, page, spring } from "../ui";
 import { Labs } from "../teach/Labs";
@@ -117,7 +117,13 @@ export function ReviewApp() {
               <MessagesSquare className="size-3.5 text-accent" />
               A highlighted moment starts a conversation, never a penalty.
             </div>
-            <div className="flex min-w-24 justify-end">
+            <div className="flex min-w-24 items-center justify-end gap-1">
+              {authed && (
+                <a href="#/student" title="Open the student side under your own account; nothing you do there is study data"
+                  className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text">
+                  <Eye className="size-3.5" />View as student
+                </a>
+              )}
               {authed && (
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   {me && <span className="hidden font-mono text-xs text-faint lg:inline">{me.email}</span>}

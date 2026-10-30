@@ -827,14 +827,20 @@ compare or exclude sessions that had an editor view.
 Besides timed labs and competitions, students have an always-open
 \emph{learning lab}: short lessons that each explain one idea next to code
 the student can change and run (\cref{fig:learn}). Eight tracks were
-written for the pilot, 57 lessons from beginner to advanced: C (twelve
-beginner lessons from \texttt{printf} to pointers, structs and recursion,
-then ten advanced ones on dynamic memory, linked lists, stacks and queues,
-function pointers, bit operations, the preprocessor and files), C++ (from
-streams and vectors through classes, RAII, templates and the STL to virtual
-functions, smart pointers and move semantics) and Python
-(beginner, intermediate and advanced, ending with classes, generators,
-decorators, memoisation and context managers). Each lesson's examples can be loaded
+written for the pilot, 82 lessons from beginner to advanced, checked against a
+full first-year syllabus so no core concept is missing: C (sixteen beginner
+lessons from \texttt{printf}, types and casts through \texttt{switch}, loop
+control, scope, pointers, structs and recursion, then fourteen advanced ones on
+dynamic memory, linked lists, stacks and queues, function pointers, bit
+operations, the preprocessor, files, sorting and binary search, command-line
+arguments and error handling, multi-file programs and variadic functions),
+C++ (from streams, vectors, pointers, namespaces and recursion through
+classes, RAII, static and friend members, templates, iterators and the STL to
+virtual functions, smart pointers, move semantics and
+\texttt{optional}/\texttt{variant}) and Python (beginner, intermediate and
+advanced, from operators, nested lists and modules through argument passing,
+\texttt{collections} and regular expressions to generators, decorators,
+dataclasses, type hints and testing, and sorting algorithms with big-O). Each lesson's examples can be loaded
 into the editor with one click, and each ends with a small exercise checked
 by the same stdin/stdout tests as lab questions
 (\cref{sec:question-sources}). Lessons are Markdown files kept in the
@@ -866,4 +872,23 @@ the learning lab's page and in the editor.
   \end{subfigure}
   \caption{The learning lab.}
   \label{fig:learn}
+\end{figure}
+
+\paragraph{View as student.} Teachers and admins can open the student side
+from the teacher area under their own staff account, to check how a lab,
+including one still in draft, will look before students see it
+(\cref{fig:preview}). They see their own and shared labs (admins see all),
+the learning lab and the practice tasks, and can run and check code as a
+student would. These sessions are marked as previews on the server, which
+decides from the sign-in and not from anything the browser sends, so a
+student can never hide their own sessions this way. Previews are left out of
+baselines, the detector, review, the live view, lab progress and the
+research export, never block deleting a lab or question, and cannot join a
+competition, so a teacher never appears on a class board.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{preview/preview-light-01-home}
+  \caption{View as student: a teacher's labs as students see them, with a draft lab marked and a bar that keeps the mode visible.}
+  \label{fig:preview}
 \end{figure}

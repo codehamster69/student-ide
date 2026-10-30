@@ -59,7 +59,7 @@ await shot("02-lessons");
 
 // --- a lesson: read, try the example, change it, run ---------------------------------
 await page.click("button:has-text('Loops'):has-text('for and while')");
-await page.waitForSelector("text=lesson 6 of 12");
+await page.waitForSelector("text=lesson 8 of 16");
 assert.match(await code(), /sum of its digits|add up the digits/, "the editor opens with the exercise starter");
 await page.click("button:has-text('Try it') >> nth=0");
 assert.match(await code(), /squared is/, "Try it loads the example");
@@ -128,19 +128,19 @@ await shot("04-exercise-checked");
 
 // --- next lesson keeps the track; this one shows as done -------------------------------
 await page.click("button:has-text('Next')");
-await page.waitForSelector("text=lesson 7 of 12");
-await page.waitForSelector("text=Write the function");
+await page.waitForSelector("text=lesson 9 of 16");
+await page.waitForSelector("text=print every prime number");
 await shot("05-next-lesson");
 await page.click("button:has-text('All lessons')");
-await page.waitForSelector("text=1 of 12 done");
+await page.waitForSelector("text=1 of 16 done");
 await shot("06-progress");
 
 // --- reopening the lesson brings the code back --------------------------------------
 await page.click("button:has-text('Loops'):has-text('for and while')");
-await page.waitForSelector("text=lesson 6 of 12");
+await page.waitForSelector("text=lesson 8 of 16");
 assert.match(await code(), /sum \+= n % 10/, "the lesson opens with the student's last code");
 await page.click("button:has-text('All lessons')");
-await page.waitForSelector("text=1 of 12 done");
+await page.waitForSelector("text=1 of 16 done");
 
 // --- teachers see none of it ------------------------------------------------------------
 assert.equal((await admin("/api/sessions")).length, before, "learning-lab sessions never reach review");

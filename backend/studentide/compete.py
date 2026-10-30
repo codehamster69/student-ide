@@ -727,6 +727,8 @@ def router(db: Database, require_admin: Callable, auth=None) -> APIRouter:
         sid = student_or_400(body.student_id)
         own(request, sid)
         comp = comp_or_404(lab_id)
+        if auth is not None and auth.previewer(request):
+            raise HTTPException(403, "student view can't join a competition: it would put you on the class board")
         if not on_roster(db, lab_id, sid):
             raise HTTPException(403, "this competition is not open for you")
         if state_of(comp) not in ("waiting", "live"):
