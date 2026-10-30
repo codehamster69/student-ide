@@ -18,12 +18,14 @@
   \node[box, below=of api] (run) {Runner\\grades submissions};
   \node[new, below=of run] (cloud) {Cloud sandbox\\capped fallback};
   \node[store, right=of api] (ws) {Workspace\\snapshots};
+  \node[new, right=of det] (build) {Build service (off VM)\\teacher recipes $\rightarrow$ images};
   \draw[arrow] (ui) -- node[left, lab] {events,\\run, terminal} (main);
   \draw[arrow] (main) -- node[left, lab] {exec, attach} (ctr);
   \draw[arrow] (ctr) -- (vol);
   \draw[arrow] (ctr.east) to[bend right=20] node[right, lab] {commands,\\file changes} (main.east);
   \draw[arrow] (main) -- node[above, lab] {signed, hash-chained\\batches (HTTPS)} (api);
   \draw[arrow] (api) -- (det);
+  \draw[arrow, dashed] (api.north east) -- node[right, lab] {recipe} (build.south west);
   \draw[arrow] (api) -- (run);
   \draw[arrow] (api) -- (ws);
   \draw[arrow, dashed] (main.south east) to[bend right=10] node[below, lab] {no local engine} (cloud.west);

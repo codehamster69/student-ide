@@ -1,8 +1,9 @@
 # Plan: Sandbox Labs, a portable desktop client with local Docker
 
-Status: **plan, not started** (2026-10-30, revision 2). Brain entries:
-[`2026-10-30-03-desktop-client-plan`](../brain/entries/2026-10-30-03-desktop-client-plan.md) (first draft) and
-[`2026-10-30-04-sandbox-labs-plan-revised`](../brain/entries/2026-10-30-04-sandbox-labs-plan-revised.md) (this revision).
+Status: **plan, not started** (2026-10-30, revision 3). Brain entries:
+[`2026-10-30-03-desktop-client-plan`](../brain/entries/2026-10-30-03-desktop-client-plan.md) (first draft),
+[`2026-10-30-04-sandbox-labs-plan-revised`](../brain/entries/2026-10-30-04-sandbox-labs-plan-revised.md) (revision 2) and
+[`2026-10-30-05-teacher-setup-plan`](../brain/entries/2026-10-30-05-teacher-setup-plan.md) (revision 3: teachers set up subjects and labs).
 Figure: [`latex/flowcharts/desktop-client.tex`](../latex/flowcharts/desktop-client.tex).
 
 Revision 2 follows Rohan's answers to the first draft's open questions:
@@ -14,6 +15,7 @@ Revision 2 follows Rohan's answers to the first draft's open questions:
 | Must labs work offline? | No, **online is required** for submissions and the rest | Offline mode dropped; only a short reconnect buffer remains. |
 | Allow vim/nano? | **Yes** | Terminal editors in every image, a Vim mode in our own editor, and terminal-editor typing logged as its own surface. |
 | UX | **Best possible** | Section 6 is expanded into concrete screens, motion specs and performance budgets. |
+| (revision 3) | **Teachers set up their own subjects and labs, easily** | Section 5 is new: subjects, an environment builder without Docker knowledge, a lab wizard, tests checked against a reference solution, preview in a cloud sandbox, publish to classes, and a shared library. Admin presets become starting points, not the only labs. |
 
 ## 1. What we are building
 
@@ -25,10 +27,13 @@ our own around what the thesis needs.
 **Sandbox Labs** is a new part of Student IDE, next to the existing web labs
 and competitions:
 
-- A **catalogue of preset labs** grouped by subject (C programming, Data
-  Structures, Operating Systems, Linux and shell, Networks, DBMS, Python).
-  Each lab is a set of **assignments** with starter files, a statement,
-  tests, and a pinned Linux image with the subject's toolchain.
+- **Subjects and labs that teachers set up themselves**, in a few minutes
+  and without knowing Docker: a teacher creates a subject (e.g. "CS201 Data
+  Structures"), picks or builds its environment from a checklist, and adds
+  labs of **assignments** with starter files, a statement and tests. A
+  **library of preset labs** (C programming, Data Structures, Operating
+  Systems, Linux and shell, Networks, DBMS, Python) gives every teacher a
+  starting point to copy and adapt.
 - Every lab opens in a **private Linux sandbox on the student's machine**
   with a **terminal, a file tree and our editor**. Edits persist; work can be
   submitted and is graded on the server.
@@ -60,6 +65,9 @@ browser.
 | Submission | Graded on the server runner from the uploaded workspace | An untrusted client cannot fake a grade. |
 | Tamper resistance | Visible, not impossible: signed builds, signed hash-chained batches, evidence checks at submission | A student owns their machine; honest framing beats false promises. |
 | Faculty | Web app: catalogue, assignment to classes, readiness, live terminal mirror, review | Faculty do not need Docker. |
+| Who makes labs | **Teachers**, per subject; admins curate the shared library and approve custom environments | Rohan's call; presets alone would not fit every course. |
+| Environments | Built from a **recipe** (base + ticked tools) by a build service; raw Dockerfile only with admin approval | Teachers never need to know Docker; images stay small, safe and cached. |
+| Checking a lab before students see it | Reference solution must pass every test, starter must fail; preview in a **cloud sandbox** | A teacher without Docker can still try the lab exactly as students will. |
 
 ## 3. Architecture
 
@@ -125,10 +133,10 @@ not, and the plan is honest about it.
 
 ### 3.3 The lab image and container
 
-- **One image per subject**, e.g. `studentide/lab-c:2026.1`, built from one
-  Ubuntu LTS base with the subject's tools (gcc, make, gdb, valgrind, python3,
-  sqlite3, iproute2 for networking labs as needed) and **vim, nano and
-  tmux**. Multi-arch (amd64 + arm64). Pinned by digest in the lab
+- **One image per environment**, e.g. `studentide/env-c-ds:3`, built from
+  one Ubuntu LTS base by the environment builder (section 5.2) with the
+  subject's tools (gcc, make, gdb, valgrind, python3, sqlite3, iproute2 for
+  networking labs as needed) and always **vim, nano and tmux**. Multi-arch (amd64 + arm64). Pinned by digest in the lab
   definition; hosted on our own registry (Artifact Registry asia-south1 or
   GHCR) to avoid Docker Hub limits; images pulled the day before a lab.
 - **One container per (student, lab)** named `sid-<student>-<lab>`, created
@@ -242,26 +250,110 @@ snapshots and the local container before the first Sandbox Lab.
 
 ## 5. Faculty side (web app)
 
-1. **Catalogue.** Admins and faculty manage preset labs: subject, image
-   version, assignments (statement, starter files, visible and hidden tests,
-   time estimate, difficulty). Labs are versioned; a running class keeps the
-   version it started with.
-2. **Assign to classes.** Pick a lab, a class roster, open and due times,
-   live or self-paced. Self-paced labs are how "hosting labs" works: students
-   open them whenever, on any machine.
-3. **Readiness board** before a live lab: each student's app version,
+Teachers set up their own subjects and labs. The goal is that a teacher who
+has never used Docker can go from nothing to a published lab in **under 15
+minutes**, and from a library preset to a published lab in **under 3**.
+
+### 5.1 Subjects
+
+A subject is the home for a course's labs.
+
+- **Create in one screen**: name, course code, semester, colour/icon
+  (auto-suggested from the name), and the environment (5.2). Everything else
+  has a sensible default.
+- **People**: owner, co-teachers and TAs, reusing lab ownership from PR #19
+  (owner and co-teachers edit, TAs view and help in live labs, admins see
+  all).
+- **Roster once per subject**, used by every lab in it: paste email
+  addresses, paste a roll range ("UG24CS001 to UG24CS060", expanded with the
+  address format from PR #14), or upload a CSV. Sections (A, B) are optional
+  tags so one lab can open for one section only.
+- **Copy a subject from last semester** with all its labs, unpublished.
+
+### 5.2 Environment builder (no Docker knowledge needed)
+
+An environment is the Linux toolbox a subject's labs run in.
+
+1. **Pick a base**: C and C++, Python, Java, Linux and shell, Web (Node),
+   Databases. Each shows what it includes and its size.
+2. **Tick extra tools** from a searchable list (gdb, valgrind, make, cmake,
+   strace, sqlite3, postgresql-client, numpy, pandas, pytest, junit, …).
+   Each row shows its size; a live total keeps images small.
+3. **Optional extras**: pip/apt packages by name (checked against an
+   allowlist mirror), a setup script for files every lab needs. A **raw
+   Dockerfile** is available too, but goes to an admin for approval.
+4. **Build**: a build service (Cloud Build or GitHub Actions to our
+   registry, never on the student-facing VM) builds amd64 and arm64 images,
+   runs a smoke test (compile hello world, open a shell, check every ticked
+   tool), and reports back. The teacher sees a progress line ("Installing
+   gdb… 1 min left") and gets a notification when it is ready.
+5. **Versions**: changing an environment builds a new version; running labs
+   keep the version they started with until the teacher moves them.
+
+Environments are shared: any teacher can reuse "C with gdb and valgrind"
+instead of building their own, so most teachers never open the builder.
+
+### 5.3 Lab wizard
+
+Four steps with a progress rail; drafts autosave, so a teacher can stop at
+any point.
+
+1. **Basics**: title, subject (environment comes from it, can be changed),
+   short description, estimated time.
+2. **Assignments**, each with:
+   - **Statement** in Markdown with live preview, images by paste or drop.
+   - **Starter files**: a small file tree; drag in files or a zip, or
+     write them in the same editor students use.
+   - **Tests**, in the simplest form that works:
+     *input/output pairs* in a table (same JSON-line tests as PR #25, so
+     every language works), or a *test command* (`make test`, `pytest`)
+     whose exit code decides, each marked visible or hidden, with weights.
+   - **Reference solution** (optional, strongly suggested): kept private.
+   - **Import** instead of writing: from the existing question sources
+     (Student IDE sets, Codeforces/CodeChef, MBPP; PRs #13, #15, #20), from
+     another lab, from a zip, or from a public Git repo folder.
+3. **Check**: the server runs every test against the reference solution
+   (all must pass) and the starter (should fail), in the lab's environment,
+   and lists problems in plain words ("Assignment 3: test 4 fails on your
+   solution — expected `5`, got `5\n`"; "Assignment 2 has no hidden tests").
+   **Try as a student** opens the lab in a cloud sandbox in the browser (or
+   locally in the desktop app), exactly as a student would see it.
+4. **Publish**: pick sections, open and due times, live or self-paced,
+   grading (tests only, tests plus manual, or manual), late policy. A
+   summary card shows what students will see before the final button.
+
+### 5.4 Library
+
+- **Presets** made and curated by admins: complete labs with environment,
+  statements, starters, tests and solutions, one click to copy into a
+  subject and adapt.
+- **Share to library**: a teacher can publish their lab for colleagues
+  (statements, starters and tests; solutions only to teachers). Copies are
+  independent, with a "based on" link and an optional "update available".
+- Search by subject, topic, language and difficulty.
+
+### 5.5 Editing a lab students already started
+
+Fixing a typo or a wrong test mid-lab is common, so it must be safe:
+statement and test fixes apply at once and re-grade existing submissions
+(students get a quiet note); starter-file changes ask whether to update
+students who have **not started** that assignment (those who started keep
+their work). Every change is versioned and shown on the lab's history.
+
+### 5.6 Running a class
+
+1. **Readiness board** before a live lab: each student's app version,
    engine (Docker, Podman, cloud), image pulled, online now. "48 of 52 ready"
    with the four names and their one-line problem.
-4. **Live view** with a read-only terminal mirror next to the editor mirror,
+2. **Live view** with a read-only terminal mirror next to the editor mirror,
    students always told who is watching (PR #16 rule).
-5. **Submissions**: per assignment, tests passed, the submitted files, and a
-   link to the session's timeline.
-6. **Review timeline** gains lanes: terminal commands, vim saves, files
+3. **Submissions**: per assignment, tests passed, the submitted files, and a
+   link to the session's timeline; manual marks and comments when the lab
+   uses them; export to CSV.
+4. **Review timeline** gains lanes: terminal commands, vim saves, files
    changed outside the app, offline gaps, chain breaks. Same evidence style
    as now: moments, not verdicts.
-7. **Teacher preview** in the desktop app: open any lab as a student would,
-   in a throwaway container, to test the image and starter files.
-8. **Cloud sandbox seats**: who is using one, and why (the doctor's
+5. **Cloud sandbox seats**: who is using one, and why (the doctor's
    diagnosis), so IT can fix that PC.
 
 ## 6. UX: students and faculty
@@ -341,27 +433,43 @@ snapshots and the local container before the first Sandbox Lab.
 
 ### 6.3 Faculty screens
 
-1. **Catalogue**: subject shelves like the student Home, with an editor for
-   assignments (statement preview side by side, starter files, tests with a
-   "run in a sandbox" button).
-2. **Class lab page**: a header with the clock and counts, the readiness
+1. **My subjects**: subject cards like the student Home, each with its labs,
+   next live lab and a "New lab" button; an empty state with three big
+   choices: *Start from the library*, *Copy last semester*, *Start blank*.
+2. **Environment builder**: base cards that lift on hover, a tool checklist
+   with sizes and a live size meter, and a build progress line that turns
+   into a ready badge with a small, satisfying settle animation.
+3. **Lab wizard**: a left progress rail (Basics, Assignments, Check,
+   Publish) whose marker glides between steps; assignments as reorderable
+   cards (drag to reorder with spring physics); statement and preview side
+   by side; tests as an editable table that grows a row when you tab out of
+   the last one. The Check step runs tests as rows that fill green or red one
+   by one, with each problem linked to the field that fixes it.
+4. **Library**: searchable shelves with a preview drawer that slides in;
+   "Use this lab" copies it into the chosen subject and opens the wizard at
+   step 2.
+5. **Class lab page**: a header with the clock and counts, the readiness
    board as a grid of student tiles that animate into place as students
    connect, ticks filling in live; tiles sort by attention (not ready,
    offline, on cloud).
-3. **Live view**: the grid becomes a live class view; clicking a tile opens
+6. **Live view**: the grid becomes a live class view; clicking a tile opens
    the student's editor and terminal mirror side by side in a panel that
    slides over without leaving the grid.
-4. **Submissions table**: tests passed per assignment, sortable, with a
+7. **Submissions table**: tests passed per assignment, sortable, with a
    heat strip per student; a row opens the files and the timeline.
-5. **Timeline**: existing review page with the new lanes collapsed by
+8. **Timeline**: existing review page with the new lanes collapsed by
    default; hovering a lane expands it smoothly.
 
 ## 7. Migration and fit with the current app
 
 Nothing existing is switched off or changed in behaviour.
 
-1. **Catalogue backend**: tables for subjects, preset labs, assignments,
-   images, class assignments and workspace snapshots. Sessions for Sandbox
+1. **Catalogue backend**: tables for subjects (with people and roster),
+   environments (recipe, versions, image digests, build status), sandbox
+   labs and versions, assignments (statement, starter files, tests,
+   private solution), library entries, class publications and workspace
+   snapshots. Ownership and co-teachers reuse the PR #19 checks; rosters
+   reuse the PR #14 address rules. Sessions for Sandbox
    Labs reuse the `sessions` table with `kind: "sandbox"` and the sitting id,
    so the detector and review work unchanged.
 2. **Shared frontend** with a small `Runtime` interface (`prepareLab`, `run`,
@@ -374,7 +482,10 @@ Nothing existing is switched off or changed in behaviour.
 5. **Session start** records `client: web | desktop`, app version, engine
    and a hashed device id, so analysis can separate devices (RQ3) and the
    review can say "new device" as context.
-6. **Cloud sandbox pool** on the VM: same images, capped seats, idle stop.
+6. **Cloud sandbox pool** on the VM: same images, capped seats, idle stop;
+   also used for teacher previews.
+7. **Build service** outside the VM (Cloud Build or GitHub Actions) that
+   turns recipes into images in our registry.
 
 ## 8. Risks
 
@@ -390,6 +501,10 @@ Nothing existing is switched off or changed in behaviour.
 | Workspace snapshots grow large (binaries, core dumps) | Medium | 5 MB cap, ignore build outputs (`a.out`, `*.o`, `core`), configurable per lab. |
 | Local client tampering | Certain to be tried | Section 4.4; grading on the server; evidence check at submission. |
 | Device change confounds baselines | Medium | Same engine (Electron); device recorded per session; RQ3 analyses by device. |
+| Teachers write broken or leaky tests | Medium | Check step against the reference solution and starter; hidden tests never sent to clients. |
+| Environments bloat or multiply | Medium | Recipes, size meter, shared environments, admin approval for raw Dockerfiles, unused versions pruned. |
+| Image builds fail or are slow | Medium | Build off the VM, smoke tests, readable error, previous version stays usable. |
+| Teacher setup still feels hard | Medium | Library presets, copy last semester, usability test with 2 teachers timed against the 15 min / 3 min targets. |
 | Ethics: terminal and workspace data are new | Certain | Consent v3 before any pilot; raw keys purged after baseline as today. |
 
 ## 9. Milestones
@@ -400,18 +515,21 @@ thesis material as usual.
 | # | Milestone | Done when |
 | --- | --- | --- |
 | D0 | **Spike** (~1 week): Electron loads the frontend, finds Docker or Podman, opens a terminal in a C container; timing parity browser vs Electron; RAM on a lab PC; portable build runs without admin | Go/no-go note in the brain with the numbers |
-| D1 | **Catalogue + one lab end to end**: catalogue tables, one C lab with 3 assignments, portable app, sign-in, sandbox per lab, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
+| D1 | **One lab end to end**: subject and lab tables, one C environment and one C lab with 3 assignments (seeded by hand), portable app, sign-in, sandbox per lab, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
 | D2 | **Submit and sync**: workspace snapshots, restore on another machine, server grading, signed hash-chained batches, reconnect buffer, min version, auto-update | Switch laptops mid-lab and carry on; submit and see the grade |
 | D3 | **Terminal monitoring**: shell hooks, `terminal-editor` detection, file watcher, schema v2, evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline |
-| D4 | **Faculty**: catalogue editor, assign to classes, readiness board, live terminal mirror, submissions table, teacher preview | A teacher runs a live Sandbox Lab from the browser end to end |
-| D5 | **Fallback + UX polish**: cloud sandbox pool, Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
+| D4 | **Teacher setup**: subjects with roster and people, environment builder with build service, lab wizard with Check and cloud-sandbox preview, publish to sections, library with presets, safe mid-lab edits | A teacher who has not seen the app before sets up a subject and publishes a lab in under 15 minutes |
+| D4b | **Running a class**: readiness board, live terminal mirror, submissions table with manual marks and export | A teacher runs a live Sandbox Lab from the browser end to end |
+| D5 | **Fallback + UX polish**: cloud sandbox pool for students, Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
 | D6 | **Pilot**: one real C lab with a class | VM CPU, cloud seat use and feedback logged; next labs chosen |
 
-D1 to D3 are the core; D4 and D5 can overlap with D3.
+D1 to D3 are the student core; D4 can start alongside D2 since it is web-only; D4b and D5 overlap with D3.
 
 ## 10. Still open
 
-1. Which subjects and labs should the first catalogue hold (we suggest
-   C programming first, then Linux and shell)?
-2. How many cloud fallback seats is the VM budget comfortable with?
-3. Can IT install Docker or Podman on one lab room's PCs for the pilot?
+1. Which subjects should get library presets first (we suggest C
+   programming, then Linux and shell)?
+2. Can teachers create subjects freely, or should an admin approve new
+   subjects (we suggest freely, with admins approving only raw Dockerfiles)?
+3. How many cloud fallback seats is the VM budget comfortable with?
+4. Can IT install Docker or Podman on one lab room's PCs for the pilot?
