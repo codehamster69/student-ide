@@ -12,7 +12,7 @@ Revision 2 follows Rohan's answers to the first draft's open questions:
 | Question | Rohan's answer | What changed in the plan |
 | --- | --- | --- |
 | Which subjects need a terminal? | It is a separate, new feature: **preset labs, all with terminal access** | Sandbox Labs is its own product side with a preset lab catalogue; the terminal is always on; existing web labs and competitions stay as they are. |
-| Lab PCs or own laptops? | **Keep it portable** in case a lab PC does not work | Portable builds (no installer, no admin), work follows the student between machines, and a capped cloud sandbox as the last fallback. |
+| Lab PCs or own laptops? | **Keep it portable** in case a lab PC does not work | Portable builds (no installer, no admin), work follows the student between machines. (A cloud fallback for students was later dropped: cloud instances are for teacher previews only.) |
 | Must labs work offline? | No, **online is required** for submissions and the rest | Offline mode dropped; only a short reconnect buffer remains. |
 | Allow vim/nano? | **Yes** | Terminal editors in every image, a Vim mode in our own editor, and terminal-editor typing logged as its own surface. |
 | UX | **Best possible** | Section 6 is expanded into concrete screens, motion specs and performance budgets. |
@@ -64,7 +64,7 @@ browser.
 | Network | Per lab: **open** (default for practice), **registries only** (package mirrors, for assessed labs), **off** | Installing needs the internet, but an assessed lab should not reach every website. |
 | Monitoring inside a root-capable instance | Watcher and command capture in a **sidecar container** the student cannot stop; key timing stays in the app | With sudo, anything inside the instance can be switched off by the student. |
 | Where work lives | Server: event log, plus a **workspace snapshot** per assignment | Work follows the student to any machine; the server can check files against the evidence. |
-| Where code runs | Local Docker or Podman first; **capped cloud sandbox** as last resort | "The lab PC doesn't work" must never block a student. |
+| Where code runs | **Always on the student's machine** (Docker or Podman); cloud instances only for **teacher previews** (Rohan, 2026-10-30) | Keeps VM compute low. A student whose machine cannot run the sandbox moves to one that can, and their work follows them. |
 | Terminal | Always on, every lab | Rohan's call: every Sandbox Lab has terminal access. |
 | Terminal editors | vim and nano in every image; Vim keys in our editor too | Rohan's call; our editor's Vim mode keeps most typing in the best-logged surface. |
 | App connectivity | **Online required**; a short reconnect buffer only | Submissions, live view and grading need it. |
@@ -85,8 +85,8 @@ browser.
  │   └ recorder (same code as web) ─► main: journal, signer ──┼───────►│  workspace store, live view   │
  │  main: Docker/Podman client, auth, updater, workspace sync │        │  detector + review (unchanged)│
  │        │ Docker API (socket / named pipe)                   │        │  runner: grades submissions   │
- │  ┌─────▼────────────────────────────────────────────────┐  │        │  cloud sandbox pool (capped,  │
- │  │ instance sid-<student>-<subject> + monitor sidecar    │  │        │  fallback only)               │
+ │  ┌─────▼────────────────────────────────────────────────┐  │        │  preview instances for        │
+ │  │ instance sid-<student>-<subject> + monitor sidecar    │  │        │  teachers only                │
  │  │  ~/labs/<lab>/<assignment>/ … (named volume)          │  │        └──────────────────────────────┘
  │  │  sudo, installs via proxy, ports, cpu/mem/disk limits │  │
  │  │  sidecar: file watcher, processes, proxy → events     │  │
@@ -133,9 +133,14 @@ not, and the plan is honest about it.
    | --- | --- | --- |
    | Docker Desktop / Docker Engine | Installed and running | Default. Free for education use. |
    | Podman (Desktop or rootless) | Installed | Same API; rootless on Linux avoids the root-equivalent `docker` group. |
-   | **Cloud sandbox** | No local engine works | Same image on the college VM (or a second small VM), one container per student, **capped** (e.g. 10 seats per lab, idle after 15 min). Costs VM compute, so it is a safety net, not a mode. Faculty see who is on it. |
 
-   The Lab doctor (section 6.2) makes this choice visible and fixable.
+   There is **no cloud fallback for students** (Rohan, 2026-10-30): every
+   cloud instance would be the VM compute this design exists to save. If no
+   local engine works, the Lab doctor (section 6.2) says why, how to fix it,
+   and suggests moving to a machine that works; since files sync through
+   the server, the student loses nothing by switching. Cloud instances exist
+   only for **teacher previews** ("Try as a student", section 5.3): a few
+   seats, idle stop after 15 minutes, registries-only network.
 
 ### 3.3 The lab image and container
 
@@ -455,7 +460,7 @@ their work). Every change is versioned and shown on the lab's history.
 ### 5.6 Running a class
 
 1. **Readiness board** before a live lab: each student's app version,
-   engine (Docker, Podman, cloud), image pulled, online now. "48 of 52 ready"
+   engine (Docker or Podman), image pulled, online now. "48 of 52 ready"
    with the four names and their one-line problem.
 2. **Live view** with a read-only terminal mirror next to the editor mirror,
    students always told who is watching (PR #16 rule).
@@ -465,8 +470,8 @@ their work). Every change is versioned and shown on the lab's history.
 4. **Review timeline** gains lanes: terminal commands, vim saves, files
    changed outside the app, offline gaps, chain breaks. Same evidence style
    as now: moments, not verdicts.
-5. **Cloud sandbox seats**: who is using one, and why (the doctor's
-   diagnosis), so IT can fix that PC.
+5. **Machines that cannot run the sandbox**: each one with the doctor's
+   diagnosis, so IT can fix that PC before the next lab.
 
 ## 6. UX: students and faculty
 
@@ -503,7 +508,7 @@ their work). Every change is versioned and shown on the lab's history.
    animate from a soft pulse to a tick: Signed in · Container engine found ·
    Engine running · Disk space · Images ready. A failed row expands with one
    plain sentence and one button ("Start Docker Desktop", "Show me how
-   (2 min)", "Use a cloud sandbox for now"). Image pulls show a progress ring
+   (2 min)", "Open on another machine"). Image pulls show a progress ring
    with MB and time left; they keep going in the background.
 3. **Home.** Subject shelves (horizontal rows) of lab cards, each with the
    subject colour, a progress ring (assignments submitted / total), due time
@@ -527,7 +532,7 @@ their work). Every change is versioned and shown on the lab's history.
      assignment; `Ctrl+Backquote` toggles the terminal. Multiple terminal tabs per
      assignment.
    - **Status bar**: recording dot ("Recorded for this lab"), who is watching,
-     connection, engine (Docker / Podman / Cloud), sandbox CPU and memory
+     connection, engine (Docker / Podman), sandbox CPU and memory
      mini bars, last saved.
 6. **Run and test.** Run morphs into a progress ring while compiling; output
    slides up; compiler errors underline the line and appear in a problems
@@ -563,7 +568,7 @@ their work). Every change is versioned and shown on the lab's history.
 5. **Class lab page**: a header with the clock and counts, the readiness
    board as a grid of student tiles that animate into place as students
    connect, ticks filling in live; tiles sort by attention (not ready,
-   offline, on cloud).
+   offline, machine problem).
 6. **Live view**: the grid becomes a live class view; clicking a tile opens
    the student's editor and terminal mirror side by side in a panel that
    slides over without leaving the grid.
@@ -594,8 +599,8 @@ Nothing existing is switched off or changed in behaviour.
 5. **Session start** records `client: web | desktop`, app version, engine
    and a hashed device id, so analysis can separate devices (RQ3) and the
    review can say "new device" as context.
-6. **Cloud sandbox pool** on the VM: same images, capped seats, idle stop;
-   also used for teacher previews.
+6. **Teacher preview pool** on the VM: same images, a few seats, idle stop;
+   teachers only.
 7. **Build service** outside the VM (Cloud Build or GitHub Actions) that
    turns recipes into images in our registry.
 
@@ -603,9 +608,10 @@ Nothing existing is switched off or changed in behaviour.
 
 | Risk | Likelihood | Mitigation |
 | --- | --- | --- |
-| Lab PCs have no Docker, students lack admin rights | High | Ask IT to install Docker or Podman on the lab image once; portable app on any laptop that has it; capped cloud sandbox for the rest. |
-| Windows needs WSL2 and BIOS virtualization | High on old PCs | Lab doctor detects and explains; cloud sandbox fallback. |
-| Cloud fallback overused, VM cost grows | Medium | Cap seats per lab, idle stop, readiness board shows who and why so PCs get fixed. |
+| Lab PCs have no Docker, students lack admin rights | High | Ask IT to install Docker or Podman on the lab image once; portable app on any laptop that has it; Lab doctor tells the student to switch machines, work follows them. |
+| Windows needs WSL2 and BIOS virtualization | High on old PCs | Lab doctor detects and explains; the student switches machines. |
+| A student has no working machine at all | Low to medium | Lab PCs prepared by IT are the guarantee; teacher can extend the due time. No cloud fallback by design. |
+| Teacher previews grow VM cost | Low | A few seats, idle stop, teachers only. |
 | Low-RAM PCs (4 GB) | Medium | Small images, one running container, idle stop; measured in D0. |
 | Image pulls saturate campus internet at 9 am | Medium | Pre-pull the day before; regional registry; optional LAN mirror. |
 | Apple Silicon / ARM laptops | Medium | Multi-arch images. |
@@ -618,11 +624,11 @@ Nothing existing is switched off or changed in behaviour.
 | Image builds fail or are slow | Medium | Build off the VM, smoke tests, readable error, previous version stays usable. |
 | Teacher setup still feels hard | Medium | Starter environments, shared labs, copy last semester, usability test with 2 teachers timed against the 15 min / 3 min targets. |
 | Students break their own instance (rm -rf, broken packages) | High | "Reset instance" keeps lab files and replays the setup recipe; files are on the server anyway. |
-| Heavy stacks (Java IDE servers, ML libraries) on 4 GB PCs | Medium | Per-subject resource defaults, one running instance, cloud fallback for the heaviest subjects. |
+| Heavy stacks (Java IDE servers, ML libraries) on 4 GB PCs | Medium | Per-subject resource defaults, one running instance; heaviest subjects run on lab PCs prepared for them. |
 | Root in a container on the student's laptop | Medium | Never privileged; user namespaces or rootless Podman; only listed capabilities; the risk is to the student's own machine, which consent explains. |
 | Open network makes fetching solutions easy | High in open mode | Registries-only default for assessed labs, host log, evidence check at submission. |
 | Grading differs from the student's instance | Medium | Grading runs in the subject's environment plus the student's setup recipe restricted to registry packages; teachers see which packages a submission needed. |
-| Cloud fallback as a whole instance costs more and can reach the internet | Medium | Cloud instances get registries-only network, smaller limits and the seat cap. |
+| Teacher preview instances can reach the internet | Low | Registries-only network, small limits. |
 | Ethics: terminal, workspace, install and host-name data are new | Certain | Consent v3 before any pilot; raw keys purged after baseline as today. |
 
 ## 9. Milestones
@@ -638,14 +644,14 @@ thesis material as usual.
 | D3 | **Terminal monitoring and whole instance**: sudo instance per subject, ports preview, setup recipe replay, network modes with the proxy, sidecar watcher and process observer, shell hooks, `terminal-editor` detection, schema v2 (incl. `pkg_install`, `net_conn`, `port_open`), evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline; a student installs Postgres and a Node server, previews it, moves machines and gets the same setup back |
 | D4 | **Teacher setup**: subjects with roster and people, environment builder with build service, lab wizard with Check and cloud-sandbox preview, publish to sections, shared library, safe mid-lab edits | A teacher who has not seen the app before sets up a subject and publishes a lab in under 15 minutes |
 | D4b | **Running a class**: readiness board, live terminal mirror, submissions table with manual marks and export | A teacher runs a live Sandbox Lab from the browser end to end |
-| D5 | **Fallback + UX polish**: cloud sandbox pool for students, Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
-| D6 | **Pilot**: one real C lab with a class | VM CPU, cloud seat use and feedback logged; next labs chosen |
+| D5 | **UX polish**: Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
+| D6 | **Pilot**: one real C lab with a class | VM CPU, machines that failed the doctor and feedback logged; next labs chosen |
 
 D1 to D3 are the student core; D4 can start alongside D2 since it is web-only; D4b and D5 overlap with D3.
 
 ## 10. Still open
 
-Decided on 2026-10-30: teachers create subjects freely; no preset labs.
+Decided on 2026-10-30: teachers create subjects freely; no preset labs;
+cloud instances for teacher previews only, no student fallback.
 
-1. Keep the cloud fallback (section 3.2), and if so how many seats?
-2. Can IT install Docker or Podman on one lab room's PCs for the pilot?
+1. Can IT install Docker or Podman on one lab room's PCs for the pilot?

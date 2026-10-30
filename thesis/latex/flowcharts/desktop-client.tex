@@ -16,7 +16,7 @@
   \node[box, right=26mm of main] (api) {App + API\\events, labs, live};
   \node[box, above=of api] (det) {Detector + review\\unchanged};
   \node[box, below=of api] (run) {Runner\\grades submissions};
-  \node[new, below=of run] (cloud) {Cloud sandbox\\capped fallback};
+  \node[new, below=of run] (cloud) {Preview instances\\teachers only};
   \node[store, right=of api] (ws) {Workspace\\snapshots};
   \node[new, right=of det] (build) {Build service (off VM)\\teacher recipes $\rightarrow$ images};
   \draw[arrow] (ui) -- node[left, lab] {events,\\run, terminal} (main);
@@ -28,7 +28,6 @@
   \draw[arrow, dashed] (api.north east) -- node[right, lab] {recipe} (build.south west);
   \draw[arrow] (api) -- (run);
   \draw[arrow] (api) -- (ws);
-  \draw[arrow, dashed] (main.south east) to[bend right=10] node[below, lab] {no local engine} (cloud.west);
   \begin{scope}[on background layer]
     \node[zone, fit=(ui) (main) (ctr) (vol),
           label={[font=\scriptsize, text=gray]above:Student machine (portable Electron app + local Docker or Podman)}] {};

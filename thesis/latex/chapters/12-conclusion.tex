@@ -20,8 +20,8 @@ inside the instance, file, process and network capture runs in a sidecar
 container they cannot stop, while key timing is captured in the app itself.
 The client is a portable Electron app, so it needs no installation, and the
 student's files are snapshotted to the server so work follows them to another
-machine; when no container engine is available, a capped cloud sandbox is the
-fallback. Electron uses the same Chromium engine as the web editor, so
+machine, including from a lab PC that cannot run the sandbox to one that can;
+cloud instances exist only for teachers to preview a lab. Electron uses the same Chromium engine as the web editor, so
 keystroke timestamps mean the same thing in both, which matters when a
 baseline learned in the browser is compared with work done in the app. The
 recorder is shared code, so the detector and review need no change for editor
@@ -36,7 +36,7 @@ submission the server checks every file against the typing evidence behind it.
   \centering
   \resizebox{0.9\linewidth}{!}{\tikzfig{desktop-client}}
   \caption{Planned Sandbox Labs client: code runs in a local container (or a
-  capped cloud sandbox), while events, workspace snapshots and submissions go
+  a cloud instance for teacher previews), while events, workspace snapshots and submissions go
   to the college server, where the detector and review are unchanged.}
   \label{fig:desktop-client}
 \end{figure}
