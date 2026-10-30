@@ -20,6 +20,7 @@ import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
 import { QuestionText } from "../questionText";
 import { LessonText } from "../learn/LessonText";
+import { ResizeHandle, clamp, usePaneSize } from "../editor/resize";
 import { Badge, Button, Dialog, Kbd, LiveDot, LogoMark, Spinner, TextArea, cn, duration, ease } from "../ui";
 import type { CompClock, SubmitResult } from "../compete/api";
 import { SubmitDialog } from "../compete/SubmitDialog";
@@ -132,7 +133,15 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const competing = !!task.competition;
   /** a learning-lab track: lessons instead of questions, no finish dialog, back to the lesson list */
   const learning = !!task.lesson;
-  const panelW = learning ? 460 : 320;
+  // Every pane can be resized by dragging its edge (remembered per browser; double-click resets).
+  const [panelSize, setPanelSize] = usePaneSize(learning ? "lesson" : "task");
+  const [consoleSize, setConsoleSize] = usePaneSize("console");
+  const [inputSize, setInputSize] = usePaneSize("input");
+  const [dragging, setDragging] = useState(false);
+  const panelW = panelSize ?? (learning ? 460 : 320);
+  const column = useRef<HTMLDivElement>(null);
+  const consoleRow = useRef<HTMLElement>(null);
+  const inputPane = useRef<HTMLDivElement>(null);
   /** learning lab: a lesson is done once Check passes (or, without tests, once the code ran), here or before */
   const isDone = (i: number) => !!tasks[i].submitted || (learning && (tasks[i].n_tests
     ? !!grades[i] && grades[i].total > 0 && grades[i].passed === grades[i].total
@@ -552,10 +561,10 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: panelW, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: duration.base, ease: ease.out }}
+              transition={dragging ? { duration: 0 } : { duration: duration.base, ease: ease.out }}
               className="shrink-0 overflow-hidden border-r border-border bg-surface"
             >
-              <div className="h-full overflow-y-auto p-5" style={{ width: panelW }}>
+              <div className="h-full overflow-y-auto overscroll-contain p-5" style={{ width: panelW }}>
                 {/* lessons are long reads: the editor tabs and Previous/Next move between them instead */}
                 {sitting && !learning && (
                   <nav aria-label="Questions in this lab" className="-mx-2 mb-5 grid gap-0.5 border-b border-border pb-4">
@@ -614,7 +623,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                     <span>
                       {task.n_tests} test{task.n_tests === 1 ? "" : "s"} to check against
                       {task.n_hidden_tests ? <> (<EyeOff className="inline size-3" /> {task.n_hidden_tests} hidden)</> : null}.
-                      {learning ? "Press Check when you think your exercise is right." : "Checking is just for you and isn't graded."}
+                      {learning ? " Press Check when you think your exercise is right." : " Checking is just for you and isn't graded."}
                     </span>
                   </p>
                 )}
@@ -654,9 +663,15 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
             </motion.aside>
           )}
         </AnimatePresence>
+        {taskOpen && (
+          <ResizeHandle orientation="vertical" label={learning ? "Lesson width" : "Task width"} className="relative -mx-[3px]"
+            size={() => panelW} onResize={(px) => setPanelSize(px === null ? null : clamp(px, 220, Math.max(220, innerWidth - 420)))}
+            measure={(e) => e.clientX} onDragging={setDragging} />
+        )}
 
         {/* Editor + console */}
-        <div className="grid min-w-0 flex-1 grid-rows-[38px_minmax(0,1fr)_minmax(200px,34%)]">
+        <div ref={column} className="grid min-w-0 flex-1"
+          style={{ gridTemplateRows: `38px minmax(0,1fr) ${consoleSize ? `${consoleSize}px` : "minmax(200px,34%)"}` }}>
           <div className="flex items-end gap-1 overflow-x-auto border-b border-border bg-surface-2 px-2" role={sitting ? "tablist" : undefined}>
             {sitting ? tasks.map((q, i) => (
               <button key={q.id} role="tab" aria-selected={i === active} onClick={() => void switchTo(i)}
@@ -696,8 +711,17 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
           </div>
           <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />
 
-          <section className="grid min-h-0 grid-cols-[minmax(180px,1fr)_2fr] border-t border-border bg-surface-2">
-            <div className="flex min-h-0 flex-col border-r border-border">
+          <section ref={consoleRow} className="relative grid min-h-0 border-t border-border bg-surface-2"
+            style={{ gridTemplateColumns: inputSize ? `${inputSize}px minmax(0,1fr)` : "minmax(180px,1fr) 2fr" }}>
+            <ResizeHandle orientation="horizontal" label="Output height" className="absolute inset-x-0 -top-1"
+              size={() => consoleRow.current?.offsetHeight ?? 200}
+              onResize={(px) => setConsoleSize(px === null ? null : clamp(px, 110, Math.max(110, (column.current?.offsetHeight ?? 600) - 38 - 80)))}
+              measure={(e) => (column.current?.getBoundingClientRect().bottom ?? innerHeight) - e.clientY} />
+            <div ref={inputPane} className="relative flex min-h-0 flex-col border-r border-border">
+              <ResizeHandle orientation="vertical" label="Input width" className="absolute inset-y-0 -right-1"
+                size={() => inputPane.current?.offsetWidth ?? 240}
+                onResize={(px) => setInputSize(px === null ? null : clamp(px, 120, Math.max(120, (consoleRow.current?.offsetWidth ?? 600) - 200)))}
+                measure={(e) => e.clientX - (consoleRow.current?.getBoundingClientRect().left ?? 0)} />
               <PaneHeader icon={<Terminal className="size-3.5" />} label="Input" />
               <div className="min-h-0 flex-1 p-3 pt-0">
                 <TextArea

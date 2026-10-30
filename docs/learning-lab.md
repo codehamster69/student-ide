@@ -14,6 +14,11 @@ lesson is *done* once Check passes (or, for a lesson without tests, once the
 student ran code in it). Opening a lesson again brings back the student's
 last code for it.
 
+Every pane of the editor (lessons and lab questions alike) can be resized by
+dragging its edge: the side panel's width, the output pane's height and the
+input/output split. Sizes are remembered in the browser; double-click a
+handle to reset it. Arrow keys move a focused handle.
+
 Tracks today: **C from scratch** (12 lessons: hello world, variables and
 types, scanf, arithmetic and `%`, if/else, loops, functions, arrays,
 strings, pointers, structs, recursion) and **Python basics** (6 lessons).

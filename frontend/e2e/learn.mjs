@@ -80,6 +80,31 @@ await page.keyboard.press("Control+Enter");
 await page.waitForSelector(".output:has-text('3 squared is 9')");
 assert.ok(!(await page.isVisible(".output:has-text('4 squared')")));
 
+// --- the lesson pane scrolls, and every pane can be resized by dragging its edge -----
+const panel = () => page.evaluate(() => { const d = document.querySelector("aside > div"); return { w: d.offsetWidth, top: d.scrollTop }; });
+await page.mouse.move(200, 500);
+await page.mouse.wheel(0, 800);
+await page.waitForTimeout(300);
+assert.ok((await panel()).top > 0, "the lesson text scrolls");
+const drag = async (label, dx, dy) => {
+  const b = await page.locator(`[role=separator][aria-label='${label}']`).boundingBox();
+  const x = b.x + b.width / 2, y = b.y + b.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+};
+const w0 = (await panel()).w;
+await drag("Lesson width", 160, 0);
+assert.ok((await panel()).w > w0 + 100, "the lesson pane widens");
+const consoleH = () => page.evaluate(() => document.querySelector("section[style]").offsetHeight);
+const h0 = await consoleH();
+await drag("Output height", 0, -150);
+assert.ok((await consoleH()) > h0 + 100, "the output pane grows");
+await drag("Output height", 0, 150);
+await drag("Lesson width", -160, 0);
+
 // --- the exercise: wrong, then right ---------------------------------------------------
 await type(`#include <stdio.h>
 
