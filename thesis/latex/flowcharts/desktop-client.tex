@@ -1,0 +1,37 @@
+% Planned Sandbox Labs desktop client with local Docker (TikZ). Used in chapter 12 via \tikzfig{desktop-client}.
+% Source of truth: thesis/plans/2026-10-30-desktop-client.md (plan, not built yet).
+\begin{tikzpicture}[
+    node distance=7mm and 9mm,
+    box/.style={rectangle, rounded corners, draw, thick, align=center,
+                minimum width=2.6cm, minimum height=1.1cm, font=\small},
+    store/.style={box, fill=blue!8},
+    new/.style={box, fill=orange!10},
+    zone/.style={draw, gray, rounded corners, inner sep=4mm},
+    arrow/.style={-{Stealth}, thick},
+    lab/.style={font=\scriptsize, align=center}]
+  \node[box] (ui) {Renderer\\editor, terminal, UI};
+  \node[new, below=of ui] (main) {Main process\\journal, signer, Docker};
+  \node[new, below=of main] (ctr) {Whole instance per subject\\sudo, any stack, monitor sidecar};
+  \node[store, below=of ctr] (vol) {Workspace volume\\one folder per question};
+  \node[box, right=26mm of main] (api) {App + API\\events, labs, live};
+  \node[box, above=of api] (det) {Detector + review\\unchanged};
+  \node[box, below=of api] (run) {Runner\\grades submissions};
+  \node[new, below=of run] (cloud) {Preview instances\\teachers only};
+  \node[store, right=of api] (ws) {Workspace\\snapshots};
+  \node[new, right=of det] (build) {Build service (off VM)\\teacher recipes $\rightarrow$ images};
+  \draw[arrow] (ui) -- node[left, lab] {events,\\run, terminal} (main);
+  \draw[arrow] (main) -- node[left, lab] {exec, attach} (ctr);
+  \draw[arrow] (ctr) -- (vol);
+  \draw[arrow] (ctr.east) to[bend right=20] node[right, lab] {commands,\\file changes} (main.east);
+  \draw[arrow] (main) -- node[above, lab] {signed, hash-chained\\batches (HTTPS)} (api);
+  \draw[arrow] (api) -- (det);
+  \draw[arrow, dashed] (api.north east) -- node[right, lab] {recipe} (build.south west);
+  \draw[arrow] (api) -- (run);
+  \draw[arrow] (api) -- (ws);
+  \begin{scope}[on background layer]
+    \node[zone, fit=(ui) (main) (ctr) (vol),
+          label={[font=\scriptsize, text=gray]above:Student machine (portable Electron app + local Docker or Podman)}] {};
+    \node[zone, fit=(api) (det) (run) (cloud) (ws),
+          label={[font=\scriptsize, text=gray]above:College VM}] {};
+  \end{scope}
+\end{tikzpicture}

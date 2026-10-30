@@ -2,11 +2,12 @@
 
 Everything for Rohan's M.Tech thesis, *Who is at the keyboard? Process-Aware
 Authorship Continuity in Programming Assessment* (IIIT Surat), lives here.
-There are two parts:
+There are three parts:
 
 | Folder | What it is |
 | --- | --- |
 | [`brain/`](brain/) | The project's memory: a dated log of events, decisions, results and the reasoning behind them. This is the raw material the report and thesis get written from. |
+| [`plans/`](plans/) | Plans for work not built yet (e.g. the desktop client), written before a thread starts coding. |
 | [`latex/`](latex/) | The LaTeX thesis project: chapters, front matter, bibliography, and every figure, screenshot, graph, flowchart and ablation result that goes in it. |
 
 ## Standing rule for every thread / PR
