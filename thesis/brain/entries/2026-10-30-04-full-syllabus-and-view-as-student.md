@@ -50,3 +50,14 @@ Docs: `docs/learning-lab.md`, `docs/view-as-student.md`.
 
 - Previews are kept (marked) rather than deleted; they age out with the raw-key
   purge like other sessions. Could be deleted outright if Rohan prefers.
+
+## Fix after going live (PR #32)
+
+Rohan got a blank page at `#/student` on the live site. Cause: student view
+listed draft labs, and that included a draft *competition*, whose card has no
+"draft" state, so the student page crashed. Draft competitions are now left
+out (they have no student side yet) and the card skips unknown states. Also
+fixed: typing `#/student` into an already open tab, and the link being
+unreachable on phones (now also on the Labs page). Lesson for the thesis's
+deployment notes: test the student view against live-like data (every lab
+kind in every state), not just the demo seed.
