@@ -8,15 +8,18 @@ import "./ui/tokens.css";
 const ReviewApp = lazy(() => import("./review/ReviewApp").then((m) => ({ default: m.ReviewApp })));
 
 const isTeacher = () => /^#\/(review|teach|live)/.test(location.hash);
+// "View as student" (#/student) is decided when the student app starts, so entering it remounts that app
+const isPreview = () => location.hash.startsWith("#/student");
 
 function Root() {
   const [review, setReview] = useState(() => isTeacher());
+  const [preview, setPreview] = useState(() => isPreview());
   useEffect(() => {
-    const on = () => setReview(isTeacher());
+    const on = () => { setReview(isTeacher()); setPreview(isPreview()); };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
-  return review ? <Suspense fallback={null}><ReviewApp /></Suspense> : <App />;
+  return review ? <Suspense fallback={null}><ReviewApp /></Suspense> : <App key={preview ? "preview" : "student"} />;
 }
 
 // No <StrictMode>: its double-invoked effects would open the editor twice and

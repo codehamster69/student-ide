@@ -220,7 +220,10 @@ def student_labs(db: Database, student_id: str, labs: list | None = None) -> lis
     out = []
     for lab in db.labs_for_student(student_id) if labs is None else labs:
         if lab["kind"] == "competition":
-            out.append(student_card(db, lab, student_id))
+            card = student_card(db, lab, student_id)
+            # "View as student" lists draft labs, but a competition not set up yet has no student side
+            if card["state"] in ("waiting", "live", "ended"):
+                out.append(card)
             continue
         done = db.attempts(student_id, lab["id"])
         qs = []
