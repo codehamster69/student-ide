@@ -18,7 +18,9 @@ package registries in assessed labs), services and ports, a terminal, a file
 tree, terminal editors such as vim, and our editor. Because a student is root
 inside the instance, file, process and network capture runs in a sidecar
 container they cannot stop, while key timing is captured in the app itself.
-The client is a portable Electron app, so it needs no installation, and the
+The client is an Electron app whose installer also sets up its own container
+engine (rootless Podman in a small WSL2 distribution on Windows or a
+lightweight VM on macOS), so students need no Docker installation; the
 student's files are snapshotted to the server so work follows them to another
 machine, including from a lab PC that cannot run the sandbox to one that can;
 cloud instances exist only for teachers to preview a lab. Electron uses the same Chromium engine as the web editor, so

@@ -58,7 +58,7 @@ browser.
 | Question | Decision | Main reason |
 | --- | --- | --- |
 | Shell | **Electron** | Same Chromium as the web app, so keystroke timestamps mean the same thing in both and the recorder is shared code. Tauri's engine differs per OS (WebView2, WebKitGTK, WKWebView), a confound for RQ1 and RQ3. |
-| Distribution | **Portable builds** (Windows portable `.exe`, Linux AppImage, macOS `.app` in a zip) plus an optional installer | Runs from Downloads or a USB stick without admin rights. |
+| Distribution | **One installer per OS that also installs its own container engine** (Podman in a small WSL distro or VM), plus a portable build for machines already set up | Rohan's call (2026-10-30): no prerequisites for students. |
 | UI code | Reuse `frontend/` (React, CodeMirror 6, Motion) | One design system for web and desktop. |
 | Sandbox | **A whole instance per (student, subject)**: persistent, sudo, any package manager; one folder per lab and assignment | Rohan's call: versatile for every subject. Installs survive across the subject's labs. |
 | Network | Per lab: **open** (default for practice), **registries only** (package mirrors, for assessed labs), **off** | Installing needs the internet, but an assessed lab should not reach every website. |
@@ -124,15 +124,20 @@ not, and the plan is honest about it.
    Submit). Opening the lab on another machine restores the latest snapshot.
    The student can switch from a broken lab PC to their laptop mid-lab and
    carry on from where they were; terminal scrollback does not move.
-3. **The sandbox needs a container runtime, which is not portable.** Docker
-   or Podman must be installed once on each machine, which on Windows needs
-   admin rights and WSL2. So the app picks the best available engine, in
-   this order, and shows which one it is using:
+3. **The sandbox needs a container runtime, so the installer brings its
+   own** (Rohan, 2026-10-30: install the dependencies instead of asking for
+   prerequisites). The **Student IDE installer** sets up everything in one
+   run; no separate Docker install. See section 3.6. If Docker or Podman is
+   already there, the app can use it instead:
 
    | Engine | When | Notes |
    | --- | --- | --- |
-   | Docker Desktop / Docker Engine | Installed and running | Default. Free for education use. |
-   | Podman (Desktop or rootless) | Installed | Same API; rootless on Linux avoids the root-equivalent `docker` group. |
+   | **Bundled engine** (our installer) | Default | Podman inside a small VM we ship; see 3.6. |
+   | Docker Desktop / Docker Engine | Already installed | Used if the student or IT prefers it. |
+   | Podman (Desktop or rootless) | Already installed | Same API. |
+
+   The portable build still exists for machines where the engine is
+   already set up (e.g. lab PCs prepared once with the installer).
 
    There is **no cloud fallback for students** (Rohan, 2026-10-30): every
    cloud instance would be the VM compute this design exists to save. If no
@@ -141,6 +146,45 @@ not, and the plan is honest about it.
    the server, the student loses nothing by switching. Cloud instances exist
    only for **teacher previews** ("Try as a student", section 5.3): a few
    seats, idle stop after 15 minutes, registries-only network.
+
+### 3.6 One installer that brings its own engine
+
+Students should not have to install Docker first. The installer sets up a
+private container engine for Student IDE alone, on each OS:
+
+| OS | What the installer does | Admin rights | Restart |
+| --- | --- | --- | --- |
+| **Windows 10/11** | Turns on WSL2 if it is off (`wsl --install --no-distribution`), then imports **our own tiny WSL distro** (`StudentIDE`, ~150 MB, Podman inside) and points the app at it. No Docker Desktop. | Once, only if WSL2 is off | Once, only if WSL2 was just turned on; the installer resumes by itself after the reboot |
+| **macOS** (Intel and Apple Silicon) | Ships a small Linux VM using Apple's Virtualization framework (via Lima, Apache 2.0) with Podman inside, stored in the user's Library. | No | No |
+| **Linux** | Installs Podman from the distro's packages (rootless), or, without sudo, unpacks static rootless Podman into the user's home when the system allows user namespaces. | Only for the package route | No |
+
+Why Podman and our own VM, not Docker Desktop: Podman and Lima are Apache
+2.0, so we may ship them inside our installer; Docker Desktop cannot be
+redistributed that way and asks the student to accept its own licence.
+Rootless Podman also means the sandbox never runs as root on the host.
+
+**What the installer cannot fix**, and how it handles each:
+
+- **Virtualization switched off in the BIOS/UEFI** (common on lab PCs).
+  Software cannot turn it on. The installer detects it before anything
+  else and shows a short, illustrated guide for the student or IT; on lab
+  PCs, IT does it once for the whole room.
+- **No admin rights on Windows with WSL2 off.** The installer stops early
+  with "Ask IT to run this once" and a one-page note for IT; once WSL2 is
+  on, students install without admin.
+- **Very old or 4 GB machines.** The installer measures RAM and disk and
+  warns honestly before installing.
+
+**Install experience**: one window, three animated steps ("Checking your
+PC" → "Setting up the Linux engine" → "Downloading your subjects"), a
+time-left estimate, and a single reboot prompt only when Windows needs it.
+Images for the student's enrolled subjects download in the background
+after sign-in. Updates to the app, the engine and images arrive silently;
+uninstalling removes the engine and its disk image cleanly.
+
+**For lab rooms**: the same installer has a silent mode
+(`StudentIDE-Setup.exe /S /allusers`) so IT can push it to every PC with
+their usual tools, after turning on virtualization once.
 
 ### 3.3 The lab image and container
 
@@ -507,7 +551,7 @@ their work). Every change is versioned and shown on the lab's history.
 2. **Lab doctor** (first run, and any time from the menu). Checklist rows
    animate from a soft pulse to a tick: Signed in · Container engine found ·
    Engine running · Disk space · Images ready. A failed row expands with one
-   plain sentence and one button ("Start Docker Desktop", "Show me how
+   plain sentence and one button ("Restart the engine", "Show me how
    (2 min)", "Open on another machine"). Image pulls show a progress ring
    with MB and time left; they keep going in the background.
 3. **Home.** Subject shelves (horizontal rows) of lab cards, each with the
@@ -608,8 +652,9 @@ Nothing existing is switched off or changed in behaviour.
 
 | Risk | Likelihood | Mitigation |
 | --- | --- | --- |
-| Lab PCs have no Docker, students lack admin rights | High | Ask IT to install Docker or Podman on the lab image once; portable app on any laptop that has it; Lab doctor tells the student to switch machines, work follows them. |
-| Windows needs WSL2 and BIOS virtualization | High on old PCs | Lab doctor detects and explains; the student switches machines. |
+| Lab PCs have no Docker, students lack admin rights | High | Our installer brings its own engine; on Windows only turning on WSL2 needs admin, once (IT can push the silent installer); portable app on any laptop that has it; Lab doctor tells the student to switch machines, work follows them. |
+| Windows needs WSL2 and BIOS virtualization | High on old PCs | Installer turns on WSL2 itself; BIOS virtualization cannot be turned on by software, so it is detected first with a guide for the student or IT. |
+| Shipping and updating our own engine | Medium | Podman and Lima are maintained upstream; we pin versions, update silently, and test on Windows 10, 11, macOS and Ubuntu in CI. |
 | A student has no working machine at all | Low to medium | Lab PCs prepared by IT are the guarantee; teacher can extend the due time. No cloud fallback by design. |
 | Teacher previews grow VM cost | Low | A few seats, idle stop, teachers only. |
 | Low-RAM PCs (4 GB) | Medium | Small images, one running container, idle stop; measured in D0. |
@@ -638,7 +683,7 @@ thesis material as usual.
 
 | # | Milestone | Done when |
 | --- | --- | --- |
-| D0 | **Spike** (~1 week): Electron loads the frontend, finds Docker or Podman, opens a terminal in a C container; timing parity browser vs Electron; RAM on a lab PC; portable build runs without admin | Go/no-go note in the brain with the numbers |
+| D0 | **Spike** (~1–2 weeks): installer prototype that sets up the bundled engine on Windows (WSL2 distro) and macOS (Lima VM); Electron loads the frontend, finds the engine, opens a terminal in a C container; timing parity browser vs Electron; RAM on a lab PC; portable build runs without admin | Go/no-go note in the brain with the numbers |
 | D1 | **One lab end to end**: subject and lab tables, one C environment and one C lab with 3 assignments (seeded by hand), portable app, sign-in, instance per subject, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
 | D2 | **Submit and sync**: workspace snapshots, restore on another machine, server grading, signed hash-chained batches, reconnect buffer, min version, auto-update | Switch laptops mid-lab and carry on; submit and see the grade |
 | D3 | **Terminal monitoring and whole instance**: sudo instance per subject, ports preview, setup recipe replay, network modes with the proxy, sidecar watcher and process observer, shell hooks, `terminal-editor` detection, schema v2 (incl. `pkg_install`, `net_conn`, `port_open`), evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline; a student installs Postgres and a Node server, previews it, moves machines and gets the same setup back |
@@ -654,4 +699,4 @@ D1 to D3 are the student core; D4 can start alongside D2 since it is web-only; D
 Decided on 2026-10-30: teachers create subjects freely; no preset labs;
 cloud instances for teacher previews only, no student fallback.
 
-1. Can IT install Docker or Podman on one lab room's PCs for the pilot?
+1. Can IT turn on virtualization (BIOS) and run our installer once on one lab room's PCs for the pilot?
