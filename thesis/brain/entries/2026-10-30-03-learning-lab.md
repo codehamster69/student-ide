@@ -47,6 +47,23 @@ student's last code per lesson are kept. Docs: `docs/learning-lab.md`.
 - `frontend/e2e/learn.mjs`; screenshots in `thesis/latex/snapshots/learn/`.
 - Thesis text: `sec:learning-lab` in `04-system-design.tex`.
 
+## Later the same day
+
+- Rohan asked whether students can scroll the question/lesson panel and
+  resize panes ("they can't scroll the question part and can't resize
+  individual windows"). Scrolling worked in Chromium at 1366×768 and
+  1280×600; not reproduced, asked for the screen and browser. Every editor
+  pane (side panel width, output height, input/output split) now has a drag
+  handle, remembered per browser, double-click to reset, arrow keys when
+  focused. Applies to labs and competitions too.
+- Rohan asked for beginner to advanced in both languages. Added C 2 ·
+  Advanced (10 lessons: dynamic memory, pointer arithmetic and 2D arrays,
+  strings by hand, typedef/enum/union, linked lists, stacks and queues,
+  function pointers and qsort, bits, preprocessor, files), Python 2 ·
+  Intermediate (6) and Python 3 · Advanced (6). 46 lessons in five tracks,
+  ordered by a track `order`; every model answer passes and every starter
+  fails (`tests/test_learn.py`).
+
 ## Follow-ups
 
 - Teacher authoring of lessons in the browser; more tracks (C++, Java, data structures).

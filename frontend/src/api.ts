@@ -55,6 +55,8 @@ export interface LearnTrack {
   id: string;
   title: string;
   language: "python" | "c" | "cpp" | "java" | "javascript";
+  /** "beginner" | "intermediate" | "advanced"; tracks come ordered beginner to advanced */
+  level: string;
   summary: string;
   lessons: Task[];
 }

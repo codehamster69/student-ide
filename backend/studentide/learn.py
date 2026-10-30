@@ -3,7 +3,7 @@ the student can change and run.
 
 Lessons are Markdown files in the repo, one folder per track:
 
-    learn/<track>/track.json        {"title", "language", "summary"}
+    learn/<track>/track.json        {"title", "language", "summary", "level", "order"}
     learn/<track>/NN-slug.md        one lesson, in file-name order
 
 A lesson file starts with a small front matter block (`title:`, `summary:`)
@@ -106,8 +106,10 @@ def tracks() -> list[dict]:
     out = []
     if not LESSONS_DIR.is_dir():
         return out
-    for d in sorted(p for p in LESSONS_DIR.iterdir() if p.is_dir() and (p / "track.json").exists()):
-        info = json.loads((d / "track.json").read_text(encoding="utf-8"))
+    found = [(json.loads((d / "track.json").read_text(encoding="utf-8")), d)
+             for d in LESSONS_DIR.iterdir() if d.is_dir() and (d / "track.json").exists()]
+    # beginner to advanced: by "order", then folder name
+    for info, d in sorted(found, key=lambda x: (x[0].get("order", 99), x[1].name)):
         language = info["language"]
         if language not in runner.LANGUAGES:
             raise LessonError(f"{d.name}: unknown language {language!r}")
@@ -121,7 +123,7 @@ def tracks() -> list[dict]:
                 raise LessonError(f"{f}: {e}") from e
             lessons.append(lesson | {"id": f"{PREFIX}{d.name}/{f.stem}", "track": d.name, "position": i,
                                      "language": language, "lab_title": info["title"], "harness": ""})
-        out.append({"id": d.name, "title": info["title"], "language": language,
+        out.append({"id": d.name, "title": info["title"], "language": language, "level": info.get("level", ""),
                     "summary": info.get("summary", ""), "lessons": lessons})
     return out
 
@@ -179,7 +181,7 @@ def student_tracks(db: Database, student_id: str | None) -> list[dict]:
             d["sessions"] = p["sessions"] if p else 0
             d["submitted"] = bool(p and (p["passed"] if l["tests"] else p["ran"]))
             lessons.append(d)
-        out.append({k: t[k] for k in ("id", "title", "language", "summary")} | {"lessons": lessons})
+        out.append({k: t[k] for k in ("id", "title", "language", "level", "summary")} | {"lessons": lessons})
     return out
 
 

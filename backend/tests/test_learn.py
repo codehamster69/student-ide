@@ -38,8 +38,10 @@ def start(c, lesson_id="learn:c/06-loops"):
 
 def test_tracks_parse_and_have_exercises():
     ids = {t["id"]: t for t in learn.tracks()}
-    assert {"c", "python"} <= set(ids)
-    assert len(ids["c"]["lessons"]) >= 12
+    assert {"c", "c-advanced", "python", "python-intermediate", "python-advanced"} <= set(ids)
+    assert len(ids["c"]["lessons"]) >= 12 and len(ids["c-advanced"]["lessons"]) >= 10
+    levels = [t["level"] for t in learn.tracks() if t["language"] == "python"]
+    assert levels == ["beginner", "intermediate", "advanced"]  # listed beginner to advanced
     for l in LESSONS:
         assert l["title"] and l["prompt"].strip() and l["starter_code"].strip(), l["id"]
         assert l["tests"] and l["solution"], f"{l['id']}: every lesson has an exercise with a model answer"

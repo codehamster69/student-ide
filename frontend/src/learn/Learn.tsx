@@ -72,7 +72,6 @@ export function Learn({ studentId, onOpen, onBack }: {
                 <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text">
                   <span className="size-2.5 rounded-sm" style={{ background: LANGUAGES[t.language].color }} />
                   {t.title}
-                  <Badge>{LANGUAGES[t.language].label}</Badge>
                 </h2>
                 {t.summary && <p className="mt-0.5 max-w-2xl text-[13px] text-muted">{t.summary}</p>}
               </div>
@@ -132,7 +131,7 @@ export function LearnCard({ onOpen, delay = 0.2 }: { onOpen: () => void; delay?:
           <Badge tone="accent">Always open</Badge>
         </span>
         <span className="mt-0.5 block text-[13px] text-muted">
-          Learn C and Python one idea at a time: read a short lesson, change the example, run it, then try the exercise.
+          C and Python from beginner to advanced, one idea at a time: read a short lesson, change the example, run it, then try the exercise.
         </span>
       </span>
       <span className="relative flex items-center gap-1 text-sm font-medium text-accent">

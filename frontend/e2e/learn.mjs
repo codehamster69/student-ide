@@ -51,8 +51,9 @@ await shot("01-home");
 
 // --- the lesson list -------------------------------------------------------------
 await page.click("button:has-text('Learning lab')");
-await page.waitForSelector("text=C from scratch");
-await page.waitForSelector("text=Python basics");
+for (const t of ["C 1 · Beginner", "C 2 · Advanced", "Python 1 · Beginner", "Python 2 · Intermediate", "Python 3 · Advanced"]) {
+  await page.waitForSelector(`h2:has-text('${t}')`);
+}
 await shot("02-lessons");
 
 // --- a lesson: read, try the example, change it, run ---------------------------------
