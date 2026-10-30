@@ -48,6 +48,8 @@ export interface Lab {
   duration_s?: number | null;
   n_questions?: number;
   joined?: boolean;
+  /** "View as student" only: a lab the teacher has not opened to students yet */
+  draft?: boolean;
 }
 
 /** A learning-lab track: lessons in one language, always open (see backend/studentide/learn.py). */
@@ -79,10 +81,16 @@ export interface CheckResult {
     stdin?: string; stdout?: string; expected?: string; stderr?: string }[];
 }
 
+/** "View as student" in dev mode: the teacher's admin token goes along, so the
+ * server files the sessions as a preview (with Google sign-in the staff cookie does that). */
+let previewToken = "";
+export const setPreviewToken = (t: string) => { previewToken = t; };
+
 export async function api<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, body === undefined ? undefined : {
+  const auth: Record<string, string> = previewToken ? { "X-Admin-Token": previewToken } : {};
+  const res = await fetch(path, body === undefined ? { headers: auth } : {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify(body),
   });
   if (!res.ok) {

@@ -80,6 +80,7 @@ from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_
 from .replay import ReplayError, final_text
 from .schema import SCHEMA_VERSION, Event
 
+PREVIEW = "preview"  # sessions.context of a teacher's "View as student" (see auth.previewer)
 STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 TASKS: list[dict] = json.loads((Path(__file__).parent / "tasks.json").read_text(encoding="utf-8"))
 TASK_IDS = {t["id"] for t in TASKS}
@@ -262,6 +263,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def start_session(body: SessionIn, request: Request) -> dict:
         sid = _student_id(body.student_id)
         auth.own_student(request, sid)
+        # "View as student": a teacher's own and shared labs (drafts too), kept out of every study table
+        staff = auth.previewer(request)
         question, context = None, None
         if body.lesson_id:
             lesson = learn.get_lesson(body.lesson_id)
@@ -271,7 +274,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             task_id = lesson["id"]
         elif body.question_id:
             q = db.get_question(body.question_id)
-            if q is None or q["lab_id"] not in {l["id"] for l in db.labs_for_student(sid)}:
+            open_labs = db.preview_labs(auth.preview_lab_ids(staff)) if staff else db.labs_for_student(sid)
+            if q is None or q["lab_id"] not in {l["id"] for l in open_labs}:
                 raise HTTPException(403, "this question is not open for you")
             lab = db.get_lab(q["lab_id"])
             # The snapshot keeps everything the session ran against, hidden tests included.
@@ -287,9 +291,14 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
             task_id = body.task_id
         else:
             raise HTTPException(400, "unknown task")
-        if not has_consent(db.get_or_create_student(sid)):
+        if staff:
+            context = PREVIEW
+            db.get_or_create_student(sid)
+            if question and question["lab_id"] and compete.get_comp(db, question["lab_id"]):
+                raise HTTPException(403, "student view can't enter a competition: it would put you on the class board")
+        elif not has_consent(db.get_or_create_student(sid)):
             raise HTTPException(403, "consent required before recording")
-        if question and question["lab_id"]:
+        if question and question["lab_id"] and not staff:
             compete.can_start_session(db, question["lab_id"], sid)
         # Coming back to a question (a later lab sitting, back from a competition's
         # board, or a lesson opened again) picks up the code where the student left it, in the same language.
@@ -305,7 +314,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def my_labs(student_id: str, request: Request) -> list[dict]:
         sid = _student_id(student_id)
         auth.own_student(request, sid)
-        return teach.student_labs(db, sid)
+        staff = auth.previewer(request)
+        return teach.student_labs(db, sid, db.preview_labs(auth.preview_lab_ids(staff)) if staff else None)
 
     @app.post("/api/sessions/{session_id}/events")
     async def ingest(session_id: str, request: Request) -> dict:

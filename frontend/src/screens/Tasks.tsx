@@ -60,6 +60,7 @@ export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn }: 
             <div>
               <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text">
                 <NotebookPen className="size-4 text-accent" /> {lab.title}
+                {lab.draft && <Badge tone="warn">Draft: students can't see it yet</Badge>}
               </h2>
               {lab.description && <p className="mt-0.5 max-w-2xl text-[13px] text-muted">{lab.description}</p>}
             </div>

@@ -211,13 +211,14 @@ def is_competition(lab) -> bool:
     return "kind" in lab.keys() and lab["kind"] == "competition"
 
 
-def student_labs(db: Database, student_id: str) -> list[dict]:
+def student_labs(db: Database, student_id: str, labs: list | None = None) -> list[dict]:
     """What a student sees: open labs assigned to them, questions in order,
-    and their own progress on each question."""
+    and their own progress on each question. `labs`: the labs to show instead
+    of the student's own ("View as student": a teacher's labs, drafts included)."""
     from .compete import student_card  # compete imports question_json from here
 
     out = []
-    for lab in db.labs_for_student(student_id):
+    for lab in db.labs_for_student(student_id) if labs is None else labs:
         if lab["kind"] == "competition":
             out.append(student_card(db, lab, student_id))
             continue
@@ -230,7 +231,8 @@ def student_labs(db: Database, student_id: str) -> list[dict]:
             qs.append(d)
         if qs:
             out.append({"id": lab["id"], "kind": "lab", "title": lab["title"], "description": lab["description"],
-                        "subject": lab["subject"], "language": lab["language"], "questions": qs})
+                        "subject": lab["subject"], "language": lab["language"], "questions": qs}
+                       | ({"draft": True} if lab["status"] == "draft" else {}))
     return out
 
 
@@ -306,6 +308,7 @@ def router(db: Database, require_admin: Callable, auth) -> APIRouter:
         lab_or_404(lab_id, request)
         if db.count_sessions(lab_id=lab_id):
             raise HTTPException(409, "students have recorded sessions in this lab; close it instead")
+        db.delete_preview_sessions(lab_id=lab_id)
         db.delete_lab(lab_id)
         return {"deleted": lab_id}
 
@@ -463,6 +466,7 @@ def router(db: Database, require_admin: Callable, auth) -> APIRouter:
         q = question_or_404(question_id, request)
         if db.count_sessions(question_id=question_id):
             raise HTTPException(409, "students have recorded sessions on this question; it can be edited but not removed")
+        db.delete_preview_sessions(question_id=question_id)
         db.delete_question(question_id)
         return detail(q["lab_id"], request)
 

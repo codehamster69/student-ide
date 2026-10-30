@@ -59,6 +59,7 @@ flowchart LR
 | 3 Dashboard | Competitions hand in each student's code when time runs out; leaderboard linked for owner, co-teachers and admins | ✅ | #21 |
 | 3 Dashboard | Any-language competitions (each student picks the language per question) and a staff-only similar-submissions check (winnowing + tiling, side by side) | ✅ | #24 |
 | 3 Dashboard | Always-open learning lab: C and Python lessons with runnable examples and checked exercises; practice recorded but kept out of baselines, detector and review | ✅ | #30 |
+| 3 Dashboard | Learning lab filled out to a full syllabus (82 lessons: C, C++, Python beginner to advanced) and "View as student" for teachers and admins (previews never study data) | ✅ | #31 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |

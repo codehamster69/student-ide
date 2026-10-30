@@ -67,7 +67,7 @@ student's last code per lesson are kept. Docs: `docs/learning-lab.md`.
   C++ 2 · Intermediate (6: classes, RAII, operator overloading, maps/sets,
   algorithms and lambdas, templates) and C++ 3 · Advanced (5: virtual
   functions, smart pointers, move semantics, exceptions, queues/heaps/BFS),
-  compiled as C++17 like lab code. 63 lessons in eight tracks, listed C,
+  compiled as C++17 like lab code. 57 lessons in eight tracks, listed C,
   C++, Python, each beginner to advanced.
 
 ## Follow-ups

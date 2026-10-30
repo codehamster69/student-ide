@@ -19,18 +19,20 @@ dragging its edge: the side panel's width, the output pane's height and the
 input/output split. Sizes are remembered in the browser; double-click a
 handle to reset it. Arrow keys move a focused handle.
 
-Tracks today, beginner to advanced (63 lessons):
+Tracks today, beginner to advanced (82 lessons). Lessons added later in a
+track use a letter after the number (`05b-switch.md`) so existing lesson ids,
+and students' progress on them, never change.
 
 | Track | Lessons |
 |---|---|
-| C 1 · Beginner (12) | hello world, variables and types, scanf, arithmetic and `%`, if/else, loops, functions, arrays, strings, pointers, structs, recursion |
-| C 2 · Advanced (10) | malloc/free, pointer arithmetic and 2D arrays, strings by hand and `fgets`, typedef/enum/union, linked lists, stacks and queues, function pointers and `qsort`, bitwise operators, preprocessor/const/static, files |
-| C++ 1 · Beginner (6) | cout, variables and cin, decisions and loops (range-for), functions and references, `std::string`, `std::vector` |
-| C++ 2 · Intermediate (6) | classes, constructors/destructors and RAII, operator overloading, maps and sets, algorithms and lambdas, templates |
-| C++ 3 · Advanced (5) | inheritance and virtual functions, smart pointers, copy and move semantics, exceptions, queues/heaps and BFS |
-| Python 1 · Beginner (6) | print, input, if, loops, lists, functions |
-| Python 2 · Intermediate (6) | string methods, dictionaries, tuples and sets, exceptions, comprehensions/lambda/sorting, files and `csv` |
-| Python 3 · Advanced (6) | classes, special methods and inheritance, generators, closures and decorators, recursion and `lru_cache`, context managers |
+| C 1 · Beginner (16) | hello world, variables and types, scanf, arithmetic and `%`, integer division/casts/`sizeof`/overflow/`math.h`, if/else, `switch` and `?:`, loops, `break`/`continue`/do-while/nested loops, functions, scope and lifetime (globals, shadowing, `static` locals), arrays, strings, pointers, structs, recursion |
+| C 2 · Advanced (14) | malloc/free, pointer arithmetic and 2D arrays, strings by hand and `fgets`, typedef/enum/union, linked lists, stacks and queues, function pointers and `qsort`, bitwise operators, preprocessor/const/static, files, insertion sort and binary search, `argc`/`argv`/exit codes/`stderr`/`errno`/`strtol`, prototypes/headers/`extern`/include guards/multi-file builds, variadic functions |
+| C++ 1 · Beginner (9) | cout, variables and cin, decisions and loops (range-for), functions and references, `std::string`, `std::vector`, raw arrays/`std::array`/pointers/`nullptr`/`new` and `delete`, namespaces/`enum class`/`constexpr`, recursion and backtracking |
+| C++ 2 · Intermediate (9) | classes, constructors/destructors and RAII, operator overloading, maps and sets, algorithms and lambdas, templates, `this`/const members/`static` members/`friend`, iterators/pair/tuple/structured bindings/deque/list/`lower_bound`, streams (`iomanip`, `stringstream`, `cerr`, `fstream`) |
+| C++ 3 · Advanced (6) | inheritance and virtual functions, smart pointers, copy and move semantics, exceptions, queues/heaps and BFS, `optional`/`variant`/`string_view` |
+| Python 1 · Beginner (10) | print, input, operators/`//`/`%`/`**`/booleans/type conversion, if, loops, `break`/`continue`/loop `else`/nested loops, lists, lists of lists, functions, modules and `import` (`math`, `random`, `__name__`) |
+| Python 2 · Intermediate (9) | string methods, dictionaries, tuples and sets, exceptions, comprehensions/lambda/sorting, files and `csv`, keyword args/`*args`/`**kwargs`/scope/`global`/`nonlocal`/mutable defaults, `collections` and `heapq`, regular expressions |
+| Python 3 · Advanced (9) | classes, special methods and inheritance, generators, closures and decorators, recursion and `lru_cache`, context managers, properties/class and static methods/dataclasses, type hints and testing with `assert`, merge sort/big-O/binary search/`bisect` |
 
 ## Writing a lesson
 

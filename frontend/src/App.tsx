@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import type { Lab, LearnTrack, Task } from "./api";
+import { ArrowLeft, Eye } from "lucide-react";
+import { setPreviewToken, type Lab, type LearnTrack, type Task } from "./api";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig } from "./auth";
 import { newSittingId, startSession, type LiveSession } from "./editor/session";
-import { page } from "./ui";
+import { page, spring } from "./ui";
 import { Shell } from "./screens/Shell";
 import { Login } from "./screens/Login";
 import { Consent } from "./screens/Consent";
@@ -25,12 +26,21 @@ type Screen =
   | { name: "session"; studentId: string; tasks: Task[]; start: number; session: LiveSession; sitting?: string; arena?: string; learn?: boolean }
   | { name: "saved"; studentId: string; summary: SessionSummary };
 
+/** The teacher area's dev-mode token (review/api.ts), read here so the student bundle stays small. */
+const teacherToken = () => { try { return sessionStorage.getItem("studentide.review.token") ?? ""; } catch { return ""; } };
+
 export function App() {
   const [screen, setScreen] = useState<Screen>({ name: "loading" });
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
+  // "View as student" (#/student from the teacher area): a teacher or admin under their own staff id
+  const [preview, setPreview] = useState(false);
   const signedIn = (studentId: string, consented: boolean) =>
     setScreen(consented ? { name: "tasks", studentId } : { name: "consent", studentId });
   const signOut = () => {
+    if (preview) {
+      location.hash = "#/teach";
+      return;
+    }
     if (cfg?.mode === "google") void endGoogleSession();
     setScreen({ name: "login" });
   };
@@ -40,8 +50,15 @@ export function App() {
     authConfig().then(async (c) => {
       setCfg(c);
       const me = c.mode === "google" ? await currentUser() : null;
+      const wantsPreview = location.hash.startsWith("#/student");
       if (me && me.role === "student") signedIn(me.student_id, me.consented);
-      else setScreen({ name: "login" });
+      // staff skip consent: nothing they do here is study data (the server files it as a preview)
+      else if (wantsPreview && me) { setPreview(true); setScreen({ name: "tasks", studentId: me.student_id }); }
+      else if (wantsPreview && c.mode === "dev" && teacherToken()) {
+        setPreviewToken(teacherToken());
+        setPreview(true);
+        setScreen({ name: "tasks", studentId: "STAFF_PREVIEW" });
+      } else setScreen({ name: "login" });
     });
   }, []);
 
@@ -147,6 +164,24 @@ export function App() {
           {content}
         </motion.div>
       </AnimatePresence>
+      {preview && <PreviewBar />}
     </MotionConfig>
+  );
+}
+
+/** Always on screen in "View as student", so a teacher never mistakes it for a student's account. */
+function PreviewBar() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.3, ...spring } }}
+      role="status"
+      className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-warn/40 bg-surface py-1.5 pl-3.5 pr-1.5 text-xs text-muted shadow-lg"
+    >
+      <Eye className="size-3.5 text-warn" />
+      <span><strong className="font-semibold text-text">Student view.</strong> Your labs as students see them. Nothing here counts as student data.</span>
+      <a href="#/teach" className="flex h-7 items-center gap-1 rounded-full bg-surface-3 px-2.5 font-medium text-text hover:bg-surface-2">
+        <ArrowLeft className="size-3.5" />Back to Teach
+      </a>
+    </motion.div>
   );
 }

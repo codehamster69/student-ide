@@ -165,7 +165,8 @@ def progress(db: Database, student_id: str) -> dict[str, dict]:
                       MAX(EXISTS (SELECT 1 FROM checks c WHERE c.session_id = s.id AND c.total > 0 AND c.passed = c.total))
                         AS passed,
                       MAX(EXISTS (SELECT 1 FROM runs r WHERE r.session_id = s.id)) AS ran
-               FROM sessions s WHERE s.student_id = ? AND s.context = ? GROUP BY s.question_id""",
+               FROM sessions s WHERE s.student_id = ? AND s.context IN (?, 'preview') AND s.question_id LIKE 'learn:%'
+               GROUP BY s.question_id""",
             (student_id, CONTEXT)).fetchall()
     return {r["id"]: dict(r) for r in rows}
 

@@ -338,5 +338,25 @@ class Auth:
         if user["student_id"] != student_id:
             raise HTTPException(403, "you can only act as yourself")
 
+    def previewer(self, request: Request) -> Teacher | None:
+        """The teacher or admin behind a student-endpoint request made from
+        "View as student", else None. Google mode: a signed-in staff account
+        (staff have their own student id, so own_student lets them through).
+        Dev mode: the admin token sent with the request. Students can never
+        claim this, so their sessions can't be hidden from the study."""
+        if self.token_ok(request):
+            return Teacher(None, True)
+        if not self.cfg.google:
+            return None
+        user = self.current(request)
+        if user is None or user["role"] not in ("teacher", "admin"):
+            return None
+        return Teacher(user["email"], user["role"] == "admin")
+
+    def preview_lab_ids(self, t: Teacher) -> set[str] | None:
+        """Labs a previewing teacher sees as a student would: their own and
+        shared labs; None = all (admins)."""
+        return None if t.admin else self.db.teacher_lab_ids(t.email)
+
     def own_session(self, request: Request, session_row) -> None:
         self.own_student(request, session_row["student_id"])
