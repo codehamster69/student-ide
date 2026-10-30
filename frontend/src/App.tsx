@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import type { Lab, Task } from "./api";
+import type { Lab, LearnTrack, Task } from "./api";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig } from "./auth";
 import { newSittingId, startSession, type LiveSession } from "./editor/session";
 import { page } from "./ui";
@@ -11,6 +11,7 @@ import { Tasks } from "./screens/Tasks";
 import { Workspace, type SessionSummary } from "./screens/Workspace";
 import { Saved } from "./screens/Saved";
 import { Arena } from "./compete/Arena";
+import { Learn } from "./learn/Learn";
 
 type Screen =
   | { name: "loading" }
@@ -18,8 +19,10 @@ type Screen =
   | { name: "consent"; studentId: string }
   | { name: "tasks"; studentId: string }
   | { name: "arena"; studentId: string; labId: string }
-  // One practice task or competition question, or a whole lab sitting (tasks = its questions).
-  | { name: "session"; studentId: string; tasks: Task[]; start: number; session: LiveSession; sitting?: string; arena?: string }
+  | { name: "learn"; studentId: string }
+  // One practice task or competition question, a whole lab sitting (tasks = its questions),
+  // or a learning-lab track (tasks = its lessons; back to the learning lab when done).
+  | { name: "session"; studentId: string; tasks: Task[]; start: number; session: LiveSession; sitting?: string; arena?: string; learn?: boolean }
   | { name: "saved"; studentId: string; summary: SessionSummary };
 
 export function App() {
@@ -76,6 +79,21 @@ export function App() {
               setScreen({ name: "session", studentId: screen.studentId, tasks: lab.questions, start, session, sitting });
             }}
             onCompetition={(labId) => setScreen({ name: "arena", studentId: screen.studentId, labId })}
+            onLearn={() => setScreen({ name: "learn", studentId: screen.studentId })}
+          />
+        </Shell>
+      );
+      break;
+    case "learn":
+      content = (
+        <Shell step={2} studentId={screen.studentId} onSignOut={signOut}>
+          <Learn
+            studentId={screen.studentId}
+            onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })}
+            onOpen={async (track: LearnTrack, start: number) => {
+              const session = await startSession(screen.studentId, track.lessons[start]);
+              setScreen({ name: "session", studentId: screen.studentId, tasks: track.lessons, start, session, learn: true });
+            }}
           />
         </Shell>
       );
@@ -105,6 +123,7 @@ export function App() {
           openSession={(task, language) => startSession(screen.studentId, task, screen.sitting, language)}
           onFinished={(summary) => setScreen(screen.arena
             ? { name: "arena", studentId: screen.studentId, labId: screen.arena }
+            : screen.learn ? { name: "learn", studentId: screen.studentId }
             : { name: "saved", studentId: screen.studentId, summary })}
         />
       );

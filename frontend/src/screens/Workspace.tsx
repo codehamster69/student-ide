@@ -10,7 +10,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
-import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, RotateCcw, Terminal, Trophy } from "lucide-react";
+import { BookOpen, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Flag, FlaskConical, PanelLeftClose, PanelLeftOpen, Play, RotateCcw, Terminal, Trophy } from "lucide-react";
 import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
 import { LANGUAGES, type Language } from "../teach/api";
@@ -19,6 +19,7 @@ import { rememberLanguage, type LiveSession } from "../editor/session";
 import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
 import { QuestionText } from "../questionText";
+import { LessonText } from "../learn/LessonText";
 import { Badge, Button, Dialog, Kbd, LiveDot, LogoMark, Spinner, TextArea, cn, duration, ease } from "../ui";
 import type { CompClock, SubmitResult } from "../compete/api";
 import { SubmitDialog } from "../compete/SubmitDialog";
@@ -129,6 +130,13 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const outcome = outcomes[active] ?? null;
   const grade = grades[active] ?? null;
   const competing = !!task.competition;
+  /** a learning-lab track: lessons instead of questions, no finish dialog, back to the lesson list */
+  const learning = !!task.lesson;
+  const panelW = learning ? 460 : 320;
+  /** learning lab: a lesson is done once Check passes (or, without tests, once the code ran), here or before */
+  const isDone = (i: number) => !!tasks[i].submitted || (learning && (tasks[i].n_tests
+    ? !!grades[i] && grades[i].total > 0 && grades[i].passed === grades[i].total
+    : !!outcomes[i]));
   const watching = useViewers(sessionId);
   const language = activeLang;
   const lang = LANGUAGES[language];
@@ -232,6 +240,17 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     const starter = cur().initial;
     if (v.state.doc.toString() !== starter) {
       v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: starter }, selection: { anchor: 0 }, userEvent: "reset", scrollIntoView: true });
+    }
+    v.focus();
+  };
+
+  /** Learning lab: put a lesson's example in the editor, as one edit (origin
+   * "example") that Ctrl+Z undoes. Learning-lab sessions never reach the detector. */
+  const loadExample = (code: string) => {
+    const v = view.current;
+    if (!v) return;
+    if (v.state.doc.toString() !== code) {
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: code }, selection: { anchor: 0 }, userEvent: "example", scrollIntoView: true });
     }
     v.focus();
   };
@@ -478,7 +497,9 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               link.ok ? "bg-success-soft text-success" : "bg-warn-soft text-warn",
             )}
             role="status"
-            title="Your typing, edits and runs are being saved"
+            title={learning
+              ? "Your typing is saved for the research study only: it is never compared with your lab work, shown to teachers or marked"
+              : "Your typing, edits and runs are being saved"}
           >
             <LiveDot tone={link.ok ? "success" : "warn"} />
             {link.ok ? "Recording" : `Offline · ${link.pending} events waiting`}
@@ -509,10 +530,17 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               Check
             </Button>
           )}
-          <Button size="sm" onClick={() => setConfirming(true)} disabled={saving}>
-            {competing ? <Trophy className="size-3.5" /> : <Flag className="size-3.5" />}
-            {competing ? "Back to board" : sitting ? "Finish lab" : "Finish"}
-          </Button>
+          {learning ? (
+            <Button size="sm" onClick={() => void finish("left")} disabled={saving}>
+              {saving ? <Spinner className="size-3.5" /> : <BookOpen className="size-3.5" />}
+              All lessons
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setConfirming(true)} disabled={saving}>
+              {competing ? <Trophy className="size-3.5" /> : <Flag className="size-3.5" />}
+              {competing ? "Back to board" : sitting ? "Finish lab" : "Finish"}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -522,13 +550,14 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
           {taskOpen && (
             <motion.aside
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
+              animate={{ width: panelW, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: duration.base, ease: ease.out }}
               className="shrink-0 overflow-hidden border-r border-border bg-surface"
             >
-              <div className="h-full w-[320px] overflow-y-auto p-5">
-                {sitting && (
+              <div className="h-full overflow-y-auto p-5" style={{ width: panelW }}>
+                {/* lessons are long reads: the editor tabs and Previous/Next move between them instead */}
+                {sitting && !learning && (
                   <nav aria-label="Questions in this lab" className="-mx-2 mb-5 grid gap-0.5 border-b border-border pb-4">
                     {tasks.map((q, i) => (
                       <button key={q.id} onClick={() => void switchTo(i)} disabled={opening !== null || saving}
@@ -536,8 +565,8 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                         className={cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-wait",
                           i === active ? "bg-accent-soft text-text" : "text-muted hover:bg-surface-2 hover:text-text")}>
                         <span className={cn("grid size-6 shrink-0 place-items-center rounded-md font-mono text-[11px] font-semibold",
-                          i === active ? "bg-accent text-accent-fg" : q.submitted ? "bg-success-soft text-success" : "bg-surface-2 text-muted")}>
-                          {opening === i ? <Spinner className="size-3" /> : q.submitted && i !== active ? <CheckCircle2 className="size-3.5" /> : i + 1}
+                          i === active ? "bg-accent text-accent-fg" : isDone(i) ? "bg-success-soft text-success" : "bg-surface-2 text-muted")}>
+                          {opening === i ? <Spinner className="size-3" /> : isDone(i) && i !== active ? <CheckCircle2 className="size-3.5" /> : i + 1}
                         </span>
                         <span className="min-w-0 flex-1 truncate font-medium">{q.title}</span>
                         {visited.has(i) && i !== active && <span className="size-1.5 shrink-0 rounded-full bg-accent/60" title="Opened in this sitting" />}
@@ -547,10 +576,16 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                   </nav>
                 )}
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
-                  {task.lab_id ? `Question ${active + 1}${sitting ? ` of ${tasks.length}` : ""}` : "Task"}
+                  {learning ? `${task.lab_title} · lesson ${active + 1} of ${tasks.length}`
+                    : task.lab_id ? `Question ${active + 1}${sitting ? ` of ${tasks.length}` : ""}` : "Task"}
                 </p>
-                <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text">{task.title}</h2>
-                <QuestionText prompt={task.prompt} source={task.source} className="mt-3 text-sm leading-relaxed text-muted" />
+                <h2 className="mt-1.5 flex items-center gap-2 text-lg font-semibold tracking-tight text-text">
+                  {task.title}
+                  {learning && isDone(active) && <CheckCircle2 className="size-4 text-success" aria-label="Done" />}
+                </h2>
+                {learning
+                  ? <LessonText markdown={task.prompt} language={language} onTry={loadExample} className="mt-3" />
+                  : <QuestionText prompt={task.prompt} source={task.source} className="mt-3 text-sm leading-relaxed text-muted" />}
                 {pickLanguage && (
                   <p className="mt-3 text-xs text-faint">
                     Answer in any of {task.languages!.map((l) => LANGUAGES[l].label).join(", ")}: pick it above the editor. Each language keeps its own code.
@@ -559,7 +594,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 {!sitting && switchError && <p className="mt-2 rounded-md bg-danger-soft px-2 py-1 text-xs text-danger" role="alert">{switchError}</p>}
                 {task.tests && task.tests.length > 0 && (
                   <div className="mt-5 grid gap-2">
-                    <p className="text-xs font-medium text-text">Examples</p>
+                    <p className="text-xs font-medium text-text">{learning ? "Exercise examples (input → output)" : "Examples"}</p>
                     {task.tests.slice(0, 3).map((t, i) => (
                       <div key={i} className="grid grid-cols-2 gap-2 font-mono text-[11.5px]">
                         <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-text">{t.stdin || "(no input)"}</pre>
@@ -579,7 +614,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                     <span>
                       {task.n_tests} test{task.n_tests === 1 ? "" : "s"} to check against
                       {task.n_hidden_tests ? <> (<EyeOff className="inline size-3" /> {task.n_hidden_tests} hidden)</> : null}.
-                      Checking is just for you and isn't graded.
+                      {learning ? "Press Check when you think your exercise is right." : "Checking is just for you and isn't graded."}
                     </span>
                   </p>
                 )}

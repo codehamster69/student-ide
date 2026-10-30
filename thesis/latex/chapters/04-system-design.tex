@@ -820,3 +820,42 @@ compare or exclude sessions that had an editor view.
   \caption{Live editor view and the notice the student sees.}
   \label{fig:live-editor}
 \end{figure}
+
+\section{Learning lab}
+\label{sec:learning-lab}
+
+Besides timed labs and competitions, students have an always-open
+\emph{learning lab}: short lessons that each explain one idea next to code
+the student can change and run (\cref{fig:learn}). Two tracks were written
+for the pilot, twelve C lessons (from \texttt{printf} to pointers, structs
+and recursion) and six Python lessons. Each lesson's examples can be loaded
+into the editor with one click, and each ends with a small exercise checked
+by the same stdin/stdout tests as lab questions
+(\cref{sec:question-sources}). Lessons are Markdown files kept in the
+repository with a hidden model answer; an automated test runs every model
+answer (it must pass) and every starter (it must not).
+
+A track opens in the same editor as a lab sitting (\cref{sec:sitting}), so
+the student practises in exactly the environment used for assessed work, and
+the lesson's code is waiting when they come back. Practice is recorded like
+a lab, since it adds real typing to the dataset, but it is kept apart from
+everything the detector reads: each session is marked as learning-lab
+practice, is excluded from baselines, review, the live view and the
+evaluation harness, and does not start a student's four-week baseline
+period. Unsupervised practice could be typed by anyone, so it is never
+treated as evidence of the student's own rhythm. Students are told this on
+the learning lab's page and in the editor.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{learn/learn-light-02-lessons}
+    \caption{The learning lab's lesson list, with the notice about recording.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{learn/learn-light-04-exercise-checked}
+    \caption{A lesson: text and examples (with Try it) beside the editor; the exercise passes Check.}
+  \end{subfigure}
+  \caption{The learning lab.}
+  \label{fig:learn}
+\end{figure}

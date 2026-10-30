@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     question_id    TEXT,                     -- question within that lab; task_id holds the same id
     question_json  TEXT,                     -- JSON copy of the question as the student saw it
     keys_purged_at REAL,                     -- raw key events deleted at this time, see retention.py
-    sitting_id     TEXT                      -- one opening of a lab: its questions' sessions share it
+    sitting_id     TEXT,                     -- one opening of a lab: its questions' sessions share it
+    context        TEXT                      -- 'learn' = learning lab practice (see learn.py); NULL = everything else
 );
 CREATE INDEX IF NOT EXISTS sessions_by_student ON sessions(student_id, started_at);
 
@@ -132,7 +133,7 @@ CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
 MIGRATIONS = {
     "students": (("consent_version", "INTEGER"),),
     "sessions": (("lab_id", "TEXT"), ("question_id", "TEXT"), ("question_json", "TEXT"), ("keys_purged_at", "REAL"),
-                 ("sitting_id", "TEXT")),
+                 ("sitting_id", "TEXT"), ("context", "TEXT")),
     "labs": (("subject", "TEXT NOT NULL DEFAULT ''"), ("language", "TEXT NOT NULL DEFAULT 'python'"),
              ("kind", "TEXT NOT NULL DEFAULT 'lab'"), ("owner_email", "TEXT")),
     "questions": (("tests_json", "TEXT NOT NULL DEFAULT '[]'"), ("harness", "TEXT NOT NULL DEFAULT ''"),
@@ -202,16 +203,17 @@ class Database:
     # sessions ---------------------------------------------------------------
 
     def create_session(self, session_id: str, student_id: str, task_id: str, schema_version: int, client_meta: dict,
-                       question: dict | None = None, sitting_id: str | None = None) -> None:
+                       question: dict | None = None, sitting_id: str | None = None, context: str | None = None) -> None:
         """`question`: the lab question row (as a dict) when the session answers one.
-        `sitting_id`: shared by the sessions of one opening of a lab (one per question visited)."""
+        `sitting_id`: shared by the sessions of one opening of a lab (one per question visited).
+        `context`: "learn" for a learning-lab lesson, kept apart from everything the detector reads."""
         q = question or {}
         with self.connect() as conn:
             conn.execute(
                 """INSERT INTO sessions(id, student_id, task_id, started_at, schema_version, client_meta,
-                                        lab_id, question_id, question_json, sitting_id) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                                        lab_id, question_id, question_json, sitting_id, context) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                 (session_id, student_id, task_id, time.time(), schema_version, json.dumps(client_meta),
-                 q.get("lab_id"), q.get("id"), json.dumps(q) if q else None, sitting_id),
+                 q.get("lab_id"), q.get("id"), json.dumps(q) if q else None, sitting_id, context),
             )
 
     def previous_sessions(self, student_id: str, question_id: str) -> list[sqlite3.Row]:
@@ -231,10 +233,13 @@ class Database:
                 (time.time(), reason, session_id),
             )
 
-    def list_sessions(self, student_id: str | None = None, lab_id: str | None = None) -> list[sqlite3.Row]:
+    def list_sessions(self, student_id: str | None = None, lab_id: str | None = None,
+                      include_learn: bool = False) -> list[sqlite3.Row]:
+        """Learning-lab sessions are left out unless `include_learn`: the
+        detector, baselines, review, live view and harness never see them."""
         sql = """SELECT s.*, (SELECT COUNT(*) FROM events e WHERE e.session_id = s.id) AS n_events
                  FROM sessions s"""
-        where, args = [], []
+        where, args = ([], []) if include_learn else (["s.context IS NULL"], [])
         if student_id is not None:
             where.append("s.student_id = ?")
             args.append(student_id)

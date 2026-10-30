@@ -3,16 +3,19 @@ import { motion } from "motion/react";
 import { ArrowUpRight, CheckCircle2, Code2, NotebookPen, Play, Trophy } from "lucide-react";
 import { api, type Lab, type Task } from "../api";
 import { Badge, Button, LiveDot, Spinner, cn, item, spring, stagger } from "../ui";
+import { LearnCard } from "../learn/Learn";
 
 /** Where "Start/Continue lab" lands: the first question not finished yet. */
 const firstOpen = (lab: Lab) => Math.max(0, lab.questions.findIndex((q) => !q.submitted));
 
-export function Tasks({ studentId, onPick, onOpenLab, onCompetition }: {
+export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn }: {
   studentId: string;
   onPick: (task: Task) => Promise<void>;
   /** opens the whole lab as one sitting, on question `start` */
   onOpenLab: (lab: Lab, start: number) => Promise<void>;
   onCompetition: (labId: string) => void;
+  /** the always-open learning lab */
+  onLearn: () => void;
 }) {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [labs, setLabs] = useState<Lab[]>([]);
@@ -100,6 +103,8 @@ export function Tasks({ studentId, onPick, onOpenLab, onCompetition }: {
           </div>
         </motion.section>
       ))}
+
+      {tasks && <LearnCard onOpen={onLearn} delay={0.15 + labs.length * 0.08} />}
 
       {tasks && (
         <>
