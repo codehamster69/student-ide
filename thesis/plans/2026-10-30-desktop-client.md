@@ -1,9 +1,10 @@
 # Plan: Sandbox Labs, a portable desktop client with local Docker
 
-Status: **plan, not started** (2026-10-30, revision 3). Brain entries:
+Status: **plan, not started** (2026-10-30, revision 4). Brain entries:
 [`2026-10-30-03-desktop-client-plan`](../brain/entries/2026-10-30-03-desktop-client-plan.md) (first draft),
-[`2026-10-30-04-sandbox-labs-plan-revised`](../brain/entries/2026-10-30-04-sandbox-labs-plan-revised.md) (revision 2) and
-[`2026-10-30-05-teacher-setup-plan`](../brain/entries/2026-10-30-05-teacher-setup-plan.md) (revision 3: teachers set up subjects and labs).
+[`2026-10-30-04-sandbox-labs-plan-revised`](../brain/entries/2026-10-30-04-sandbox-labs-plan-revised.md) (revision 2),
+[`2026-10-30-05-teacher-setup-plan`](../brain/entries/2026-10-30-05-teacher-setup-plan.md) (revision 3: teachers set up subjects and labs) and
+[`2026-10-30-06-whole-instance-plan`](../brain/entries/2026-10-30-06-whole-instance-plan.md) (revision 4: a whole instance for any subject).
 Figure: [`latex/flowcharts/desktop-client.tex`](../latex/flowcharts/desktop-client.tex).
 
 Revision 2 follows Rohan's answers to the first draft's open questions:
@@ -16,6 +17,7 @@ Revision 2 follows Rohan's answers to the first draft's open questions:
 | Allow vim/nano? | **Yes** | Terminal editors in every image, a Vim mode in our own editor, and terminal-editor typing logged as its own surface. |
 | UX | **Best possible** | Section 6 is expanded into concrete screens, motion specs and performance budgets. |
 | (revision 3) | **Teachers set up their own subjects and labs, easily** | Section 5 is new: subjects, an environment builder without Docker knowledge, a lab wizard, tests checked against a reference solution, preview in a cloud sandbox, publish to classes, and a shared library. Admin presets become starting points, not the only labs. |
+| (revision 4) | **Versatile for all subjects; users may install any tech stack, since they get a whole instance** | Section 3.5 is new: each student gets a persistent Linux instance per subject with sudo, internet for installs, services and ports. Teachers choose a network mode per lab (open, registries only, off). Monitoring moves to a sidecar the student cannot switch off, and installs are logged. |
 
 ## 1. What we are building
 
@@ -34,8 +36,10 @@ and competitions:
   **library of preset labs** (C programming, Data Structures, Operating
   Systems, Linux and shell, Networks, DBMS, Python) gives every teacher a
   starting point to copy and adapt.
-- Every lab opens in a **private Linux sandbox on the student's machine**
-  with a **terminal, a file tree and our editor**. Edits persist; work can be
+- Every lab opens in a **whole Linux instance on the student's machine**
+  (sudo, internet for installs, services, ports) with a **terminal, a file
+  tree and our editor**, so any subject's stack fits: C, Java, Python and
+  ML, web, databases, compilers, networking, DevOps. Edits persist; work can be
   submitted and is graded on the server.
 - **Monitoring keeps working.** Keystrokes, pastes, edits, runs, focus,
   terminal commands and files changed outside the editor stream to the
@@ -56,12 +60,14 @@ browser.
 | Shell | **Electron** | Same Chromium as the web app, so keystroke timestamps mean the same thing in both and the recorder is shared code. Tauri's engine differs per OS (WebView2, WebKitGTK, WKWebView), a confound for RQ1 and RQ3. |
 | Distribution | **Portable builds** (Windows portable `.exe`, Linux AppImage, macOS `.app` in a zip) plus an optional installer | Runs from Downloads or a USB stick without admin rights. |
 | UI code | Reuse `frontend/` (React, CodeMirror 6, Motion) | One design system for web and desktop. |
-| Sandbox | One container per (student, lab); one folder per assignment | Instant assignment switching; assignments still separate sessions. |
+| Sandbox | **A whole instance per (student, subject)**: persistent, sudo, any package manager; one folder per lab and assignment | Rohan's call: versatile for every subject. Installs survive across the subject's labs. |
+| Network | Per lab: **open** (default for practice), **registries only** (package mirrors, for assessed labs), **off** | Installing needs the internet, but an assessed lab should not reach every website. |
+| Monitoring inside a root-capable instance | Watcher and command capture in a **sidecar container** the student cannot stop; key timing stays in the app | With sudo, anything inside the instance can be switched off by the student. |
 | Where work lives | Server: event log, plus a **workspace snapshot** per assignment | Work follows the student to any machine; the server can check files against the evidence. |
 | Where code runs | Local Docker or Podman first; **capped cloud sandbox** as last resort | "The lab PC doesn't work" must never block a student. |
 | Terminal | Always on, every lab | Rohan's call: all preset labs have terminal access. |
 | Terminal editors | vim and nano in every image; Vim keys in our editor too | Rohan's call; our editor's Vim mode keeps most typing in the best-logged surface. |
-| Network | **Online required**; a short reconnect buffer only | Submissions, live view and grading need it. |
+| App connectivity | **Online required**; a short reconnect buffer only | Submissions, live view and grading need it. |
 | Submission | Graded on the server runner from the uploaded workspace | An untrusted client cannot fake a grade. |
 | Tamper resistance | Visible, not impossible: signed builds, signed hash-chained batches, evidence checks at submission | A student owns their machine; honest framing beats false promises. |
 | Faculty | Web app: catalogue, assignment to classes, readiness, live terminal mirror, review | Faculty do not need Docker. |
@@ -80,10 +86,10 @@ browser.
  │  main: Docker/Podman client, auth, updater, workspace sync │        │  detector + review (unchanged)│
  │        │ Docker API (socket / named pipe)                   │        │  runner: grades submissions   │
  │  ┌─────▼────────────────────────────────────────────────┐  │        │  cloud sandbox pool (capped,  │
- │  │ lab container sid-<student>-<lab>                     │  │        │  fallback only)               │
- │  │  /workspace/<assignment>/ … (named volume)            │  │        └──────────────────────────────┘
- │  │  no network, non-root, caps dropped, cpu/mem/pids     │  │
- │  │  shell hooks + file watcher → events                  │  │
+ │  │ instance sid-<student>-<subject> + monitor sidecar    │  │        │  fallback only)               │
+ │  │  ~/labs/<lab>/<assignment>/ … (named volume)          │  │        └──────────────────────────────┘
+ │  │  sudo, installs via proxy, ports, cpu/mem/disk limits │  │
+ │  │  sidecar: file watcher, processes, proxy → events     │  │
  │  └───────────────────────────────────────────────────────┘  │
  └───────────────────────────────────────────────────────────┘
 ```
@@ -139,16 +145,17 @@ not, and the plan is honest about it.
   networking labs as needed) and always **vim, nano and tmux**. Multi-arch (amd64 + arm64). Pinned by digest in the lab
   definition; hosted on our own registry (Artifact Registry asia-south1 or
   GHCR) to avoid Docker Hub limits; images pulled the day before a lab.
-- **One container per (student, lab)** named `sid-<student>-<lab>`, created
-  on first open, stopped on app close or after idle, removed when the lab is
-  archived. Restart takes about a second.
-- **Workspace is a named volume**, one folder per assignment. Not a bind
+- **One instance per (student, subject)** named `sid-<student>-<subject>`
+  (section 3.5), created on first open, stopped on app close or after idle,
+  kept for the semester. Restart takes about a second.
+- **Workspace is a named volume**, one folder per lab and assignment
+  (`/home/student/labs/<lab>/<assignment>/`). Not a bind
   mount: faster on Windows/WSL, and the files are not in the student's
   Documents folder.
-- **Locked down like today's VM runner**: `--network none` (a lab may opt
-  into an apt/pip mirror), non-root user, `cap_drop ALL`,
-  `no-new-privileges`, read-only root with tmpfs and the workspace writable,
-  CPU, memory and pids limits.
+- **Isolated from the host, open inside** (section 3.5): sudo and a
+  writable root inside the instance, but never `--privileged`, no host
+  mounts other than the volumes, user namespaces (rootless Podman or Docker
+  `userns-remap`) where available, and CPU, memory, disk and pids limits.
 
 ### 3.4 Assignments and persistent state
 
@@ -169,6 +176,72 @@ Each assignment keeps, independently:
 Switching between assignments is instant because nothing reloads: each
 assignment's editor and terminal stay mounted (hidden), only the visible one
 renders.
+
+### 3.5 A whole instance, for any subject
+
+Each student gets a full Linux machine per subject, not a locked-down
+runner, so the same app serves every subject without us predicting its
+stack.
+
+**What students (and teachers) can do inside**
+
+- `sudo apt install`, `pip`, `npm`, `cargo`, `go install`, `sdkman`, `conda`,
+  downloading tarballs, cloning repos: any tech stack.
+- Run **services**: MySQL, PostgreSQL, MongoDB, Redis, Nginx, a Flask or
+  Spring server, Jupyter. Services keep running while the lab is open.
+- **Ports**: a port a program opens inside (e.g. 3000, 8080, 8888) is
+  detected and offered as a one-click preview in an in-app browser tab, or
+  forwarded to `localhost` on the host. Web development and Jupyter work as
+  on a normal machine.
+- **Debugging and systems work**: gdb and strace (`SYS_PTRACE`), processes,
+  signals, threads, pipes, shared memory, file systems in user space.
+  Networking labs get `NET_ADMIN`/`NET_RAW` inside their own network
+  namespace (ping, tcpdump, iptables, socket programming).
+- **Multi-machine labs** (later): a lab can define several instances on a
+  private network (client/server, a small cluster), from the same recipe.
+
+**Persistence**
+
+- The instance's root filesystem and home are kept for the semester, so a
+  tool installed in week 2 is there in week 10. A "Reset instance" button
+  rebuilds it from the subject's environment while keeping lab files.
+- **Moving machines**: lab files come back from the server's workspace
+  snapshots (section 3.2). Installed packages are too big to sync, so the
+  app records every install command (from the command log) as the
+  student's **setup recipe** and replays it on the new machine: "Restoring
+  your setup: installing 4 packages…". The student can view and edit the
+  recipe.
+
+**Network modes (per lab, set by the teacher)**
+
+| Mode | What works | Default for |
+| --- | --- | --- |
+| Open | Full internet | Practice labs, projects |
+| Registries only | apt, pip, npm, Maven, crates, Go proxy, GitHub releases through a small filtering proxy started next to the instance | Assessed labs |
+| Off | Nothing outside the instance | Exams, competitions |
+
+In every mode, traffic leaves through that proxy, which logs host names
+(not contents) so the review can say "downloaded from pypi.org" or "visited
+github.com". Open mode is honest about what it allows: a student could
+fetch a solution, which is why assessed labs default to registries only and
+why the evidence check (section 4.4) matters more than the network rule.
+
+**Resources**: defaults of 2 CPUs, 2 GB RAM and a 10 GB disk per instance,
+raised per subject (ML or Java stacks need more), shown live in the status
+bar. One instance runs at a time; others stop.
+
+**Limits, stated plainly**: no GPU (CUDA labs need a cloud GPU later),
+no Android emulator or other nested VMs, no Windows-only tools, no kernel
+modules (OS labs use user space or a VM image instead), GUI programs only
+through a later noVNC window. Docker-in-Docker is off by default; a DevOps
+subject can enable it with Sysbox or rootless Podman inside, where the host
+supports it.
+
+**Teachers get the same instance.** "Set up by hand" in the environment
+builder (section 5.2) opens a fresh instance; the teacher installs what the
+subject needs in a terminal, and the commands become the environment's
+recipe, which the build service turns into an image. Nobody has to write a
+Dockerfile.
 
 ## 4. Monitoring
 
@@ -195,6 +268,23 @@ events as usual.
 | `term_paste` | Paste into the terminal | Text, length and hash, like editor pastes. |
 | `fs_change` | A workspace file changes **not** through our editor | Path, size, hash, diff against the last known text, and the command that was running (`vim main.c`, `cat > main.c`, `git checkout`). |
 | `term_output` | Per command | Bytes written and a clipped tail. |
+| `pkg_install` | A package manager installs or removes something | Manager (apt, pip, npm, …), packages and versions, from the command log and the package databases. Feeds the setup recipe. |
+| `net_conn` | The instance reaches a new host through the proxy | Host name, port, mode decision (allowed or blocked); no contents. |
+| `port_open` / `service` | A program starts listening, or a service starts or stops | Port, process name. |
+
+**Where the capture runs.** With sudo, a student can switch off anything
+inside the instance, including shell hooks. So:
+
+- **Key timing** never depends on the instance: it is captured in the app
+  (xterm.js and the editor), as before.
+- The **file watcher, package and process observer and the network proxy**
+  run in a **sidecar container** next to the instance. It mounts the
+  workspace read-only and sees the instance's processes through a shared
+  PID namespace; root inside the instance cannot stop it.
+- **Shell hooks** stay for rich command lines, but are best-effort: the
+  sidecar also sees every process started (`execve` via the shared PID
+  namespace), and when hooks go quiet while processes keep running, the
+  review notes "command logging stopped at 10:42".
 
 How the client knows vim is in the foreground: the shell hook reports the
 command start (`vim main.c`) and its end; between the two, terminal keys are
@@ -238,7 +328,9 @@ The aim is that tampering is **expensive and visible**.
 | Modified app sends fake events | Code-signed builds; Electron fuses (ASAR integrity, no `RunAsNode`, no `NODE_OPTIONS`), devtools off; server refuses clients below a minimum version. |
 | Events dropped, reordered or edited | Per-install keypair in the OS keychain (`safeStorage`) registered at sign-in; every batch signed and carrying the hash of the previous batch. Breaks are shown in the review. |
 | Code appears without being typed | At every workspace upload and at Submit the server checks each file against the evidence: editor edits, `terminal-editor` keys with `fs_change` saves, pastes. Content with no supporting evidence is marked "appeared without typing" on the timeline. |
-| Files edited from the host (`docker cp`, exec from outside) | The in-container watcher reports them as `fs_change` with no foreground command, shown as "changed outside the app". |
+| Monitoring switched off from inside (root in the instance) | Capture lives in the app and the sidecar; silenced shell hooks are visible. |
+| Solutions downloaded (open network) | Proxy logs hosts; downloaded or generated files with no typing behind them are "appeared without typing"; assessed labs default to registries only. |
+| Files edited from the host (`docker cp`, exec from outside) | The sidecar watcher reports them as `fs_change` with no foreground command, shown as "changed outside the app". |
 | Grades faked locally | Submissions are graded on the server runner from the uploaded workspace. Local tests are practice. |
 | Someone else types, in person or by remote desktop | The detector's job, and the reason the thesis exists. |
 | Scripted typing (AutoHotkey, xdotool) | Machine-regular timing; the identity channel is built to notice a different "typist". |
@@ -290,8 +382,23 @@ An environment is the Linux toolbox a subject's labs run in.
 5. **Versions**: changing an environment builds a new version; running labs
    keep the version they started with until the teacher moves them.
 
+Or **set up by hand**: open a fresh instance, install everything in its
+terminal as on any Linux machine, try it, and press "Save as environment".
+The recorded install commands become the recipe (shown for review and
+editable), and the build service builds it reproducibly. Teachers can mix
+both: tick the common tools, then add the rest by hand.
+
+Starter environments cover every common subject: C/C++ and DSA, Java
+(JDK, Maven, Gradle), Python and data science (Jupyter, numpy, pandas,
+scikit-learn), web (Node, npm, a database), DBMS (MySQL, PostgreSQL,
+MongoDB clients and servers), compiler design (flex, bison, LLVM), OS and
+systems (gdb, strace, valgrind, perf), networks (iproute2, tcpdump,
+netcat, Wireshark CLI), DevOps (git, Docker via Podman, Terraform CLI).
+
 Environments are shared: any teacher can reuse "C with gdb and valgrind"
 instead of building their own, so most teachers never open the builder.
+Students start from the subject's environment and may install more on top
+(section 3.5); the subject's environment is what grading uses.
 
 ### 5.3 Lab wizard
 
@@ -319,6 +426,7 @@ any point.
    **Try as a student** opens the lab in a cloud sandbox in the browser (or
    locally in the desktop app), exactly as a student would see it.
 4. **Publish**: pick sections, open and due times, live or self-paced,
+   network mode (open, registries only, off; section 3.5),
    grading (tests only, tests plus manual, or manual), late policy. A
    summary card shows what students will see before the final button.
 
@@ -505,7 +613,13 @@ Nothing existing is switched off or changed in behaviour.
 | Environments bloat or multiply | Medium | Recipes, size meter, shared environments, admin approval for raw Dockerfiles, unused versions pruned. |
 | Image builds fail or are slow | Medium | Build off the VM, smoke tests, readable error, previous version stays usable. |
 | Teacher setup still feels hard | Medium | Library presets, copy last semester, usability test with 2 teachers timed against the 15 min / 3 min targets. |
-| Ethics: terminal and workspace data are new | Certain | Consent v3 before any pilot; raw keys purged after baseline as today. |
+| Students break their own instance (rm -rf, broken packages) | High | "Reset instance" keeps lab files and replays the setup recipe; files are on the server anyway. |
+| Heavy stacks (Java IDE servers, ML libraries) on 4 GB PCs | Medium | Per-subject resource defaults, one running instance, cloud fallback for the heaviest subjects. |
+| Root in a container on the student's laptop | Medium | Never privileged; user namespaces or rootless Podman; only listed capabilities; the risk is to the student's own machine, which consent explains. |
+| Open network makes fetching solutions easy | High in open mode | Registries-only default for assessed labs, host log, evidence check at submission. |
+| Grading differs from the student's instance | Medium | Grading runs in the subject's environment plus the student's setup recipe restricted to registry packages; teachers see which packages a submission needed. |
+| Cloud fallback as a whole instance costs more and can reach the internet | Medium | Cloud instances get registries-only network, smaller limits and the seat cap. |
+| Ethics: terminal, workspace, install and host-name data are new | Certain | Consent v3 before any pilot; raw keys purged after baseline as today. |
 
 ## 9. Milestones
 
@@ -515,9 +629,9 @@ thesis material as usual.
 | # | Milestone | Done when |
 | --- | --- | --- |
 | D0 | **Spike** (~1 week): Electron loads the frontend, finds Docker or Podman, opens a terminal in a C container; timing parity browser vs Electron; RAM on a lab PC; portable build runs without admin | Go/no-go note in the brain with the numbers |
-| D1 | **One lab end to end**: subject and lab tables, one C environment and one C lab with 3 assignments (seeded by hand), portable app, sign-in, sandbox per lab, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
+| D1 | **One lab end to end**: subject and lab tables, one C environment and one C lab with 3 assignments (seeded by hand), portable app, sign-in, instance per subject, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
 | D2 | **Submit and sync**: workspace snapshots, restore on another machine, server grading, signed hash-chained batches, reconnect buffer, min version, auto-update | Switch laptops mid-lab and carry on; submit and see the grade |
-| D3 | **Terminal monitoring**: shell hooks, `terminal-editor` detection, file watcher, schema v2, evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline |
+| D3 | **Terminal monitoring and whole instance**: sudo instance per subject, ports preview, setup recipe replay, network modes with the proxy, sidecar watcher and process observer, shell hooks, `terminal-editor` detection, schema v2 (incl. `pkg_install`, `net_conn`, `port_open`), evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline; a student installs Postgres and a Node server, previews it, moves machines and gets the same setup back |
 | D4 | **Teacher setup**: subjects with roster and people, environment builder with build service, lab wizard with Check and cloud-sandbox preview, publish to sections, library with presets, safe mid-lab edits | A teacher who has not seen the app before sets up a subject and publishes a lab in under 15 minutes |
 | D4b | **Running a class**: readiness board, live terminal mirror, submissions table with manual marks and export | A teacher runs a live Sandbox Lab from the browser end to end |
 | D5 | **Fallback + UX polish**: cloud sandbox pool for students, Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
@@ -529,7 +643,9 @@ D1 to D3 are the student core; D4 can start alongside D2 since it is web-only; D
 
 1. Which subjects should get library presets first (we suggest C
    programming, then Linux and shell)?
-2. Can teachers create subjects freely, or should an admin approve new
+2. Should open network be allowed in assessed labs at all, or only
+   registries-only and off (we suggest registries-only as the floor)?
+3. Can teachers create subjects freely, or should an admin approve new
    subjects (we suggest freely, with admins approving only raw Dockerfiles)?
-3. How many cloud fallback seats is the VM budget comfortable with?
-4. Can IT install Docker or Podman on one lab room's PCs for the pilot?
+4. How many cloud fallback seats is the VM budget comfortable with?
+5. Can IT install Docker or Podman on one lab room's PCs for the pilot?

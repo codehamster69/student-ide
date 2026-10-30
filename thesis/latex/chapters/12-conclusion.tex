@@ -12,8 +12,12 @@ shells on one VM would cost far more than today's short runs. A planned
 \texttt{thesis/plans/2026-10-30-desktop-client.md}) lets teachers set up their own
 subjects and labs (an environment built from a checklist of tools rather than
 a Dockerfile, assignments whose tests are checked against a reference
-solution, and a shared library of preset labs), each opened in a private Linux container on the student's own machine
-with a terminal, a file tree, terminal editors such as vim, and our editor.
+solution, and a shared library of preset labs), each opened in a whole Linux instance per subject on the student's own
+machine, with sudo, internet access for installing any tech stack (limited to
+package registries in assessed labs), services and ports, a terminal, a file
+tree, terminal editors such as vim, and our editor. Because a student is root
+inside the instance, file, process and network capture runs in a sidecar
+container they cannot stop, while key timing is captured in the app itself.
 The client is a portable Electron app, so it needs no installation, and the
 student's files are snapshotted to the server so work follows them to another
 machine; when no container engine is available, a capped cloud sandbox is the

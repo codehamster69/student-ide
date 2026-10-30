@@ -11,7 +11,7 @@
     lab/.style={font=\scriptsize, align=center}]
   \node[box] (ui) {Renderer\\editor, terminal, UI};
   \node[new, below=of ui] (main) {Main process\\journal, signer, Docker};
-  \node[new, below=of main] (ctr) {Lab container\\terminal, vim, toolchain};
+  \node[new, below=of main] (ctr) {Whole instance per subject\\sudo, any stack, monitor sidecar};
   \node[store, below=of ctr] (vol) {Workspace volume\\one folder per question};
   \node[box, right=26mm of main] (api) {App + API\\events, labs, live};
   \node[box, above=of api] (det) {Detector + review\\unchanged};
