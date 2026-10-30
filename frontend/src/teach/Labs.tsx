@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronRight, ListChecks, Plus, Trophy, Users, X } from "lucide-react";
+import { ChevronRight, Eye, ListChecks, Plus, Trophy, Users, X } from "lucide-react";
 import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
@@ -32,7 +32,11 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
             Every session a student records is linked to the lab and question they worked on.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* also in the header, which runs off narrow screens */}
+          <a href="#/student" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2 md:hidden">
+            <Eye className="size-4" /> View as student
+          </a>
           <Button onClick={() => setCreating("competition")} disabled={!!creating}>
             <Trophy className="size-4 text-gold" /> New competition
           </Button>

@@ -52,7 +52,7 @@ export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn }: 
       {error && <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
       {!tasks && !error && <div className="mt-10 flex justify-center text-muted"><Spinner className="size-5" /></div>}
 
-      {tasks && labs.map((lab, li) => lab.kind === "competition" ? (
+      {tasks && labs.map((lab, li) => lab.kind === "competition" ? !(lab.state && lab.state in COMP_STATE) ? null : (
         <CompetitionCard key={lab.id} lab={lab} delay={0.1 + li * 0.08} onOpen={() => onCompetition(lab.id)} />
       ) : (
         <motion.section key={lab.id} variants={stagger(0.06, 0.1 + li * 0.08)} initial="initial" animate="animate" className="mt-7">

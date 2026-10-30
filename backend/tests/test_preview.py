@@ -108,3 +108,12 @@ def test_competitions_stay_off_limits(world, app):
     assert r.status_code == 403 and "class board" in r.json()["detail"]
     r = admin.post("/api/sessions", json={"student_id": me(admin), "question_id": q["id"]})
     assert r.status_code == 403 and "class board" in r.json()["detail"]
+
+
+def test_draft_competition_is_not_listed(world):
+    """A competition not set up yet has no student side; listing it blanked the page (live, 2026-10-30)."""
+    priya, meera, admin, lab, draft = world
+    comp = admin.post("/api/teach/competitions", json={"title": "Later", "description": "", "duration_min": 30}).json()
+    labs = admin.get(f"/api/students/{me(admin)}/labs").json()
+    assert comp["lab_id"] not in {l["id"] for l in labs}
+    assert all(l["state"] in ("waiting", "live", "ended") for l in labs if l["kind"] == "competition")
