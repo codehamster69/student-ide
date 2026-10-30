@@ -19,12 +19,15 @@ dragging its edge: the side panel's width, the output pane's height and the
 input/output split. Sizes are remembered in the browser; double-click a
 handle to reset it. Arrow keys move a focused handle.
 
-Tracks today, beginner to advanced (46 lessons):
+Tracks today, beginner to advanced (63 lessons):
 
 | Track | Lessons |
 |---|---|
 | C 1 · Beginner (12) | hello world, variables and types, scanf, arithmetic and `%`, if/else, loops, functions, arrays, strings, pointers, structs, recursion |
 | C 2 · Advanced (10) | malloc/free, pointer arithmetic and 2D arrays, strings by hand and `fgets`, typedef/enum/union, linked lists, stacks and queues, function pointers and `qsort`, bitwise operators, preprocessor/const/static, files |
+| C++ 1 · Beginner (6) | cout, variables and cin, decisions and loops (range-for), functions and references, `std::string`, `std::vector` |
+| C++ 2 · Intermediate (6) | classes, constructors/destructors and RAII, operator overloading, maps and sets, algorithms and lambdas, templates |
+| C++ 3 · Advanced (5) | inheritance and virtual functions, smart pointers, copy and move semantics, exceptions, queues/heaps and BFS |
 | Python 1 · Beginner (6) | print, input, if, loops, lists, functions |
 | Python 2 · Intermediate (6) | string methods, dictionaries, tuples and sets, exceptions, comprehensions/lambda/sorting, files and `csv` |
 | Python 3 · Advanced (6) | classes, special methods and inheritance, generators, closures and decorators, recursion and `lru_cache`, context managers |

@@ -63,6 +63,12 @@ student's last code per lesson are kept. Docs: `docs/learning-lab.md`.
   Intermediate (6) and Python 3 · Advanced (6). 46 lessons in five tracks,
   ordered by a track `order`; every model answer passes and every starter
   fails (`tests/test_learn.py`).
+- Rohan then asked for C++ beginner to advanced too: C++ 1 · Beginner (6),
+  C++ 2 · Intermediate (6: classes, RAII, operator overloading, maps/sets,
+  algorithms and lambdas, templates) and C++ 3 · Advanced (5: virtual
+  functions, smart pointers, move semantics, exceptions, queues/heaps/BFS),
+  compiled as C++17 like lab code. 63 lessons in eight tracks, listed C,
+  C++, Python, each beginner to advanced.
 
 ## Follow-ups
 

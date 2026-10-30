@@ -131,7 +131,7 @@ export function LearnCard({ onOpen, delay = 0.2 }: { onOpen: () => void; delay?:
           <Badge tone="accent">Always open</Badge>
         </span>
         <span className="mt-0.5 block text-[13px] text-muted">
-          C and Python from beginner to advanced, one idea at a time: read a short lesson, change the example, run it, then try the exercise.
+          C, C++ and Python from beginner to advanced, one idea at a time: read a short lesson, change the example, run it, then try the exercise.
         </span>
       </span>
       <span className="relative flex items-center gap-1 text-sm font-medium text-accent">
