@@ -68,10 +68,10 @@ lab visit for analysis.
 - On "Finish lab" every session of the sitting ends; questions with code
   (different from the starter code) end as `submit`, untouched ones as `left`.
 - In a later sitting, `POST /api/sessions` returns `resume_code`: the code of
-  the student's latest session on that question, rebuilt from its edits. The
-  new session's start snapshot holds it, so replay still starts from it.
-  Competitions keep one question per session from their board and do not
-  resume.
+  the student's latest session on that question (in the same language),
+  rebuilt from its edits. The new session's start snapshot holds it, so replay
+  still starts from it. Competitions do the same each time a student goes
+  back to the board and opens a question again (see `docs/competitions.md`).
 - Older sessions have `sitting_id` NULL (one question per visit).
 
 Research API: `GET /api/sessions?lab_id=...`; the export includes the same

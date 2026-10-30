@@ -8,7 +8,7 @@ import { Recorder, SCHEMA_VERSION } from "../recorder";
 export interface LiveSession {
   id: string;
   rec: Recorder;
-  /** a lab question opened again in a later sitting: the code as the student left it */
+  /** a lab or competition question opened again (later sitting, back from the board, a reload): the code as the student left it, in this language */
   resumeCode?: string | null;
   /** any-language competitions: the language this session is in (one session per language) */
   language?: Language;

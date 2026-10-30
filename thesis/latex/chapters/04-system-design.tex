@@ -513,6 +513,19 @@ and it runs once per competition, in the background, while the board shows
 that grading is still under way. Competitions that had already ended when
 the feature shipped keep their announced results.
 
+\paragraph{Coming back to a question.} A student moves between competition
+questions through the board, and each visit opens a fresh session. At first
+a fresh session also meant fresh starter code, so going back to the board to
+try another question threw away the first attempt on screen (it was still in
+the log). Now the server rebuilds the code of the student's latest session on
+that question, in the same language, from its edits and hands it to the new
+session, which records it as its start snapshot. Replay, the detector and the
+hand-in at the bell all read it from there, so nothing downstream changes: a
+session still answers one question in one language, and the restored code is
+never mistaken for typing or a paste. Lab sittings already resumed this way;
+competitions had been left out only because they were built before
+sittings.
+
 \paragraph{Any language.} For college-level contests a competition can be
 set to \emph{any language}: each student picks C, C++, Java, JavaScript or
 Python per question, from a switcher above the editor
