@@ -32,10 +32,10 @@ and competitions:
 - **Subjects and labs that teachers set up themselves**, in a few minutes
   and without knowing Docker: a teacher creates a subject (e.g. "CS201 Data
   Structures"), picks or builds its environment from a checklist, and adds
-  labs of **assignments** with starter files, a statement and tests. A
-  **library of preset labs** (C programming, Data Structures, Operating
-  Systems, Linux and shell, Networks, DBMS, Python) gives every teacher a
-  starting point to copy and adapt.
+  labs of **assignments** with starter files, a statement and tests. There
+  are **no admin preset labs** (Rohan, 2026-10-30): the shared library holds
+  only labs teachers choose to share, and starter environments cover the
+  common subjects.
 - Every lab opens in a **whole Linux instance on the student's machine**
   (sudo, internet for installs, services, ports) with a **terminal, a file
   tree and our editor**, so any subject's stack fits: C, Java, Python and
@@ -65,13 +65,13 @@ browser.
 | Monitoring inside a root-capable instance | Watcher and command capture in a **sidecar container** the student cannot stop; key timing stays in the app | With sudo, anything inside the instance can be switched off by the student. |
 | Where work lives | Server: event log, plus a **workspace snapshot** per assignment | Work follows the student to any machine; the server can check files against the evidence. |
 | Where code runs | Local Docker or Podman first; **capped cloud sandbox** as last resort | "The lab PC doesn't work" must never block a student. |
-| Terminal | Always on, every lab | Rohan's call: all preset labs have terminal access. |
+| Terminal | Always on, every lab | Rohan's call: every Sandbox Lab has terminal access. |
 | Terminal editors | vim and nano in every image; Vim keys in our editor too | Rohan's call; our editor's Vim mode keeps most typing in the best-logged surface. |
 | App connectivity | **Online required**; a short reconnect buffer only | Submissions, live view and grading need it. |
 | Submission | Graded on the server runner from the uploaded workspace | An untrusted client cannot fake a grade. |
 | Tamper resistance | Visible, not impossible: signed builds, signed hash-chained batches, evidence checks at submission | A student owns their machine; honest framing beats false promises. |
 | Faculty | Web app: catalogue, assignment to classes, readiness, live terminal mirror, review | Faculty do not need Docker. |
-| Who makes labs | **Teachers**, per subject; admins curate the shared library and approve custom environments | Rohan's call; presets alone would not fit every course. |
+| Who makes labs | **Teachers**, per subject, created freely; no admin presets; admins only approve raw Dockerfiles | Rohan's call (2026-10-30); presets alone would not fit every course. |
 | Environments | Built from a **recipe** (base + ticked tools) by a build service; raw Dockerfile only with admin approval | Teachers never need to know Docker; images stay small, safe and cached. |
 | Checking a lab before students see it | Reference solution must pass every test, starter must fail; preview in a **cloud sandbox** | A teacher without Docker can still try the lab exactly as students will. |
 
@@ -346,7 +346,9 @@ snapshots and the local container before the first Sandbox Lab.
 
 Teachers set up their own subjects and labs. The goal is that a teacher who
 has never used Docker can go from nothing to a published lab in **under 15
-minutes**, and from a library preset to a published lab in **under 3**.
+minutes**, and from a lab a colleague shared to a published lab in
+**under 3**. **Teachers create subjects freely**, with no admin approval
+(Rohan, 2026-10-30).
 
 ### 5.1 Subjects
 
@@ -434,9 +436,9 @@ any point.
 
 ### 5.4 Library
 
-- **Presets** made and curated by admins: complete labs with environment,
-  statements, starters, tests and solutions, one click to copy into a
-  subject and adapt.
+- **No admin presets** (Rohan, 2026-10-30). The library starts empty and
+  grows from what teachers share; an empty library shows "Start blank" and
+  "Copy last semester" instead.
 - **Share to library**: a teacher can publish their lab for colleagues
   (statements, starters and tests; solutions only to teachers). Copies are
   independent, with a "based on" link and an optional "update available".
@@ -614,7 +616,7 @@ Nothing existing is switched off or changed in behaviour.
 | Teachers write broken or leaky tests | Medium | Check step against the reference solution and starter; hidden tests never sent to clients. |
 | Environments bloat or multiply | Medium | Recipes, size meter, shared environments, admin approval for raw Dockerfiles, unused versions pruned. |
 | Image builds fail or are slow | Medium | Build off the VM, smoke tests, readable error, previous version stays usable. |
-| Teacher setup still feels hard | Medium | Library presets, copy last semester, usability test with 2 teachers timed against the 15 min / 3 min targets. |
+| Teacher setup still feels hard | Medium | Starter environments, shared labs, copy last semester, usability test with 2 teachers timed against the 15 min / 3 min targets. |
 | Students break their own instance (rm -rf, broken packages) | High | "Reset instance" keeps lab files and replays the setup recipe; files are on the server anyway. |
 | Heavy stacks (Java IDE servers, ML libraries) on 4 GB PCs | Medium | Per-subject resource defaults, one running instance, cloud fallback for the heaviest subjects. |
 | Root in a container on the student's laptop | Medium | Never privileged; user namespaces or rootless Podman; only listed capabilities; the risk is to the student's own machine, which consent explains. |
@@ -634,7 +636,7 @@ thesis material as usual.
 | D1 | **One lab end to end**: subject and lab tables, one C environment and one C lab with 3 assignments (seeded by hand), portable app, sign-in, instance per subject, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
 | D2 | **Submit and sync**: workspace snapshots, restore on another machine, server grading, signed hash-chained batches, reconnect buffer, min version, auto-update | Switch laptops mid-lab and carry on; submit and see the grade |
 | D3 | **Terminal monitoring and whole instance**: sudo instance per subject, ports preview, setup recipe replay, network modes with the proxy, sidecar watcher and process observer, shell hooks, `terminal-editor` detection, schema v2 (incl. `pkg_install`, `net_conn`, `port_open`), evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline; a student installs Postgres and a Node server, previews it, moves machines and gets the same setup back |
-| D4 | **Teacher setup**: subjects with roster and people, environment builder with build service, lab wizard with Check and cloud-sandbox preview, publish to sections, library with presets, safe mid-lab edits | A teacher who has not seen the app before sets up a subject and publishes a lab in under 15 minutes |
+| D4 | **Teacher setup**: subjects with roster and people, environment builder with build service, lab wizard with Check and cloud-sandbox preview, publish to sections, shared library, safe mid-lab edits | A teacher who has not seen the app before sets up a subject and publishes a lab in under 15 minutes |
 | D4b | **Running a class**: readiness board, live terminal mirror, submissions table with manual marks and export | A teacher runs a live Sandbox Lab from the browser end to end |
 | D5 | **Fallback + UX polish**: cloud sandbox pool for students, Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
 | D6 | **Pilot**: one real C lab with a class | VM CPU, cloud seat use and feedback logged; next labs chosen |
@@ -643,9 +645,7 @@ D1 to D3 are the student core; D4 can start alongside D2 since it is web-only; D
 
 ## 10. Still open
 
-1. Which subjects should get library presets first (we suggest C
-   programming, then Linux and shell)?
-2. Can teachers create subjects freely, or should an admin approve new
-   subjects (we suggest freely, with admins approving only raw Dockerfiles)?
-3. How many cloud fallback seats is the VM budget comfortable with?
-4. Can IT install Docker or Podman on one lab room's PCs for the pilot?
+Decided on 2026-10-30: teachers create subjects freely; no preset labs.
+
+1. Keep the cloud fallback (section 3.2), and if so how many seats?
+2. Can IT install Docker or Podman on one lab room's PCs for the pilot?
