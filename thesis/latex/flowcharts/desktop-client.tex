@@ -1,4 +1,4 @@
-% Planned desktop client with local Docker labs (TikZ). Used in chapter 12 via \tikzfig{desktop-client}.
+% Planned Sandbox Labs desktop client with local Docker (TikZ). Used in chapter 12 via \tikzfig{desktop-client}.
 % Source of truth: thesis/plans/2026-10-30-desktop-client.md (plan, not built yet).
 \begin{tikzpicture}[
     node distance=7mm and 9mm,
@@ -11,11 +11,13 @@
     lab/.style={font=\scriptsize, align=center}]
   \node[box] (ui) {Renderer\\editor, terminal, UI};
   \node[new, below=of ui] (main) {Main process\\journal, signer, Docker};
-  \node[new, below=of main] (ctr) {Lab container\\one per student, lab};
+  \node[new, below=of main] (ctr) {Lab container\\terminal, vim, toolchain};
   \node[store, below=of ctr] (vol) {Workspace volume\\one folder per question};
   \node[box, right=26mm of main] (api) {App + API\\events, labs, live};
   \node[box, above=of api] (det) {Detector + review\\unchanged};
-  \node[box, below=of api] (run) {Runner\\hand-in grading only};
+  \node[box, below=of api] (run) {Runner\\grades submissions};
+  \node[new, below=of run] (cloud) {Cloud sandbox\\capped fallback};
+  \node[store, right=of api] (ws) {Workspace\\snapshots};
   \draw[arrow] (ui) -- node[left, lab] {events,\\run, terminal} (main);
   \draw[arrow] (main) -- node[left, lab] {exec, attach} (ctr);
   \draw[arrow] (ctr) -- (vol);
@@ -23,10 +25,12 @@
   \draw[arrow] (main) -- node[above, lab] {signed, hash-chained\\batches (HTTPS)} (api);
   \draw[arrow] (api) -- (det);
   \draw[arrow] (api) -- (run);
+  \draw[arrow] (api) -- (ws);
+  \draw[arrow, dashed] (main.south east) to[bend right=10] node[below, lab] {no local engine} (cloud.west);
   \begin{scope}[on background layer]
     \node[zone, fit=(ui) (main) (ctr) (vol),
-          label={[font=\scriptsize, text=gray]above:Student machine (Electron + local Docker)}] {};
-    \node[zone, fit=(api) (det) (run),
+          label={[font=\scriptsize, text=gray]above:Student machine (portable Electron app + local Docker or Podman)}] {};
+    \node[zone, fit=(api) (det) (run) (cloud) (ws),
           label={[font=\scriptsize, text=gray]above:College VM}] {};
   \end{scope}
 \end{tikzpicture}

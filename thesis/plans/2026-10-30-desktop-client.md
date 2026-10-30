@@ -1,359 +1,396 @@
-# Plan: Student IDE desktop client with local Docker labs
+# Plan: Sandbox Labs, a portable desktop client with local Docker
 
-Status: **plan, not started** (2026-10-30). Brain entry:
-[`2026-10-30-03-desktop-client-plan`](../brain/entries/2026-10-30-03-desktop-client-plan.md).
+Status: **plan, not started** (2026-10-30, revision 2). Brain entries:
+[`2026-10-30-03-desktop-client-plan`](../brain/entries/2026-10-30-03-desktop-client-plan.md) (first draft) and
+[`2026-10-30-04-sandbox-labs-plan-revised`](../brain/entries/2026-10-30-04-sandbox-labs-plan-revised.md) (this revision).
 Figure: [`latex/flowcharts/desktop-client.tex`](../latex/flowcharts/desktop-client.tex).
 
-## 1. What we want and why
+Revision 2 follows Rohan's answers to the first draft's open questions:
+
+| Question | Rohan's answer | What changed in the plan |
+| --- | --- | --- |
+| Which subjects need a terminal? | It is a separate, new feature: **preset labs, all with terminal access** | Sandbox Labs is its own product side with a preset lab catalogue; the terminal is always on; existing web labs and competitions stay as they are. |
+| Lab PCs or own laptops? | **Keep it portable** in case a lab PC does not work | Portable builds (no installer, no admin), work follows the student between machines, and a capped cloud sandbox as the last fallback. |
+| Must labs work offline? | No, **online is required** for submissions and the rest | Offline mode dropped; only a short reconnect buffer remains. |
+| Allow vim/nano? | **Yes** | Terminal editors in every image, a Vim mode in our own editor, and terminal-editor typing logged as its own surface. |
+| UX | **Best possible** | Section 6 is expanded into concrete screens, motion specs and performance budgets. |
+
+## 1. What we are building
 
 Rohan saw a desktop lab tool that starts a private Docker sandbox on the
 student's own machine for each lab, with an Ubuntu terminal, a file editor,
-persistent edits and submission. We take the idea, not the product: this plan
-designs our own client around what the thesis needs.
+persistent edits and submission. We take the idea, not the product, and design
+our own around what the thesis needs.
 
-What we want from a desktop client:
+**Sandbox Labs** is a new part of Student IDE, next to the existing web labs
+and competitions:
 
-1. **Real environments.** A terminal and a full Linux toolchain per lab
-   (gcc, make, gdb, valgrind, Python, shell utilities), which a web Run button
-   cannot give. Subjects like OS, networks or DBMS labs become possible.
-2. **Compute moves to the student's machine.** Today every Run and Check is a
-   process on the college VM's runner container. Running that is cheap; what
-   would *not* be cheap is giving 60 students a live terminal each on the VM.
-   Local Docker is what makes terminals affordable, more than it saves on
-   today's runs.
-3. **Monitoring keeps working.** Keystrokes, pastes, edits, runs and focus
-   changes still stream to the server, the CUSUM detector and review timeline
-   still work, and the terminal becomes a new, logged surface.
-4. **Switching questions is instant** and each question keeps its whole state
-   (code, undo, cursor, terminal, last output).
-5. **A polished, calm, motion-rich UI** for students and faculty.
+- A **catalogue of preset labs** grouped by subject (C programming, Data
+  Structures, Operating Systems, Linux and shell, Networks, DBMS, Python).
+  Each lab is a set of **assignments** with starter files, a statement,
+  tests, and a pinned Linux image with the subject's toolchain.
+- Every lab opens in a **private Linux sandbox on the student's machine**
+  with a **terminal, a file tree and our editor**. Edits persist; work can be
+  submitted and is graded on the server.
+- **Monitoring keeps working.** Keystrokes, pastes, edits, runs, focus,
+  terminal commands and files changed outside the editor stream to the
+  server; the CUSUM detector, live view and review timeline keep working.
+  A flag still only starts a conversation.
+- **Compute moves to the student's machine.** Sixty live Linux shells on the
+  college VM would cost far more than today's short runs; local Docker is
+  what makes a terminal per student affordable.
 
-What does not change: the server stays the source of truth for sessions,
-events, grading, the detector and the review. A flag still only starts a
-conversation. Faculty keep working in the browser.
+What does not change: existing web labs, competitions, the detector, the
+review and the server as the source of truth. Faculty keep working in the
+browser.
 
 ## 2. Decisions at a glance
 
-| Question | Recommendation | Main reason |
+| Question | Decision | Main reason |
 | --- | --- | --- |
-| Shell | **Electron**, not Tauri | Same Chromium as the web app, so keystroke timestamps mean the same thing on both; Tauri uses a different web engine per OS (WebView2, WebKitGTK, WKWebView). |
-| UI code | Reuse `frontend/` (React, CodeMirror 6, Motion) behind a `Runtime` adapter | One codebase for web and desktop; web stays the fallback. |
-| Sandbox | One container per student per lab, one folder per question | Fast switching (no container start per question); questions still isolated by folder and session. |
-| Where code lives | Server is the truth (edit log + snapshots); the local volume is a working copy | Local files can be tampered with; the server's replay cannot. |
-| Runs and Checks | Local for practice; competitions and graded labs graded on the server at hand-in | Untrusted client cannot fake a grade; server grades only once per hand-in. |
-| Terminal | xterm.js on a `docker exec` shell, logged with key timing, commands and file changes outside the editor | Terminal becomes evidence like the editor, not a blind spot. |
-| Offline | Durable local journal, upload later; a live/proctored lab needs the network | Wi-Fi drops should not lose data, but live view needs a connection. |
-| Tamper resistance | Detectable, not impossible: signed builds, signed hash-chained batches, server replay checks | A student owns their machine; honest framing is better than false promises. |
-| Faculty | Stay on the web app; desktop has an optional teacher preview mode | Faculty do not need Docker to run a class. |
+| Shell | **Electron** | Same Chromium as the web app, so keystroke timestamps mean the same thing in both and the recorder is shared code. Tauri's engine differs per OS (WebView2, WebKitGTK, WKWebView), a confound for RQ1 and RQ3. |
+| Distribution | **Portable builds** (Windows portable `.exe`, Linux AppImage, macOS `.app` in a zip) plus an optional installer | Runs from Downloads or a USB stick without admin rights. |
+| UI code | Reuse `frontend/` (React, CodeMirror 6, Motion) | One design system for web and desktop. |
+| Sandbox | One container per (student, lab); one folder per assignment | Instant assignment switching; assignments still separate sessions. |
+| Where work lives | Server: event log, plus a **workspace snapshot** per assignment | Work follows the student to any machine; the server can check files against the evidence. |
+| Where code runs | Local Docker or Podman first; **capped cloud sandbox** as last resort | "The lab PC doesn't work" must never block a student. |
+| Terminal | Always on, every lab | Rohan's call: all preset labs have terminal access. |
+| Terminal editors | vim and nano in every image; Vim keys in our editor too | Rohan's call; our editor's Vim mode keeps most typing in the best-logged surface. |
+| Network | **Online required**; a short reconnect buffer only | Submissions, live view and grading need it. |
+| Submission | Graded on the server runner from the uploaded workspace | An untrusted client cannot fake a grade. |
+| Tamper resistance | Visible, not impossible: signed builds, signed hash-chained batches, evidence checks at submission | A student owns their machine; honest framing beats false promises. |
+| Faculty | Web app: catalogue, assignment to classes, readiness, live terminal mirror, review | Faculty do not need Docker. |
 
 ## 3. Architecture
 
 ```
- Student machine                                                     College VM (unchanged core)
- ┌──────────────────────────────────────────────────────────┐       ┌──────────────────────────┐
- │ Electron app                                              │       │ Caddy → App + API         │
- │  renderer (sandboxed): React UI, CodeMirror, xterm.js     │ HTTPS │  sessions, events, labs   │
- │   └ recorder (same as web) ──► main: durable journal ─────┼──────►│  detector, review, live   │
- │  main process: Docker client, auth, updater, signer       │       │  runner (hand-in grading) │
- │        │ Docker API (socket / named pipe)                  │       └──────────────────────────┘
- │  ┌─────▼───────────────────────────────────────────────┐ │
- │  │ Docker: lab container sid-<student>-<lab>            │ │
- │  │  /workspace/q1 … /workspace/qN  (named volume)       │ │
- │  │  no network, non-root, caps dropped, cpu/mem/pids    │ │
- │  │  shell hooks + file watcher → events                 │ │
- │  └──────────────────────────────────────────────────────┘ │
- └──────────────────────────────────────────────────────────┘
+ Student machine (portable app)                                         College VM
+ ┌───────────────────────────────────────────────────────────┐        ┌──────────────────────────────┐
+ │ Electron                                                   │        │ Caddy → App + API             │
+ │  renderer (sandboxed): React UI, CodeMirror, xterm.js      │ HTTPS  │  catalogue, sessions, events  │
+ │   └ recorder (same code as web) ─► main: journal, signer ──┼───────►│  workspace store, live view   │
+ │  main: Docker/Podman client, auth, updater, workspace sync │        │  detector + review (unchanged)│
+ │        │ Docker API (socket / named pipe)                   │        │  runner: grades submissions   │
+ │  ┌─────▼────────────────────────────────────────────────┐  │        │  cloud sandbox pool (capped,  │
+ │  │ lab container sid-<student>-<lab>                     │  │        │  fallback only)               │
+ │  │  /workspace/<assignment>/ … (named volume)            │  │        └──────────────────────────────┘
+ │  │  no network, non-root, caps dropped, cpu/mem/pids     │  │
+ │  │  shell hooks + file watcher → events                  │  │
+ │  └───────────────────────────────────────────────────────┘  │
+ └───────────────────────────────────────────────────────────┘
 ```
 
 The same picture as TikZ is in `latex/flowcharts/desktop-client.tex`.
 
-### 3.1 Electron vs Tauri
+### 3.1 Electron, not Tauri
 
-Tauri gives a 10 MB install instead of about 100 MB and lower memory, which is
-attractive on old lab PCs. It loses on the one thing the thesis cannot give
-up: **measurement consistency**. Students will build baselines in the browser
-(Chrome on lab PCs) and may later work in the desktop app. Electron runs the
-same Chromium, so `KeyboardEvent.timeStamp`, key repeat and IME behaviour are
-the same as in the web app, and the recorder code is literally shared. With
-Tauri the engine differs by OS, and any timing difference becomes a confound
-in RQ1 and RQ3. Electron also has mature pieces for the rest: `node-pty` /
-Docker exec streams, `dockerode`, `safeStorage` for secrets, code signing,
-auto-update, and fuses for hardening.
+Tauri gives a ~10 MB app instead of ~100 MB and uses less RAM. It loses on the
+one thing the thesis cannot give up: **measurement consistency**. Students
+build baselines in the browser (Chrome on lab PCs) and will also work in the
+desktop app; Electron runs the same Chromium, so `KeyboardEvent.timeStamp`,
+key repeat and IME behave as in the web app. Electron also has mature pieces
+for the rest: `node-pty`/Docker exec streams, `dockerode`, `safeStorage`,
+code signing, auto-update, and fuses for hardening. A D0 spike checks timing
+parity (scripted typing through a hardware-level injector in both) and RAM
+on a lab PC before we commit.
 
-A one-week spike verifies this (milestone D0): type the same scripted text
-through both the browser and the Electron build with a hardware-level key
-injector, compare inter-key interval distributions.
+### 3.2 Portable, and work that follows the student
 
-### 3.2 The `Runtime` adapter
+"Portable" has three layers. The first two are fully solvable; the third is
+not, and the plan is honest about it.
 
-The web app today calls `/api/sessions/{id}/run` and `/check`. We put that
-behind an interface so the same UI runs in both places:
+1. **The app is portable.** No installer, no admin rights: Windows portable
+   `.exe` (or a zip), Linux AppImage, macOS `.app`. Settings and caches go in
+   the user's profile (or next to the app with a `--portable` flag on a USB
+   stick). An installer exists too, for students who prefer one.
+2. **The work is portable.** Nothing important lives only on one machine.
+   The server holds the event log and a **workspace snapshot** for every
+   assignment (the question folder as a compressed tarball, size-capped at
+   5 MB, uploaded about 10 s after the last change, on every Run and on
+   Submit). Opening the lab on another machine restores the latest snapshot.
+   The student can switch from a broken lab PC to their laptop mid-lab and
+   carry on from where they were; terminal scrollback does not move.
+3. **The sandbox needs a container runtime, which is not portable.** Docker
+   or Podman must be installed once on each machine, which on Windows needs
+   admin rights and WSL2. So the app picks the best available engine, in
+   this order, and shows which one it is using:
 
-```ts
-interface Runtime {
-  kind: "server" | "local";
-  prepareLab(lab): AsyncIterable<SetupStep>;        // pull image, create container, sync files
-  run(question, code, stdin): Promise<RunResult>;   // local: docker exec; server: today's endpoint
-  check(question, code): Promise<CheckResult>;      // practice only when local
-  terminal?(question): TerminalHandle;              // local only
-  files?(question): FileTree;                       // local only (multi-file questions later)
-}
-```
+   | Engine | When | Notes |
+   | --- | --- | --- |
+   | Docker Desktop / Docker Engine | Installed and running | Default. Free for education use. |
+   | Podman (Desktop or rootless) | Installed | Same API; rootless on Linux avoids the root-equivalent `docker` group. |
+   | **Cloud sandbox** | No local engine works | Same image on the college VM (or a second small VM), one container per student, **capped** (e.g. 10 seats per lab, idle after 15 min). Costs VM compute, so it is a safety net, not a mode. Faculty see who is on it. |
 
-`ServerRuntime` wraps today's endpoints, so the web app behaves exactly as now.
-`LocalRuntime` lives in the Electron main process and is reached through a
-narrow `contextBridge` API. Labs gain an `environment` field: `web`, `local`
-or `either`, so a teacher decides per lab.
+   The Lab doctor (section 6.2) makes this choice visible and fixable.
 
-### 3.3 The lab container
+### 3.3 The lab image and container
 
-- **Image per subject**, e.g. `studentide/lab-c:2026.1`, `lab-python`,
-  `lab-linux` (OS lab), built from one Ubuntu LTS base, multi-arch
-  (amd64 + arm64 for Apple Silicon laptops), pinned by digest in the lab
-  definition so every student in a lab has the same toolchain. Hosted on our
-  own registry (Artifact Registry in asia-south1, or GHCR) to avoid Docker
-  Hub rate limits; a lab-room mirror can be added later.
-- **One container per (student, lab)**, named `sid-<student>-<lab>`,
-  created on first open, stopped when the app closes or after idle, removed
-  when the lab closes. Starting a stopped container takes about a second, so
-  reopening a lab is fast.
-- **Workspace is a named volume**, one folder per question
-  (`/workspace/q3-linked-list/`). Named volume, not a bind mount: faster on
-  Windows/WSL, and files are not sitting in the student's Documents folder.
-- **Locked down the same way as the VM runner today**: `--network none` by
-  default (a lab can opt into a package mirror), non-root user, `cap_drop ALL`,
-  `no-new-privileges`, read-only root, tmpfs `/tmp` with `exec`, memory, CPU
-  and pids limits. The runner's 5 s / 256 MB limits apply to Run; the
-  terminal has wider limits since students may run servers or long jobs.
+- **One image per subject**, e.g. `studentide/lab-c:2026.1`, built from one
+  Ubuntu LTS base with the subject's tools (gcc, make, gdb, valgrind, python3,
+  sqlite3, iproute2 for networking labs as needed) and **vim, nano and
+  tmux**. Multi-arch (amd64 + arm64). Pinned by digest in the lab
+  definition; hosted on our own registry (Artifact Registry asia-south1 or
+  GHCR) to avoid Docker Hub limits; images pulled the day before a lab.
+- **One container per (student, lab)** named `sid-<student>-<lab>`, created
+  on first open, stopped on app close or after idle, removed when the lab is
+  archived. Restart takes about a second.
+- **Workspace is a named volume**, one folder per assignment. Not a bind
+  mount: faster on Windows/WSL, and the files are not in the student's
+  Documents folder.
+- **Locked down like today's VM runner**: `--network none` (a lab may opt
+  into an apt/pip mirror), non-root user, `cap_drop ALL`,
+  `no-new-privileges`, read-only root with tmpfs and the workspace writable,
+  CPU, memory and pids limits.
 
-### 3.4 Persistent state per question
+### 3.4 Assignments and persistent state
 
-Each question keeps, independently:
+The sitting model of PR #17 carries over: opening a lab is one sitting, each
+assignment visited is its own session linked by `sitting_id`, and switching
+logs `focus {target: "question"}` out and in. So the detector and review need
+no change for switching.
+
+Each assignment keeps, independently:
 
 | State | Where it lives |
 | --- | --- |
-| Code | Server (edit log + snapshots, resume code as today) and the volume |
-| Undo history, cursor, scroll, folds | Renderer memory for open tabs; local store across restarts |
-| Terminal (shell, cwd, scrollback) | One `tmux`-free shell per question started in its folder; scrollback kept in the renderer, last 5,000 lines on disk |
-| Last run output, stdin, Check result | Local store, plus runs/checks on the server |
+| Files (all of them, not just one) | Volume, plus the server's workspace snapshot; the editor's edit log on the server |
+| Open files, cursor, scroll, folds, undo | Renderer memory while open; local store across restarts |
+| Terminal: its own shell in the assignment folder, cwd, scrollback | Kept alive while the lab is open; last 5,000 lines on disk |
+| Last run output, stdin, test results | Local store; submissions and runs on the server |
 
-Reopening a lab on another machine: the server's resume code fills the
-volume, so code follows the student; terminal history does not (by design).
+Switching between assignments is instant because nothing reloads: each
+assignment's editor and terminal stay mounted (hidden), only the visible one
+renders.
 
-The "one session per question, linked by a sitting id" model (PR #17) stays.
-Switching still logs `focus {target: "question"}` out and in, so the detector
-and review need no change for switching.
+## 4. Monitoring
 
-## 4. Monitoring in a local client
+### 4.1 Editor: unchanged
 
-### 4.1 Editor events: unchanged
+The recorder is the same file as the web app's, so `key`, `edit`,
+`clipboard`, `cursor`, `snapshot`, `focus` and `session_*` events are
+identical and the detector keeps its frozen config. The editor gains
+multi-file tabs; each edit carries its file path (additive field).
 
-The recorder is the same file as on the web, so `key`, `edit`, `clipboard`,
-`cursor`, `snapshot`, `focus` and `session_*` events are identical. The
-detector keeps its features and its frozen config.
+**Vim mode in our editor.** Since vim is allowed, the editor offers Vim key
+bindings (CodeMirror's vim extension) as a setting. A student who likes vim
+can stay in the editor, where every edit is logged at full detail, instead
+of moving to vim in the terminal, where we see far less. Normal-mode
+commands are key events like any other; the edits they cause are edit
+events as usual.
 
-### 4.2 Runs
-
-A local Run produces a `run` event as today. Because there is no server-side
-`runs` row, the client also posts the run record (`code`, `stdin`, clipped
-`stdout`/`stderr`, exit code, duration) to a new `POST /api/sessions/{id}/runs`
-with `where: "local"`. The server stores it as untrusted context; the review
-shows it as a local run. Run frequency still feeds the process channel.
-
-### 4.3 Terminal logging (schema v2, additive)
-
-The terminal is the new surface. What we log:
+### 4.2 Terminal and terminal editors (event schema v2, additive)
 
 | Event | When | Content |
 | --- | --- | --- |
-| `key` with `surface: "terminal"` | Every key down/up in xterm.js | Same as editor keys (code, class, timing). No characters for typed text beyond what the command line already shows. |
-| `term_cmd` | Each command the shell runs | Command line, cwd, start time, exit code, duration, from shell integration hooks (bash `PROMPT_COMMAND` + `DEBUG` trap emitting OSC 133-style marks, read by the client from the PTY stream). |
-| `term_paste` | Paste into the terminal | Length and hash, plus the text for the review, like editor pastes. |
-| `fs_change` | A file in the question folder changes **not** through our editor | Path, size, hash and a diff against the last known text, with the command that was running (e.g. `cat > main.c`, `sed -i`, `git checkout`). |
-| `term_output` | Per command | Bytes written and a clipped tail, not the whole stream. |
+| `key` with `surface` | Every key down/up anywhere | `editor`, `terminal` (shell prompt) or `terminal-editor` (vim/nano in the foreground, with the file). Same fields as editor keys. |
+| `term_cmd` | Each command the shell runs | Command line, cwd, start, exit code, duration, from shell hooks (bash `PROMPT_COMMAND` + `DEBUG` trap emitting OSC 133-style marks, read from the PTY stream). |
+| `term_paste` | Paste into the terminal | Text, length and hash, like editor pastes. |
+| `fs_change` | A workspace file changes **not** through our editor | Path, size, hash, diff against the last known text, and the command that was running (`vim main.c`, `cat > main.c`, `git checkout`). |
+| `term_output` | Per command | Bytes written and a clipped tail. |
 
-`fs_change` matters most. Code that appears through the terminal, from a
-`docker cp` on the host, or from any other route is shown on the timeline
-like a paste: "code changed outside the editor". A small watcher inside the
-container (`inotifywait` on `/workspace`) reports changes; every change the
-editor itself made is tagged with its hash so the client can tell the two
-apart.
+How the client knows vim is in the foreground: the shell hook reports the
+command start (`vim main.c`) and its end; between the two, terminal keys are
+tagged `terminal-editor` with the file. Each save shows up as an
+`fs_change` with a diff, so the review can replay a vim session save by save.
 
-Terminal editors (vim, nano) are left out of the default images. A teacher
-can allow them per lab; then edits made in them arrive as `fs_change` plus
-terminal key timing, which is weaker evidence than editor edits, and the
-review says so.
+What is weaker for vim and nano: we see every key and its timing, and the
+file at each save, but not each character edit in between. The review says
+so in plain words on that lane.
 
-**Detector.** Terminal key timing is a different distribution from coding
-(short commands, many Enter keys), so at first it is recorded but **not** mixed
-into the identity channel. Once there is data, a separate terminal digraph
-baseline can be tried as an extra channel on the dev split (same protocol as
-the key-pair channel in PR #10). `term_cmd` compile/run commands count as runs
-for the process channel. `fs_change` outside the editor feeds the same
-evidence lane as large pastes.
+**Detector.** Shell-prompt typing (short commands, many Enters) is a
+different distribution from coding, so `terminal` keys are recorded but kept
+out of the identity channel until tested. `terminal-editor` keys are code
+typing mixed with vim commands; they are a candidate for the identity
+channel, tested on the dev split with the same protocol as the key-pair
+channel (PR #10). `term_cmd` compiles and runs count as runs for the process
+channel. `fs_change` diffs without matching typing feed the same evidence
+lane as large pastes.
 
-### 4.4 Offline buffering
+### 4.3 Online required, with a short reconnect buffer
 
-- The renderer hands every event to the main process at once; the main
-  process appends it to a **journal file per session** (append-only, fsync
-  every 500 ms) before acknowledging. A crash or power cut loses at most
-  half a second.
-- An uploader drains the journal in batches with exponential backoff.
-  `(session_id, seq)` is already idempotent, so retries are safe.
-- Opening a lab needs the network once (sign-in, lab bundle, session ids for
-  every question are issued at sitting start). After that a student can keep
-  working offline; events upload when the network returns.
-- Labs marked **live** (proctored, competitions) show a clear banner when
-  offline and the teacher's live view shows "offline since 10:42". A gap is
-  shown on the timeline as a gap, never as a flag.
-- Each batch carries the client's wall clock and monotonic clock; the server
-  records receive time, so clock skew and long delays are visible.
-- Competition hand-in at time end (PR #21) is decided by the server clock; a
-  student who is offline at the end gets the code from events that reached
-  the server, which is the rule today.
+- Every event is appended to a per-session journal file by the main process
+  before it is acknowledged (fsync every 500 ms), then uploaded in batches;
+  `(session_id, seq)` keeps retries idempotent.
+- If the connection drops, the student keeps typing for up to **5 minutes**
+  with a calm "Reconnecting…" pill; events catch up when it returns. After
+  5 minutes the workspace turns read-only with a clear message, until the
+  connection is back. Submitting needs a live connection.
+- Live view shows "offline since 10:42"; the review timeline shows the gap
+  as a gap, never as a flag.
+- Each batch carries wall and monotonic clocks; the server records receive
+  time, so skew and delays are visible.
 
-### 4.5 Tamper resistance
+### 4.4 Tamper resistance
 
-A student controls their own machine, so a local client can never be made
-tamper-proof. The aim is that tampering is **expensive and visible**, and the
-evidence the detector relies on stays checkable on the server.
+A student controls their own machine, so the client cannot be tamper-proof.
+The aim is that tampering is **expensive and visible**.
 
 | Threat | Counter |
 | --- | --- |
-| Modified app sends fake events | Code-signed builds; Electron fuses (ASAR integrity, no `RunAsNode`, no `NODE_OPTIONS`, devtools off); server refuses clients below a minimum version. |
-| Events dropped, reordered or edited after the fact | Each install has a keypair in the OS keychain (`safeStorage`), registered on sign-in; every batch is signed and carries the hash of the previous batch. Breaks in the chain are shown in the review. |
-| Code injected without typing | Server already replays edits; it checks that replayed code equals snapshots, runs and hand-ins, and that inserted characters roughly match key downs. Text without keys looks like a paste, which is exactly how the timeline treats it. |
-| Files edited from the host (`docker cp`, exec) | `fs_change` events from the in-container watcher; hand-in uses the server's replayed code, not the volume. |
-| Grades faked locally | Graded work is graded on the server runner at hand-in. Local Check is practice only. |
-| Someone else types, in person or by remote desktop | Unchanged: this is the detector's job, and the reason the thesis exists. |
-| Scripted typing (AutoHotkey, xdotool) | Produces machine-regular timing; the identity channel is built to notice a different "typist". |
+| Modified app sends fake events | Code-signed builds; Electron fuses (ASAR integrity, no `RunAsNode`, no `NODE_OPTIONS`), devtools off; server refuses clients below a minimum version. |
+| Events dropped, reordered or edited | Per-install keypair in the OS keychain (`safeStorage`) registered at sign-in; every batch signed and carrying the hash of the previous batch. Breaks are shown in the review. |
+| Code appears without being typed | At every workspace upload and at Submit the server checks each file against the evidence: editor edits, `terminal-editor` keys with `fs_change` saves, pastes. Content with no supporting evidence is marked "appeared without typing" on the timeline. |
+| Files edited from the host (`docker cp`, exec from outside) | The in-container watcher reports them as `fs_change` with no foreground command, shown as "changed outside the app". |
+| Grades faked locally | Submissions are graded on the server runner from the uploaded workspace. Local tests are practice. |
+| Someone else types, in person or by remote desktop | The detector's job, and the reason the thesis exists. |
+| Scripted typing (AutoHotkey, xdotool) | Machine-regular timing; the identity channel is built to notice a different "typist". |
 
 What the client deliberately does **not** do: no screen capture, no webcam,
-no list of other running apps, no files outside the lab workspace, no
-keystrokes outside the app window. This keeps the ethics position of the web
-app; the consent text (v3) spells out the terminal logging and the local
-container.
+no list of other apps, no files outside the lab workspace, no keys outside
+the app window. Consent v3 explains the terminal logging, workspace
+snapshots and the local container before the first Sandbox Lab.
 
-## 5. Student experience
+## 5. Faculty side (web app)
 
-### 5.1 First run: "Lab doctor"
+1. **Catalogue.** Admins and faculty manage preset labs: subject, image
+   version, assignments (statement, starter files, visible and hidden tests,
+   time estimate, difficulty). Labs are versioned; a running class keeps the
+   version it started with.
+2. **Assign to classes.** Pick a lab, a class roster, open and due times,
+   live or self-paced. Self-paced labs are how "hosting labs" works: students
+   open them whenever, on any machine.
+3. **Readiness board** before a live lab: each student's app version,
+   engine (Docker, Podman, cloud), image pulled, online now. "48 of 52 ready"
+   with the four names and their one-line problem.
+4. **Live view** with a read-only terminal mirror next to the editor mirror,
+   students always told who is watching (PR #16 rule).
+5. **Submissions**: per assignment, tests passed, the submitted files, and a
+   link to the session's timeline.
+6. **Review timeline** gains lanes: terminal commands, vim saves, files
+   changed outside the app, offline gaps, chain breaks. Same evidence style
+   as now: moments, not verdicts.
+7. **Teacher preview** in the desktop app: open any lab as a student would,
+   in a throwaway container, to test the image and starter files.
+8. **Cloud sandbox seats**: who is using one, and why (the doctor's
+   diagnosis), so IT can fix that PC.
 
-A friendly check screen instead of an error:
+## 6. UX: students and faculty
 
-1. Sign in with Google (system browser, PKCE loopback, same
-   `@iiitsurat.ac.in` rule as the web app).
-2. Checks: Docker installed? Running? Enough disk (images ~400 MB to 1 GB)?
-   Virtualization on (Windows)? Each check is a row that animates from
-   spinner to tick or to a one-line fix ("Start Docker Desktop" button,
-   link to a 2-minute guide).
-3. Pre-pulls the images for the student's enrolled labs in the background
-   with a progress ring.
-4. If Docker cannot work, it says so plainly and offers **"Use the web
-   version for this lab"** when the lab allows `web`.
+### 6.1 Principles
 
-### 5.2 Home
-
-A grid of lab cards coloured by subject, each with a progress ring
-(questions attempted / total), due time and status (Open, Live now, Closed).
-"Live now" cards pulse gently. Opening a card plays a shared-element
-transition: the card expands into the workspace while the container boots
-behind it, with a short narrative instead of a spinner: "Preparing your C
-lab… starting sandbox… restoring your code… ready".
-
-### 5.3 Workspace
-
-- **Question rail** on the left: numbered chips with state (not started,
-  in progress, ran, checks passing). `Ctrl+1…9`, `Ctrl+Tab` and a command
-  palette (`Ctrl+K`) switch questions. Switching is instant because nothing
-  reloads: each question's editor and terminal stay mounted (hidden), and the
-  content slides a few pixels in the direction of travel.
-- **Editor** centre, **terminal and output** in a bottom dock with tabs
-  (Terminal, Output, Tests). The dock remembers its height per question.
-- **Status bar**: recording dot ("Recording for this lab"), who is watching
-  (as in PR #16), connection state, sandbox state (CPU/memory mini bars),
-  and unsent events if offline.
-- **Run** morphs into a progress ring while compiling, then the output panel
-  slides up; compile errors underline the line in the editor.
-- **Hand-in** opens a calm review sheet: each question with its status and a
-  final confirmation; after hand-in the card on Home shows a checkmark
-  animation once.
-
-### 5.4 Motion and visual design principles
-
-- **Motion explains, never decorates**: transitions show where things came
-  from (card → workspace, chip → question), state changes (run → output) and
-  progress (setup steps). 120 to 240 ms, spring easing, one motion system in
-  `frontend/src/ui` shared by student and faculty screens.
+- **Calm by default, motion with meaning.** Motion shows where things came
+  from (card → workspace, assignment chip → assignment), what changed
+  (Run → output, submit → result) and progress (sandbox setup). Durations
+  120 to 240 ms, spring easing, one motion system in `frontend/src/ui`
+  shared by student and faculty screens.
 - **Never move what the student is typing into.** No layout shift in the
-  editor or terminal; motion is only in the chrome around them.
-- **Animations must not distort keystroke timing.** Only `transform` and
-  `opacity` (compositor), no main-thread animation during typing, and a CI
-  benchmark that types a scripted text with and without animations running
-  and checks the recorded inter-key intervals match within 1 ms. This is a
-  thesis requirement as much as a UX one.
-- Respect `prefers-reduced-motion`; light and dark themes; Inter for UI,
-  JetBrains Mono for code; WCAG AA contrast; full keyboard use with visible
-  focus rings.
+  editor or terminal; motion lives in the chrome around them.
+- **Motion must not change keystroke timing.** Only compositor properties
+  (`transform`, `opacity`), nothing animating on the main thread during
+  typing, and a CI benchmark that types a scripted text with and without
+  animations and checks recorded inter-key intervals agree within 1 ms.
+- **Every wait tells a story.** No bare spinners: setup, pulls, compiles and
+  uploads each say what is happening and how long is left.
+- **Every error has one next step**, written as a button, not a code.
+- **Keyboard first**: everything reachable without the mouse, a command
+  palette, visible focus rings.
+- Light and dark themes, Inter for UI and JetBrains Mono for code,
+  WCAG AA contrast, `prefers-reduced-motion` respected (motion becomes fades).
+- **Performance budgets**: app ready in under 2 s from launch, assignment
+  switch under 100 ms, key-to-glyph latency under 16 ms, terminal echo under
+  30 ms, 60 fps for all transitions on a 4 GB lab PC.
 
-## 6. Faculty side
+### 6.2 Student screens
 
-Faculty stay in the web app (no Docker needed) with these additions:
+1. **Sign-in.** One button, "Continue with your college Google account",
+   opens the system browser (PKCE, loopback); the window gently pulls back
+   into focus when sign-in completes.
+2. **Lab doctor** (first run, and any time from the menu). Checklist rows
+   animate from a soft pulse to a tick: Signed in · Container engine found ·
+   Engine running · Disk space · Images ready. A failed row expands with one
+   plain sentence and one button ("Start Docker Desktop", "Show me how
+   (2 min)", "Use a cloud sandbox for now"). Image pulls show a progress ring
+   with MB and time left; they keep going in the background.
+3. **Home.** Subject shelves (horizontal rows) of lab cards, each with the
+   subject colour, a progress ring (assignments submitted / total), due time
+   and a status chip: *Live now* (gentle pulse), *Due Fri*, *Submitted*.
+   A "Continue where you left off" hero card at the top resumes the last
+   assignment in one click. Search and filters by subject.
+4. **Opening a lab.** The card expands into the workspace (shared-element
+   transition) while the sandbox starts behind it. A thin step line under
+   the header reads "Starting sandbox → Restoring your files → Ready" and
+   fades away when done; on a warm start it is under a second and barely
+   shows.
+5. **Workspace.**
+   - Left: **assignment rail**, numbered chips with state (not started,
+     in progress, tests passing, submitted). `Ctrl+1…9`, `Ctrl+Tab`,
+     `Ctrl+K` palette. Switching slides content a few pixels in the
+     direction of travel; the rail's highlight glides to the new chip.
+   - Next to it, a collapsible **file tree** for the assignment folder.
+   - Centre: **editor** with file tabs; Vim mode toggle in the status bar.
+   - Right (collapsible): **statement** with examples and a "Tests" tab.
+   - Bottom dock: **Terminal**, **Output**, **Tests**. Height remembered per
+     assignment; `Ctrl+Backquote` toggles the terminal. Multiple terminal tabs per
+     assignment.
+   - **Status bar**: recording dot ("Recorded for this lab"), who is watching,
+     connection, engine (Docker / Podman / Cloud), sandbox CPU and memory
+     mini bars, last saved.
+6. **Run and test.** Run morphs into a progress ring while compiling; output
+   slides up; compiler errors underline the line and appear in a problems
+   list. Tests show as rows that fill green or red one by one, with a diff
+   view for failures.
+7. **Submit.** A sheet slides up: files included, tests passed locally,
+   "graded on the server". After submission the grade arrives with a short,
+   restrained confirmation (a check that draws itself), and the rail chip
+   turns to *Submitted*. Resubmission is allowed until the due time; history
+   is kept.
+8. **Connection loss.** A small pill "Reconnecting… your work is safe"
+   with a countdown only in the last minute before read-only.
+9. **Switching machines.** Opening the same lab elsewhere shows "Restored
+   from your last save 2 min ago" with the machine name.
 
-1. **Lab environment**: when creating a lab, pick *Browser*, *Desktop
-   sandbox* or *Either*, and a subject image (C, Python, Linux shell, …),
-   with per-lab switches: terminal on/off, terminal editors allowed,
-   package mirror allowed, live (needs network).
-2. **Class readiness board** before a lab: each student's client version,
-   Docker health, images pulled, online now. A teacher sees "48 of 52 ready"
-   before the lab starts, not 20 minutes in.
-3. **Live view** gains a read-only terminal mirror next to the editor
-   mirror, with the same "student sees who is watching" rule.
-4. **Review timeline** gains lanes: terminal commands, files changed outside
-   the editor, offline gaps and chain breaks, local vs server runs. Each
-   lane uses the existing evidence style (moments, not verdicts).
-5. **Teacher preview** (desktop app, optional): open a lab as a student
-   would, in a throwaway container, to test starter code and the image.
-6. Image catalogue managed by admins (versions, sizes, toolchains), so
-   teachers pick, not build, images.
+### 6.3 Faculty screens
 
-The faculty UI uses the same motion system: the class grid animates tiles
-into place as students connect, readiness ticks fill in live, timeline lanes
-expand smoothly on hover.
+1. **Catalogue**: subject shelves like the student Home, with an editor for
+   assignments (statement preview side by side, starter files, tests with a
+   "run in a sandbox" button).
+2. **Class lab page**: a header with the clock and counts, the readiness
+   board as a grid of student tiles that animate into place as students
+   connect, ticks filling in live; tiles sort by attention (not ready,
+   offline, on cloud).
+3. **Live view**: the grid becomes a live class view; clicking a tile opens
+   the student's editor and terminal mirror side by side in a panel that
+   slides over without leaving the grid.
+4. **Submissions table**: tests passed per assignment, sortable, with a
+   heat strip per student; a row opens the files and the timeline.
+5. **Timeline**: existing review page with the new lanes collapsed by
+   default; hovering a lane expands it smoothly.
 
-## 7. Migration from the web app
+## 7. Migration and fit with the current app
 
-Nothing is switched off. Steps, each shippable on its own:
+Nothing existing is switched off or changed in behaviour.
 
-1. Extract the `Runtime` adapter in `frontend/`; web keeps `ServerRuntime`
-   (no behaviour change, existing e2e tests must pass unchanged).
-2. Add `desktop/` (Electron) that bundles the same frontend build and talks
-   to the same API with a bearer token instead of a cookie.
-3. Add the `environment` field to labs (default `web`, so existing labs are
-   untouched) and the local-run upload endpoint.
-4. Bump the event schema to v2 with only additive types (`term_cmd`,
-   `term_paste`, `fs_change`, `term_output`, `key.surface`); v1 recordings
-   remain valid, the detector ignores what it does not know.
-5. Session start records `client: web | desktop`, client version and a hashed
-   device id, so analysis can separate devices (important for RQ3) and the
+1. **Catalogue backend**: tables for subjects, preset labs, assignments,
+   images, class assignments and workspace snapshots. Sessions for Sandbox
+   Labs reuse the `sessions` table with `kind: "sandbox"` and the sitting id,
+   so the detector and review work unchanged.
+2. **Shared frontend** with a small `Runtime` interface (`prepareLab`, `run`,
+   `test`, `terminal`, `files`); the web app keeps today's behaviour.
+3. **`desktop/` Electron app** bundles the frontend build and talks to the
+   same API with a bearer token.
+4. **Schema v2**, additive only: `key.surface`, `edit.path`, `term_cmd`,
+   `term_paste`, `fs_change`, `term_output`. v1 recordings stay valid; the
+   detector ignores what it does not know.
+5. **Session start** records `client: web | desktop`, app version, engine
+   and a hashed device id, so analysis can separate devices (RQ3) and the
    review can say "new device" as context.
-6. Pilot one lab as `either`; compare VM CPU, run counts and student
-   feedback before making any lab `local` only.
+6. **Cloud sandbox pool** on the VM: same images, capped seats, idle stop.
 
 ## 8. Risks
 
 | Risk | Likelihood | Mitigation |
 | --- | --- | --- |
-| Lab PCs have no Docker and students lack admin rights | High | Ask IT to install Docker (or Podman) on lab images once; until then those labs stay `web`. |
-| Windows needs WSL2 and BIOS virtualization; Hyper-V conflicts | High on old PCs | Lab doctor detects it and explains; fallback to web. |
-| Low-RAM PCs (4 GB) struggle with Docker Desktop + Electron | Medium | Small images, one running container at a time, idle stop; measure in D0. |
-| Docker Desktop licensing | Low | Free for education use; Podman Desktop and Rancher Desktop as free alternatives (the client talks the Docker API, which both provide). |
-| On Linux, the `docker` group is root-equivalent | Medium | Prefer rootless Docker or Podman on lab machines; document for IT. |
-| Image pulls on 60 PCs at 9 am saturate campus internet | Medium | Pre-pull the day before; regional registry; optional LAN mirror. |
-| Students on Apple Silicon or ARM laptops | Medium | Multi-arch images. |
-| Local client tampering | Certain to be tried | Section 4.5; graded work graded on the server. |
-| Device change confounds keystroke baselines | Medium | Same engine (Electron); record client and device per session; analyse by device in RQ3. |
-| Two clients to maintain | Medium | One frontend; desktop adds only the runtime, terminal and journal. |
-| Ethics: terminal logging is new data | Certain | Consent v3 before any desktop pilot; same retention (raw keys purged after baseline). |
+| Lab PCs have no Docker, students lack admin rights | High | Ask IT to install Docker or Podman on the lab image once; portable app on any laptop that has it; capped cloud sandbox for the rest. |
+| Windows needs WSL2 and BIOS virtualization | High on old PCs | Lab doctor detects and explains; cloud sandbox fallback. |
+| Cloud fallback overused, VM cost grows | Medium | Cap seats per lab, idle stop, readiness board shows who and why so PCs get fixed. |
+| Low-RAM PCs (4 GB) | Medium | Small images, one running container, idle stop; measured in D0. |
+| Image pulls saturate campus internet at 9 am | Medium | Pre-pull the day before; regional registry; optional LAN mirror. |
+| Apple Silicon / ARM laptops | Medium | Multi-arch images. |
+| Vim usage hides fine-grained edits | Medium | Vim mode in our editor; `terminal-editor` keys and save diffs; review states the limit. |
+| Workspace snapshots grow large (binaries, core dumps) | Medium | 5 MB cap, ignore build outputs (`a.out`, `*.o`, `core`), configurable per lab. |
+| Local client tampering | Certain to be tried | Section 4.4; grading on the server; evidence check at submission. |
+| Device change confounds baselines | Medium | Same engine (Electron); device recorded per session; RQ3 analyses by device. |
+| Ethics: terminal and workspace data are new | Certain | Consent v3 before any pilot; raw keys purged after baseline as today. |
 
 ## 9. Milestones
 
@@ -362,22 +399,19 @@ thesis material as usual.
 
 | # | Milestone | Done when |
 | --- | --- | --- |
-| D0 | **Spike** (about 1 week): Electron shell loads the frontend, detects Docker, runs C in a container; timing parity test browser vs Electron; RAM measured on a lab PC | Timing distributions match within measurement error; a go/no-go note in the brain |
-| D1 | **Local runs**: `Runtime` adapter, `desktop/` app, Google sign-in, lab container per lab with question folders, local Run/Check, `environment` field | A student does a full C lab in the desktop app and the review looks identical to a web session |
-| D2 | **Reliable stream**: durable journal, offline mode, signed hash-chained batches, minimum client version, auto-update | Pull the network cable for 10 minutes mid-lab: nothing lost, review shows the gap |
-| D3 | **Terminal**: xterm.js, shell integration, file watcher, schema v2, consent v3, review lanes | A command-line edit to `main.c` shows up as "changed outside the editor" on the timeline |
-| D4 | **Faculty**: environment picker, image catalogue, readiness board, live terminal mirror, teacher preview | A teacher runs a desktop lab from the browser end to end |
-| D5 | **UI and motion pass**: Lab doctor, Home, workspace, hand-in, faculty screens; reduced-motion; keystroke-latency benchmark in CI | Usability test with 5 students and 2 faculty; benchmark green |
-| D6 | **Pilot**: one real lab as `either` | VM CPU and run counts compared; feedback logged; decide which labs go `local` |
+| D0 | **Spike** (~1 week): Electron loads the frontend, finds Docker or Podman, opens a terminal in a C container; timing parity browser vs Electron; RAM on a lab PC; portable build runs without admin | Go/no-go note in the brain with the numbers |
+| D1 | **Catalogue + one lab end to end**: catalogue tables, one C lab with 3 assignments, portable app, sign-in, sandbox per lab, file tree, editor, terminal, local Run/tests | A student does the lab in the app and its sessions show in the review like web sessions |
+| D2 | **Submit and sync**: workspace snapshots, restore on another machine, server grading, signed hash-chained batches, reconnect buffer, min version, auto-update | Switch laptops mid-lab and carry on; submit and see the grade |
+| D3 | **Terminal monitoring**: shell hooks, `terminal-editor` detection, file watcher, schema v2, evidence check at submission, consent v3, review lanes, Vim mode in the editor | A vim edit and a `cat > main.c` both appear correctly on the timeline |
+| D4 | **Faculty**: catalogue editor, assign to classes, readiness board, live terminal mirror, submissions table, teacher preview | A teacher runs a live Sandbox Lab from the browser end to end |
+| D5 | **Fallback + UX polish**: cloud sandbox pool, Lab doctor, full motion pass on all screens, reduced motion, performance budgets and keystroke benchmark in CI | Usability test with 5 students and 2 faculty; budgets and benchmark green |
+| D6 | **Pilot**: one real C lab with a class | VM CPU, cloud seat use and feedback logged; next labs chosen |
 
 D1 to D3 are the core; D4 and D5 can overlap with D3.
 
-## 10. Open questions for Rohan
+## 10. Still open
 
-1. Which subjects need a real terminal first (only C programming, or an OS /
-   Linux lab too)?
-2. Will labs run on college lab PCs (which OS, can IT install Docker?) or on
-   students' own laptops?
-3. Must labs work offline, or is the campus network reliable enough that
-   "needs network" is acceptable for all labs?
-4. Should terminal editors like vim be allowed in some labs?
+1. Which subjects and labs should the first catalogue hold (we suggest
+   C programming first, then Linux and shell)?
+2. How many cloud fallback seats is the VM budget comfortable with?
+3. Can IT install Docker or Podman on one lab room's PCs for the pilot?

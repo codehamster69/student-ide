@@ -3,30 +3,34 @@
 \section{Conclusion}
 \section{Future work}
 
-\subsection{A desktop client with local sandboxes}
+\subsection{Sandbox Labs: a desktop client with local sandboxes}
 \label{sec:desktop-client}
 The pilot runs every student program on the college VM, which keeps the
-runner simple but rules out a real terminal per student: sixty live shells on
-one VM would cost far more than today's short runs. A planned desktop client
-(Figure~\ref{fig:desktop-client}; full plan in
-\texttt{thesis/plans/2026-10-30-desktop-client.md}) moves execution to a
-private Docker container on the student's own machine, one per student and
-lab, with a folder per question. The client is built on Electron so that it
-uses the same Chromium engine as the web editor: keystroke timestamps then
-mean the same thing in both, which matters when a baseline learned in the
-browser is compared with work done in the desktop app. The recorder is shared
-code, so the detector and review need no change for editor work. The terminal
-becomes a new logged surface (key timing, commands, and files changed outside
-the editor, shown like pastes). Because a student controls their own machine,
-the client cannot be made tamper-proof; instead batches are signed and
-hash-chained, graded work is graded on the server at hand-in, and the server
-checks that replayed edits reproduce every run and hand-in.
+runner simple but rules out a real terminal per student: sixty live Linux
+shells on one VM would cost far more than today's short runs. A planned
+\emph{Sandbox Labs} feature (Figure~\ref{fig:desktop-client}; full plan in
+\texttt{thesis/plans/2026-10-30-desktop-client.md}) adds a catalogue of preset
+labs, each opened in a private Linux container on the student's own machine
+with a terminal, a file tree, terminal editors such as vim, and our editor.
+The client is a portable Electron app, so it needs no installation, and the
+student's files are snapshotted to the server so work follows them to another
+machine; when no container engine is available, a capped cloud sandbox is the
+fallback. Electron uses the same Chromium engine as the web editor, so
+keystroke timestamps mean the same thing in both, which matters when a
+baseline learned in the browser is compared with work done in the app. The
+recorder is shared code, so the detector and review need no change for editor
+work. The terminal becomes a new logged surface: key timing tagged by where it
+was typed (editor, shell prompt or a terminal editor), commands, and files
+changed outside the editor, shown like pastes. Because a student controls
+their own machine, the client cannot be made tamper-proof; instead batches are
+signed and hash-chained, submissions are graded on the server, and at
+submission the server checks every file against the typing evidence behind it.
 
 \begin{figure}[ht]
   \centering
   \resizebox{0.9\linewidth}{!}{\tikzfig{desktop-client}}
-  \caption{Planned desktop client: code runs in a local container, events and
-  hand-ins still go to the college server, where the detector and review are
-  unchanged.}
+  \caption{Planned Sandbox Labs client: code runs in a local container (or a
+  capped cloud sandbox), while events, workspace snapshots and submissions go
+  to the college server, where the detector and review are unchanged.}
   \label{fig:desktop-client}
 \end{figure}
