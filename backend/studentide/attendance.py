@@ -38,7 +38,7 @@ attendance.
     PUT    /api/teach/attendance                    {sync_key}  use an existing Roll Call key instead (checked first)
     DELETE /api/teach/attendance                    disconnect
     GET    /api/teach/attendance/labs               per lab: attached class groups and lab days sent
-    GET    /api/teach/attendance/classes            the teacher's Roll Call class groups
+    GET    /api/teach/attendance/classes            the teacher's Roll Call class groups (?every=1: admins, every teacher's)
     POST   /api/teach/attendance/classes            {branch, section, group, groups: [{prefix, start, end, digits, exclude}]}
     GET    /api/teach/attendance/subjects           Roll Call subjects (for the lab's subject picker)
     POST   /api/teach/attendance/subjects           {name, code}
@@ -547,8 +547,30 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 d.update(days_sent=row["days"], last_sent=row["last"], errors=row["errors"])
         return {k: v for k, v in out.items() if ids is None or k in ids}
 
+    def everyones_classes(request: Request) -> dict[str, dict]:
+        """Admins: every connected teacher's Roll Call class groups, by id, each with
+        its `owner` (whose register it is and whose key sends its attendance).
+        A teacher whose Roll Call can't be reached is left out, not an error."""
+        out: dict[str, dict] = {}
+        with db.connect() as conn:
+            rows = conn.execute("SELECT email, sync_key FROM attendance_links ORDER BY email").fetchall()
+        for row in rows:
+            try:
+                got = RollCall(row["sync_key"], rollcall_url(), send_http).call("GET", "/api/v1/classes")
+            except RollCallError:
+                continue
+            for c in got or []:
+                out.setdefault(c["id"], c | {"owner": row["email"]})
+        return out
+
     @r.get("/attendance/classes")
-    def classes(request: Request) -> list:
+    def classes(request: Request, every: bool = False) -> list:
+        """The teacher's Roll Call class groups; `?every=1` for an admin: every
+        teacher's, each with `owner` (the admin's own first)."""
+        if every and auth.teacher(request).admin:
+            email = me(request)
+            groups = list(everyones_classes(request).values())
+            return sorted(groups, key=lambda c: (c["owner"] != email, c["owner"], c["label"]))
         return rc(lambda: client(me(request)).call("GET", "/api/v1/classes"))
 
     @r.post("/attendance/classes")
@@ -605,12 +627,17 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         email = me(request)
         want = list(dict.fromkeys(body.class_ids))
         have = {c["class_id"]: c for c in attached(lab_id)}
-        mine = {c["id"]: c for c in rc(lambda: client(email).call("GET", "/api/v1/classes"))} if set(want) - set(have) or key_of(email) else {}
+        mine = {c["id"]: c for c in rc(lambda: client(email).call("GET", "/api/v1/classes"))} if key_of(email) else {}
+        # an admin may attach any teacher's group: it stays in that teacher's register
+        others = everyones_classes(request) if auth.teacher(request).admin and set(want) - set(mine) - set(have) else {}
         rows = []
         for cid in want:
             c = mine.get(cid)
+            o = others.get(cid)
             if c is not None:  # refresh from Roll Call: the roster may have changed
                 rows.append((lab_id, cid, c["label"], json.dumps(sorted(s.upper() for s in c["students"])), email, time.time()))
+            elif o is not None:
+                rows.append((lab_id, cid, o["label"], json.dumps(sorted(s.upper() for s in o["students"])), o["owner"], time.time()))
             elif cid in have:  # a co-teacher's class: keep their copy
                 h = have[cid]
                 rows.append((lab_id, cid, h["label"], h["students_json"], h["attached_by"], h["attached_at"]))

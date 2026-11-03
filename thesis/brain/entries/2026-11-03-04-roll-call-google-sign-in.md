@@ -57,3 +57,19 @@ OAuth client and set the Vercel env vars (`GOOGLE_CLIENT_ID`, `ROLLCALL_SECRET`,
 ## Thesis
 
 `sec:attendance`, paragraph *Faculty without labs*.
+
+## Follow-up (same day): admin view, view as, lost records
+
+- Rohan's earlier Roll Call records (one class, three sessions) sat in a register
+  only his browser's old key opened; signing in from Student IDE had replaced that
+  key on the device. With his OK they were moved into his register. To stop this
+  recurring, a device now remembers its earlier register and Settings offers
+  *Move them here* (`POST /api/v1/merge`); admins also see such unlinked
+  registers on `/admin` and can move one into a teacher's register.
+- Roll Call `/admin` groups everything by teacher (classes with their students,
+  subjects), with *Open as teacher* (full access) and *See the portal as* any
+  student (`/me?as=<roll>`, read-only, across every register).
+- Student IDE: admins' class-group picker lists every connected teacher's groups
+  under that teacher (`GET /attendance/classes?every=1`); an attached group stays
+  in its teacher's register and is sent with that teacher's key
+  (`test_admins_attach_any_teachers_group`). *Setup* is now a top-bar tab.

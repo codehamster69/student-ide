@@ -22,7 +22,11 @@ export async function openRollCall(ask: () => Promise<{ url: string }>): Promise
 }
 
 /** A class group in the teacher's Roll Call */
-export interface RollCallClass { id: string; branch: string; section: string; group: string; label: string; students: string[] }
+export interface RollCallClass {
+  id: string; branch: string; section: string; group: string; label: string; students: string[];
+  /** admins listing every teacher's groups: whose register it is ("" = the shared dev register) */
+  owner?: string;
+}
 
 export interface RollCallSubject { id: string | null; code: string; name: string }
 

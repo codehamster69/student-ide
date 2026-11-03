@@ -26,6 +26,8 @@ const TABS = [
   { href: href.subjects, label: "Subjects", icon: BookOpen, match: (r: Route) => r.name === "subjects" || r.name === "subject" },
   { href: href.live, label: "Live", icon: Radio, match: (r: Route) => areaOf(r) === "live" },
   { href: href.review, label: "Review", icon: Activity, match: (r: Route) => areaOf(r) === "review" },
+  // Roll Call, class groups, keys (and for admins every teacher's register)
+  { href: href.setup, label: "Setup", icon: Sparkles, match: (r: Route) => r.name === "setup" },
 ];
 const ADMIN_TAB = { href: href.people, label: "People", icon: UsersRound, match: (r: Route) => r.name === "people" };
 
@@ -94,12 +96,6 @@ export function ReviewApp() {
               A highlighted moment starts a conversation, never a penalty.
             </div>
             <div className="flex min-w-24 items-center justify-end gap-1">
-              {authed && (
-                <a href={href.setup} title="Getting started: connect Roll Call, make a lab, attach class groups"
-                  className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text">
-                  <Sparkles className="size-3.5" /><span className="hidden lg:inline">Getting started</span>
-                </a>
-              )}
               {authed && <HeaderRollCall />}
               {authed && (
                 <a href={href.student} title="Open the student side under your own account; nothing you do there is study data"

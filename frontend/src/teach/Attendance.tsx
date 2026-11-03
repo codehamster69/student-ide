@@ -358,20 +358,29 @@ function ClassPicker({ lab, attached, onSave, onCancel, onAuthLost }: {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const fail = useFail(onAuthLost, setError);
-  useEffect(() => { get<RollCallClass[]>("/api/teach/attendance/classes").then((c) => { setClasses(c); if (!c.length) setCreating(true); }, fail); }, [fail]);
+  useEffect(() => { get<RollCallClass[]>("/api/teach/attendance/classes?every=1").then((c) => { setClasses(c); if (!c.length) setCreating(true); }, fail); }, [fail]);
   const onRoster = useMemo(() => new Set(lab.roster), [lab.roster]);
 
   return (
     <div className="mt-3 grid gap-2 rounded-xl border border-border bg-surface-2/50 p-3">
-      {!classes ? <Spinner /> : classes.map((c) => {
+      {!classes ? <Spinner /> : classes.map((c, i) => {
         const matched = c.students.filter((s) => onRoster.has(s)).length;
+        // admins see every teacher's groups, under each teacher's name
+        const head = c.owner !== undefined && (i === 0 || classes[i - 1].owner !== c.owner);
         return (
-          <label key={c.id} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-1.5 py-1 text-[13px] hover:bg-surface">
+          <div key={c.id} className="contents">
+          {head && (
+            <p className={cn("px-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint", i > 0 && "mt-2")}>
+              {c.owner || "Shared register"}
+            </p>
+          )}
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-1.5 py-1 text-[13px] hover:bg-surface">
             <Checkbox checked={chosen.includes(c.id)} onChange={(e) => setChosen(e.target.checked ? [...chosen, c.id] : chosen.filter((x) => x !== c.id))} />
             <span className="flex-1 font-medium text-text">{c.label}</span>
             <span className="font-mono text-[11px] text-faint">{c.students[0]}{c.students.length > 1 ? `–${c.students[c.students.length - 1].slice(-3)}` : ""}</span>
             <span className="text-xs tabular-nums text-faint" title={`${matched} already on this lab's roster`}>{c.students.length}</span>
           </label>
+          </div>
         );
       })}
       {classes && !creating && (

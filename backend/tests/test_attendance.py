@@ -509,3 +509,33 @@ def test_one_register_per_teacher_with_roll_calls_google_sign_in(tmp_path, rc, m
     asha = sign_in(app2, "asha.m@" + DOMAIN)
     assert asha.post("/api/teach/attendance/open").status_code == 200
     assert len(asha.get("/api/teach/attendance/key").json()["sync_key"]) == 40
+
+
+def test_admins_attach_any_teachers_group(tmp_path, rc):
+    """An admin's picker lists every teacher's groups (with their owner); an attached
+    one stays in that teacher's register and is sent with that teacher's key."""
+    cfg = Config(client_id="test-client", secure_cookie=False, admins=frozenset({"pg25cs07@" + DOMAIN}))
+    app = create_app(tmp_path / "g.sqlite3", serve_frontend=False, auth_config=cfg, verify_google=fake_google,
+                     attendance_transport=rc)
+    priya, admin = sign_in(app, "priya.shah@" + DOMAIN), sign_in(app, "pg25cs07@" + DOMAIN)
+    priya.put("/api/teach/attendance", json={"sync_key": KEY_A})
+    admin.put("/api/teach/attendance", json={"sync_key": KEY_B})
+    g_priya = rc.add_class(KEY_A, "CSE", "A", "G1", "UG23CS", 1, 3)
+    g_admin = rc.add_class(KEY_B, "CSE", "B", "G1", "UG23CS", 61, 62)
+    every = admin.get("/api/teach/attendance/classes?every=1").json()
+    assert [(c["id"], c["owner"]) for c in every] == [(g_admin, "pg25cs07@" + DOMAIN), (g_priya, "priya.shah@" + DOMAIN)]
+    # a teacher asking for every group still gets only their own
+    assert [c["id"] for c in priya.get("/api/teach/attendance/classes?every=1").json()] == [g_priya]
+    lab = open_lab(admin, roster=())
+    r = admin.put(f"/api/teach/labs/{lab['id']}/classes", json={"class_ids": [g_priya, g_admin]})
+    assert r.status_code == 200, r.text
+    assert {c["class_id"]: c["attached_by"] for c in r.json()["classes"]} == {g_priya: "priya.shah@" + DOMAIN, g_admin: "pg25cs07@" + DOMAIN}
+    # a teacher can't attach someone else's group
+    other = open_lab(priya, roster=())
+    assert priya.put(f"/api/teach/labs/{other['id']}/classes", json={"class_ids": [g_admin]}).status_code == 404
+    # sending: Priya's group lands in Priya's register
+    student = sign_in(app, "ug23cs001@" + DOMAIN)
+    work(student, start(student, "UG23CS001", lab["questions"][0]["id"]), minutes=12)
+    sent = admin.post(f"/api/teach/labs/{lab['id']}/attendance", json={"day": today()}).json()
+    assert all(x["error"] is None for x in sent["results"]), sent
+    assert list(rc.ws[KEY_A]["sessions"].values())[0]["marks"]["UG23CS001"] == "P"
