@@ -72,6 +72,9 @@ The detector is never consulted: a highlighted moment does not change attendance
   (`PUT /api/v1/viewers`, Roll Call stores only its sha256) and opens Roll Call's
   `/me` signed in: their own marks, read-only, grouped by subject. A student key
   opens no workspace, and a browser holding one only ever shows `/me`.
+  Students who never use Student IDE sign in to Roll Call with Google instead:
+  their address gives a 30-day signed pass to the marks under their own roll
+  number in every register. Nothing in the URL can pick another student.
 - **New key.** *Show key* → *Make a new key* moves the whole register (classes,
   sessions, subjects, students' read access) to a new key in one step
   (`POST /api/v1/rotate` with the new key's hash and the new key, so Roll Call's
