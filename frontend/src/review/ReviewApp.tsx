@@ -73,15 +73,16 @@ export function ReviewApp() {
       <div className="relative flex min-h-full flex-col">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-dot-grid [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         <header className="sticky top-0 z-30 border-b border-border/70 bg-bg/80 backdrop-blur-md">
-          <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-5">
-            <div className="flex items-center gap-5">
+          {/* phones: logo and actions on one row, the tabs on a scrollable row below */}
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 md:h-14 md:flex-nowrap md:px-5 md:py-0">
+            <div className="contents md:flex md:items-center md:gap-5">
               <a href={teaching ? href.labs : href.review} className="rounded-lg"><Logo subtitle={watching ? "Live class view" : teaching ? "Labs and questions" : "Review timeline"} /></a>
               {authed && (
                 <LayoutGroup id="teacher-nav">
-                  <nav className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm">
+                  <nav className="order-last -mx-1 flex w-[calc(100%+0.5rem)] overflow-x-auto rounded-lg border border-border bg-surface p-0.5 shadow-sm [scrollbar-width:none] md:order-none md:mx-0 md:w-auto">
                     {tabs.map(({ href, label, icon: Icon, match }) => (
                       <a key={href} href={href} aria-current={match(r) ? "page" : undefined}
-                        className={cn("relative flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors",
+                        className={cn("relative flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors",
                           match(r) ? "text-text" : "text-muted hover:text-text")}>
                         {match(r) && <motion.span layoutId="nav-pill" transition={spring} className="absolute inset-0 rounded-md bg-surface-3" />}
                         <Icon className="relative size-3.5" /><span className="relative">{label}</span>
@@ -91,22 +92,22 @@ export function ReviewApp() {
                 </LayoutGroup>
               )}
             </div>
-            <div className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted shadow-sm md:flex">
+            <div className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted shadow-sm xl:flex">
               <MessagesSquare className="size-3.5 text-accent" />
               A highlighted moment starts a conversation, never a penalty.
             </div>
-            <div className="flex min-w-24 items-center justify-end gap-1">
+            <div className="flex items-center justify-end gap-1">
               {authed && <HeaderRollCall />}
               {authed && (
                 <a href={href.student} title="Open the student side under your own account; nothing you do there is study data"
                   className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text">
-                  <Eye className="size-3.5" />View as student
+                  <Eye className="size-3.5" /><span className="hidden sm:inline">View as student</span>
                 </a>
               )}
               {authed && (
                 <Button variant="ghost" size="sm" onClick={signOut}>
                   {me && <span className="hidden font-mono text-xs text-faint lg:inline">{me.email}</span>}
-                  <LogOut className="size-3.5" /> {cfg?.mode === "google" ? "Sign out" : "Lock"}
+                  <LogOut className="size-3.5" /> <span className="hidden sm:inline">{cfg?.mode === "google" ? "Sign out" : "Lock"}</span>
                 </Button>
               )}
             </div>

@@ -299,7 +299,10 @@ export function ClassGroupsCard({ lab, onAuthLost, onRosterChanged }: {
       <p className="mt-1 text-xs text-muted">
         Attach the Roll Call class groups taking this lab. When it closes, each student is marked in their own group.
       </p>
-      {!info || !conn ? <Skeleton className="mt-4 h-16 w-full rounded-xl" /> : (
+      {!info || !conn ? (error ? (
+        <button className="mt-3 text-xs font-medium text-accent hover:underline"
+          onClick={() => { setError(""); void load(); get<Connection>("/api/teach/attendance").then(setConn, fail); }}>Try again</button>
+      ) : <Skeleton className="mt-4 h-16 w-full rounded-xl" />) : (
         <>
           {!conn.connected && info.classes.length === 0 ? (
             <div className="mt-4"><ConnectRollCall onAuthLost={onAuthLost} onChange={setConn} compact /></div>

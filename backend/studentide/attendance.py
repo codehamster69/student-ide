@@ -79,7 +79,7 @@ import urllib.error
 import urllib.request
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Callable, Literal
 from zoneinfo import ZoneInfo
 
@@ -254,8 +254,41 @@ def describe(rule: dict) -> str:
     return "Present = " + ", ".join(parts[:-1]) + " and " + parts[-1] + " in the lab"
 
 
-def lab_activity(db: Database, lab_id: str) -> dict[str, dict[str, dict]]:
-    """day -> student -> evidence, from the lab's counted sessions."""
+def _session_spans(db: Database, lab_id: str) -> list:
+    """Each counted session of the lab with the first and last moment of an edit
+    (server seconds), from the events index alone: no event bodies are read."""
+    with db.connect() as conn:
+        return conn.execute("""SELECT s.id, s.student_id, s.started_at,
+                                      s.started_at + MIN(e.t) / 1000.0 AS first, s.started_at + MAX(e.t) / 1000.0 AS last
+                               FROM sessions s JOIN events e ON e.session_id = s.id AND e.type = 'edit'
+                               WHERE s.lab_id = ? AND s.context IS NULL GROUP BY s.id""", (lab_id,)).fetchall()
+
+
+def _days_between(first: float, last: float, tz) -> set[str]:
+    a, b = datetime.fromtimestamp(first, tz).date(), datetime.fromtimestamp(last, tz).date()
+    return {(a + timedelta(days=i)).isoformat() for i in range((b - a).days + 1)}
+
+
+def lab_days(db: Database, lab_id: str) -> list[str]:
+    """The days with activity in the lab, newest first, cheaply: from edit times
+    and runs/Checks, without reading each edit (a busy lab has 100k+ of them)."""
+    tz = timezone()
+    days: set[str] = set()
+    for s in _session_spans(db, lab_id):
+        days |= _days_between(s["first"], s["last"], tz)
+    with db.connect() as conn:
+        for r in conn.execute("""SELECT r.created_at FROM runs r JOIN sessions s ON s.id = r.session_id
+                                 WHERE s.lab_id = ? AND s.context IS NULL
+                                 UNION ALL
+                                 SELECT c.created_at FROM checks c JOIN sessions s ON s.id = c.session_id
+                                 WHERE s.lab_id = ? AND s.context IS NULL""", (lab_id, lab_id)):
+            days.add(datetime.fromtimestamp(r["created_at"], tz).date().isoformat())
+    return sorted(days, reverse=True)
+
+
+def lab_activity(db: Database, lab_id: str, day: str | None = None) -> dict[str, dict[str, dict]]:
+    """day -> student -> evidence, from the lab's counted sessions. With `day`,
+    only sessions that had edits that day are read (and only that day is kept)."""
     tz = timezone()
     out: dict[str, dict[str, dict]] = {}
 
@@ -272,6 +305,12 @@ def lab_activity(db: Database, lab_id: str) -> dict[str, dict[str, dict]]:
     with db.connect() as conn:
         sessions = conn.execute("SELECT id, student_id, started_at FROM sessions WHERE lab_id = ? AND context IS NULL",
                                 (lab_id,)).fetchall()
+    if day is not None:
+        spans = {x["id"]: x for x in _session_spans(db, lab_id)}
+        reading = [s for s in sessions if s["id"] in spans and day in _days_between(spans[s["id"]]["first"], spans[s["id"]]["last"], tz)]
+    else:
+        reading = sessions
+    with db.connect() as conn:
         # runs and Checks as the server recorded them (the client's "run" events are left out: same presses)
         runs = conn.execute("""SELECT r.session_id, r.created_at, 'runs' AS kind FROM runs r JOIN sessions s ON s.id = r.session_id
                                WHERE s.lab_id = ? AND s.context IS NULL
@@ -279,7 +318,7 @@ def lab_activity(db: Database, lab_id: str) -> dict[str, dict[str, dict]]:
                                SELECT c.session_id, c.created_at, 'checks' FROM checks c JOIN sessions s ON s.id = c.session_id
                                WHERE s.lab_id = ? AND s.context IS NULL""", (lab_id, lab_id)).fetchall()
     by_id = {s["id"]: s for s in sessions}
-    for s in sessions:
+    for s in reading:
         for e in db.iter_events(s["id"], types=("edit",)):
             ts = s["started_at"] + e["t"] / 1000.0
             x = ev(day_of(ts), s["student_id"])
@@ -296,7 +335,7 @@ def lab_activity(db: Database, lab_id: str) -> dict[str, dict[str, dict]]:
         x = ev(day_of(c["created_at"]), s["student_id"])
         x[c["kind"]] += 1
         touch(x, c["created_at"])
-    return out
+    return {day: out[day]} if day is not None and day in out else ({} if day is not None else out)
 
 
 def judge(e: dict | None, rule: dict) -> dict:
@@ -610,7 +649,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 for r in rows]
 
     def overview(lab_id: str) -> dict:
-        days = sorted(lab_activity(db, lab_id), reverse=True)
+        days = lab_days(db, lab_id)
         return {"classes": [{k: c[k] for k in ("class_id", "label", "attached_by", "attached_at")} | {"n_students": len(c["students"])}
                             for c in attached(lab_id)],
                 "days": days, "sent": sent(lab_id), "rollcall_url": rollcall_url(), **settings(lab_id),
@@ -723,7 +762,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         if not send_it or not settings(lab["id"])["auto_send"] or not attached(lab["id"]):
             return []
         day = local_day(run["opened_at"])
-        if day not in lab_activity(db, lab["id"]):
+        if day not in lab_days(db, lab["id"]):
             return []
         groups = set(run["class_ids"]) or {c["class_id"] for c in attached(lab["id"])}
         groups -= {x["class_id"] for x in sent(lab["id"]) if x["day"] == day and not x["error"]}  # the teacher sent it already
@@ -735,10 +774,9 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
             return [{"day": day, "results": [], "error": e.detail}]
 
     def preview(lab_id: str, day: str | None, overrides: dict[str, str] | None = None) -> dict:
-        activity = lab_activity(db, lab_id)
-        days = sorted(activity, reverse=True)
+        days = lab_days(db, lab_id)
         day = day or (days[0] if days else datetime.now(timezone()).date().isoformat())
-        today = activity.get(day, {})
+        today = lab_activity(db, lab_id, day).get(day, {})
         st = settings(lab_id)
         with db.connect() as conn:
             prev = {r["class_id"]: json.loads(r["overrides_json"]) for r in conn.execute(
@@ -840,7 +878,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         done = {s["day"] for s in sent(lab_id) if not s["error"]}
         lab = db.get_lab(lab_id)
         return [send(lab, d, None, me(request), "lab closed", base(request))
-                for d in sorted(lab_activity(db, lab_id)) if d not in done]
+                for d in sorted(lab_days(db, lab_id)) if d not in done]
 
     r.on_lab_closed = on_closed  # type: ignore[attr-defined]
     r.sittings = Sittings()  # type: ignore[attr-defined]
