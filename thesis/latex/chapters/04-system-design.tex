@@ -950,6 +950,17 @@ whole group absent (\cref{fig:which-group}).
   \label{fig:which-group}
 \end{figure}
 
+\paragraph{Faculty without labs.} Keys made by Student IDE only reach teachers
+who use it, so Roll Call also offers Google sign-in with the same OAuth client
+and the same address rule: a student-shaped address is sent to the read-only
+view, any other college address gets its own register on first sign-in. Roll
+Call remains local-first; it keeps each teacher's key encrypted with a server
+secret so any device can open the register after sign-in. A shared link
+secret lets Student IDE adopt a register that a teacher already made in Roll
+Call, and record its own keys there, so one teacher never ends up with two
+registers. Admins on the shared list can open every register from Roll Call
+too, with the same banner and log as from Student IDE.
+
 \paragraph{Subjects and onboarding.} A lab's subject is also the Roll Call
 session's subject, and both apps gained a Subjects view: in Student IDE the
 labs of a course with their class groups and what has been sent, in Roll Call

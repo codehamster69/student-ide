@@ -50,6 +50,17 @@ The detector is never consulted: a highlighted moment does not change attendance
 
 ## Keys and sign-in
 
+- **Google sign-in in Roll Call.** Teachers without labs can use Roll Call on its
+  own: *Sign in with Google* on `/login` (the Student IDE OAuth client, college
+  addresses only, student-shaped addresses are sent to My attendance). The first
+  sign-in makes their register. With `STUDENTIDE_ROLLCALL_LINK_SECRET` set (same
+  value as Roll Call's `LINK_SECRET`), Student IDE and Roll Call keep **one
+  register per teacher**: setting up in Student IDE adopts a register the teacher
+  already made in Roll Call, a key made in Student IDE is linked so Google sign-in
+  opens it, and every existing teacher's key is linked once at start
+  (`POST /api/link/teacher`). Admins in Roll Call's `ADMINS` get a *Teachers'
+  registers* page there too (Settings), with the same full access and banner.
+
 - **Teachers.** Each teacher's key is one Roll Call workspace. Student IDE keeps it
   on its server (`attendance_links`, `issued = 1` when Student IDE made it). *Open
   Roll Call* asks Roll Call for a one-time link (`POST /api/v1/login-codes`): the
@@ -63,7 +74,8 @@ The detector is never consulted: a highlighted moment does not change attendance
   opens no workspace, and a browser holding one only ever shows `/me`.
 - **New key.** *Show key* → *Make a new key* moves the whole register (classes,
   sessions, subjects, students' read access) to a new key in one step
-  (`POST /api/v1/rotate`, only the new key's hash is sent). The old key is
+  (`POST /api/v1/rotate` with the new key's hash and the new key, so Roll Call's
+  Google sign-in follows). The old key is
   retired: Roll Call answers it with 410, so devices still holding it show
   "Key replaced, sign in again" instead of opening an empty register.
 - **Admins** (`STUDENTIDE_ADMINS`, or the admin token in dev mode) see every
@@ -88,6 +100,7 @@ time slot = first to last activity, and a source link back to the lab.
 | --- | --- | --- |
 | `STUDENTIDE_ATTENDANCE_URL` | `https://attendance.hokora.xyz` | Roll Call base URL |
 | `STUDENTIDE_PUBLIC_URL` | request URL | used in the link back from Roll Call |
+| `STUDENTIDE_ROLLCALL_LINK_SECRET` | off | same as Roll Call's `LINK_SECRET`: one register per teacher in both apps |
 | `STUDENTIDE_TIMEZONE` | `Asia/Kolkata` | what a "lab day" is |
 
 ## Pages

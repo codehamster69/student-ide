@@ -34,6 +34,7 @@ class FakeRollCall:
         self.codes = []  # (kind, key) behind each one-time sign-in link
         self.moved = {}  # sha256 of a new key -> the register waiting for it (POST /rotate)
         self.retired = set()
+        self.accounts = {}  # email -> key: Roll Call's faculty accounts (Google sign-in), linked over /api/link/teacher
 
     def add_class(self, key, branch, section, group, prefix, start, end, digits=3):
         cid = str(uuid.uuid4())
@@ -47,6 +48,16 @@ class FakeRollCall:
         if self.down:
             from studentide.attendance import RollCallError
             raise RollCallError("Roll Call is not reachable (test)")
+        if url.endswith("/api/link/teacher"):
+            if key != "link:" + "s" * 20:
+                return 401, {"error": "link secret"}
+            have = self.accounts.get(body["email"])
+            if have and have not in self.retired:
+                return 200, {"key": have}
+            if body.get("key"):
+                self.accounts[body["email"]] = body["key"]
+                return 200, {"key": body["key"]}
+            return 200, {"key": None}
         path = url.split("/api/v1", 1)[1]
         if key.startswith("st_"):  # a student key only asks for its own sign-in link
             if path == "/login-codes" and method == "POST":
@@ -68,6 +79,9 @@ class FakeRollCall:
             return 200, {"code": f"t{len(self.codes)}", "kind": "teacher"}
         if path == "/rotate" and method == "POST":
             self.moved[body["new_workspace"]] = self.ws.pop(key)
+            for email, k in list(self.accounts.items()):
+                if k == key and body.get("new_key"):
+                    self.accounts[email] = body["new_key"]
             self.retired.add(key)
             return 200, {"ok": True, "moved": {"classes": len(ws["classes"]), "sessions": len(ws["sessions"])}}
         if path == "/viewers" and method == "PUT":
@@ -359,9 +373,9 @@ def test_replacing_the_key_keeps_the_register(client, rc):
     assert r.json()["moved"]["classes"] == 1 and r.json()["issued"] is True
     new = client.get("/api/teach/attendance/key", headers=ADMIN).json()["sync_key"]
     assert new != old and len(new) == 40
-    # Roll Call only ever saw the new key's hash, and refuses the old key now
+    # Roll Call gets the new key (so its Google sign-in follows), and refuses the old key now
     rotate = next(c for c in rc.calls if c[1].endswith("/rotate"))
-    assert rotate[2] == old and new not in json.dumps(rotate[3])
+    assert rotate[2] == old and rotate[3] == {"new_workspace": hashlib.sha256(new.encode()).hexdigest(), "new_key": new}
     assert rc(("GET"), "http://rc/api/v1", old, None)[0] == 410
     # the same class groups and lab keep working under the new key
     assert [c["id"] for c in client.get("/api/teach/attendance/classes", headers=ADMIN).json()] == [g1]
@@ -453,3 +467,45 @@ def test_teacher_picks_the_performing_group_when_opening(client, rc):
     sittings = client.get(f"/api/teach/labs/{lid}/classes", headers=ADMIN).json()["sittings"]
     # the first, group-less sitting is open_lab's, before the groups were attached
     assert [s["class_ids"] for s in sittings] == [[], [g1], [g2]] and all(s["closed_at"] for s in sittings)
+
+
+def test_one_register_per_teacher_with_roll_calls_google_sign_in(tmp_path, rc, monkeypatch):
+    """Roll Call's own Google sign-in and Student IDE share one register per teacher."""
+    cfg = Config(client_id="test-client", secure_cookie=False)
+    make = lambda name: create_app(tmp_path / name, serve_frontend=False, auth_config=cfg, verify_google=fake_google,
+                                   attendance_transport=rc)
+    # without the link secret nothing is linked: Student IDE works on its own keys as before
+    alone = sign_in(make("a.sqlite3"), "nisha.k@" + DOMAIN)
+    alone.post("/api/teach/attendance/key")
+    assert not any(c[1].endswith("/api/link/teacher") for c in rc.calls) and rc.accounts == {}
+
+    monkeypatch.setenv("STUDENTIDE_ROLLCALL_LINK_SECRET", "s" * 20)
+    app = make("b.sqlite3")
+    # Priya signed in to Roll Call with Google first: Student IDE uses that register
+    rc.accounts["priya.shah@" + DOMAIN] = KEY_A
+    priya = sign_in(app, "priya.shah@" + DOMAIN)
+    priya.post("/api/teach/attendance/open")
+    assert priya.get("/api/teach/attendance/key").json()["sync_key"] == KEY_A
+    # Meera starts in Student IDE: her new key is linked, so Google sign-in in Roll Call opens it
+    meera = sign_in(app, "meera.rao@" + DOMAIN)
+    meera.post("/api/teach/attendance/open")
+    mine = meera.get("/api/teach/attendance/key").json()["sync_key"]
+    assert rc.accounts["meera.rao@" + DOMAIN] == mine
+    # a new key moves the Roll Call account along with the register
+    meera.post("/api/teach/attendance/key/rotate")
+    new = meera.get("/api/teach/attendance/key").json()["sync_key"]
+    assert new != mine and rc.accounts["meera.rao@" + DOMAIN] == new
+    # Roll Call down while linking: setting up still works, on Student IDE's own key
+    rc.accounts.clear()
+    real = rc.__call__
+
+    def flaky(method, url, key, body):
+        if url.endswith("/api/link/teacher"):
+            from studentide.attendance import RollCallError
+            raise RollCallError("down")
+        return real(method, url, key, body)
+    app2 = create_app(tmp_path / "c.sqlite3", serve_frontend=False, auth_config=cfg, verify_google=fake_google,
+                      attendance_transport=flaky)
+    asha = sign_in(app2, "asha.m@" + DOMAIN)
+    assert asha.post("/api/teach/attendance/open").status_code == 200
+    assert len(asha.get("/api/teach/attendance/key").json()["sync_key"]) == 40

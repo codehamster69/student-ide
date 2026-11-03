@@ -73,6 +73,7 @@ import hashlib
 import json
 import os
 import secrets
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -185,9 +186,22 @@ class RollCallError(Exception):
 Transport = Callable[[str, str, str, dict | None], tuple[int, object]]
 
 
+LINK = "link:"  # "key" of a server-to-server link call: the shared secret, not a sync key
+
+
 def key_header(key: str) -> dict[str, str]:
-    """A student key goes in x-student-key, a teacher's sync key as a bearer token."""
+    """A student key goes in x-student-key, a teacher's sync key as a bearer token,
+    and a link call carries the shared link secret."""
+    if key.startswith(LINK):
+        return {"x-link-secret": key[len(LINK):]}
     return {"x-student-key": key} if key.startswith("st_") else {"Authorization": f"Bearer {key}"}
+
+
+def link_secret() -> str:
+    """$STUDENTIDE_ROLLCALL_LINK_SECRET, the same as Roll Call's LINK_SECRET: lets both
+    apps keep one register per teacher (Roll Call's Google sign-in opens it too)."""
+    s = (os.environ.get("STUDENTIDE_ROLLCALL_LINK_SECRET") or "").strip()
+    return s if len(s) >= 16 else ""
 
 
 def urllib_transport(method: str, url: str, key: str, body: dict | None) -> tuple[int, object]:
@@ -387,13 +401,42 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 "connected_at": row["connected_at"] if row else None, "issued": bool(row and row["issued"]),
                 "rule": DEFAULT_RULE, "timezone": str(timezone())}
 
+    def link(email: str, key: str | None = None) -> str | None:
+        """Roll Call's register for this address (made by Google sign-in there, or
+        linked from here before); with `key`, records it as theirs when they have
+        none. None when linking is off, the address is the dev register, or Roll
+        Call is unreachable: Student IDE then works as before, on its own key."""
+        secret = link_secret()
+        if not secret or not email:
+            return None
+        try:
+            status, data = send_http("POST", rollcall_url() + "/api/link/teacher", LINK + secret,
+                                     {"email": email, **({"key": key} if key else {})})
+        except RollCallError:
+            return None
+        return data.get("key") if status == 200 and isinstance(data, dict) else None
+
+    def link_everyone() -> None:
+        """Once per start: teachers whose keys were made before linking existed get
+        linked, so their first Google sign-in in Roll Call opens the same register."""
+        with db.connect() as conn:
+            rows = conn.execute("SELECT email, sync_key FROM attendance_links WHERE email <> ''").fetchall()
+        for row in rows:
+            link(row["email"], row["sync_key"])
+
+    if link_secret() and transport is None:
+        threading.Thread(target=link_everyone, daemon=True, name="rollcall-link").start()
+
     def provision(email: str) -> str:
-        """This teacher's key, making one (a new, empty Roll Call workspace) if they have none."""
+        """This teacher's key. With none yet: the register they already have in Roll
+        Call (they signed in there with Google first), or else a new key, which is a
+        new, empty Roll Call workspace."""
         key = key_of(email)
         if key is not None:
             return key
-        key = new_teacher_key()
-        rc(lambda: RollCall(key, rollcall_url(), send_http).call("GET", "/api/v1"))  # creates the workspace
+        key = link(email) or new_teacher_key()
+        rc(lambda: RollCall(key, rollcall_url(), send_http).call("GET", "/api/v1"))  # checks it / creates the workspace
+        key = link(email, key) or key
         now = time.time()
         with db.connect() as conn:
             conn.execute("""INSERT INTO attendance_links(email, sync_key, connected_at, checked_at, issued)
@@ -416,14 +459,15 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
     def rotate_key(request: Request) -> dict:
         """A new key for the same register: Roll Call moves every class, session,
         subject and student grant across and refuses the old key from then on.
-        Only the new key's hash is sent; the old key is forgotten here."""
+        The old key is forgotten here."""
         email = me(request)
         old = key_of(email)
         if old is None:
             raise HTTPException(404, "no Roll Call key yet: press Open Roll Call to make one")
         new = new_teacher_key()
+        # the new key itself too, so Roll Call's Google sign-in keeps opening this register
         moved = rc(lambda: RollCall(old, rollcall_url(), send_http).call(
-            "POST", "/api/v1/rotate", {"new_workspace": hashlib.sha256(new.encode()).hexdigest()}))
+            "POST", "/api/v1/rotate", {"new_workspace": hashlib.sha256(new.encode()).hexdigest(), "new_key": new}))
         now = time.time()
         with db.connect() as conn:
             conn.execute("UPDATE attendance_links SET sync_key = ?, issued = 1, checked_at = ? WHERE email = ?",
@@ -466,7 +510,9 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
 
     @r.post("/attendance/open")
     def open_rollcall(request: Request) -> dict:
-        key = provision(me(request))
+        email = me(request)
+        key = provision(email)
+        link(email, key)  # e.g. a key replaced before linking was on
         out = rc(lambda: RollCall(key, rollcall_url(), send_http).call("POST", "/api/v1/login-codes"))
         return {"url": login_link(out)}
 
