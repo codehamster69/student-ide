@@ -207,10 +207,10 @@ assert.equal((await submitAs(CLASS[2], "cpp", CPP)).passed, 3);
 assert.equal((await submitAs(CLASS[3], "java", JAVA)).passed, 3);
 
 // --- teacher: the board with languages, then the similar pair ----------------------
-await t.goto(`${BASE}/#/teach/c/${labId}`);
+await t.goto(`${BASE}/#/teach/labs/${labId}/board`);
 await t.waitForSelector(`text=${CLASS[3].handle}`);
 await shot(t, "06-board-languages", true);
-await t.goto(`${BASE}/#/teach/l/${labId}`);
+await t.goto(`${BASE}/#/teach/labs/${labId}`);
 await t.click("a:has-text('Similar submissions')");
 await t.waitForSelector("text=Similar submissions worth a look");
 await t.waitForSelector(`button:has-text('${CLASS[0].handle}')`);

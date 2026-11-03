@@ -13,6 +13,7 @@ import { Workspace, type SessionSummary } from "./screens/Workspace";
 import { Saved } from "./screens/Saved";
 import { Arena } from "./compete/Arena";
 import { Learn } from "./learn/Learn";
+import { href } from "./routes";
 
 type Screen =
   | { name: "loading" }
@@ -38,7 +39,7 @@ export function App() {
     setScreen(consented ? { name: "tasks", studentId } : { name: "consent", studentId });
   const signOut = () => {
     if (preview) {
-      location.hash = "#/teach";
+      location.hash = href.labs;
       return;
     }
     if (cfg?.mode === "google") void endGoogleSession();
@@ -70,7 +71,7 @@ export function App() {
     case "login":
       content = (
         <Shell step={0}>
-          <Login cfg={cfg!} onDone={signedIn} onTeacher={() => { location.hash = "#/teach"; }} />
+          <Login cfg={cfg!} onDone={signedIn} onTeacher={() => { location.hash = href.labs; }} />
         </Shell>
       );
       break;
@@ -179,7 +180,7 @@ function PreviewBar() {
     >
       <Eye className="size-3.5 text-warn" />
       <span><strong className="font-semibold text-text">Student view.</strong> Your labs as students see them. Nothing here counts as student data.</span>
-      <a href="#/teach" className="flex h-7 items-center gap-1 rounded-full bg-surface-3 px-2.5 font-medium text-text hover:bg-surface-2">
+      <a href={href.labs} className="flex h-7 items-center gap-1 rounded-full bg-surface-3 px-2.5 font-medium text-text hover:bg-surface-2">
         <ArrowLeft className="size-3.5" />Back to Teach
       </a>
     </motion.div>

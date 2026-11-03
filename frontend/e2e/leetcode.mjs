@@ -118,7 +118,7 @@ await off.goto(`${BASE}/#/teach`);
 await off.fill("input[type=password]", TOKEN);
 await off.click("button[type=submit]");
 await off.waitForSelector("text=A lab is one sitting");
-await off.goto(`${BASE}/#/teach/l/${labId}`);
+await off.goto(`${BASE}/#/teach/labs/${labId}`);
 await off.waitForSelector("text=The problem text can't be loaded right now");
 await shot(off, "06-teacher-warning");
 
@@ -129,7 +129,7 @@ const post = async (path, body) => {
   return r.json();
 };
 const cppLab = await post("/api/teach/labs", { title: "Lab 12: Hashing in C++ (e2e)", language: "cpp" });
-await t.goto(`${BASE}/#/teach/l/${cppLab.id}`);
+await t.goto(`${BASE}/#/teach/labs/${cppLab.id}`);
 await t.waitForSelector("text=Add the first question");
 await t.click("button:has-text('From a platform') >> nth=0");
 await t.click("button[role=tab]:has-text('LeetCode')");

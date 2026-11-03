@@ -73,14 +73,14 @@ const panel = priya.locator("aside > div", { has: priya.locator("h2:has-text('Te
 if (OUT) { await priya.waitForTimeout(800); await panel.screenshot({ path: `${OUT}/ownership-${SCHEME}-02-teachers-panel.png` }); }
 
 await go(priya, "#/review", "text=Lab sessions");
-await priya.waitForSelector("a[href^='#/review/l/lab_demo1/']");
+await priya.waitForSelector("a[href^='#/review/labs/lab_demo1/']");
 assert.ok(!(await priya.isVisible("text=Practice tasks")), "practice sessions are for admins only");
 await shot(priya, "03-review-lab-sessions");
-await priya.click("a[href^='#/review/l/lab_demo1/']");
+await priya.click("a[href^='#/review/labs/lab_demo1/']");
 await priya.waitForSelector("h1:has-text('Lab 5: Strings and dictionaries')");
-await priya.waitForSelector("a[href^='#/review/s/']");
+await priya.waitForSelector("a[href^='#/review/sessions/']");
 await shot(priya, "04-review-one-lab", true);
-await priya.click("a[href^='#/review/s/']");
+await priya.click("a[href^='#/review/sessions/']");
 await priya.waitForSelector("text=Back to the lab session");
 
 // --- the co-teacher sees the shared lab next to her own -----------------------------
@@ -91,7 +91,7 @@ await shot(meera, "05-co-teacher-labs");
 
 // --- anyone else: refused with a message, still signed in -------------------------------
 const arjun = await as(ARJUN);
-await go(arjun, "#/teach/l/lab_demo1", "text=this lab belongs to another teacher");
+await go(arjun, "#/teach/labs/lab_demo1", "text=this lab belongs to another teacher");
 assert.ok(await arjun.isVisible("text=Sign out"), "a refusal does not sign the teacher out");
 await shot(arjun, "06-not-yours");
 

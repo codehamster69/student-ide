@@ -111,6 +111,8 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | `STUDENTIDE_RAW_KEY_DAYS` | raw keystrokes are deleted after this many days at the latest (default 28) |
 | `STUDENTIDE_SESSION_DAYS` | how long a sign-in lasts (default 7) |
 | `STUDENTIDE_ADMIN_TOKEN` | leave empty; only for scripts, then unset again |
+| `STUDENTIDE_ATTENDANCE_URL` | Roll Call for lab attendance (default `https://attendance.hokora.xyz`), see [attendance.md](attendance.md) |
+| `STUDENTIDE_PUBLIC_URL` | e.g. `https://studentide.hokora.xyz`, for the link back from Roll Call |
 | `BACKUP_KEEP_DAYS` | how many days of nightly backups to keep (default 14) |
 
 ## Who is who

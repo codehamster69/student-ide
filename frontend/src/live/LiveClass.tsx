@@ -9,6 +9,7 @@ import { AuthError, get, token } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LanguageBadge } from "../teach/bits";
 import { STATE, ago, leaveView, type LiveClass as LiveClassData, type LiveLab, type LiveState, type LiveStudent } from "./api";
+import { href } from "../routes";
 
 const POLL_MS = 3000;
 
@@ -40,12 +41,12 @@ export function LiveLabs({ onAuthLost }: { onAuthLost: () => void }) {
           <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><Radio className="size-5" /></span>
           <p className="text-sm font-medium text-text">No lab is open right now</p>
           <p className="max-w-sm text-sm text-muted">Open a lab from the Labs tab when the class starts, then follow it here.</p>
-          <Button className="mt-2" onClick={() => { location.hash = "#/teach"; }}>Go to labs</Button>
+          <Button className="mt-2" onClick={() => { location.hash = href.labs; }}>Go to labs</Button>
         </Card>
       )}
       <div className="grid gap-3">
         {labs?.map((l) => (
-          <motion.a key={l.id} variants={item} href={`#/live/l/${l.id}`}
+          <motion.a key={l.id} variants={item} href={href.liveLab(l.id)}
             className="group flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-shadow hover:shadow-md">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[15px] font-semibold text-text">
@@ -123,7 +124,7 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
 
   return (
     <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href="#/live" className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
+      <motion.a variants={item} href={href.live} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
         <ArrowLeft className="size-4" /> All open labs
       </motion.a>
 
@@ -142,9 +143,9 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             <ArrowUpDown className="size-3.5" /> {sort === "roll" ? "Roll number" : "Last edit"}
           </Button>
           {data.lab.kind === "competition" && (
-            <Button size="sm" onClick={() => { location.hash = `#/teach/c/${id}`; }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
+            <Button size="sm" onClick={() => { location.hash = href.board(id); }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
           )}
-          <Button size="sm" onClick={() => { location.hash = `#/teach/l/${id}`; }}>Lab settings</Button>
+          <Button size="sm" onClick={() => { location.hash = href.lab(id); }}>Lab settings</Button>
         </div>
       </motion.div>
 
@@ -254,7 +255,7 @@ function StudentCard({ s, now, editorView, fresh, onSeen }: {
             )}
           </div>
           {s.moments > 0 && (
-            <a href={`#/review/s/${s.moment_session_id ?? s.session_id}`} onClick={onSeen}
+            <a href={href.session(s.moment_session_id ?? s.session_id)} onClick={onSeen}
               className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1.5 text-xs font-medium text-accent hover:underline">
               <MessagesSquare className="size-3.5" />
               {s.moments} moment{s.moments === 1 ? "" : "s"} worth a conversation in this lab
@@ -263,11 +264,11 @@ function StudentCard({ s, now, editorView, fresh, onSeen }: {
           )}
           <div className="mt-auto flex items-center gap-2 pt-1">
             {editorView && (
-              <Button size="sm" onClick={() => { location.hash = `#/live/s/${s.session_id}`; }} disabled={s.state === "left" || s.state === "submitted"}>
+              <Button size="sm" onClick={() => { location.hash = href.liveSession(s.session_id); }} disabled={s.state === "left" || s.state === "submitted"}>
                 <Eye className="size-3.5" /> View editor
               </Button>
             )}
-            <a href={`#/review/s/${s.session_id}`} className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted hover:text-text">
+            <a href={href.session(s.session_id)} className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted hover:text-text">
               <Activity className="size-3.5" /> Timeline
             </a>
             {s.watched && <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-faint" title="A teacher has this editor open"><Eye className="size-3" /> open</span>}

@@ -93,11 +93,11 @@ for (const [email, who] of [[PRIYA, "owner"], [MEERA, "co-teacher"], [ADMIN, "ad
     await t.goto(`${BASE}/#/teach`);
     await t.waitForSelector("text=Friday sprint");
     await shot(t, "03-labs-list");
-    await t.goto(`${BASE}/#/teach/l/${labId}`);
+    await t.goto(`${BASE}/#/teach/labs/${labId}`);
     await t.waitForSelector("text=Open leaderboard");
     assert.ok(await t.isVisible("button:has-text('Leaderboard')"), "lab page links the board");
     await shot(t, "04-lab-page");
-    await t.goto(`${BASE}/#/live/l/${labId}`);
+    await t.goto(`${BASE}/#/live/labs/${labId}`);
     await t.click("button:has-text('Leaderboard')");
     await t.waitForSelector("text=Class competition");
   }
@@ -109,7 +109,7 @@ await call(priya, "POST", `/api/teach/competitions/${labId}/end`);
 await s.waitForSelector("text=being handed in", { timeout: 15_000 });
 await shot(s, "05-arena-handing-in");
 const t = await as(PRIYA);
-await t.goto(`${BASE}/#/teach/c/${labId}`);
+await t.goto(`${BASE}/#/teach/labs/${labId}/board`);
 await t.waitForSelector("text=Handing in and grading");
 await shot(t, "06-board-handing-in");
 await t.waitForSelector("text=Handing in and grading", { state: "detached", timeout: (GRACE_S + 15) * 1000 });

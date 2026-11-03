@@ -892,3 +892,66 @@ competition, so a teacher never appears on a class board.
   \caption{View as student: a teacher's labs as students see them, with a draft lab marked and a bar that keeps the mode visible.}
   \label{fig:preview}
 \end{figure}
+
+\section{Attendance through Roll Call}
+\label{sec:attendance}
+
+Lab classes also need an attendance register, which the department keeps in
+a separate web app, Roll Call. Rather than make teachers take a roll call
+during a lab whose every keystroke is already recorded, Student IDE marks it
+for them. A teacher connects once by pasting their Roll Call sync key (Roll
+Call has no accounts; the key is the faculty member's workspace, and it never
+leaves the Student IDE server). A lab can then attach one or more Roll Call
+\emph{class groups}, for example the two practical groups of a section that
+share a lab slot, either picked from the teacher's Roll Call or created from
+Student IDE with a roll-number range (\cref{fig:attendance}). Attaching a
+group adds its students to the lab's roster.
+
+\paragraph{Effective participation.} Being signed in is not taking part, so
+a student counts as present for a lab day only with at least ten
+\emph{active minutes} (distinct wall-clock minutes with an edit, a Run or a
+Check) and at least forty \emph{typed} characters; pasted or dropped text and
+Reset do not count as typing. Each lab can change both thresholds and can
+also require one Run or Check. Only the lab's own sessions count: learning-lab
+practice (\cref{sec:learning-lab}) and staff previews never do. The rule reads
+only edit, run and check records, not key timings, so it works after raw keys
+have been deleted (\cref{sec:deployment}), and it is independent of the
+detector: a highlighted moment never changes a student's attendance, keeping
+the promise that a flag leads only to a conversation.
+
+\paragraph{Marking.} When the teacher closes the lab, each lab day not yet
+sent becomes one Roll Call session per attached class group: every student on
+that group's roster is marked present or absent there, so a lab shared by
+several groups still lands in each student's own register. Before closing,
+the teacher can open the lab's attendance page, see for every student why the
+rule marked them (``14 active min, 140 typed chars, 1 run'', ``only 4 of 10
+active minutes''), override any mark and send. Students who worked in the lab
+but are on no attached roster are listed separately; this almost always means
+a Roll Call roster prefix that differs from the college address. Session ids
+are derived from lab, class group and day, so sending again replaces the same
+records instead of adding new ones, and a failed send is kept and can be
+retried without blocking the lab from closing.
+
+\paragraph{Subjects and onboarding.} A lab's subject is also the Roll Call
+session's subject, and both apps gained a Subjects view: in Student IDE the
+labs of a course with their class groups and what has been sent, in Roll Call
+each subject across the classes it is taught to with every student's
+percentage. Each app has a ``Getting started'' checklist that ticks itself
+from what the new faculty member has already set up, and both now use one
+URL scheme (collections are plural nouns, an item is
+\texttt{/<collection>/<id>}, a view of it one more segment), with the older
+links kept working.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{attendance/attendance-light-04-preview}
+    \caption{A lab's attendance page: one card per attached class group, each mark with its reason; a mark can be tapped to override it.}
+  \end{subfigure}\\[1ex]
+  \begin{subfigure}{\textwidth}
+    \includegraphics[width=\linewidth]{attendance/attendance-light-11-rollcall-subject}
+    \caption{Roll Call after sending: the subject's sessions from Student IDE and each student's percentage.}
+  \end{subfigure}
+  \caption{Attendance from a lab, in Student IDE and in Roll Call.}
+  \label{fig:attendance}
+\end{figure}

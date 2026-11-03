@@ -6,6 +6,7 @@ import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LanguageDot } from "../teach/bits";
 import type { Language } from "../teach/api";
+import { href } from "../routes";
 
 // Similar submissions in a competition (backend: compete.py + similarity.py).
 // A pointer for a conversation, never a verdict: the page never says "copied",
@@ -80,7 +81,7 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
 
   return (
     <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1240px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={`#/teach/l/${id}`} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
+      <motion.a variants={item} href={href.lab(id)} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
         <ArrowLeft className="size-4" /> Back to the competition
       </motion.a>
       <motion.div variants={item} className="mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -284,7 +285,7 @@ function CodeSide({ s, share, ranges, hover, onHover }: {
           {s.n_pastes ? `${s.pasted_chars.toLocaleString()} pasted in ${s.n_pastes} paste${s.n_pastes === 1 ? "" : "s"}` : "nothing pasted"}
         </span>
         {typedOrPasted === 0 && <span>no editor activity recorded for this submission</span>}
-        <a href={`#/review/s/${s.session_id}`} className="ml-auto inline-flex items-center gap-1 text-accent hover:underline">
+        <a href={href.session(s.session_id)} className="ml-auto inline-flex items-center gap-1 text-accent hover:underline">
           Session timeline <ExternalLink className="size-3" />
         </a>
       </div>

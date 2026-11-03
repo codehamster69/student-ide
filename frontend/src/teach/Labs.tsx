@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronRight, Eye, ListChecks, Plus, Trophy, Users, X } from "lucide-react";
+import { ChevronRight, Eye, ListChecks, Plus, Sparkles, Trophy, Users, X } from "lucide-react";
 import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
@@ -8,6 +8,7 @@ import { dayTime } from "../review/format";
 import { BOARD_MODES, type BoardMode, type TeacherComp } from "../compete/api";
 import { STATUS, type LabLanguage, type LabDetail, type LabRow, type LabStatus } from "./api";
 import { LanguageBadge, LanguageSelect } from "./bits";
+import { href } from "../routes";
 
 const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutral", open: "success", closed: "warn" };
 
@@ -34,7 +35,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {/* also in the header, which runs off narrow screens */}
-          <a href="#/student" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2 md:hidden">
+          <a href={href.student} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2 md:hidden">
             <Eye className="size-4" /> View as student
           </a>
           <Button onClick={() => setCreating("competition")} disabled={!!creating}>
@@ -59,7 +60,12 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
           <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><ListChecks className="size-5" /></span>
           <p className="text-sm font-medium text-text">No labs yet</p>
           <p className="max-w-sm text-sm text-muted">Create one, add a few questions, assign your students and open it when the class starts.</p>
-          <Button variant="primary" className="mt-2" onClick={() => setCreating("lab")}><Plus className="size-4" /> New lab</Button>
+          <div className="mt-2 flex gap-2">
+            <a href={href.setup} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
+              <Sparkles className="size-4 text-accent" /> Getting started
+            </a>
+            <Button variant="primary" onClick={() => setCreating("lab")}><Plus className="size-4" /> New lab</Button>
+          </div>
         </Card>
       )}
 
@@ -67,7 +73,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
         <motion.ul variants={stagger(0.05, 0.1)} className="grid gap-3">
           {labs.map((l) => (
             <motion.li key={l.id} variants={item}>
-              <a href={`#/teach/l/${l.id}`}
+              <a href={href.lab(l.id)}
                 className="group grid items-center gap-x-6 gap-y-2 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md md:grid-cols-[1fr_auto_auto_auto_1.25rem]">
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">
@@ -86,8 +92,8 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
                 {l.kind === "competition" ? (
                   // a link of its own inside the row's link: navigate by hand so the row does not open
                   <span role="link" tabIndex={0} className="inline-flex h-7 items-center gap-1.5 justify-self-start rounded-full bg-gold-soft px-3 text-xs font-medium text-gold transition-opacity hover:opacity-80 md:justify-self-end"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); location.hash = `#/teach/c/${l.id}`; }}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); location.hash = `#/teach/c/${l.id}`; } }}>
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); } }}>
                     <Trophy className="size-3.5" /> Leaderboard
                   </span>
                 ) : (
@@ -142,7 +148,7 @@ function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; on
         ? (await send<TeacherComp>("POST", "/api/teach/competitions",
             { title, description, subject, language, duration_min: Number(minutes) || null, board })).lab_id
         : (await send<LabDetail>("POST", "/api/teach/labs", { title, description, subject, language })).id;
-      location.hash = `#/teach/l/${id}`;
+      location.hash = href.lab(id);
     } catch (err) {
       if (err instanceof AuthError) return onAuthLost();
       setError((err as Error).message);

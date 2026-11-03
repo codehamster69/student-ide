@@ -6,6 +6,7 @@ import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
 import type { TeacherComp } from "./api";
 import { Countdown, Leaderboard, Podium } from "./Leaderboard";
+import { href } from "../routes";
 
 const POLL_MS = 2000;
 
@@ -56,7 +57,7 @@ export function LiveBoard({ id, onAuthLost }: { id: string; onAuthLost: () => vo
     <motion.div variants={stagger(0.06)} initial="initial" animate="animate"
       className={cn("mx-auto px-5 pb-20 pt-6", present ? "fixed inset-0 z-40 max-w-none overflow-auto bg-bg px-[6vw] pt-[4vh]" : "max-w-[1100px]")}>
       {!present && (
-        <motion.a variants={item} href={`#/teach/l/${id}`} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
+        <motion.a variants={item} href={href.lab(id)} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
           <ArrowLeft className="size-4" /> Back to the competition
         </motion.a>
       )}
@@ -104,7 +105,7 @@ export function LiveBoard({ id, onAuthLost }: { id: string; onAuthLost: () => vo
       {!present && (
         <p className="mt-6 text-center text-xs text-faint">
           The board ranks tests passed and solving speed only. Nothing from the review timeline is ever shown here.
-          {" "}<a href={`#/teach/similar/${id}`} className="inline-flex items-center gap-1 text-muted hover:text-text"><ScanSearch className="size-3" />Similar submissions</a>
+          {" "}<a href={href.similar(id)} className="inline-flex items-center gap-1 text-muted hover:text-text"><ScanSearch className="size-3" />Similar submissions</a>
         </p>
       )}
     </motion.div>

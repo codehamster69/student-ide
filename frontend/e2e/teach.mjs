@@ -42,7 +42,7 @@ await t.waitForSelector("text=Teacher access");
 await t.fill("input[type=password]", TOKEN);
 await t.click("button[type=submit]");
 await t.waitForSelector("text=A lab is one sitting");
-await t.waitForSelector("a[href^='#/teach/l/']");
+await t.waitForSelector("a[href^='#/teach/labs/']");
 await shot(t, "01-labs");
 
 await t.click("button:has-text('New lab')");
@@ -129,10 +129,10 @@ await shot(t, "07-progress", true);
 // the seeded demo lab, with the simulated class's progress
 const demo = (await get("/api/teach/labs")).find((l) => l.id === "lab_demo1");
 if (demo) {
-  await t.goto(`${BASE}/#/teach/l/${demo.id}`);
+  await t.goto(`${BASE}/#/teach/labs/${demo.id}`);
   await t.waitForSelector("text=Count vowels");
   await shot(t, "08-demo-lab", true);
-  await t.goto(`${BASE}/#/review`);
+  await t.goto(`${BASE}/#/review/sessions`);
   await t.waitForSelector("text=Sessions reviewed");
   await t.waitForSelector("text=Anagram check");
 }

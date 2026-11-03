@@ -25,7 +25,7 @@ const shot = async (name, full = false) => {
   await page.screenshot({ path: `${OUT}/review-${SCHEME}-${name}.png`, fullPage: full });
 };
 
-await page.goto(`${BASE}/#/review/all`);
+await page.goto(`${BASE}/#/review/sessions`);
 await page.waitForSelector("text=Teacher access");
 await shot("01-gate");
 await page.fill("input[type=password]", "wrong");
@@ -34,7 +34,7 @@ await page.waitForSelector("text=not accepted");
 await page.fill("input[type=password]", TOKEN);
 await page.click("button[type=submit]");
 await page.waitForSelector("text=Sessions reviewed");
-await page.waitForSelector("a[href^='#/review/s/'] svg path");
+await page.waitForSelector("a[href^='#/review/sessions/'] svg path");
 await shot("02-overview", true);
 
 // a takeover session that the detector caught
@@ -47,7 +47,7 @@ const takeover = pick("takeover", "identity");
 const copying = pick("copying", "process") ?? pick("paste", "process");
 const honest = rows.find((r) => r.phase === "assessed" && r.synthetic?.condition === "honest" && r.episodes.length === 0);
 
-await page.goto(`${BASE}/#/review/s/${takeover.id}`);
+await page.goto(`${BASE}/#/review/sessions/${takeover.id}`);
 await page.waitForSelector("text=Moment 1");
 await shot("03-session-takeover", true);
 await page.click("button:has-text('Ground truth')");
@@ -61,12 +61,12 @@ await page.waitForTimeout(2500);
 await shot("05-replaying");
 await page.keyboard.press("Space");
 
-await page.goto(`${BASE}/#/review/s/${copying.id}`);
+await page.goto(`${BASE}/#/review/sessions/${copying.id}`);
 await page.waitForSelector("text=Moment 1");
 await shot("06-session-process", true);
 
 if (honest) {
-  await page.goto(`${BASE}/#/review/s/${honest.id}`);
+  await page.goto(`${BASE}/#/review/sessions/${honest.id}`);
   await page.waitForSelector("text=Nothing stood out");
   await shot("07-session-honest");
 }

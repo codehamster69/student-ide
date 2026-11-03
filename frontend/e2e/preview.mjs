@@ -31,7 +31,7 @@ const before = (await admin("/api/sessions")).length;
 await page.goto(`${BASE}/#/teach`);
 await page.fill("input[type=password]", TOKEN);
 await page.click("button[type=submit]");
-await page.waitForSelector("a[href^='#/teach/l/']");
+await page.waitForSelector("a[href^='#/teach/labs/']");
 await page.click("a:has-text('View as student')");
 
 // --- the student home, as the teacher's labs ------------------------------------------
@@ -54,7 +54,7 @@ await shot("02-editor");
 
 // --- back to Teach --------------------------------------------------------------------------
 await page.click("a:has-text('Back to Teach')");
-await page.waitForSelector("a[href^='#/teach/l/']");
+await page.waitForSelector("a[href^='#/teach/labs/']");
 assert.equal((await admin("/api/sessions")).length, before, "previews never reach review");
 const labs = await admin("/api/teach/labs");
 assert.equal(labs.find((l) => l.title === "Lab 6: Recursion").n_sessions, 0, "nor lab counts");

@@ -72,10 +72,10 @@ await t.goto(`${BASE}/#/live`);
 await t.waitForSelector("text=Teacher access");
 await t.fill("input[type=password]", TOKEN);
 await t.click("button[type=submit]");
-await t.waitForSelector("a[href='#/live/l/lab_demo1']");
+await t.waitForSelector("a[href='#/live/labs/lab_demo1']");
 await shot(t, "02-open-labs");
 
-await t.click("a[href='#/live/l/lab_demo1']");
+await t.click("a[href='#/live/labs/lab_demo1']");
 await t.waitForSelector("text=Live class view");
 await t.waitForFunction(() => document.querySelectorAll("button:has(svg.lucide-eye)").length >= 4);
 // The class view is open: students see the small notice.
