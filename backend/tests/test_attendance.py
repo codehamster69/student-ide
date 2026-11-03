@@ -32,6 +32,8 @@ class FakeRollCall:
         self.calls = []
         self.down = False
         self.codes = []  # (kind, key) behind each one-time sign-in link
+        self.moved = {}  # sha256 of a new key -> the register waiting for it (POST /rotate)
+        self.retired = set()
 
     def add_class(self, key, branch, section, group, prefix, start, end, digits=3):
         cid = str(uuid.uuid4())
@@ -51,14 +53,23 @@ class FakeRollCall:
                 self.codes.append(("student", key))
                 return 200, {"code": f"s{len(self.codes)}", "kind": "student"}
             return 401, {"error": "student keys open only /me"}
+        if key in self.retired:
+            return 410, {"error": "replaced", "replaced": True}
+        h = hashlib.sha256(key.encode()).hexdigest()
+        if key not in self.ws and h in self.moved:
+            self.ws[key] = self.moved.pop(h)
         if key not in self.ws and key != "z" * 40 and len(key) >= 32:  # Roll Call makes a workspace for any new key
             self.ws[key] = {"classes": {}, "sessions": {}, "subjects": []}
         ws = self.ws.get(key)
         if ws is None:
             return 401, {"error": "bad key"}
         if path == "/login-codes" and method == "POST":
-            self.codes.append(("teacher", key))
+            self.codes.append(("teacher", key) + ((body["label"],) if body and body.get("label") else ()))
             return 200, {"code": f"t{len(self.codes)}", "kind": "teacher"}
+        if path == "/rotate" and method == "POST":
+            self.moved[body["new_workspace"]] = self.ws.pop(key)
+            self.retired.add(key)
+            return 200, {"ok": True, "moved": {"classes": len(ws["classes"]), "sessions": len(ws["sessions"])}}
         if path == "/viewers" and method == "PUT":
             ws.setdefault("viewers", {})[body["viewer_hash"]] = body["student_id"]
             return 200, {"ok": True}
@@ -331,3 +342,55 @@ def test_students_open_their_own_attendance_read_only(tmp_path, rc):
     lone = sign_in(app, "ug23cs009@" + DOMAIN)
     assert lone.get("/api/attendance/UG23CS009").json()["enabled"] is False
     assert lone.post("/api/attendance/UG23CS009/open").status_code == 404
+
+
+def test_replacing_the_key_keeps_the_register(client, rc):
+    client.post("/api/teach/attendance/key", headers=ADMIN)
+    old = client.get("/api/teach/attendance/key", headers=ADMIN).json()["sync_key"]
+    g1 = rc.add_class(old, "CSE", "A", "G1", "UG23CS", 1, 3)
+    lab = open_lab(client, ADMIN, roster=())
+    client.put(f"/api/teach/labs/{lab['id']}/classes", json={"class_ids": [g1]}, headers=ADMIN)
+
+    r = client.post("/api/teach/attendance/key/rotate", headers=ADMIN)
+    assert r.status_code == 200, r.text
+    assert r.json()["moved"]["classes"] == 1 and r.json()["issued"] is True
+    new = client.get("/api/teach/attendance/key", headers=ADMIN).json()["sync_key"]
+    assert new != old and len(new) == 40
+    # Roll Call only ever saw the new key's hash, and refuses the old key now
+    rotate = next(c for c in rc.calls if c[1].endswith("/rotate"))
+    assert rotate[2] == old and new not in json.dumps(rotate[3])
+    assert rc(("GET"), "http://rc/api/v1", old, None)[0] == 410
+    # the same class groups and lab keep working under the new key
+    assert [c["id"] for c in client.get("/api/teach/attendance/classes", headers=ADMIN).json()] == [g1]
+    work(client, start(client, "UG23CS001", lab["questions"][0]["id"]), minutes=12)
+    sent = client.post(f"/api/teach/labs/{lab['id']}/attendance", json={"day": today()}, headers=ADMIN).json()
+    assert all(x["error"] is None for x in sent["results"])
+    assert list(rc.ws[new]["sessions"].values())[0]["marks"]["UG23CS001"] == "P"
+
+
+def test_a_key_replaced_elsewhere_says_so(client, rc):
+    client.put("/api/teach/attendance", json={"sync_key": KEY_A}, headers=ADMIN)
+    rc.retired.add(KEY_A)
+    r = client.get("/api/teach/attendance/classes", headers=ADMIN)
+    assert r.status_code == 409 and "replaced" in r.json()["detail"]
+
+
+def test_admins_open_any_teachers_register(tmp_path, rc):
+    cfg = Config(client_id="test-client", secure_cookie=False, admins=frozenset({"pg25cs07@" + DOMAIN}))
+    app = create_app(tmp_path / "r.sqlite3", serve_frontend=False, auth_config=cfg, verify_google=fake_google,
+                     attendance_transport=rc)
+    priya, meera = sign_in(app, "priya.shah@" + DOMAIN), sign_in(app, "meera.rao@" + DOMAIN)
+    admin = sign_in(app, "pg25cs07@" + DOMAIN)
+    priya.put("/api/teach/attendance", json={"sync_key": KEY_A})
+    meera.post("/api/teach/attendance/key")
+    regs = admin.get("/api/teach/attendance/registers").json()
+    assert [r["email"] for r in regs] == ["meera.rao@" + DOMAIN, "priya.shah@" + DOMAIN]
+    assert "sync_key" not in json.dumps(regs)
+    r = admin.post(f"/api/teach/attendance/registers/priya.shah@{DOMAIN}/open")
+    assert r.status_code == 200 and "#code=" in r.json()["url"]
+    assert rc.codes[-1] == ("teacher", KEY_A, f"priya.shah@{DOMAIN}'s register, opened by admin pg25cs07@{DOMAIN}")
+    assert admin.get("/api/teach/attendance/registers").json()[1]["last_opened"] is not None
+    # teachers can't list or open each other's registers
+    assert meera.get("/api/teach/attendance/registers").status_code == 403
+    assert meera.post(f"/api/teach/attendance/registers/priya.shah@{DOMAIN}/open").status_code == 403
+    assert admin.post(f"/api/teach/attendance/registers/nobody@{DOMAIN}/open").status_code == 404

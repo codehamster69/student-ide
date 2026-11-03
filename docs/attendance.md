@@ -52,6 +52,17 @@ The detector is never consulted: a highlighted moment does not change attendance
   (`PUT /api/v1/viewers`, Roll Call stores only its sha256) and opens Roll Call's
   `/me` signed in: their own marks, read-only, grouped by subject. A student key
   opens no workspace, and a browser holding one only ever shows `/me`.
+- **New key.** *Show key* → *Make a new key* moves the whole register (classes,
+  sessions, subjects, students' read access) to a new key in one step
+  (`POST /api/v1/rotate`, only the new key's hash is sent). The old key is
+  retired: Roll Call answers it with 410, so devices still holding it show
+  "Key replaced, sign in again" instead of opening an empty register.
+- **Admins** (`STUDENTIDE_ADMINS`, or the admin token in dev mode) see every
+  teacher's register under *Teachers' Roll Call registers* (People, and Getting
+  started). *Open register* signs them in to it with full access; Roll Call shows
+  a banner naming whose register it is, and Student IDE logs every open
+  (`attendance_admin_opens`). Roll Call itself has no admin notion: the access
+  comes from Student IDE holding the teachers' keys.
 - **Shared computers.** Roll Call → Settings → *Sign out* forgets the key and the
   records in that browser. Signing in on a browser that holds someone else's
   records asks whether to move them in or leave them.

@@ -248,6 +248,43 @@ await lone.waitForSelector("text=Your labs").catch(() => lone.waitForSelector("t
 await lone.waitForTimeout(800);
 assert.equal(await lone.locator("button:has-text('My attendance')").count(), 0);
 
+// --- a new key: same register, the old key stops working everywhere ---------------------
+await t.goto(`${BASE}/#/teach/setup`);
+await t.click("button:has-text('Show key')");
+await t.click("button:has-text('Make a new key')");
+await t.waitForSelector("text=New key ready");
+const NEW = await t.locator("[aria-label='Your Roll Call key']").innerText();
+assert.notEqual(NEW, KEY);
+assert.equal((await api("GET", "/api/teach/attendance/key")).sync_key, NEW);
+await shot(t, "18-new-key");
+assert.equal((await fetch(`${RC}/api/sync`, { headers: { "x-sync-key": KEY } })).status, 410);
+const moved = await (await fetch(`${RC}/api/sync`, { headers: { "x-sync-key": NEW } })).json();
+assert.equal(moved.sessions.length, 2);
+assert.equal(moved.classes.length, 2);
+// the Roll Call tab still holding the old key says so
+await r.goto(`${RC}/settings`);
+await r.waitForSelector("text=This key was replaced");
+await shot(r, "19-rollcall-key-replaced");
+// students' read access moved with the register
+const after = await (await fetch(`${RC}/api/me`, { headers: { "x-student-key": studentKey } })).json();
+assert.deepEqual(after.sessions.map((x) => x.mark), ["P"]);
+// and Student IDE keeps sending with the new key
+const resent = await api("POST", `/api/teach/labs/${lab.id}/attendance`, { day: g1.date });
+assert.ok(resent.results.every((x) => x.error === null));
+
+// --- admins: open any teacher's register with full access --------------------------------
+await t.goto(`${BASE}/#/teach/setup`);
+await t.waitForSelector("text=Teachers' Roll Call registers");
+await t.locator("text=Teachers' Roll Call registers").scrollIntoViewIfNeeded();
+await shot(t, "20-admin-registers");
+const adm = await popup(t, "button:has-text('Open register')", `${RC}/`);
+await adm.setViewportSize({ width: 1280, height: 860 });
+await adm.waitForSelector("text=Admin access");
+await adm.goto(`${RC}/sessions`);
+await adm.waitForSelector("text=Student IDE");
+await shot(adm, "21-rollcall-admin");
+assert.equal(await adm.evaluate(() => localStorage.getItem("attendance:sync-key")), NEW);
+
 await browser.close();
 assert.deepEqual(errors, []);
 console.log("attendance e2e ok", lab.id);

@@ -31,6 +31,9 @@ attendance.
     GET    /api/teach/attendance                    this teacher's Roll Call connection
     POST   /api/teach/attendance/key                make this teacher's key (a new Roll Call workspace), if none yet
     GET    /api/teach/attendance/key                show it, to sign in to Roll Call by hand
+    POST   /api/teach/attendance/key/rotate         replace the key: same register under a new key; the old key stops working
+    GET    /api/teach/attendance/registers          admins: every teacher's Roll Call register (never the keys)
+    POST   /api/teach/attendance/registers/{email}/open   admins: one-time link into that register, full access; logged
     POST   /api/teach/attendance/open               {url}: one-time link that opens Roll Call signed in (makes the key first)
     PUT    /api/teach/attendance                    {sync_key}  use an existing Roll Call key instead (checked first)
     DELETE /api/teach/attendance                    disconnect
@@ -82,6 +85,13 @@ CREATE TABLE IF NOT EXISTS attendance_links (
     connected_at  REAL NOT NULL,
     checked_at    REAL,
     issued        INTEGER NOT NULL DEFAULT 0 -- 1 = made by Student IDE, 0 = pasted by the teacher
+);
+
+-- Every time an admin opened another teacher's Roll Call register.
+CREATE TABLE IF NOT EXISTS attendance_admin_opens (
+    at            REAL NOT NULL,
+    admin         TEXT NOT NULL,
+    teacher       TEXT NOT NULL
 );
 
 -- A student's key for Roll Call's read-only My attendance (st_...). Roll Call
@@ -204,6 +214,9 @@ class RollCall:
         status, data = self.transport(method, self.base + path, self.key, body)
         if status == 401:
             raise RollCallError("Roll Call did not accept this sync key", 400)
+        if status == 410:
+            raise RollCallError("This Roll Call key was replaced in Roll Call. Paste the new key under "
+                                "Getting started → I already use Roll Call.", 409)
         if status >= 400:
             msg = data.get("error") if isinstance(data, dict) else None
             raise RollCallError(f"Roll Call said: {msg or f'error {status}'}", 502 if status >= 500 else 400)
@@ -396,6 +409,58 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         if key is None:
             raise HTTPException(404, "no Roll Call key yet: press Open Roll Call to make one")
         return {"sync_key": key, "login_url": rollcall_url() + "/login"}
+
+    @r.post("/attendance/key/rotate")
+    def rotate_key(request: Request) -> dict:
+        """A new key for the same register: Roll Call moves every class, session,
+        subject and student grant across and refuses the old key from then on.
+        Only the new key's hash is sent; the old key is forgotten here."""
+        email = me(request)
+        old = key_of(email)
+        if old is None:
+            raise HTTPException(404, "no Roll Call key yet: press Open Roll Call to make one")
+        new = new_teacher_key()
+        moved = rc(lambda: RollCall(old, rollcall_url(), send_http).call(
+            "POST", "/api/v1/rotate", {"new_workspace": hashlib.sha256(new.encode()).hexdigest()}))
+        now = time.time()
+        with db.connect() as conn:
+            conn.execute("UPDATE attendance_links SET sync_key = ?, issued = 1, checked_at = ? WHERE email = ?",
+                         (new, now, email))
+        return connection(request) | {"moved": (moved or {}).get("moved")}
+
+    # admins: every register ---------------------------------------------------
+
+    def admin_only(request: Request) -> str:
+        t = auth.teacher(request)
+        if not t.admin:
+            raise HTTPException(403, "only admins open other teachers' registers")
+        return t.email or ""
+
+    @r.get("/attendance/registers")
+    def registers(request: Request) -> list[dict]:
+        admin_only(request)
+        with db.connect() as conn:
+            rows = conn.execute("""SELECT l.email, l.issued, l.connected_at,
+                                          (SELECT COUNT(DISTINCT c.lab_id) FROM lab_classes c WHERE c.attached_by = l.email) AS labs,
+                                          (SELECT MAX(at) FROM attendance_admin_opens o WHERE o.teacher = l.email) AS last_opened
+                                   FROM attendance_links l ORDER BY l.email""").fetchall()
+        return [dict(r) | {"issued": bool(r["issued"])} for r in rows]
+
+    @r.post("/attendance/registers/{email}/open")
+    def open_register(email: str, request: Request) -> dict:
+        """Full access to a teacher's register for an admin (Rohan, 2026-11-03).
+        Roll Call shows whose register it is; every open is logged here."""
+        admin = admin_only(request)
+        email = "" if email == "-" else email  # "-" = the dev-mode / admin-token register
+        key = key_of(email)
+        if key is None:
+            raise HTTPException(404, "that teacher has not set up Roll Call")
+        label = (f"{email}'s register" if email else "the shared register") + \
+            (f", opened by admin {admin}" if admin else ", opened with the admin token")
+        out = rc(lambda: RollCall(key, rollcall_url(), send_http).call("POST", "/api/v1/login-codes", {"label": label}))
+        with db.connect() as conn:
+            conn.execute("INSERT INTO attendance_admin_opens(at, admin, teacher) VALUES (?,?,?)", (time.time(), admin, email))
+        return {"url": login_link(out)}
 
     @r.post("/attendance/open")
     def open_rollcall(request: Request) -> dict:

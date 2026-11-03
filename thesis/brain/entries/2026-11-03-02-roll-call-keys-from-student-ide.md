@@ -60,3 +60,23 @@ workspace, is the smallest change that keeps Roll Call account-free.
 - Teachers who already used Roll Call before must choose "I already use Roll
   Call", or their first Open Roll Call starts an empty register (Roll Call then
   offers to move the device's records in).
+
+## Follow-up the same day: new keys and admin access
+
+- **Make a new key** (Rohan: "invalidate their old key and create new one
+  without affecting their old data"): Roll Call `POST /api/v1/rotate
+  {new_workspace}` moves classes, sessions, subjects and student grants to the
+  new key's workspace id in one SQL statement and records the old id in
+  `retired_keys`; `/api/sync` and `/api/v1` answer the old key with 410, and
+  Roll Call shows "Key replaced, sign in again". Student IDE sends only the new
+  key's hash and stores the new key.
+- **Admins** (Rohan asked how Roll Call knows he is admin; it doesn't, Student
+  IDE does). Decision card: Rohan chose **full access to all registers** over a
+  read-only view. Student IDE lists every teacher's register for admins and
+  opens one with a labelled one-time link; Roll Call shows an "Admin access"
+  banner, and `attendance_admin_opens` logs who opened whose register when.
+- Checks: 336 backend tests (rotation keeps the register and keeps sending;
+  a key replaced elsewhere reports it; admins only, logged). e2e: new key ->
+  old key 410, same 2 sessions and 2 classes under the new key, student's /me
+  unchanged, Roll Call tab with the old key shows the banner; admin opens the
+  register with the banner. Screenshots 18-21.

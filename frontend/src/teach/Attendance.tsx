@@ -4,7 +4,7 @@ import {
   AlertTriangle, ArrowLeft, Check, ClipboardCheck, Copy, ExternalLink, KeyRound, Link2, Plus, RefreshCw, Send, Settings2, Unplug, UsersRound, X,
 } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Field, Input, Spinner, cn, item, stagger } from "../ui";
-import { AuthError, get, send } from "../review/api";
+import { AuthError, get, send, token } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { href } from "../routes";
 import type { LabDetail } from "./api";
@@ -52,6 +52,7 @@ export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
   const [pasting, setPasting] = useState(false);
   const [shown, setShown] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [rotated, setRotated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fail = useFail(onAuthLost, setError);
@@ -89,8 +90,21 @@ export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
                 setCopied(true); setTimeout(() => setCopied(false), 1500);
               }}>{copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}</Button>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="secondary" disabled={busy} onClick={async () => {
+                if (!confirm("Make a new key? Your classes, sessions and subjects stay exactly as they are and move to the new key. The old key stops working everywhere, so other devices signed in with it must sign in again (Open Roll Call).")) return;
+                setBusy(true); setError("");
+                try {
+                  update(await send<Connection>("POST", "/api/teach/attendance/key/rotate"));
+                  setShown((await get<{ sync_key: string }>("/api/teach/attendance/key")).sync_key);
+                  setRotated(true);
+                } catch (e) { fail(e); }
+                setBusy(false);
+              }}>{busy ? <Spinner /> : <RefreshCw className="size-3.5" />} Make a new key</Button>
+              {rotated && <span className="text-xs text-success" role="status">New key ready. Your records moved with it; the old key no longer works.</span>}
+            </div>
             <p className="text-xs text-muted">
-              Your key is your whole register, so keep it private, like a password. To sign in by hand on another device, paste it at{" "}
+              Your key is your whole register, so keep it private, like a password. If it may have leaked, make a new one: nothing is lost. To sign in by hand on another device, paste it at{" "}
               <a href={`${conn.url}/login`} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">{conn.url.replace(/^https?:\/\//, "")}/login</a>.
               Students never see it: they get their own key, which shows only their marks.
             </p>
@@ -142,6 +156,53 @@ export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
       )}
       {error && <p className="text-xs text-danger" role="alert">{error}</p>}
     </div>
+  );
+}
+
+interface Register { email: string; issued: boolean; connected_at: number; labs: number; last_opened: number | null }
+
+/**
+ * Admins: every teacher's Roll Call register, each opened with full access in a
+ * new tab (Roll Call shows whose it is; Student IDE logs each open). Renders
+ * nothing for teachers.
+ */
+export function AllRegisters({ onAuthLost }: { onAuthLost: () => void }) {
+  const [rows, setRows] = useState<Register[] | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const fail = useFail(onAuthLost, setError);
+  useEffect(() => {
+    fetch("/api/teach/attendance/registers", { headers: { "X-Admin-Token": token.get() } })
+      .then(async (r) => (r.ok ? setRows(await r.json()) : setRows(null)), () => setRows(null));
+  }, []);
+  if (!rows) return null;
+  return (
+    <Card className="p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><ClipboardCheck className="size-4 text-accent" /> Teachers' Roll Call registers</h2>
+      <p className="mt-1 text-xs text-muted">
+        As an admin you can open any teacher's register with full access: Roll Call shows a banner saying whose it is, and each open is logged here.
+      </p>
+      {rows.length === 0 ? <p className="mt-3 text-[13px] text-muted">No teacher has set up Roll Call yet.</p> : (
+        <div className="mt-3 grid gap-1.5">
+          {rows.map((r) => (
+            <div key={r.email} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-surface-2/60 px-3 py-2 text-[13px]">
+              <span className="min-w-0 flex-1 truncate font-medium text-text">{r.email || "Shared (admin token)"}</span>
+              <span className="text-xs text-faint">{r.labs} lab{r.labs === 1 ? "" : "s"} with class groups</span>
+              <span className="text-xs text-faint">{r.last_opened ? `opened by an admin ${new Date(r.last_opened * 1000).toLocaleDateString()}` : "never opened by an admin"}</span>
+              <Button size="sm" variant="secondary" disabled={busy === r.email} aria-label={`Open register of ${r.email}`} onClick={async () => {
+                setBusy(r.email); setError("");
+                try {
+                  await openRollCall(() => send<{ url: string }>("POST", `/api/teach/attendance/registers/${encodeURIComponent(r.email || "-")}/open`));
+                  setRows((xs) => xs && xs.map((x) => (x.email === r.email ? { ...x, last_opened: Date.now() / 1000 } : x)));
+                } catch (e) { fail(e); }
+                setBusy(null);
+              }}>{busy === r.email ? <Spinner /> : <ExternalLink className="size-3.5" />} Open register</Button>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-2 text-xs text-danger" role="alert">{error}</p>}
+    </Card>
   );
 }
 

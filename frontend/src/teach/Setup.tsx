@@ -6,7 +6,7 @@ import type { Me } from "../auth";
 import { AuthError, get } from "../review/api";
 import { href } from "../routes";
 import type { LabRow } from "./api";
-import { ConnectRollCall } from "./Attendance";
+import { AllRegisters, ConnectRollCall } from "./Attendance";
 import type { Connection, LabAttendanceSummary } from "./attendanceApi";
 
 /**
@@ -115,6 +115,7 @@ export function Setup({ me, onAuthLost }: { me: Me | null; onAuthLost: () => voi
           </Card>
         </motion.aside>
       </div>
+      <motion.div variants={item} className="mt-6"><AllRegisters onAuthLost={onAuthLost} /></motion.div>
     </motion.div>
   );
 }

@@ -953,7 +953,12 @@ student's marks alone; Roll Call stores only its hash, and a student key opens
 a read-only page of the student's own attendance and never a workspace
 (Figure~\ref{fig:my-attendance}). Because keys live in the browser, Roll Call
 gained a sign-out for shared lab computers and asks before mixing one person's
-local records into another's account.
+local records into another's account. A teacher can replace a key that may
+have leaked: the register moves to the new key in one statement and the old
+key is refused from then on, so no stale device quietly opens an empty
+register. Admins, who are known only to Student IDE, can open any teacher's
+register with full access; Roll Call names whose register it is, and every
+such opening is logged.
 
 \begin{figure}[ht]
   \centering

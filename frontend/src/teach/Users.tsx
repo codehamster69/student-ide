@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { AllRegisters } from "./Attendance";
 import { motion } from "motion/react";
 import { Search, ShieldCheck, Undo2, UserPlus } from "lucide-react";
 import { Badge, Button, Card, Field, Input, Spinner, cn, item, stagger } from "../ui";
@@ -126,6 +127,7 @@ export function Users({ me, onAuthLost }: { me: string; onAuthLost: () => void }
           ))}
         </Card>
       )}
+      <motion.div variants={item} className="mt-6"><AllRegisters onAuthLost={onAuthLost} /></motion.div>
     </motion.div>
   );
 }
