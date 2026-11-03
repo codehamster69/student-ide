@@ -5,6 +5,7 @@ import { Badge, Button, Card, Dialog, Input, LiveDot, Spinner, cn } from "../ui"
 import { AuthError, get, send } from "../review/api";
 import { BOARD_MODES, type BoardMode, type CompState, type TeacherComp } from "./api";
 import { Countdown } from "./Leaderboard";
+import { href } from "../routes";
 
 const STATE: Record<CompState, { label: string; tone: "neutral" | "accent" | "success" | "warn" }> = {
   draft: { label: "Draft", tone: "neutral" },
@@ -76,7 +77,7 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
         </div>
       )}
       {started && (
-        <a href={`#/teach/c/${labId}`} className="relative mt-3 grid gap-1 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-surface-2"
+        <a href={href.board(labId)} className="relative mt-3 grid gap-1 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-surface-2"
           title="Open the full leaderboard">
           {c.handing_in && <p className="flex items-center gap-2 text-xs text-muted"><Spinner className="size-3" /> Grading the code students had open…</p>}
           {c.board.slice(0, 5).map((r) => (
@@ -148,12 +149,12 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
         {c.state === "live" && (
           <Button onClick={() => setConfirmEnd(true)} disabled={busy}><Square className="size-3.5 fill-current" /> End now</Button>
         )}
-        <a href={`#/teach/c/${labId}`}
+        <a href={href.board(labId)}
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
           <MonitorPlay className="size-4" /> Open leaderboard
         </a>
         {started && (
-          <a href={`#/teach/similar/${labId}`} title="Pairs of submissions that look alike: something to talk about, never a score"
+          <a href={href.similar(labId)} title="Pairs of submissions that look alike: something to talk about, never a score"
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
             <ScanSearch className="size-4" /> Similar submissions
           </a>

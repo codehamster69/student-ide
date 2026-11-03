@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
-import { Activity, ListChecks, Eye, LogOut, MessagesSquare, Radio, UsersRound } from "lucide-react";
+import { Activity, BookOpen, ListChecks, Eye, LogOut, MessagesSquare, Radio, Sparkles, UsersRound } from "lucide-react";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig, type Me } from "../auth";
 import { Button, Logo, cn, page, spring } from "../ui";
 import { Labs } from "../teach/Labs";
 import { LabEditor } from "../teach/LabEditor";
 import { Users } from "../teach/Users";
+import { Subject, Subjects } from "../teach/Subjects";
+import { Setup } from "../teach/Setup";
+import { OpenRollCall } from "../teach/Attendance";
 import { LiveBoard } from "../compete/LiveBoard";
 import { Similar } from "../compete/Similar";
 import { LiveClass, LiveLabs } from "../live/LiveClass";
@@ -15,50 +18,25 @@ import { Gate } from "./Gate";
 import { LabSessions } from "./LabSessions";
 import { Overview } from "./Overview";
 import { SessionView } from "./SessionView";
+import { areaOf, canonicalize, href, parseRoute, routeHash, type Route } from "../routes";
 
-type Route =
-  | { name: "overview" } | { name: "review-lab"; id: string; day?: string } | { name: "review-all" } | { name: "session"; id: string }
-  | { name: "labs" } | { name: "lab"; id: string } | { name: "board"; id: string } | { name: "similar"; id: string } | { name: "people" }
-  | { name: "live" } | { name: "live-lab"; id: string } | { name: "live-session"; id: string };
-
-// Routes: #/review (lab sessions), #/review/l/<lab id>[/<day>] (one lab session), #/review/all, #/review/s/<session id>, #/teach (labs) and
-// #/teach/l/<lab id>, #/teach/c/<lab id> (competition live board), #/teach/similar/<lab id> (similar submissions), #/teach/people (admins),
-// #/live (open labs), #/live/l/<lab id> (class view), #/live/s/<session id> (one student's editor).
-// One teacher area, one sign-in.
-function route(): Route {
-  if (location.hash.startsWith("#/teach/people")) return { name: "people" };
-  const ll = location.hash.match(/^#\/live\/l\/([A-Za-z0-9_]+)/);
-  if (ll) return { name: "live-lab", id: ll[1] };
-  const ls = location.hash.match(/^#\/live\/s\/([0-9a-f]+)/);
-  if (ls) return { name: "live-session", id: ls[1] };
-  if (location.hash.startsWith("#/live")) return { name: "live" };
-  const s = location.hash.match(/^#\/review\/s\/([0-9a-f]+)/);
-  if (s) return { name: "session", id: s[1] };
-  const rl = location.hash.match(/^#\/review\/l\/([A-Za-z0-9_]+)(?:\/(\d{4}-\d{2}-\d{2}))?/);
-  if (rl) return { name: "review-lab", id: rl[1], day: rl[2] };
-  if (location.hash.startsWith("#/review/all")) return { name: "review-all" };
-  const l = location.hash.match(/^#\/teach\/l\/([A-Za-z0-9_]+)/);
-  if (l) return { name: "lab", id: l[1] };
-  const c = location.hash.match(/^#\/teach\/c\/([A-Za-z0-9_]+)/);
-  if (c) return { name: "board", id: c[1] };
-  const sim = location.hash.match(/^#\/teach\/similar\/([A-Za-z0-9_]+)/);
-  if (sim) return { name: "similar", id: sim[1] };
-  return location.hash.startsWith("#/teach") ? { name: "labs" } : { name: "overview" };
-}
-
+// One teacher area, one sign-in. Every page and its URL is listed in ../routes.ts.
 const TABS = [
-  { href: "#/teach", label: "Labs", icon: ListChecks, match: (r: Route) => r.name === "labs" || r.name === "lab" || r.name === "board" || r.name === "similar" },
-  { href: "#/live", label: "Live", icon: Radio, match: (r: Route) => r.name.startsWith("live") },
-  { href: "#/review", label: "Review", icon: Activity, match: (r: Route) => r.name === "overview" || r.name.startsWith("review") || r.name === "session" },
+  { href: href.labs, label: "Labs", icon: ListChecks, match: (r: Route) => areaOf(r) === "teach" && !["subjects", "subject", "setup", "people"].includes(r.name) },
+  { href: href.subjects, label: "Subjects", icon: BookOpen, match: (r: Route) => r.name === "subjects" || r.name === "subject" },
+  { href: href.live, label: "Live", icon: Radio, match: (r: Route) => areaOf(r) === "live" },
+  { href: href.review, label: "Review", icon: Activity, match: (r: Route) => areaOf(r) === "review" },
+  // Roll Call, class groups, keys (and for admins every teacher's register)
+  { href: href.setup, label: "Setup", icon: Sparkles, match: (r: Route) => r.name === "setup" },
 ];
-const ADMIN_TAB = { href: "#/teach/people", label: "People", icon: UsersRound, match: (r: Route) => r.name === "people" };
+const ADMIN_TAB = { href: href.people, label: "People", icon: UsersRound, match: (r: Route) => r.name === "people" };
 
 export function ReviewApp() {
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [student, setStudent] = useState<Me | null>(null); // signed in, but with a student account
   const [authed, setAuthed] = useState(false);
-  const [r, setR] = useState(route);
+  const [r, setR] = useState(() => { canonicalize(); return parseRoute(); });
 
   // Google mode: a teacher or admin session cookie; dev mode: the token in this tab.
   useEffect(() => {
@@ -72,13 +50,13 @@ export function ReviewApp() {
   }, []);
 
   useEffect(() => {
-    const on = () => setR(route());
+    const on = () => { canonicalize(); setR(parseRoute()); };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
 
-  const teaching = r.name === "labs" || r.name === "lab" || r.name === "board" || r.name === "similar" || r.name === "people";
-  const watching = r.name.startsWith("live");
+  const teaching = areaOf(r) === "teach";
+  const watching = areaOf(r) === "live";
   const tabs = me?.role === "admin" ? [...TABS, ADMIN_TAB] : TABS;
   useEffect(() => { document.title = `${watching ? "Live" : teaching ? "Labs" : "Review"} · Student IDE`; }, [teaching, watching]);
 
@@ -88,7 +66,7 @@ export function ReviewApp() {
     setMe(null);
     setAuthed(false);
   };
-  const key = !cfg ? "loading" : !authed ? "gate" : "id" in r ? `${r.name}-${r.id}-${"day" in r ? r.day : ""}` : r.name;
+  const key = !cfg ? "loading" : !authed ? "gate" : r.name === "lab" ? `lab-${r.id}` : routeHash(r);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -97,7 +75,7 @@ export function ReviewApp() {
         <header className="sticky top-0 z-30 border-b border-border/70 bg-bg/80 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-5">
             <div className="flex items-center gap-5">
-              <a href={teaching ? "#/teach" : "#/review"} className="rounded-lg"><Logo subtitle={watching ? "Live class view" : teaching ? "Labs and questions" : "Review timeline"} /></a>
+              <a href={teaching ? href.labs : href.review} className="rounded-lg"><Logo subtitle={watching ? "Live class view" : teaching ? "Labs and questions" : "Review timeline"} /></a>
               {authed && (
                 <LayoutGroup id="teacher-nav">
                   <nav className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm">
@@ -118,8 +96,9 @@ export function ReviewApp() {
               A highlighted moment starts a conversation, never a penalty.
             </div>
             <div className="flex min-w-24 items-center justify-end gap-1">
+              {authed && <HeaderRollCall />}
               {authed && (
-                <a href="#/student" title="Open the student side under your own account; nothing you do there is study data"
+                <a href={href.student} title="Open the student side under your own account; nothing you do there is study data"
                   className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text">
                   <Eye className="size-3.5" />View as student
                 </a>
@@ -153,7 +132,13 @@ export function ReviewApp() {
               ) : r.name === "board" ? (
                 <LiveBoard id={r.id} onAuthLost={signOut} />
               ) : r.name === "lab" ? (
-                <LabEditor id={r.id} onAuthLost={signOut} />
+                <LabEditor id={r.id} view={r.view} onAuthLost={signOut} />
+              ) : r.name === "subjects" ? (
+                <Subjects onAuthLost={signOut} />
+              ) : r.name === "subject" ? (
+                <Subject slug={r.slug} onAuthLost={signOut} />
+              ) : r.name === "setup" ? (
+                <Setup me={me} onAuthLost={signOut} />
               ) : r.name === "labs" ? (
                 <Labs onAuthLost={signOut} />
               ) : r.name === "review-lab" ? (
@@ -168,5 +153,14 @@ export function ReviewApp() {
         </main>
       </div>
     </MotionConfig>
+  );
+}
+
+/** Header shortcut to the teacher's Roll Call, signed in (makes their key on first use). */
+function HeaderRollCall() {
+  return (
+    <span className="hidden md:inline-flex" title="Your attendance register, signed in">
+      <OpenRollCall onAuthLost={() => location.reload()} variant="ghost" label="Roll Call" className="text-muted" />
+    </span>
   );
 }

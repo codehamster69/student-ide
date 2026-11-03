@@ -16,11 +16,17 @@ import {
 } from "./api";
 import { LanguagePills, LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
 import { SourcePicker } from "./SourcePicker";
+import { href } from "../routes";
+import { AttendancePage, ClassGroupsCard, PerformingDialog, SittingBar } from "./Attendance";
+import type { LabClasses, RollCallSubject } from "./attendanceApi";
+
+type SentDay = { day?: string; error?: string; results?: { label: string; present: number; total: number; error: string | null }[] };
 
 const BLANK: QuestionFields = { title: "", prompt: "", starter_code: "", sample_input: "", tests: [] };
 
-/** #/teach/l/<id>: edit one lab's questions, roster and status, and watch progress. */
-export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
+/** #/teach/labs/<id>: edit one lab's questions, roster and status, and watch progress.
+ * #/teach/labs/<id>/attendance (view "attendance"): its attendance for Roll Call. */
+export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attendance"; onAuthLost: () => void }) {
   const [lab, setLab] = useState<LabDetail | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<string | null>(null); // question id, "new", or "pick" (from a platform)
@@ -47,6 +53,23 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
     }
   }, [fail]);
 
+  // sittings: which attached class groups are performing while the lab is open
+  const [sittings, setSittings] = useState<LabClasses | null>(null);
+  const [picking, setPicking] = useState<"open" | "switch" | null>(null);
+  const loadSittings = useCallback(() => get<LabClasses>(`/api/teach/labs/${lab?.id}/classes`).then(setSittings, () => setSittings(null)), [lab?.id]);
+  useEffect(() => { if (lab?.id) void loadSittings(); }, [lab?.id, lab?.status, loadSittings]);
+  const patchStatus = async (body: { status?: LabStatus; performing?: string[] }) => {
+    if (!lab) return;
+    const next = await write("PATCH", `/api/teach/labs/${lab.id}`, body) as (LabDetail & { attendance_sent?: SentDay[] }) | null;
+    const sent = next?.attendance_sent ?? [];
+    const results = sent.flatMap((d) => d.results ?? []).filter((x) => !(x as { skipped?: boolean }).skipped);
+    const failed = results.filter((x) => x.error).length + sent.filter((d) => d.error).length;
+    const what = body.status === "closed" ? "Lab closed" : "Sitting ended";
+    if (sent.length) setNotes([failed ? `${what}, but attendance for ${failed} class group${failed === 1 ? "" : "s"} could not be sent to Roll Call. Open Attendance to retry.`
+      : `${what}. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`]);
+    void loadSittings();
+  };
+
   if (!lab) {
     return (
       <div className="mx-auto max-w-[1240px] px-5 pt-8">
@@ -54,6 +77,8 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
       </div>
     );
   }
+
+  if (view === "attendance") return <AttendancePage lab={lab} onAuthLost={onAuthLost} />;
 
   const move = (i: number, d: -1 | 1) => {
     const ids = lab.questions.map((q) => q.id);
@@ -63,7 +88,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
 
   return (
     <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1240px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href="#/teach" className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
+      <motion.a variants={item} href={href.labs} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
         <ArrowLeft className="size-4" /> All labs
       </motion.a>
 
@@ -71,19 +96,35 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
         <LabHeading lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
         <div className="flex items-center gap-2">
           {lab.kind === "competition" && (
-            <Button size="sm" onClick={() => { location.hash = `#/teach/c/${lab.id}`; }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
+            <Button size="sm" onClick={() => { location.hash = href.board(lab.id); }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
           )}
           {lab.status === "open" && (
-            <Button size="sm" onClick={() => { location.hash = `#/live/l/${lab.id}`; }}><Radio className="size-3.5 text-success" /> Watch live</Button>
+            <Button size="sm" onClick={() => { location.hash = href.liveLab(lab.id); }}><Radio className="size-3.5 text-success" /> Watch live</Button>
           )}
           <StatusSwitch value={lab.status} disabled={!lab.questions.length}
-            onChange={(status) => void write("PATCH", `/api/teach/labs/${lab.id}`, { status })} />
+            onChange={async (status) => {
+              if (status === "open") {
+                // a lab with class groups asks which group is performing first
+                const info = await get<LabClasses>(`/api/teach/labs/${lab.id}/classes`).catch(() => null);
+                setSittings(info);
+                if (info && info.classes.length) { setPicking("open"); return; }
+              }
+              await patchStatus({ status });
+            }} />
           <Button variant="ghost" size="icon" aria-label="Delete lab" onClick={() => setConfirmDelete(true)}
             title={lab.n_sessions ? "Students have recorded work here; close the lab instead" : "Delete lab"} disabled={lab.n_sessions > 0}>
             <Trash2 className="size-4" />
           </Button>
         </div>
       </motion.div>
+
+      {lab.status === "open" && <SittingBar lab={lab} info={sittings} onSwitch={() => setPicking("switch")} />}
+      <PerformingDialog open={!!picking} switching={picking === "switch"} groups={sittings?.classes ?? []}
+        current={sittings?.current?.class_ids} onClose={() => setPicking(null)}
+        onConfirm={async (ids) => {
+          await patchStatus(picking === "switch" ? { performing: ids } : { status: "open", performing: ids });
+          setPicking(null);
+        }} />
 
       <AnimatePresence>
         {error && (
@@ -182,6 +223,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
               onChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
           )}
           <Settings lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
+          <ClassGroupsCard lab={lab} onAuthLost={onAuthLost} onRosterChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
           <Teachers lab={lab} onSave={(body) => write("PUT", `/api/teach/labs/${lab.id}/teachers`, body)} />
           <Assign lab={lab} onSave={(student_ids, everyone) => write("PUT", `/api/teach/labs/${lab.id}/roster`, { student_ids, everyone })} onAuthLost={onAuthLost} />
           <Progress lab={lab} />
@@ -192,7 +234,7 @@ export function LabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => vo
         title="Delete this lab?" description="Its questions and roster go too. No student has recorded anything here yet, so nothing else is lost."
         actions={<>
           <Button onClick={() => setConfirmDelete(false)} data-autofocus>Keep</Button>
-          <Button variant="danger" onClick={async () => { if (await write("DELETE", `/api/teach/labs/${lab.id}`)) location.hash = "#/teach"; }}>Delete</Button>
+          <Button variant="danger" onClick={async () => { if (await write("DELETE", `/api/teach/labs/${lab.id}`)) location.hash = href.labs; }}>Delete</Button>
         </>} />
     </motion.div>
   );
@@ -413,14 +455,24 @@ function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, o
 /** Subject and programming language for the whole lab. */
 function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: string; language?: LabLanguage }) => Promise<unknown> }) {
   const [subject, setSubject] = useState(lab.subject);
+  const [known, setKnown] = useState<string[]>([]);
   useEffect(() => setSubject(lab.subject), [lab.subject]);
+  // suggest Roll Call's subjects (when connected) and the subjects of the teacher's other labs
+  useEffect(() => {
+    const names = new Set<string>();
+    void Promise.allSettled([
+      get<RollCallSubject[]>("/api/teach/attendance/subjects").then((xs) => xs.forEach((x) => names.add(x.name))),
+      get<{ subject: string }[]>("/api/teach/labs").then((ls) => ls.forEach((l) => l.subject && names.add(l.subject))),
+    ]).then(() => setKnown([...names].sort()));
+  }, []);
   return (
     <Card className="p-5">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><BookOpen className="size-4 text-accent" /> Session settings</h2>
       <div className="mt-4 grid gap-3">
         <Field label="Subject">
           <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} placeholder="Data Structures" className="h-9 text-[13px]"
-            onBlur={() => subject.trim() !== lab.subject && void onSave({ subject })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
+            list="lab-subjects" onBlur={() => subject.trim() !== lab.subject && void onSave({ subject })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
+          <datalist id="lab-subjects">{known.map((n) => <option key={n} value={n} />)}</datalist>
         </Field>
         <Field label="Programming language" hint={`${lab.language === "any"
           ? `${ANY_LANGUAGE.label}: each student picks C, C++, Java, JavaScript or Python per question, and is graded in it.`
@@ -575,7 +627,7 @@ function Progress({ lab }: { lab: LabDetail }) {
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
         <h2 className="text-sm font-semibold text-text">Progress</h2>
-        <a href={`#/review/l/${lab.id}`} className="text-xs font-medium text-accent hover:underline">Open review timeline</a>
+        <a href={href.reviewLab(lab.id)} className="text-xs font-medium text-accent hover:underline">Open review timeline</a>
       </div>
       {students.length === 0 || lab.questions.length === 0 ? (
         <p className="px-5 pb-5 text-xs text-muted">Once students start, you'll see who has started and finished each question.</p>

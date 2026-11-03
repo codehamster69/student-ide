@@ -9,6 +9,7 @@ import { LANGUAGES } from "../teach/api";
 import { STATE, ago, leaveView, type LiveEditor as LiveEditorData } from "./api";
 import { ActivityBars } from "./LiveClass";
 import { QuestionText } from "../questionText";
+import { href } from "../routes";
 
 const POLL_MS = 2000;
 const MARK_MS = 10_000;
@@ -67,7 +68,7 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
   const lang = LANGUAGES[s.language] ?? LANGUAGES.python;
   return (
     <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-12 pt-6">
-      <motion.a variants={item} href={s.lab_id ? `#/live/l/${s.lab_id}` : "#/live"}
+      <motion.a variants={item} href={s.lab_id ? href.liveLab(s.lab_id) : href.live}
         className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
         <ArrowLeft className="size-4" /> {s.lab_title ?? "Live"}
       </motion.a>
@@ -83,7 +84,7 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={st.tone}><LiveDot tone={st.tone} live={st.live} />{st.label}</Badge>
-          <a href={`#/review/s/${s.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text shadow-sm hover:bg-surface-2">
+          <a href={href.session(s.id)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text shadow-sm hover:bg-surface-2">
             <Activity className="size-3.5" /> Timeline
           </a>
         </div>

@@ -72,7 +72,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import compete, grading, learn, live as live_mod, retention, runner, teach
+from . import attendance, compete, grading, learn, live as live_mod, retention, runner, teach
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .providers import PROVIDERS, ProviderError
@@ -146,8 +146,10 @@ def latest_code(db: Database, student_id: str, question_id: str, language: str |
 
 
 def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True,
-               auth_config: Config | None = None, verify_google=None, live_mode: str | None = None) -> FastAPI:
-    """`auth_config` / `verify_google` replace the environment and Google's token check in tests."""
+               auth_config: Config | None = None, verify_google=None, live_mode: str | None = None,
+               attendance_transport=None) -> FastAPI:
+    """`auth_config` / `verify_google` replace the environment and Google's token check in tests,
+    `attendance_transport` the HTTP calls to Roll Call (see attendance.Transport)."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
     cfg = auth_config or Config.from_env(admin_token)
     auth = Auth(db, cfg, verify_google)
@@ -499,7 +501,10 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return replay_data(db, session_id)
 
     app.include_router(learn.router(db, auth, _student_id))
-    app.include_router(teach.router(db, require_admin, auth))
+    attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
+    app.include_router(attendance_router)
+    app.include_router(attendance_router.student_router)
+    app.include_router(teach.router(db, require_admin, auth, attendance_router.on_lab_closed, attendance_router.sittings))
     app.include_router(compete.router(db, require_admin, auth))
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))
 

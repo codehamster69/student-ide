@@ -5,6 +5,7 @@ import { Badge, Card, cn, item, stagger, spring } from "../ui";
 import { AuthError, get, type LabSessionRow, type SessionSummary, type StudentRow } from "./api";
 import { ChannelTag, CountUp, Skeleton, Spark } from "./bits";
 import { clock, dayKey, dayTime, span, TASKS } from "./format";
+import { href } from "../routes";
 
 type Filter = "all" | "moments" | "assessed";
 
@@ -52,7 +53,7 @@ export function Overview({ labId, day, onAuthLost }: { labId?: string; day?: str
 
   return (
     <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-20 pt-8">
-      <motion.a variants={item} href="#/review" className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
+      <motion.a variants={item} href={href.review} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
         <ArrowLeft className="size-4" /> All lab sessions
       </motion.a>
       <motion.div variants={item} className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -158,7 +159,7 @@ function Stat({ label, value, hint, tone, loading }: { label: string; value: num
 
 function Row({ r }: { r: SessionSummary }) {
   return (
-    <a href={`#/review/s/${r.id}`}
+    <a href={href.session(r.id)}
       className="group grid items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-2/70 lg:grid-cols-[1.1fr_1.2fr_0.7fr_11rem_1.6fr_1.5rem]">
       <span className="flex items-center gap-2">
         <span className="grid size-8 place-items-center rounded-full bg-surface-3 font-mono text-[11px] font-semibold text-muted">{r.student_id.slice(-2)}</span>

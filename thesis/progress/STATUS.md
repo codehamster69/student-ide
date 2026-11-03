@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-10-27**. Live page: <https://claude.ai/artifact/7nwKBLuR3yH3HDyJ3588Bd>
+Last updated: **2026-11-03**. Live page: <https://claude.ai/artifact/7nwKBLuR3yH3HDyJ3588Bd>
 (private; its source is [`phase-diagram.html`](phase-diagram.html)). The same picture for the
 thesis is the TikZ figure [`latex/flowcharts/phase-progress.tex`](../latex/flowcharts/phase-progress.tex),
 shown in appendix E.
@@ -60,6 +60,7 @@ flowchart LR
 | 3 Dashboard | Any-language competitions (each student picks the language per question) and a staff-only similar-submissions check (winnowing + tiling, side by side) | ✅ | #24 |
 | 3 Dashboard | Always-open learning lab: C and Python lessons with runnable examples and checked exercises; practice recorded but kept out of baselines, detector and review | ✅ | #30 |
 | 3 Dashboard | Learning lab filled out to a full syllabus (82 lessons: C, C++, Python beginner to advanced) and "View as student" for teachers and admins (previews never study data) | ✅ | #31 |
+| 3 Dashboard | Attendance through Roll Call: labs attach class groups; at lab end students who effectively took part (active minutes + typed characters) are marked present in their own group; Subjects view, Getting started, one URL scheme | 🟧 | #33 |
 | 4 Evaluation | Harness: student-level dev/test split, frozen config, test ledger | ✅ | #9 |
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |

@@ -99,8 +99,8 @@ the teacher screens show the message without signing out.
 
 The Review tab opens on **Lab sessions**: one row per lab per day (a class
 meeting) with its time, students and how many are worth a conversation; a row
-opens that class's sessions student by student (`#/review/l/<lab>/<day>`).
-"Every session in one list" (`#/review/all`) keeps the flat list.
+opens that class's sessions student by student (`#/review/labs/<lab>/<day>`).
+"Every session in one list" (`#/review/sessions`) keeps the flat list.
 
 ## API (admin token)
 

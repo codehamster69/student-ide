@@ -5,7 +5,7 @@ area (`/#/live`), or **Watch live** on an open lab's settings page.
 
 ## What a teacher sees
 
-**Class view** (`#/live/l/<lab id>`), refreshed every 3 s, one card per
+**Class view** (`#/live/labs/<lab id>`), refreshed every 3 s, one card per
 student on the roster (or everyone who started, for an "everyone" lab):
 
 | Field | Meaning |
@@ -20,7 +20,7 @@ student on the roster (or everyone who started, for an "everyone" lab):
 
 No code is shown in the class view.
 
-**Editor view** (`#/live/s/<session id>`, refreshed every 2 s): a read-only
+**Editor view** (`#/live/sessions/<session id>`, refreshed every 2 s): a read-only
 copy of the student's editor with their caret, lines changed in the last
 few seconds tinted, recent runs with output, last test check and the
 prompt. The server rebuilds the code from the edit events the recorder

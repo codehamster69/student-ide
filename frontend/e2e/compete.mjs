@@ -144,7 +144,7 @@ await s.waitForSelector("text=Leaderboard");
 await submitAs(CLASS[5], 0, ADD);
 
 // --- teacher's live board ------------------------------------------------------
-await t.goto(`${BASE}/#/teach/c/${labId}`);
+await t.goto(`${BASE}/#/teach/labs/${labId}/board`);
 await t.waitForSelector("text=Rohan");
 await shot(t, "08-live-board", true);
 

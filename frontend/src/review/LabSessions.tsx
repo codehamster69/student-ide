@@ -5,6 +5,7 @@ import { Badge, Card, item, stagger } from "../ui";
 import { AuthError, get, type LabSessionRow, type SessionSummary } from "./api";
 import { Skeleton } from "./bits";
 import { dayKey, span } from "./format";
+import { href } from "../routes";
 
 interface Sitting {
   lab: LabSessionRow;
@@ -64,7 +65,7 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
             their own baseline weeks, never with the class.
           </p>
         </div>
-        <a href="#/review/all" className="text-sm font-medium text-accent hover:underline">Every session in one list</a>
+        <a href={href.reviewAll} className="text-sm font-medium text-accent hover:underline">Every session in one list</a>
       </motion.div>
 
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
@@ -81,7 +82,7 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
         <motion.ul variants={stagger(0.05, 0.1)} className="grid gap-3">
           {sittings.map(({ lab: l, day, start, end, students, sessions, assessed, talkTo }) => (
             <motion.li key={`${l.id}-${day}`} variants={item}>
-              <a href={`#/review/l/${l.id}/${day}`}
+              <a href={href.reviewLab(l.id, day)}
                 className="group grid items-center gap-x-6 gap-y-2 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md md:grid-cols-[1fr_auto_auto_1.25rem]">
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">

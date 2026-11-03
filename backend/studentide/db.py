@@ -107,6 +107,31 @@ CREATE TABLE IF NOT EXISTS lab_students (
     PRIMARY KEY (lab_id, student_id)
 ) WITHOUT ROWID;
 
+-- Roll Call class groups attached to a lab, with a copy of their student ids.
+CREATE TABLE IF NOT EXISTS lab_classes (
+    lab_id        TEXT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    class_id      TEXT NOT NULL,             -- Roll Call class uuid
+    label         TEXT NOT NULL,             -- "CSE · A · G1"
+    students_json TEXT NOT NULL,             -- registration numbers on its roster, upper-case
+    attached_by   TEXT NOT NULL,             -- whose Roll Call holds the class (sends go through their key)
+    attached_at   REAL NOT NULL,
+    PRIMARY KEY (lab_id, class_id)
+) WITHOUT ROWID;
+
+-- A sitting: one opening of a lab for the class groups performing in it
+-- (attendance.py). class_ids '[]' = every attached group / the whole roster.
+-- While a sitting with chosen groups is open, students of the lab's other
+-- groups can't work in it; closing it sends attendance for its groups only.
+CREATE TABLE IF NOT EXISTS lab_runs (
+    id            TEXT PRIMARY KEY,
+    lab_id        TEXT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    class_ids     TEXT NOT NULL DEFAULT '[]',
+    opened_at     REAL NOT NULL,
+    opened_by     TEXT NOT NULL DEFAULT '',
+    closed_at     REAL
+);
+CREATE INDEX IF NOT EXISTS lab_runs_lab ON lab_runs(lab_id, opened_at);
+
 -- Co-teachers a lab's owner shares it with: same view and edit rights as the
 -- owner, except changing who it is shared with. Addresses, so a colleague can
 -- be added before their first sign-in.
@@ -442,8 +467,16 @@ class Database:
         with self.connect() as conn:
             return conn.execute(
                 """SELECT * FROM labs l WHERE l.status = 'open' AND
-                       (l.everyone = 1 OR EXISTS (SELECT 1 FROM lab_students r WHERE r.lab_id = l.id AND r.student_id = ?))
-                   ORDER BY l.created_at DESC""", (student_id,)).fetchall()
+                       (l.everyone = 1 OR EXISTS (SELECT 1 FROM lab_students r WHERE r.lab_id = l.id AND r.student_id = :s))
+                       -- not while the lab is open for another of the lab's class groups (lab_runs)
+                       AND NOT (
+                         EXISTS (SELECT 1 FROM lab_runs u WHERE u.lab_id = l.id AND u.closed_at IS NULL AND u.class_ids <> '[]')
+                         AND EXISTS (SELECT 1 FROM lab_classes c WHERE c.lab_id = l.id AND instr(c.students_json, '"' || :s || '"') > 0)
+                         AND NOT EXISTS (SELECT 1 FROM lab_runs u JOIN lab_classes c ON c.lab_id = u.lab_id
+                                         WHERE u.lab_id = l.id AND u.closed_at IS NULL
+                                           AND instr(u.class_ids, '"' || c.class_id || '"') > 0
+                                           AND instr(c.students_json, '"' || :s || '"') > 0))
+                   ORDER BY l.created_at DESC""", {"s": student_id}).fetchall()
 
     def preview_labs(self, ids: set[str] | None) -> list[sqlite3.Row]:
         """What "View as student" lists: open and draft labs among `ids` (None = all),

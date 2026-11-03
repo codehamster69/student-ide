@@ -27,7 +27,7 @@ Teacher, at `/#/teach`:
    and opening the question again (or a reload) picks up the code where they
    left it, in the language they were using; each visit is still its own
    recorded session, starting from a snapshot of that code.
-5. **Live board** (`/#/teach/c/<lab id>`) is made for the projector:
+5. **Live board** (`/#/teach/labs/<lab id>/board`) is made for the projector:
    *Present* goes full screen and hides roll numbers. **End now** stops
    submissions early; otherwise the clock does. The podium shows at the end.
 
@@ -145,7 +145,7 @@ JavaScript or Python per question from the switcher above the editor.
 ## Similar submissions
 
 Staff open **Similar submissions** from the competition panel or the board
-(`#/teach/similar/<lab id>`). It is a pointer for a conversation, never a
+(`#/teach/labs/<lab id>/similar`). It is a pointer for a conversation, never a
 verdict: it never says "copied", students never see it, and nothing on it
 changes a score.
 
