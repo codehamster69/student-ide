@@ -8,6 +8,7 @@ import { LabEditor } from "../teach/LabEditor";
 import { Users } from "../teach/Users";
 import { Subject, Subjects } from "../teach/Subjects";
 import { Setup } from "../teach/Setup";
+import { OpenRollCall } from "../teach/Attendance";
 import { LiveBoard } from "../compete/LiveBoard";
 import { Similar } from "../compete/Similar";
 import { LiveClass, LiveLabs } from "../live/LiveClass";
@@ -99,6 +100,7 @@ export function ReviewApp() {
                   <Sparkles className="size-3.5" /><span className="hidden lg:inline">Getting started</span>
                 </a>
               )}
+              {authed && <HeaderRollCall />}
               {authed && (
                 <a href={href.student} title="Open the student side under your own account; nothing you do there is study data"
                   className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text">
@@ -155,5 +157,14 @@ export function ReviewApp() {
         </main>
       </div>
     </MotionConfig>
+  );
+}
+
+/** Header shortcut to the teacher's Roll Call, signed in (makes their key on first use). */
+function HeaderRollCall() {
+  return (
+    <span className="hidden md:inline-flex" title="Your attendance register, signed in">
+      <OpenRollCall onAuthLost={() => location.reload()} variant="ghost" label="Roll Call" className="text-muted" />
+    </span>
   );
 }

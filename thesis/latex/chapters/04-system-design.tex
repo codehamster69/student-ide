@@ -942,6 +942,26 @@ URL scheme (collections are plural nouns, an item is
 \texttt{/<collection>/<id>}, a view of it one more segment), with the older
 links kept working.
 
+\paragraph{Keys and who sees what.} Roll Call has no accounts: a random key
+is a workspace. Rather than asking faculty to copy that key between sites,
+Student IDE makes one per teacher, keeps it on its server, and signs the
+teacher in to Roll Call with a one-time link (valid once, for two minutes; Roll
+Call holds the key only encrypted with the link's code). Each teacher therefore
+sees only their own register. Students get their own key, which Student IDE
+grants, through each teacher whose class groups list them, read access to that
+student's marks alone; Roll Call stores only its hash, and a student key opens
+a read-only page of the student's own attendance and never a workspace
+(Figure~\ref{fig:my-attendance}). Because keys live in the browser, Roll Call
+gained a sign-out for shared lab computers and asks before mixing one person's
+local records into another's account.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{attendance/attendance-light-17-my-attendance}
+  \caption{A student's ``My attendance'' in Roll Call, opened from Student IDE: their own marks by subject, read-only.}
+  \label{fig:my-attendance}
+\end{figure}
+
 \begin{figure}[ht]
   \centering
   \begin{subfigure}{\textwidth}

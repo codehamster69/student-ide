@@ -7,8 +7,13 @@ Student IDE can mark lab attendance in [Roll Call](https://attendance.hokora.xyz
 
 ## For a teacher
 
-1. **Connect once.** Roll Call → Settings → Connect Student IDE → copy your sync key.
-   Student IDE → Getting started (`#/teach/setup`) → paste it.
+1. **Set up Roll Call once.** Student IDE → Getting started (`#/teach/setup`) →
+   *Set up Roll Call for me*. Student IDE makes your own Roll Call key (your own
+   register: nobody else's key opens it). From then on *Open Roll Call* (there,
+   in a lab, or *Roll Call* in the header) opens Roll Call already signed in.
+   *Show key* reveals the key to sign in by hand at `<roll call>/login`.
+   Already keep a register in Roll Call? Choose *I already use Roll Call* and
+   paste the key from Roll Call → Settings instead.
 2. **Attach class groups to a lab.** In the lab, *Class groups and attendance* →
    *Attach class groups*: tick groups from your Roll Call or create one (branch,
    section, lab group, roll prefix and range). Their students join the lab's roster.
@@ -33,6 +38,23 @@ Per student and lab day (timezone `STUDENTIDE_TIMEZONE`, default Asia/Kolkata):
 Each lab sets its own thresholds (*Rule* on the attendance page), and whether to
 send on close. Learning-lab practice and View-as-student previews never count.
 The detector is never consulted: a highlighted moment does not change attendance.
+
+## Keys and sign-in
+
+- **Teachers.** Each teacher's key is one Roll Call workspace. Student IDE keeps it
+  on its server (`attendance_links`, `issued = 1` when Student IDE made it). *Open
+  Roll Call* asks Roll Call for a one-time link (`POST /api/v1/login-codes`): the
+  browser goes to `/login#code=…`, which works once, for two minutes, and stores
+  the key in that browser. Roll Call stores the key only encrypted with the code.
+- **Students.** *My attendance* (student app header, shown when one of their labs
+  has class groups) makes the student's own key (`st_…`, table `student_keys`),
+  grants it through every teacher whose attached groups list them
+  (`PUT /api/v1/viewers`, Roll Call stores only its sha256) and opens Roll Call's
+  `/me` signed in: their own marks, read-only, grouped by subject. A student key
+  opens no workspace, and a browser holding one only ever shows `/me`.
+- **Shared computers.** Roll Call → Settings → *Sign out* forgets the key and the
+  records in that browser. Signing in on a browser that holds someone else's
+  records asks whether to move them in or leave them.
 
 ## What Roll Call receives
 

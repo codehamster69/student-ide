@@ -27,8 +27,8 @@ export function Setup({ me, onAuthLost }: { me: Me | null; onAuthLost: () => voi
   const withClasses = labs?.find((l) => att[l.id]?.classes.length);
   const steps: { title: string; text: ReactNode; done: boolean; icon: typeof Users; link?: [string, string]; body?: ReactNode }[] = [
     {
-      title: "Connect Roll Call", icon: PlugZap, done: !!conn?.connected,
-      text: "Optional, but it's what lets a lab mark attendance. One-time: paste the sync key from Roll Call's Settings.",
+      title: "Set up Roll Call", icon: PlugZap, done: !!conn?.connected,
+      text: "Optional, but it's what lets a lab mark attendance. One press makes your own register; Open Roll Call then signs you in there, on any device.",
       body: <ConnectRollCall onAuthLost={onAuthLost} onChange={setConn} />,
     },
     {

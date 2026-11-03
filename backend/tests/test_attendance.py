@@ -2,6 +2,7 @@
 judge effective participation per student and day, send one Roll Call session
 per class group, and send automatically when the lab closes."""
 
+import hashlib
 import json
 import time
 import uuid
@@ -30,6 +31,7 @@ class FakeRollCall:
         self.ws = {KEY_A: {"classes": {}, "sessions": {}, "subjects": []}, KEY_B: {"classes": {}, "sessions": {}, "subjects": []}}
         self.calls = []
         self.down = False
+        self.codes = []  # (kind, key) behind each one-time sign-in link
 
     def add_class(self, key, branch, section, group, prefix, start, end, digits=3):
         cid = str(uuid.uuid4())
@@ -43,10 +45,23 @@ class FakeRollCall:
         if self.down:
             from studentide.attendance import RollCallError
             raise RollCallError("Roll Call is not reachable (test)")
+        path = url.split("/api/v1", 1)[1]
+        if key.startswith("st_"):  # a student key only asks for its own sign-in link
+            if path == "/login-codes" and method == "POST":
+                self.codes.append(("student", key))
+                return 200, {"code": f"s{len(self.codes)}", "kind": "student"}
+            return 401, {"error": "student keys open only /me"}
+        if key not in self.ws and key != "z" * 40 and len(key) >= 32:  # Roll Call makes a workspace for any new key
+            self.ws[key] = {"classes": {}, "sessions": {}, "subjects": []}
         ws = self.ws.get(key)
         if ws is None:
             return 401, {"error": "bad key"}
-        path = url.split("/api/v1", 1)[1]
+        if path == "/login-codes" and method == "POST":
+            self.codes.append(("teacher", key))
+            return 200, {"code": f"t{len(self.codes)}", "kind": "teacher"}
+        if path == "/viewers" and method == "PUT":
+            ws.setdefault("viewers", {})[body["viewer_hash"]] = body["student_id"]
+            return 200, {"ok": True}
         if path == "" and method == "GET":
             return 200, {"ok": True, "classes": len(ws["classes"])}
         if path == "/classes" and method == "GET":
@@ -255,3 +270,64 @@ def test_each_teacher_uses_their_own_roll_call(tmp_path, rc):
     assert [s["marks"] for s in rc.ws[KEY_A]["sessions"].values()] == [{"UG23CS001": "A"}]
     assert [s["marks"] for s in rc.ws[KEY_B]["sessions"].values()] == [{"UG23CS002": "P"}]
     assert all(k != KEY_B or c[0] != "PUT" or "/sessions/" in c[1] for c in rc.calls for k in [c[2]])
+
+
+def test_student_ide_makes_each_teachers_key_and_signs_them_in(tmp_path, rc):
+    cfg = Config(client_id="test-client", secure_cookie=False)
+    app = create_app(tmp_path / "k.sqlite3", serve_frontend=False, auth_config=cfg, verify_google=fake_google,
+                     attendance_transport=rc)
+    priya, meera = sign_in(app, "priya.shah@" + DOMAIN), sign_in(app, "meera.rao@" + DOMAIN)
+    assert priya.get("/api/teach/attendance/key").status_code == 404
+    # one press: a new key (a new, empty Roll Call workspace) and a one-time sign-in link
+    r = priya.post("/api/teach/attendance/open")
+    assert r.status_code == 200 and r.json()["url"].startswith("https://attendance.hokora.xyz/login#code=")
+    assert "sync_key" not in r.json()
+    key = priya.get("/api/teach/attendance/key").json()["sync_key"]
+    assert len(key) == 40 and key in rc.ws and rc.codes[-1] == ("teacher", key)
+    conn = priya.get("/api/teach/attendance").json()
+    assert conn["connected"] is True and conn["issued"] is True
+    # pressing again signs in to the same workspace; a second teacher gets their own
+    priya.post("/api/teach/attendance/open")
+    assert priya.get("/api/teach/attendance/key").json()["sync_key"] == key
+    meera.post("/api/teach/attendance/key")
+    other = meera.get("/api/teach/attendance/key").json()["sync_key"]
+    assert other != key
+    # a teacher who already keeps a register can use that key instead
+    meera.put("/api/teach/attendance", json={"sync_key": KEY_B})
+    assert meera.get("/api/teach/attendance").json()["issued"] is False
+    assert meera.get("/api/teach/attendance/key").json()["sync_key"] == KEY_B
+    # students never see a teacher key
+    student = sign_in(app, "ug23cs001@" + DOMAIN)
+    assert student.get("/api/teach/attendance/key").status_code == 403
+
+
+def test_students_open_their_own_attendance_read_only(tmp_path, rc):
+    cfg = Config(client_id="test-client", secure_cookie=False)
+    app = create_app(tmp_path / "s.sqlite3", serve_frontend=False, auth_config=cfg, verify_google=fake_google,
+                     attendance_transport=rc)
+    priya, meera = sign_in(app, "priya.shah@" + DOMAIN), sign_in(app, "meera.rao@" + DOMAIN)
+    priya.put("/api/teach/attendance", json={"sync_key": KEY_A})
+    meera.put("/api/teach/attendance", json={"sync_key": KEY_B})
+    ga = rc.add_class(KEY_A, "CSE", "A", "G1", "UG23CS", 1, 3)
+    gb = rc.add_class(KEY_B, "CSE", "A", "", "UG23CS", 1, 6)
+    for t, g in ((priya, ga), (meera, gb)):
+        lab = open_lab(t, roster=())
+        t.put(f"/api/teach/labs/{lab['id']}/classes", json={"class_ids": [g]})
+
+    me = sign_in(app, "ug23cs002@" + DOMAIN)
+    assert me.get("/api/attendance/UG23CS002").json()["enabled"] is True
+    assert me.get("/api/attendance/UG23CS003").status_code == 403  # only yourself
+    r = me.post("/api/attendance/UG23CS002/open")
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["key"].startswith("st_") and out["teachers"] == 2 and out["url"].startswith("https://attendance.hokora.xyz/login#code=")
+    viewer = hashlib.sha256(out["key"].encode()).hexdigest()
+    # both teachers' Roll Calls let this key read UG23CS002's marks, and nothing else was sent
+    assert rc.ws[KEY_A]["viewers"] == {viewer: "UG23CS002"} and rc.ws[KEY_B]["viewers"] == {viewer: "UG23CS002"}
+    assert rc.codes[-1] == ("student", out["key"])
+    assert me.post("/api/attendance/UG23CS002/open").json()["key"] == out["key"]  # the same key every time
+
+    # a student in no attached class group has nothing to open
+    lone = sign_in(app, "ug23cs009@" + DOMAIN)
+    assert lone.get("/api/attendance/UG23CS009").json()["enabled"] is False
+    assert lone.post("/api/attendance/UG23CS009/open").status_code == 404

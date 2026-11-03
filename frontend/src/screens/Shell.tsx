@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LogOut } from "lucide-react";
 import { Button, Logo, Stepper, page } from "../ui";
+import { MyAttendanceButton } from "./MyAttendance";
 
 const STEPS = ["Sign in", "Consent", "Choose task"];
 
@@ -19,7 +20,8 @@ export function Shell({ step, studentId, onSignOut, children }: {
       <header className="relative z-10 flex h-16 items-center justify-between gap-4 px-6">
         <Logo subtitle="Lab code editor" />
         <Stepper steps={STEPS} current={step} />
-        <div className="flex min-w-40 justify-end">
+        <div className="flex min-w-40 items-center justify-end gap-1">
+          {studentId && step >= 2 && studentId !== "STAFF_PREVIEW" && <MyAttendanceButton studentId={studentId} />}
           {studentId && (
             <div className="flex items-center gap-1 rounded-full border border-border bg-surface py-1 pl-3 pr-1 shadow-sm">
               <span className="font-mono text-xs text-muted">{studentId}</span>

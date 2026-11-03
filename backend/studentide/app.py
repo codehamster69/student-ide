@@ -503,6 +503,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     app.include_router(learn.router(db, auth, _student_id))
     attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
     app.include_router(attendance_router)
+    app.include_router(attendance_router.student_router)
     app.include_router(teach.router(db, require_admin, auth, attendance_router.on_lab_closed))
     app.include_router(compete.router(db, require_admin, auth))
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))

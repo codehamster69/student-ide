@@ -2,7 +2,24 @@
 
 export interface Rule { min_active_minutes: number; min_typed_chars: number; require_run: boolean }
 
-export interface Connection { connected: boolean; url: string; connected_at: number | null; rule: Rule; timezone: string }
+/** `issued`: the key was made by Student IDE (else the teacher pasted one they already used) */
+export interface Connection { connected: boolean; url: string; connected_at: number | null; issued: boolean; rule: Rule; timezone: string }
+
+/**
+ * Opens Roll Call in a new tab, already signed in: the server asks Roll Call for a
+ * one-time link (making this teacher's key first if needed). The tab opens at
+ * once so the browser doesn't block it as a pop-up, then goes to the link.
+ */
+export async function openRollCall(ask: () => Promise<{ url: string }>): Promise<void> {
+  const w = window.open("", "_blank");
+  try {
+    const { url } = await ask();
+    if (w) { w.opener = null; w.location.href = url; } else location.href = url;
+  } catch (e) {
+    w?.close();
+    throw e;
+  }
+}
 
 /** A class group in the teacher's Roll Call */
 export interface RollCallClass { id: string; branch: string; section: string; group: string; label: string; students: string[] }

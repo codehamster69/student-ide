@@ -1,6 +1,14 @@
 """Attendance from labs, through Roll Call (the attendance site, codehamsters/attendance).
 
-A teacher connects once by pasting their Roll Call sync key. A lab can then
+Keys. Student IDE makes each teacher's Roll Call sync key (or the teacher pastes
+one they already use) and keeps it on the server. "Open Roll Call" asks Roll Call
+for a one-time sign-in link, so the teacher lands there signed in; the key itself
+can be shown to its owner to sign in by hand. Each key is its own Roll Call
+workspace, so a teacher sees only their own register. Each student gets a
+student key (st_...), granted through every teacher whose class groups list
+them, which opens only their own marks on Roll Call's read-only My attendance.
+
+A lab can then
 attach one or more Roll Call class groups (pick existing ones or create one
 here). When the lab ends, every student who *effectively participated* is
 marked present in their own class group's register, one Roll Call session per
@@ -21,7 +29,10 @@ has purged raw keys and is unrelated to the detector: a flag never changes
 attendance.
 
     GET    /api/teach/attendance                    this teacher's Roll Call connection
-    PUT    /api/teach/attendance                    {sync_key}  connect (checked against Roll Call first)
+    POST   /api/teach/attendance/key                make this teacher's key (a new Roll Call workspace), if none yet
+    GET    /api/teach/attendance/key                show it, to sign in to Roll Call by hand
+    POST   /api/teach/attendance/open               {url}: one-time link that opens Roll Call signed in (makes the key first)
+    PUT    /api/teach/attendance                    {sync_key}  use an existing Roll Call key instead (checked first)
     DELETE /api/teach/attendance                    disconnect
     GET    /api/teach/attendance/labs               per lab: attached class groups and lab days sent
     GET    /api/teach/attendance/classes            the teacher's Roll Call class groups
@@ -34,6 +45,9 @@ attendance.
     GET    /api/teach/labs/{id}/attendance?day=     preview: who would be marked present, and why
     POST   /api/teach/labs/{id}/attendance          {day, overrides: {student: "P"|"A"}}  send to Roll Call
 
+    GET    /api/attendance/{student}                {enabled}: is this student in any attached class group
+    POST   /api/attendance/{student}/open           {url, key}: grants their key, then a one-time link to My attendance
+
 Closing a lab (PATCH status=closed) sends every lab day not sent yet, if the
 lab has class groups and auto_send is on. Sending again replaces the same Roll
 Call sessions (their ids are derived from lab + class + day), never duplicates.
@@ -41,8 +55,10 @@ Call sessions (their ids are derived from lab + class + day), never duplicates.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import secrets
 import time
 import urllib.error
 import urllib.request
@@ -64,8 +80,17 @@ CREATE TABLE IF NOT EXISTS attendance_links (
     email         TEXT PRIMARY KEY,          -- '' = dev mode / admin token
     sync_key      TEXT NOT NULL,
     connected_at  REAL NOT NULL,
-    checked_at    REAL
+    checked_at    REAL,
+    issued        INTEGER NOT NULL DEFAULT 0 -- 1 = made by Student IDE, 0 = pasted by the teacher
 );
+
+-- A student's key for Roll Call's read-only My attendance (st_...). Roll Call
+-- only ever sees its sha256, granted per teacher workspace.
+CREATE TABLE IF NOT EXISTS student_keys (
+    student_id    TEXT PRIMARY KEY,
+    key           TEXT NOT NULL,
+    created_at    REAL NOT NULL
+) WITHOUT ROWID;
 
 -- Roll Call class groups attached to a lab, with a copy of their student ids.
 CREATE TABLE IF NOT EXISTS lab_classes (
@@ -110,6 +135,22 @@ NOT_TYPED = ("input.paste", "input.drop")
 def ensure_schema(db: Database) -> None:
     with db.connect() as conn:
         conn.executescript(SCHEMA)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(attendance_links)")}
+        if "issued" not in cols:  # databases from before keys were made here
+            conn.execute("ALTER TABLE attendance_links ADD COLUMN issued INTEGER NOT NULL DEFAULT 0")
+
+
+def login_link(out: dict) -> str:
+    """Roll Call's one-time sign-in link, on the address this server knows Roll Call by."""
+    return f"{rollcall_url()}/login#code={out['code']}"
+
+
+def new_teacher_key() -> str:
+    return secrets.token_urlsafe(30)  # 40 characters, Roll Call's key format
+
+
+def new_student_key() -> str:
+    return "st_" + secrets.token_urlsafe(30)
 
 
 def timezone() -> ZoneInfo:
@@ -132,9 +173,14 @@ class RollCallError(Exception):
 Transport = Callable[[str, str, str, dict | None], tuple[int, object]]
 
 
+def key_header(key: str) -> dict[str, str]:
+    """A student key goes in x-student-key, a teacher's sync key as a bearer token."""
+    return {"x-student-key": key} if key.startswith("st_") else {"Authorization": f"Bearer {key}"}
+
+
 def urllib_transport(method: str, url: str, key: str, body: dict | None) -> tuple[int, object]:
     req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
-                                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                                 headers={**key_header(key), "Content-Type": "application/json",
                                           "User-Agent": "studentide-attendance"})
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
@@ -320,11 +366,42 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
     @r.get("/attendance")
     def connection(request: Request) -> dict:
         with db.connect() as conn:
-            row = conn.execute("SELECT connected_at, checked_at FROM attendance_links WHERE email = ?",
+            row = conn.execute("SELECT connected_at, checked_at, issued FROM attendance_links WHERE email = ?",
                                (me(request),)).fetchone()
         return {"connected": row is not None, "url": rollcall_url(),
-                "connected_at": row["connected_at"] if row else None, "rule": DEFAULT_RULE,
-                "timezone": str(timezone())}
+                "connected_at": row["connected_at"] if row else None, "issued": bool(row and row["issued"]),
+                "rule": DEFAULT_RULE, "timezone": str(timezone())}
+
+    def provision(email: str) -> str:
+        """This teacher's key, making one (a new, empty Roll Call workspace) if they have none."""
+        key = key_of(email)
+        if key is not None:
+            return key
+        key = new_teacher_key()
+        rc(lambda: RollCall(key, rollcall_url(), send_http).call("GET", "/api/v1"))  # creates the workspace
+        now = time.time()
+        with db.connect() as conn:
+            conn.execute("""INSERT INTO attendance_links(email, sync_key, connected_at, checked_at, issued)
+                            VALUES (?,?,?,?,1) ON CONFLICT(email) DO NOTHING""", (email, key, now, now))
+        return key_of(email) or key
+
+    @r.post("/attendance/key")
+    def make_key(request: Request) -> dict:
+        provision(me(request))
+        return connection(request)
+
+    @r.get("/attendance/key")
+    def show_key(request: Request) -> dict:
+        key = key_of(me(request))
+        if key is None:
+            raise HTTPException(404, "no Roll Call key yet: press Open Roll Call to make one")
+        return {"sync_key": key, "login_url": rollcall_url() + "/login"}
+
+    @r.post("/attendance/open")
+    def open_rollcall(request: Request) -> dict:
+        key = provision(me(request))
+        out = rc(lambda: RollCall(key, rollcall_url(), send_http).call("POST", "/api/v1/login-codes"))
+        return {"url": login_link(out)}
 
     @r.put("/attendance")
     def connect(body: LinkIn, request: Request) -> dict:
@@ -332,9 +409,9 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         info = rc(lambda: RollCall(key, rollcall_url(), send_http).call("GET", "/api/v1"))
         now = time.time()
         with db.connect() as conn:
-            conn.execute("""INSERT INTO attendance_links(email, sync_key, connected_at, checked_at) VALUES (?,?,?,?)
+            conn.execute("""INSERT INTO attendance_links(email, sync_key, connected_at, checked_at, issued) VALUES (?,?,?,?,0)
                             ON CONFLICT(email) DO UPDATE SET sync_key = excluded.sync_key, connected_at = excluded.connected_at,
-                            checked_at = excluded.checked_at""", (me(request), key, now, now))
+                            checked_at = excluded.checked_at, issued = 0""", (me(request), key, now, now))
         return connection(request) | {"workspace": info}
 
     @r.delete("/attendance")
@@ -537,4 +614,59 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 for d in sorted(lab_activity(db, lab_id)) if d not in done]
 
     r.on_lab_closed = on_closed  # type: ignore[attr-defined]
+    r.student_router = student_router(db, auth, send_http)  # type: ignore[attr-defined]
     return r
+
+
+def student_router(db: Database, auth, send_http: Transport) -> APIRouter:
+    """My attendance for students: their own marks on Roll Call, read-only."""
+    s = APIRouter(prefix="/api/attendance")
+
+    def teachers_of(student: str) -> list[tuple[str, str]]:
+        """(email, sync key) of every teacher whose attached class groups list this student."""
+        like = f'%"{student}"%'
+        with db.connect() as conn:
+            rows = conn.execute("""SELECT DISTINCT l.email, l.sync_key FROM lab_classes c
+                                   JOIN attendance_links l ON l.email = c.attached_by
+                                   WHERE c.students_json LIKE ?""", (like,)).fetchall()
+        return [(r["email"], r["sync_key"]) for r in rows]
+
+    def key_for(student: str) -> str:
+        with db.connect() as conn:
+            conn.execute("INSERT OR IGNORE INTO student_keys(student_id, key, created_at) VALUES (?,?,?)",
+                         (student, new_student_key(), time.time()))
+            return conn.execute("SELECT key FROM student_keys WHERE student_id = ?", (student,)).fetchone()["key"]
+
+    def who(student_id: str, request: Request) -> str:
+        auth.own_student(request, student_id)
+        return student_id.strip().upper()
+
+    @s.get("/{student_id}")
+    def status(student_id: str, request: Request) -> dict:
+        return {"enabled": bool(teachers_of(who(student_id, request))), "url": rollcall_url()}
+
+    @s.post("/{student_id}/open")
+    def open_mine(student_id: str, request: Request) -> dict:
+        student = who(student_id, request)
+        teachers = teachers_of(student)
+        if not teachers:
+            raise HTTPException(404, "none of your labs records attendance in Roll Call yet")
+        key = key_for(student)
+        viewer = hashlib.sha256(key.encode()).hexdigest()
+        granted = 0
+        for _, tkey in teachers:  # one teacher's Roll Call being down shouldn't hide the others
+            try:
+                RollCall(tkey, rollcall_url(), send_http).call("PUT", "/api/v1/viewers",
+                                                                 {"student_id": student, "viewer_hash": viewer})
+                granted += 1
+            except RollCallError:
+                pass
+        if not granted:
+            raise HTTPException(502, "Roll Call is not reachable right now")
+        try:
+            out = RollCall(key, rollcall_url(), send_http).call("POST", "/api/v1/login-codes")
+        except RollCallError as e:
+            raise HTTPException(e.status, str(e)) from e
+        return {"url": login_link(out), "key": key, "teachers": granted}
+
+    return s

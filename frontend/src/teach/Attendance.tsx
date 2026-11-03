@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  AlertTriangle, ArrowLeft, Check, ClipboardCheck, ExternalLink, Link2, Plus, RefreshCw, Send, Settings2, Unplug, UsersRound, X,
+  AlertTriangle, ArrowLeft, Check, ClipboardCheck, Copy, ExternalLink, KeyRound, Link2, Plus, RefreshCw, Send, Settings2, Unplug, UsersRound, X,
 } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Field, Input, Spinner, cn, item, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
@@ -9,7 +9,7 @@ import { Skeleton } from "../review/bits";
 import { href } from "../routes";
 import type { LabDetail } from "./api";
 import {
-  dayLabel, splitId, type Connection, type LabClasses, type Preview, type RollCallClass, type Rule, type StudentMark,
+  dayLabel, openRollCall, splitId, type Connection, type LabClasses, type Preview, type RollCallClass, type Rule, type StudentMark,
 } from "./attendanceApi";
 
 function useFail(onAuthLost: () => void, setError: (s: string) => void) {
@@ -19,53 +19,129 @@ function useFail(onAuthLost: () => void, setError: (s: string) => void) {
   }, [onAuthLost, setError]);
 }
 
-/** Paste the Roll Call sync key once; shows the connection afterwards. Used on Getting started and in a lab. */
+/** Opens Roll Call signed in, making the teacher's key on first use. */
+export function OpenRollCall({ onAuthLost, onOpened, label = "Open Roll Call", variant = "secondary", className }: {
+  onAuthLost: () => void; onOpened?: () => void; label?: string; variant?: "primary" | "secondary" | "ghost"; className?: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const fail = useFail(onAuthLost, setError);
+  return (
+    <span className="inline-flex flex-col gap-1">
+      <Button size="sm" variant={variant} className={className} disabled={busy} onClick={async () => {
+        setBusy(true); setError("");
+        try { await openRollCall(() => send<{ url: string }>("POST", "/api/teach/attendance/open")); onOpened?.(); } catch (e) { fail(e); }
+        setBusy(false);
+      }}>{busy ? <Spinner /> : <ExternalLink className="size-3.5" />} {label}</Button>
+      {error && <span className="text-xs text-danger" role="alert">{error}</span>}
+    </span>
+  );
+}
+
+/**
+ * Roll Call for this teacher. Student IDE makes their key (their own Roll Call
+ * register, seen only by them) and signs them in with one button; a teacher who
+ * already keeps a register there can paste that key instead. Used on Getting
+ * started and in a lab.
+ */
 export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
   onAuthLost: () => void; onChange?: (c: Connection) => void; compact?: boolean;
 }) {
   const [conn, setConn] = useState<Connection | null>(null);
   const [key, setKey] = useState("");
+  const [pasting, setPasting] = useState(false);
+  const [shown, setShown] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fail = useFail(onAuthLost, setError);
   const update = useCallback((c: Connection) => { setConn(c); onChange?.(c); }, [onChange]);
-  useEffect(() => { get<Connection>("/api/teach/attendance").then(update, fail); }, [update, fail]);
+  const reload = useCallback(() => get<Connection>("/api/teach/attendance").then(update, fail), [update, fail]);
+  useEffect(() => { void reload(); }, [reload]);
 
   if (!conn) return <Skeleton className="h-16 w-full rounded-xl" />;
   if (conn.connected) {
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-success/30 bg-success-soft px-3 py-2.5 text-[13px]">
-        <Check className="size-4 text-success" />
-        <span className="flex-1 text-text">Connected to <a href={conn.url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">Roll Call</a></span>
-        <Button size="sm" variant="ghost" onClick={async () => {
-          if (!confirm("Disconnect Roll Call? Labs keep their class groups, but attendance can't be sent until you connect again.")) return;
-          try { update(await send<Connection>("DELETE", "/api/teach/attendance")); } catch (e) { fail(e); }
-        }}><Unplug className="size-3.5" /> Disconnect</Button>
+      <div className="grid gap-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-success/30 bg-success-soft px-3 py-2.5 text-[13px]">
+          <Check className="size-4 text-success" />
+          <span className="min-w-0 flex-1 text-text">Your Roll Call is ready{conn.issued ? "" : " (your own key)"}</span>
+          <OpenRollCall onAuthLost={onAuthLost} variant="primary" />
+          {!compact && (
+            <Button size="sm" variant="ghost" onClick={async () => {
+              if (shown) { setShown(null); return; }
+              try { setShown((await get<{ sync_key: string }>("/api/teach/attendance/key")).sync_key); } catch (e) { fail(e); }
+            }}><KeyRound className="size-3.5" /> {shown ? "Hide key" : "Show key"}</Button>
+          )}
+          {!compact && (
+            <Button size="sm" variant="ghost" onClick={async () => {
+              if (!confirm("Disconnect Roll Call? Your register stays in Roll Call and labs keep their class groups, but attendance can't be sent until you connect again. Keep your key (Show key) if Student IDE made it.")) return;
+              try { update(await send<Connection>("DELETE", "/api/teach/attendance")); setShown(null); } catch (e) { fail(e); }
+            }}><Unplug className="size-3.5" /> Disconnect</Button>
+          )}
+        </div>
+        {shown && (
+          <div className="grid gap-1.5 rounded-xl border border-border bg-surface-2/60 p-3 text-[13px]">
+            <div className="flex gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-lg border border-border bg-surface px-2.5 py-1.5 font-mono text-xs text-text" aria-label="Your Roll Call key">{shown}</code>
+              <Button size="sm" variant="secondary" aria-label="Copy key" onClick={async () => {
+                await navigator.clipboard.writeText(shown).catch(() => {});
+                setCopied(true); setTimeout(() => setCopied(false), 1500);
+              }}>{copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}</Button>
+            </div>
+            <p className="text-xs text-muted">
+              Your key is your whole register, so keep it private, like a password. To sign in by hand on another device, paste it at{" "}
+              <a href={`${conn.url}/login`} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">{conn.url.replace(/^https?:\/\//, "")}/login</a>.
+              Students never see it: they get their own key, which shows only their marks.
+            </p>
+          </div>
+        )}
+        {error && <p className="text-xs text-danger" role="alert">{error}</p>}
       </div>
     );
   }
   return (
-    <form className="grid gap-2" onSubmit={async (e) => {
-      e.preventDefault();
-      setBusy(true); setError("");
-      try { update(await send<Connection>("PUT", "/api/teach/attendance", { sync_key: key.trim() })); setKey(""); } catch (err) { fail(err); }
-      setBusy(false);
-    }}>
+    <div className="grid gap-2">
       {!compact && (
         <p className="text-[13px] text-muted">
-          In <a href={`${conn.url}/settings#student-ide`} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">Roll Call → Settings → Connect Student IDE</a>,
-          copy your sync key and paste it here. It stays on the server and is never shown to students.
+          Roll Call is the attendance register. Student IDE makes your own key for it, so you see only your classes, and signs you in with one press.
         </p>
       )}
-      <div className="flex gap-2">
-        <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="Roll Call sync key" aria-label="Roll Call sync key"
-          className="h-9 font-mono text-[13px]" autoComplete="off" spellCheck={false} />
-        <Button type="submit" size="sm" variant="primary" className="h-9" disabled={key.trim().length < 32 || busy}>
-          {busy ? <Spinner /> : <Link2 className="size-3.5" />} Connect
-        </Button>
-      </div>
+      {!pasting ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="primary" disabled={busy} onClick={async () => {
+            setBusy(true); setError("");
+            try { update(await send<Connection>("POST", "/api/teach/attendance/key")); } catch (e) { fail(e); }
+            setBusy(false);
+          }}>{busy ? <Spinner /> : <ClipboardCheck className="size-3.5" />} Set up Roll Call for me</Button>
+          <button type="button" className="text-xs font-medium text-muted hover:text-text" onClick={() => setPasting(true)}>
+            I already use Roll Call
+          </button>
+        </div>
+      ) : (
+        <form className="grid gap-2" onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true); setError("");
+          try { update(await send<Connection>("PUT", "/api/teach/attendance", { sync_key: key.trim() })); setKey(""); } catch (err) { fail(err); }
+          setBusy(false);
+        }}>
+          <p className="text-[13px] text-muted">
+            Copy your key from <a href={`${conn.url}/settings#student-ide`} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">Roll Call → Settings</a> and paste it here, so labs use the classes you already have.
+          </p>
+          <div className="flex gap-2">
+            <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="Roll Call sync key" aria-label="Roll Call sync key"
+              className="h-9 font-mono text-[13px]" autoComplete="off" spellCheck={false} />
+            <Button type="submit" size="sm" variant="primary" className="h-9" disabled={key.trim().length < 32 || busy}>
+              {busy ? <Spinner /> : <Link2 className="size-3.5" />} Connect
+            </Button>
+          </div>
+          <button type="button" className="justify-self-start text-xs font-medium text-muted hover:text-text" onClick={() => setPasting(false)}>
+            Back: let Student IDE set it up
+          </button>
+        </form>
+      )}
       {error && <p className="text-xs text-danger" role="alert">{error}</p>}
-    </form>
+    </div>
   );
 }
 
