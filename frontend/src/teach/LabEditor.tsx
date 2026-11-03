@@ -133,9 +133,9 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
         )}
       </AnimatePresence>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
-        <motion.section variants={item}>
-          <div className="mb-3 flex items-center justify-between">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <motion.section variants={item} className="min-w-0">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-faint">
               Questions <span className="ml-1 tabular-nums text-muted">{lab.questions.length}</span>
             </h2>
@@ -255,7 +255,7 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
   };
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className="min-w-[min(100%,18rem)] flex-1">
       <div className="flex items-center gap-3">
         <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => void commit()} maxLength={120}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label="Lab title"
