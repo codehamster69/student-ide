@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   AlertTriangle, ArrowLeft, Check, ClipboardCheck, Copy, ExternalLink, KeyRound, Link2, Plus, RefreshCw, Send, Settings2, Unplug, UsersRound, X,
 } from "lucide-react";
-import { Badge, Button, Card, Checkbox, Field, Input, Spinner, cn, item, stagger } from "../ui";
+import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, cn, item, stagger } from "../ui";
 import { AuthError, get, send, token } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { href } from "../routes";
@@ -206,6 +206,66 @@ export function AllRegisters({ onAuthLost }: { onAuthLost: () => void }) {
   );
 }
 
+/**
+ * "Which group is performing?" asked when a lab with class groups is opened, and
+ * when switching to the next group while it stays open. Only the chosen groups'
+ * students can work in the lab meanwhile; the sitting's attendance is sent for
+ * them alone when it ends.
+ */
+export function PerformingDialog({ open, groups, current, switching, onConfirm, onClose }: {
+  open: boolean; groups: { class_id: string; label: string; n_students: number }[]; current?: string[];
+  switching: boolean; onConfirm: (ids: string[]) => Promise<void>; onClose: () => void;
+}) {
+  const [picked, setPicked] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (open) setPicked(groups.length === 1 ? [groups[0].class_id] : groups.filter((g) => !current?.includes(g.class_id)).slice(0, 1).map((g) => g.class_id));
+  }, [open, groups, current]);
+  return (
+    <Dialog open={open} onClose={onClose} icon={<UsersRound className="size-5" />}
+      title={switching ? "Switch to the next group" : "Which group is performing?"}
+      description={<div className="grid gap-3">
+        <p>{switching
+          ? "The current group's sitting ends and its attendance is sent to Roll Call. Then only the groups you tick can work in the lab."
+          : "Only the groups you tick can work in the lab until you close it or switch groups. When it ends, attendance is sent for them alone."}</p>
+        <div className="grid gap-1.5">
+          {groups.map((g) => (
+            <label key={g.class_id} className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-surface-2/60 px-3 py-2 text-[13px] text-text">
+              <Checkbox checked={picked.includes(g.class_id)} aria-label={g.label}
+                onChange={(e) => setPicked((p) => (e.target.checked ? [...p, g.class_id] : p.filter((x) => x !== g.class_id)))} />
+              <span className="flex-1 font-medium">{g.label}</span>
+              <span className="text-xs tabular-nums text-faint">{g.n_students} students</span>
+              {current?.includes(g.class_id) && <Badge>now</Badge>}
+            </label>
+          ))}
+        </div>
+      </div>}
+      actions={<>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="primary" data-autofocus disabled={!picked.length || busy} onClick={async () => {
+          setBusy(true); await onConfirm(picked); setBusy(false);
+        }}>{busy ? <Spinner /> : null}{switching ? "Switch" : "Open the lab"}</Button>
+      </>} />
+  );
+}
+
+/** While a lab is open for chosen groups: which ones, and a way to move on to the next. */
+export function SittingBar({ lab, info, onSwitch }: { lab: LabDetail; info: LabClasses | null; onSwitch: () => void }) {
+  if (lab.status !== "open" || !info || !info.classes.length) return null;
+  const cur = info.current;
+  const who = cur && cur.class_ids.length ? cur.labels.join(", ") : "every attached group";
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-success/30 bg-success-soft px-4 py-2.5 text-[13px]" role="status">
+      <span className="size-2 rounded-full bg-success" />
+      <span className="min-w-0 flex-1 text-text">
+        Open for <span className="font-semibold">{who}</span>
+        {cur && <span className="text-muted"> · since {new Date(cur.opened_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
+      </span>
+      {info.classes.length > 1 && <Button size="sm" onClick={onSwitch}><RefreshCw className="size-3.5" /> Next group</Button>}
+    </div>
+  );
+}
+
 /** Lab sidebar: which Roll Call class groups this lab marks attendance in. */
 export function ClassGroupsCard({ lab, onAuthLost, onRosterChanged }: {
   lab: LabDetail; onAuthLost: () => void; onRosterChanged: () => void;
@@ -274,7 +334,7 @@ export function ClassGroupsCard({ lab, onAuthLost, onRosterChanged }: {
             <div className="mt-4 grid gap-1 border-t border-border pt-3 text-xs text-muted">
               <span>{info.describe}.</span>
               <span>
-                {info.auto_send ? "Sent to Roll Call when you close the lab." : "Sent only when you press Send."}{" "}
+                {info.auto_send ? "Sent to Roll Call for the groups performing when you close the lab or move to the next group." : "Sent only when you press Send."}{" "}
                 {lastSent && (lastSent.error
                   ? <span className="text-danger">Last send failed: {lastSent.error}</span>
                   : <>Last sent {dayLabel(lastSent.day)}.</>)}
@@ -410,7 +470,8 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
     if ((next === "P") === s.auto) delete o[s.student_id]; else o[s.student_id] = next;
     setOverrides(o);
   };
-  const sentAll = p.classes.length > 0 && p.classes.every((c) => c.sent && !c.sent.error);
+  const idle = (c: Preview["classes"][number]) => c.idle && !c.students.some((s) => overrides[s.student_id]);
+  const sentAll = p.classes.some((c) => !idle(c)) && p.classes.every((c) => idle(c) || (c.sent && !c.sent.error));
 
   return (
     <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1240px] px-5 pb-20 pt-6">
@@ -433,10 +494,12 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
           <Button size="sm" variant="primary" disabled={busy || !p.classes.length} onClick={async () => {
             setBusy(true); setError(""); setNotice("");
             try {
-              const r = await send<{ results: { label: string; present: number; total: number; error: string | null }[] }>(
+              const r = await send<{ results: { label: string; present: number; total: number; error: string | null; skipped?: boolean }[] }>(
                 "POST", `/api/teach/labs/${lab.id}/attendance`, { day: p.day, overrides });
               const bad = r.results.filter((x) => x.error);
-              setNotice(bad.length ? "" : `Sent: ${r.results.map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`);
+              const skipped = r.results.filter((x) => x.skipped);
+              setNotice(bad.length ? "" : `Sent: ${r.results.filter((x) => !x.skipped).map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`
+                + (skipped.length ? ` Not sent (nobody from the group worked that day): ${skipped.map((x) => x.label).join(", ")}.` : ""));
               if (bad.length) setError(bad.map((x) => `${x.label}: ${x.error}`).join(" "));
               await load(p.day);
             } catch (e) { fail(e); }
@@ -473,7 +536,8 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
                     <div>
                       <h2 className="text-sm font-semibold text-text">{c.label}</h2>
                       <p className="text-xs text-muted">
-                        {c.sent ? (c.sent.error ? <span className="text-danger">Not sent: {c.sent.error}</span>
+                        {!c.sent && idle(c) ? "Not sent: nobody from this group worked in the lab this day"
+                          : c.sent ? (c.sent.error ? <span className="text-danger">Not sent: {c.sent.error}</span>
                           : <>Sent {new Date(c.sent.sent_at * 1000).toLocaleString()}{c.sent.how === "lab closed" ? " when the lab closed" : ""}</>)
                           : "Not sent yet"}
                       </p>

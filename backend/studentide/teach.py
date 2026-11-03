@@ -71,6 +71,9 @@ class LabPatch(BaseModel):
     everyone: bool | None = None
     subject: str | None = Field(default=None, max_length=120)
     language: LabLanguage | None = None
+    # which attached class groups are performing in this opening (attendance.py sittings);
+    # sent with status "open", or alone while open to switch to the next group
+    performing: list[str] | None = Field(default=None, max_length=50)
 
 
 class QuestionIn(BaseModel):
@@ -239,7 +242,8 @@ def student_labs(db: Database, student_id: str, labs: list | None = None) -> lis
     return out
 
 
-def router(db: Database, require_admin: Callable, auth, on_lab_closed: Callable | None = None) -> APIRouter:
+def router(db: Database, require_admin: Callable, auth, on_lab_closed: Callable | None = None,
+           sittings=None) -> APIRouter:
     """`auth`: an auth.Auth. It limits every lab to its owner, co-teachers and
     admins; in Google mode roster entries may be full addresses and are upper-cased.
     `on_lab_closed(lab_id, request)`: run when a lab is closed (attendance.py sends
@@ -294,6 +298,9 @@ def router(db: Database, require_admin: Callable, auth, on_lab_closed: Callable 
     def patch_lab(lab_id: str, body: LabPatch, request: Request) -> dict:
         lab_or_404(lab_id, request)
         fields = body.model_dump(exclude_none=True)
+        performing = fields.pop("performing", None)
+        if sittings and performing is not None:
+            sittings.check(lab_id, performing)  # 400 before anything changes
         if fields.get("status") == "open" and not db.lab_questions(lab_id):
             raise HTTPException(409, "add at least one question before opening the lab")
         if "subject" in fields:
@@ -307,6 +314,16 @@ def router(db: Database, require_admin: Callable, auth, on_lab_closed: Callable 
             switch_language(db, lab_id, lab["language"], fields["language"])
         was = db.get_lab(lab_id)["status"]
         db.update_lab(lab_id, fields)
+        now = fields.get("status", was)
+        if sittings:
+            try:  # opening, switching group, closing: never fails because attendance couldn't be sent
+                sent = sittings.changed(lab_id, was, now, performing, request)
+            except HTTPException as e:
+                sent = [{"error": e.detail}]
+            out = detail(lab_id, request)
+            if sent is not None:
+                out["attendance_sent"] = sent
+            return out
         out = detail(lab_id, request)
         if on_lab_closed and fields.get("status") == "closed" and was != "closed":
             try:

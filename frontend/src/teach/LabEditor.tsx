@@ -17,8 +17,8 @@ import {
 import { LanguagePills, LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
 import { SourcePicker } from "./SourcePicker";
 import { href } from "../routes";
-import { AttendancePage, ClassGroupsCard } from "./Attendance";
-import type { RollCallSubject } from "./attendanceApi";
+import { AttendancePage, ClassGroupsCard, PerformingDialog, SittingBar } from "./Attendance";
+import type { LabClasses, RollCallSubject } from "./attendanceApi";
 
 type SentDay = { day?: string; error?: string; results?: { label: string; present: number; total: number; error: string | null }[] };
 
@@ -53,6 +53,23 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
     }
   }, [fail]);
 
+  // sittings: which attached class groups are performing while the lab is open
+  const [sittings, setSittings] = useState<LabClasses | null>(null);
+  const [picking, setPicking] = useState<"open" | "switch" | null>(null);
+  const loadSittings = useCallback(() => get<LabClasses>(`/api/teach/labs/${lab?.id}/classes`).then(setSittings, () => setSittings(null)), [lab?.id]);
+  useEffect(() => { if (lab?.id) void loadSittings(); }, [lab?.id, lab?.status, loadSittings]);
+  const patchStatus = async (body: { status?: LabStatus; performing?: string[] }) => {
+    if (!lab) return;
+    const next = await write("PATCH", `/api/teach/labs/${lab.id}`, body) as (LabDetail & { attendance_sent?: SentDay[] }) | null;
+    const sent = next?.attendance_sent ?? [];
+    const results = sent.flatMap((d) => d.results ?? []).filter((x) => !(x as { skipped?: boolean }).skipped);
+    const failed = results.filter((x) => x.error).length + sent.filter((d) => d.error).length;
+    const what = body.status === "closed" ? "Lab closed" : "Sitting ended";
+    if (sent.length) setNotes([failed ? `${what}, but attendance for ${failed} class group${failed === 1 ? "" : "s"} could not be sent to Roll Call. Open Attendance to retry.`
+      : `${what}. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`]);
+    void loadSittings();
+  };
+
   if (!lab) {
     return (
       <div className="mx-auto max-w-[1240px] px-5 pt-8">
@@ -86,12 +103,13 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           )}
           <StatusSwitch value={lab.status} disabled={!lab.questions.length}
             onChange={async (status) => {
-              const next = await write("PATCH", `/api/teach/labs/${lab.id}`, { status }) as (LabDetail & { attendance_sent?: SentDay[] }) | null;
-              const sent = next?.attendance_sent ?? [];
-              const results = sent.flatMap((d) => d.results ?? []);
-              const failed = results.filter((x) => x.error).length + sent.filter((d) => d.error).length;
-              if (sent.length) setNotes([failed ? `Lab closed, but attendance for ${failed} class group${failed === 1 ? "" : "s"} could not be sent to Roll Call. Open Attendance to retry.`
-                : `Lab closed. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`]);
+              if (status === "open") {
+                // a lab with class groups asks which group is performing first
+                const info = await get<LabClasses>(`/api/teach/labs/${lab.id}/classes`).catch(() => null);
+                setSittings(info);
+                if (info && info.classes.length) { setPicking("open"); return; }
+              }
+              await patchStatus({ status });
             }} />
           <Button variant="ghost" size="icon" aria-label="Delete lab" onClick={() => setConfirmDelete(true)}
             title={lab.n_sessions ? "Students have recorded work here; close the lab instead" : "Delete lab"} disabled={lab.n_sessions > 0}>
@@ -99,6 +117,14 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           </Button>
         </div>
       </motion.div>
+
+      {lab.status === "open" && <SittingBar lab={lab} info={sittings} onSwitch={() => setPicking("switch")} />}
+      <PerformingDialog open={!!picking} switching={picking === "switch"} groups={sittings?.classes ?? []}
+        current={sittings?.current?.class_ids} onClose={() => setPicking(null)}
+        onConfirm={async (ids) => {
+          await patchStatus(picking === "switch" ? { performing: ids } : { status: "open", performing: ids });
+          setPicking(null);
+        }} />
 
       <AnimatePresence>
         {error && (

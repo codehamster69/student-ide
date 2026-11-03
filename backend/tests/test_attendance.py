@@ -275,6 +275,9 @@ def test_each_teacher_uses_their_own_roll_call(tmp_path, rc):
     student.post("/api/consent", json={"student_id": "UG23CS002"})
     sid = student.post("/api/sessions", json={"student_id": "UG23CS002", "question_id": lab["questions"][0]["id"]}).json()["session_id"]
     work(student, sid, minutes=12)
+    other = sign_in(app, "ug23cs001@" + DOMAIN)  # in priya's group, works too briefly to count
+    other.post("/api/consent", json={"student_id": "UG23CS001"})
+    work(other, other.post("/api/sessions", json={"student_id": "UG23CS001", "question_id": lab["questions"][0]["id"]}).json()["session_id"], minutes=2)
     r = priya.post(f"/api/teach/labs/{lab['id']}/attendance", json={"day": today()}).json()
     assert all(x["error"] is None for x in r["results"])
     # each class's session went to the Roll Call that holds that class
@@ -394,3 +397,59 @@ def test_admins_open_any_teachers_register(tmp_path, rc):
     assert meera.get("/api/teach/attendance/registers").status_code == 403
     assert meera.post(f"/api/teach/attendance/registers/priya.shah@{DOMAIN}/open").status_code == 403
     assert admin.post(f"/api/teach/attendance/registers/nobody@{DOMAIN}/open").status_code == 404
+
+
+def test_one_lab_for_groups_on_different_days(client, rc):
+    """G1 sits the lab today, G2 another day: today's send leaves G2 alone."""
+    client.put("/api/teach/attendance", json={"sync_key": KEY_A}, headers=ADMIN)
+    g1 = rc.add_class(KEY_A, "CSE", "A", "G1", "UG23CS", 1, 2)
+    g2 = rc.add_class(KEY_A, "CSE", "A", "G2", "UG23CS", 3, 4)
+    lab = open_lab(client, ADMIN, roster=())
+    client.put(f"/api/teach/labs/{lab['id']}/classes", json={"class_ids": [g1, g2]}, headers=ADMIN)
+    work(client, start(client, "UG23CS001", lab["questions"][0]["id"]), minutes=12)
+    p = client.get(f"/api/teach/labs/{lab['id']}/attendance", headers=ADMIN).json()
+    assert [c["idle"] for c in p["classes"]] == [False, True]
+    r = client.post(f"/api/teach/labs/{lab['id']}/attendance", json={"day": today()}, headers=ADMIN).json()
+    assert [x.get("skipped", False) for x in r["results"]] == [False, True]
+    assert [s["classId"] for s in rc.ws[KEY_A]["sessions"].values()] == [g1]
+    # an override in G2 sends it on purpose (the whole group skipped the lab)
+    r = client.post(f"/api/teach/labs/{lab['id']}/attendance", json={"day": today(), "overrides": {"UG23CS003": "A"}},
+                    headers=ADMIN).json()
+    assert not any(x.get("skipped") for x in r["results"])
+    assert sorted(s["classId"] for s in rc.ws[KEY_A]["sessions"].values()) == sorted([g1, g2])
+
+
+def test_teacher_picks_the_performing_group_when_opening(client, rc):
+    client.put("/api/teach/attendance", json={"sync_key": KEY_A}, headers=ADMIN)
+    g1 = rc.add_class(KEY_A, "CSE", "A", "G1", "UG23CS", 1, 2)
+    g2 = rc.add_class(KEY_A, "CSE", "A", "G2", "UG23CS", 3, 4)
+    lab = open_lab(client, ADMIN, roster=())
+    lid, qid = lab["id"], lab["questions"][0]["id"]
+    client.put(f"/api/teach/labs/{lid}/classes", json={"class_ids": [g1, g2]}, headers=ADMIN)
+    client.patch(f"/api/teach/labs/{lid}", json={"status": "draft"}, headers=ADMIN)
+    assert client.patch(f"/api/teach/labs/{lid}", json={"status": "open", "performing": ["nope"]}, headers=ADMIN).status_code == 400
+    assert client.get(f"/api/teach/labs/{lid}", headers=ADMIN).json()["status"] == "draft"  # nothing changed
+
+    # open for G1: G2's students don't see the lab, G1's do
+    client.patch(f"/api/teach/labs/{lid}", json={"status": "open", "performing": [g1]}, headers=ADMIN)
+    labs = lambda sid: [l["id"] for l in client.get(f"/api/students/{sid}/labs").json()]
+    assert lid in labs("UG23CS001") and lid not in labs("UG23CS003")
+    work(client, start(client, "UG23CS001", qid), minutes=12)
+    info = client.get(f"/api/teach/labs/{lid}/classes", headers=ADMIN).json()
+    assert info["current"]["class_ids"] == [g1] and info["current"]["labels"] == ["CSE · A · G1"]
+
+    # switch to G2 without closing: G1's sitting ends and only G1 is sent
+    r = client.patch(f"/api/teach/labs/{lid}", json={"performing": [g2]}, headers=ADMIN).json()
+    assert [x["label"] for x in r["attendance_sent"][0]["results"]] == ["CSE · A · G1"]
+    assert [s["classId"] for s in rc.ws[KEY_A]["sessions"].values()] == [g1]
+    assert lid in labs("UG23CS003") and lid not in labs("UG23CS001")
+    work(client, start(client, "UG23CS003", qid), minutes=11)
+
+    # closing ends G2's sitting and sends G2 only; G1's register isn't touched again
+    r = client.patch(f"/api/teach/labs/{lid}", json={"status": "closed"}, headers=ADMIN).json()
+    assert [x["label"] for x in r["attendance_sent"][0]["results"]] == ["CSE · A · G2"]
+    marks = {s["classId"]: s["marks"] for s in rc.ws[KEY_A]["sessions"].values()}
+    assert marks == {g1: {"UG23CS001": "P", "UG23CS002": "A"}, g2: {"UG23CS003": "P", "UG23CS004": "A"}}
+    sittings = client.get(f"/api/teach/labs/{lid}/classes", headers=ADMIN).json()["sittings"]
+    # the first, group-less sitting is open_lab's, before the groups were attached
+    assert [s["class_ids"] for s in sittings] == [[], [g1], [g2]] and all(s["closed_at"] for s in sittings)

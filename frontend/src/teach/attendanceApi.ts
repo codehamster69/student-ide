@@ -31,6 +31,9 @@ export interface SentRow {
   present: number; total: number; error: string | null;
 }
 
+/** One opening of a lab for the class groups performing in it ([] = all attached / whole roster). */
+export interface Sitting { id: string; class_ids: string[]; labels: string[]; opened_at: number; closed_at: number | null; opened_by: string }
+
 /** GET /api/teach/labs/<id>/classes */
 export interface LabClasses {
   classes: { class_id: string; label: string; attached_by: string; attached_at: number; n_students: number }[];
@@ -40,6 +43,9 @@ export interface LabClasses {
   auto_send: boolean;
   describe: string;
   rollcall_url: string;
+  sittings: Sitting[];
+  /** the sitting open now, if the lab is open */
+  current: Sitting | null;
 }
 
 export interface StudentMark {
@@ -64,7 +70,8 @@ export interface Preview {
   rule: Rule;
   auto_send: boolean;
   describe: string;
-  classes: { class_id: string; label: string; students: StudentMark[]; present: number; total: number; sent: SentRow | null }[];
+  /** idle: nobody from the group worked in the lab that day (another group's sitting), so it isn't sent */
+  classes: { class_id: string; label: string; students: StudentMark[]; present: number; total: number; sent: SentRow | null; idle: boolean }[];
   not_in_any_class: Omit<StudentMark, "auto" | "override">[];
 }
 

@@ -18,8 +18,17 @@ Student IDE can mark lab attendance in [Roll Call](https://attendance.hokora.xyz
    *Attach class groups*: tick groups from your Roll Call or create one (branch,
    section, lab group, roll prefix and range). Their students join the lab's roster.
    A lab can have several groups (e.g. G1 and G2 sharing a slot).
-3. **Run the lab, then close it.** Closing sends attendance for every lab day not
-   sent yet. To check first, open *Attendance* (`#/teach/labs/<id>/attendance`):
+3. **Open the lab for the group that is performing.** With class groups attached,
+   *Open* asks *Which group is performing?*. Tick the group in the room now (or
+   several, if they share the slot). Until the lab closes or you move on, only
+   those groups' students see the lab; students on no attached roster are not
+   restricted. Each opening is a *sitting*.
+4. **Move on or close.** *Next group* (in the green "Open for …" bar) ends the
+   sitting, sends its attendance for its groups only, and starts a sitting for
+   the next group, so G1 on Monday and G2 on Thursday can share one lab without
+   G2 being marked absent on Monday. Closing ends the last sitting the same way
+   (a lab closed without any sitting sends every lab day not sent yet, as before).
+   Groups with nobody working in the lab that day are never sent. To check first, open *Attendance* (`#/teach/labs/<id>/attendance`):
    each student's mark with its reason; tap a mark to override; *Send to Roll Call*.
 
 Roll Call rosters must build the same ids as the college address: `ug23cs001@…`

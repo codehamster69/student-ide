@@ -110,9 +110,17 @@ await t.click("button:has-text('Save')");
 await t.waitForSelector("text=Preview, adjust and send");
 lab = await api("GET", `/api/teach/labs/${lab.id}`);
 assert.deepEqual(lab.roster, ["UG23CS001", "UG23CS002", "UG23CS003", "UG23CS004", "UG23CS005", "UG23CS006"]);
-await api("PATCH", `/api/teach/labs/${lab.id}`, { status: "open" });
+// opening asks which group is performing; this sitting has both groups in the room
 await t.reload();
-await t.waitForSelector("text=CSE · A · G1");
+await t.locator("[aria-label='Lab status'] [role=radio]:has-text('Open')").click();
+const pick = t.locator("[role=dialog]:has-text('Which group is performing?')");
+await pick.waitFor();
+await pick.locator("label:has-text('CSE · A · G1') input[type=checkbox]").check();
+await shot(t, "03a-which-group");
+await pick.locator("label:has-text('CSE · A · G2') input[type=checkbox]").check();
+await pick.locator("button:has-text('Open the lab')").click();
+await t.waitForSelector("[role=status]:has-text('Open for')", { timeout: 8000 }).catch(async (e) => { await shot(t, "debug"); throw e; });
+assert.match(await t.locator("[role=status]:has-text('Open for')").innerText(), /CSE · A · G\d, CSE · A · G\d/);
 await shot(t, "03-lab-class-groups");
 
 // --- students work in the lab (dev mode: roll number sign-in) ---------------------

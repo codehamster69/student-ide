@@ -932,6 +932,24 @@ are derived from lab, class group and day, so sending again replaces the same
 records instead of adding new ones, and a failed send is kept and can be
 retried without blocking the lab from closing.
 
+\paragraph{Sittings.} Lab groups of one section usually take the same lab
+on different days, so marking every attached group whenever the lab closes
+would record the group that was not in the room as absent. Opening a lab that
+has class groups therefore asks the teacher which group is performing; the
+opening becomes a \emph{sitting} for those groups. While it lasts, only their
+students see the lab (students on no attached roster are not restricted), and
+when the teacher closes the lab or moves to the next group, attendance for
+that day is sent for the sitting's groups alone. A group in which nobody
+worked that day is never sent, so a sitting opened by mistake does not mark a
+whole group absent (\cref{fig:which-group}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.6\linewidth]{attendance/attendance-light-03a-which-group}
+  \caption{Opening a lab with class groups asks which group is performing; only that group's students can work in the lab, and only they are marked when the sitting ends.}
+  \label{fig:which-group}
+\end{figure}
+
 \paragraph{Subjects and onboarding.} A lab's subject is also the Roll Call
 session's subject, and both apps gained a Subjects view: in Student IDE the
 labs of a course with their class groups and what has been sent, in Roll Call

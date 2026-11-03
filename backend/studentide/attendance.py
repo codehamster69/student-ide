@@ -51,6 +51,17 @@ attendance.
     GET    /api/attendance/{student}                {enabled}: is this student in any attached class group
     POST   /api/attendance/{student}/open           {url, key}: grants their key, then a one-time link to My attendance
 
+One lab can serve several groups on different days (G1 on Monday, G2 on
+Tuesday): a group none of whose students worked in the lab on a day is not
+sent for that day, so G2 isn't marked absent on G1's day. Overriding a mark in
+that group sends it anyway (e.g. the whole group skipped the lab).
+
+Sittings. Opening a lab (PATCH status=open, performing=[class ids]) starts a
+sitting for the groups performing now; while it is open, students of the lab's
+other groups can't work in it (db.labs_for_student). Sending performing again
+while open switches to the next group: the previous sitting ends and its
+attendance is sent, for its groups only. Closing ends the last one the same way.
+
 Closing a lab (PATCH status=closed) sends every lab day not sent yet, if the
 lab has class groups and auto_send is on. Sending again replaces the same Roll
 Call sessions (their ids are derived from lab + class + day), never duplicates.
@@ -102,16 +113,7 @@ CREATE TABLE IF NOT EXISTS student_keys (
     created_at    REAL NOT NULL
 ) WITHOUT ROWID;
 
--- Roll Call class groups attached to a lab, with a copy of their student ids.
-CREATE TABLE IF NOT EXISTS lab_classes (
-    lab_id        TEXT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
-    class_id      TEXT NOT NULL,             -- Roll Call class uuid
-    label         TEXT NOT NULL,             -- "CSE · A · G1"
-    students_json TEXT NOT NULL,             -- registration numbers on its roster, upper-case
-    attached_by   TEXT NOT NULL,             -- whose Roll Call holds the class (sends go through their key)
-    attached_at   REAL NOT NULL,
-    PRIMARY KEY (lab_id, class_id)
-) WITHOUT ROWID;
+-- lab_classes and lab_runs live in db.py (labs_for_student reads them).
 
 CREATE TABLE IF NOT EXISTS lab_attendance (
     lab_id        TEXT PRIMARY KEY REFERENCES labs(id) ON DELETE CASCADE,
@@ -543,7 +545,8 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         days = sorted(lab_activity(db, lab_id), reverse=True)
         return {"classes": [{k: c[k] for k in ("class_id", "label", "attached_by", "attached_at")} | {"n_students": len(c["students"])}
                             for c in attached(lab_id)],
-                "days": days, "sent": sent(lab_id), "rollcall_url": rollcall_url(), **settings(lab_id)}
+                "days": days, "sent": sent(lab_id), "rollcall_url": rollcall_url(), **settings(lab_id),
+                "sittings": runs(lab_id), "current": current_run(lab_id)}
 
     @r.get("/labs/{lab_id}/classes")
     def lab_classes(lab_id: str, request: Request) -> dict:
@@ -587,6 +590,77 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
 
     # preview and send -----------------------------------------------------
 
+    # sittings: which groups perform in each opening of the lab ------------------
+
+    def local_day(ts: float) -> str:
+        return datetime.fromtimestamp(ts, timezone()).date().isoformat()
+
+    def runs(lab_id: str) -> list[dict]:
+        labels = {c["class_id"]: c["label"] for c in attached(lab_id)}
+        with db.connect() as conn:
+            rows = conn.execute("SELECT * FROM lab_runs WHERE lab_id = ? ORDER BY opened_at", (lab_id,)).fetchall()
+        out = []
+        for r in rows:
+            ids = json.loads(r["class_ids"])
+            out.append(dict(r) | {"class_ids": ids, "labels": [labels.get(i, "removed group") for i in ids]})
+        return out
+
+    def groups_on(lab_id: str, day: str) -> set[str] | None:
+        """The groups that sat the lab on `day`; None = all attached (no sitting chose groups)."""
+        that_day = [r for r in runs(lab_id) if local_day(r["opened_at"]) == day]
+        if not that_day or any(not r["class_ids"] for r in that_day):
+            return None
+        return {i for r in that_day for i in r["class_ids"]}
+
+    def current_run(lab_id: str) -> dict | None:
+        return next((r for r in reversed(runs(lab_id)) if r["closed_at"] is None), None)
+
+    class Sittings:
+        """Called by teach.py's PATCH /labs/{id}: opening starts a sitting for the
+        performing groups, switching groups or closing ends it and sends its
+        attendance (if auto-send is on), for its groups only."""
+
+        def check(self, lab_id: str, performing: list[str]) -> None:
+            ids = {c["class_id"] for c in attached(lab_id)}
+            unknown = [i for i in performing if i not in ids]
+            if unknown:
+                raise HTTPException(400, "performing groups must be attached to the lab first")
+
+        def changed(self, lab_id: str, was: str, now: str, performing: list[str] | None, request: Request):
+            cur = current_run(lab_id)
+            sent = None
+            if was == "open" and (now != "open" or performing is not None):
+                if cur is not None:
+                    sent = end_run(cur, request, send_it=now != "draft")
+                elif now == "closed":
+                    sent = on_closed(lab_id, request)
+            elif now == "closed" and was != "closed":
+                sent = on_closed(lab_id, request)
+            if now == "open" and (was != "open" or performing is not None):
+                with db.connect() as conn:
+                    conn.execute("INSERT INTO lab_runs(id, lab_id, class_ids, opened_at, opened_by) VALUES (?,?,?,?,?)",
+                                 ("run_" + uuid.uuid4().hex[:10], lab_id, json.dumps(sorted(set(performing or []))),
+                                  time.time(), me(request)))
+            return sent
+
+    def end_run(run: dict, request: Request, send_it: bool = True) -> list[dict]:
+        with db.connect() as conn:
+            conn.execute("UPDATE lab_runs SET closed_at = ? WHERE id = ?", (time.time(), run["id"]))
+        lab = db.get_lab(run["lab_id"])
+        if not send_it or not settings(lab["id"])["auto_send"] or not attached(lab["id"]):
+            return []
+        day = local_day(run["opened_at"])
+        if day not in lab_activity(db, lab["id"]):
+            return []
+        groups = set(run["class_ids"]) or {c["class_id"] for c in attached(lab["id"])}
+        groups -= {x["class_id"] for x in sent(lab["id"]) if x["day"] == day and not x["error"]}  # the teacher sent it already
+        if not groups:
+            return []
+        try:
+            return [send(lab, day, None, me(request), "lab closed", base(request), only=groups)]
+        except HTTPException as e:  # e.g. nobody from the group worked in it
+            return [{"day": day, "results": [], "error": e.detail}]
+
     def preview(lab_id: str, day: str | None, overrides: dict[str, str] | None = None) -> dict:
         activity = lab_activity(db, lab_id)
         days = sorted(activity, reverse=True)
@@ -598,7 +672,11 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 "SELECT class_id, overrides_json FROM attendance_sent WHERE lab_id = ? AND day = ?", (lab_id, day))}
         sent_rows = {s["class_id"]: s for s in sent(lab_id) if s["day"] == day}
         classes, in_a_class = [], set()
+        performing = groups_on(lab_id, day)
         for c in attached(lab_id):
+            if performing is not None and c["class_id"] not in performing:
+                in_a_class.update(c["students"])  # another day's group: neither listed nor "in no class group"
+                continue
             ov = (overrides if overrides is not None else prev.get(c["class_id"], {}))
             students = []
             for sid in c["students"]:
@@ -607,29 +685,42 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 students.append({"student_id": sid, **j, "auto": j["present"],
                                  "present": (o == "P") if o in ("P", "A") else j["present"], "override": o})
                 in_a_class.add(sid)
+            # nobody from this group worked in the lab that day (another group's sitting): not sent,
+            # unless the teacher overrides a mark in it on purpose
+            idle = not any(sid in today for sid in c["students"]) and not any(s["override"] for s in students)
             classes.append({"class_id": c["class_id"], "label": c["label"], "students": students,
                             "present": sum(s["present"] for s in students), "total": len(students),
-                            "sent": sent_rows.get(c["class_id"])})
+                            "sent": sent_rows.get(c["class_id"]), "idle": idle})
         # active in the lab but on no attached roster: usually a prefix that doesn't match the college address
         outside = sorted(({"student_id": sid, **judge(e, st["rule"])} for sid, e in today.items() if sid not in in_a_class),
                          key=lambda x: x["student_id"])
-        return {"day": day, "days": days, **st, "classes": classes, "not_in_any_class": outside}
+        return {"day": day, "days": days, **st, "classes": classes, "not_in_any_class": outside,
+                "sittings": [r for r in runs(lab_id) if local_day(r["opened_at"]) == day]}
 
     @r.get("/labs/{lab_id}/attendance")
     def get_preview(lab_id: str, request: Request, day: str | None = None) -> dict:
         lab_or_404(lab_id, request)
         return preview(lab_id, day)
 
-    def send(lab, day: str, overrides: dict[str, str] | None, by: str, how: str, base_url: str) -> dict:
+    def send(lab, day: str, overrides: dict[str, str] | None, by: str, how: str, base_url: str,
+             only: set[str] | None = None) -> dict:
         p = preview(lab["id"], day, overrides)
+        if only is not None:
+            p["classes"] = [c for c in p["classes"] if c["class_id"] in only]
         if not p["classes"]:
             raise HTTPException(409, "attach a class group first")
+        if all(c["idle"] for c in p["classes"]):
+            raise HTTPException(409, f"nobody from the attached class groups worked in this lab on {day}")
         firsts = [s["first"] for c in p["classes"] for s in c["students"] if s["present"] and s["first"]]
         lasts = [s["last"] for c in p["classes"] for s in c["students"] if s["present"] and s["last"]]
         hhmm = lambda ts: datetime.fromtimestamp(ts, timezone()).strftime("%H:%M")
         faculty = ((auth.get_user(by) or {}).get("name") or "") if by else ""
         results = []
         for c in p["classes"]:
+            if c["idle"]:
+                results.append({"class_id": c["class_id"], "label": c["label"], "skipped": True, "error": None,
+                                "reason": "nobody from this group worked in the lab that day"})
+                continue
             row = next(x for x in attached(lab["id"]) if x["class_id"] == c["class_id"])
             marks = {s["student_id"]: "P" if s["present"] else "A" for s in c["students"]}
             ov = {s["student_id"]: s["override"] for s in c["students"] if s["override"]}
@@ -679,6 +770,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                 for d in sorted(lab_activity(db, lab_id)) if d not in done]
 
     r.on_lab_closed = on_closed  # type: ignore[attr-defined]
+    r.sittings = Sittings()  # type: ignore[attr-defined]
     r.student_router = student_router(db, auth, send_http)  # type: ignore[attr-defined]
     return r
 
