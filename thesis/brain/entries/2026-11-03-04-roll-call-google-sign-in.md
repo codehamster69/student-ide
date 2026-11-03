@@ -73,3 +73,19 @@ OAuth client and set the Vercel env vars (`GOOGLE_CLIENT_ID`, `ROLLCALL_SECRET`,
   under that teacher (`GET /attendance/classes?every=1`); an attached group stays
   in its teacher's register and is sent with that teacher's key
   (`test_admins_attach_any_teachers_group`). *Setup* is now a top-bar tab.
+
+## Follow-up (same day): lab card speed, student Google sign-in
+
+- The lab's class-group card on the live site loaded forever: listing a lab's
+  days parsed every edit of every session (226 sessions), twice per page, on one
+  worker. Days now come from edit times in the events index; a day's preview
+  reads only that day's sessions (bench 0.86 s → 0.15 s). The card shows errors
+  with *Try again*. The top bar and lab page were also fixed for phones (PR #34).
+- Roll Call: students who never use Student IDE sign in with Google. A student
+  address gets a 30-day signed pass (`sp1.ROLL.expiry.sig`); `/api/me` reads the
+  roll number only from the pass and returns that roll number's marks in every
+  register. Checked: query parameters are ignored, a pass with another roll
+  number fails its signature (401), an expired pass fails, and the pass opens no
+  admin, sync or `/api/v1` endpoint. `/me?as=` still needs an admin pass.
+- Open: marks match by roll number, so a register that uses other ids for a
+  student shows nothing to that student until the roster uses roll numbers.
