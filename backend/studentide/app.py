@@ -60,7 +60,8 @@ Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
 POST /api/sessions/{id}/submit, see compete.py.
 Sandbox Labs (subjects, environments, library, teacher previews): /api/sandbox/*,
-see sandbox.py, previews.py and docs/sandbox-labs.md.
+see sandbox.py, previews.py and docs/sandbox-labs.md. Submissions and their
+grading ($STUDENTIDE_GRADING=off turns it off): /api/sandbox/*/submissions, see submissions.py.
 
 Run with:  uvicorn studentide.app:create_app --factory
 (env STUDENTIDE_DB picks the database file)
@@ -82,7 +83,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
 from . import (attendance, compete, desktop, grading, learn, live as live_mod, previews, retention, runner, sandbox,
-               teach, workspaces)
+               submissions, teach, workspaces)
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .providers import PROVIDERS, ProviderError
@@ -519,7 +520,6 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return replay_data(db, session_id)
 
     app.include_router(learn.router(db, auth, _student_id))
-    app.include_router(workspaces.router(db, auth, _student_id))
     app.include_router(desktop.router(db, auth, me_json))
     attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
     app.include_router(attendance_router)
@@ -529,15 +529,23 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     sandbox_router = sandbox.router(db, require_admin, auth)
     app.include_router(sandbox_router)
     app.include_router(sandbox_router.student_router)
-    preview_router = previews.router(db, require_admin, auth, sandbox_router,
-                                     preview_driver if preview_driver is not None else previews.driver_from_env(),
-                                     preview_limits)
+    driver = preview_driver if preview_driver is not None else previews.driver_from_env()
+    submissions_router = submissions.router(db, require_admin, auth, sandbox_router,
+                                            driver if os.environ.get("STUDENTIDE_GRADING", "on") != "off" else None)
+    app.include_router(submissions_router)
+    app.include_router(submissions_router.student_router)
+    grader = app.state.grader = submissions_router.grader
+    app.include_router(workspaces.router(db, auth, _student_id, sandbox_router.upload_gate,
+                                         lambda *a: submissions.submission_json(grader.row(grader.submit(*a)), True)))
+    preview_router = previews.router(db, require_admin, auth, sandbox_router, driver, preview_limits)
     app.include_router(preview_router)
     app.include_router(preview_router.ws_router)
     app.state.previews = preview_router.previews
     if preview_router.previews.enabled and preview_driver is None:  # a real driver: clear leftovers, stop idle ones
         preview_router.previews.on_restart()
         previews.start_reaper(preview_router.previews)
+    if grader.enabled and preview_driver is None:
+        grader.on_restart()
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))
 
     if serve_frontend and FRONTEND_DIST.is_dir():

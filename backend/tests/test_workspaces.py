@@ -15,9 +15,24 @@ from studentide.app import create_app
 Q = {"student_id": "S1"}
 
 
+def open_lab(path, students=("S1", "S2"), status="published", due_at=None) -> None:
+    """Lab slab_1 with assignment asg_1, open to `students` (uploads are checked against the catalogue)."""
+    import sqlite3
+    with sqlite3.connect(path) as conn:
+        conn.execute("INSERT INTO sbx_subjects (id, title, created_at, updated_at) VALUES ('sub_1', 'OS', 0, 0)")
+        conn.executemany("INSERT INTO sbx_subject_students (subject_id, student_id) VALUES ('sub_1', ?)",
+                         [(s,) for s in students])
+        conn.execute("INSERT INTO sbx_labs (id, subject_id, title, status, due_at, created_at, updated_at) "
+                     "VALUES ('slab_1', 'sub_1', 'Shell', ?, ?, 0, 0)", (status, due_at))
+        conn.execute("INSERT INTO sbx_assignments (id, lab_id, position, title, created_at, updated_at) "
+                     "VALUES ('asg_1', 'slab_1', 0, 'One', 0, 0)")
+
+
 @pytest.fixture
 def client(tmp_path):
-    return TestClient(create_app(tmp_path / "w.sqlite3", admin_token="t", serve_frontend=False))
+    c = TestClient(create_app(tmp_path / "w.sqlite3", admin_token="t", serve_frontend=False))
+    open_lab(tmp_path / "w.sqlite3")
+    return c
 
 
 def tgz(files: dict[str, bytes], links: dict[str, str] | None = None) -> bytes:
@@ -167,3 +182,25 @@ def test_detector_ignores_terminal_keys_and_follows_files():
     assert s.k_code == ["KeyA"]
     assert len(s.run_t) == 1
     assert final_text(ev) == "abc"  # the main file, not util.c
+
+
+def test_uploads_are_checked_against_the_lab(tmp_path):
+    import time
+    path = tmp_path / "g.sqlite3"
+    c = TestClient(create_app(path, admin_token="t", serve_frontend=False))
+    open_lab(path, students=("S1",), due_at=time.time() - 3600)
+    data = tgz({"./main.c": b"x"})
+    # not on the roster, unknown lab, unknown assignment
+    assert c.put("/api/workspaces/slab_1/asg_1", params={"student_id": "S9"}, content=data,
+                 headers={"X-Workspace-Sha256": sha("a")}).status_code == 403
+    assert put(c, data, sha("a"), lab="slab_2").status_code == 403
+    assert put(c, data, sha("a"), asg="asg_9").status_code == 404
+    # past the due time: backups are kept, Submit is refused with a reason
+    assert put(c, data, sha("a")).status_code == 200
+    late = put(c, data, sha("a"), reason="submit")
+    assert late.status_code == 409 and "can no longer be submitted" in late.json()["detail"]
+    # a draft lab takes nothing
+    import sqlite3
+    with sqlite3.connect(path) as conn:
+        conn.execute("UPDATE sbx_labs SET status = 'draft', due_at = NULL")
+    assert put(c, data, sha("b")).status_code == 403

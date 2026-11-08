@@ -183,7 +183,8 @@ export class WorkspaceSync {
       headers: { "Content-Type": "application/gzip", "X-Workspace-Sha256": hash, "X-Workspace-Reason": reason, ...(this.state.synced[k] ? { "X-Workspace-Parent": this.state.synced[k]! } : {}) },
       body: new Uint8Array(tgz),
     });
-    if (!r.ok) throw new Error(`workspace upload failed (${r.status})`);
+    // the server's reason (lab closed, not on the roster) is what the student needs to read
+    if (!r.ok) throw new Error(await r.json().then((j) => (typeof j?.detail === "string" ? j.detail : ""), () => "") || `workspace upload failed (${r.status})`);
     this.state.synced[k] = hash;
     await this.save();
     return hash;
