@@ -7,6 +7,9 @@ WORKDIR /web
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
+# Types shared with the desktop app (frontend/src/desktop.ts, tsconfig paths): same relative layout.
+COPY desktop/app/src/shared /desktop/app/src/shared
+COPY desktop/sandbox/src/api.ts /desktop/sandbox/src/api.ts
 RUN npm run build
 
 FROM python:3.12-slim-bookworm
