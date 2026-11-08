@@ -49,6 +49,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      # Engine downloads and Electron zips come from GitHub releases, which can 504 for an
+      # hour; a cache keyed on the pinned versions keeps packaging working through that.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            desktop/installer/assets/lima/arm64
+            desktop/installer/assets/lima/x64
+            desktop/installer/assets/podman-static
+          key: engine-assets-${{ runner.os }}-${{ hashFiles('desktop/installer/scripts/fetch-assets.sh') }}
       - run: npm ci && npm run build && scripts/fetch-assets.sh linux
       - name: Run setup as a user without sudo or Podman
         run: |
@@ -57,7 +66,7 @@ jobs:
           sudo sed -i '/^student-ci:/d' /etc/subuid /etc/subgid
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           sudo cp -r dist assets /home/student-ci/ && sudo chown -R student-ci /home/student-ci
-          echo '{"images":[{"ref":"docker.io/library/alpine:3.20","subject":"CI"}]}' | sudo -u student-ci tee /home/student-ci/images.json
+          echo '{"images":[{"ref":"docker.io/library/alpine:3.22","subject":"CI"}]}' | sudo -u student-ci tee /home/student-ci/images.json
           NODE="$(command -v node)"; sudo chmod o+rx "$(dirname "$NODE")" || true
           cd /home/student-ci && sudo -u student-ci env HOME=/home/student-ci USER=student-ci PATH=/usr/bin:/bin \
             "$NODE" dist/cli.js --data-dir /home/student-ci/sid --assets /home/student-ci/assets --images /home/student-ci/images.json
@@ -77,6 +86,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      # Engine downloads and Electron zips come from GitHub releases, which can 504 for an
+      # hour; a cache keyed on the pinned versions keeps packaging working through that.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            desktop/installer/assets/lima/arm64
+            desktop/installer/assets/lima/x64
+            desktop/installer/assets/podman-static
+          key: engine-assets-${{ runner.os }}-${{ hashFiles('desktop/installer/scripts/fetch-assets.sh') }}
       - uses: actions/download-artifact@v4
         if: matrix.target == '--win'
         with: { name: wsl-rootfs, path: desktop/installer/assets/wsl }
@@ -84,6 +102,13 @@ jobs:
         run: scripts/fetch-assets.sh mac
       - if: matrix.target == '--linux'
         run: scripts/fetch-assets.sh linux
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('desktop/app/package-lock.json') }}
       - run: npm ci && npm --prefix ../sandbox ci && npm --prefix ../app ci
       # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo secrets.
       - run: npm run package -- ${{ matrix.target }}

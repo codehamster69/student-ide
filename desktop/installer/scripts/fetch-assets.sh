@@ -6,8 +6,9 @@ cd "$(dirname "$0")/.."
 LIMA=1.0.7
 PODMAN=5.3.1
 
-fetch() { # url sha256 out
-  curl -fsSL --retry 3 -o "$3" "$1"
+fetch() { # url sha256 out; skips a file already there with the right checksum (CI cache)
+  if [ -f "$3" ] && echo "$2  $3" | sha256sum -c - >/dev/null 2>&1; then return; fi
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$3" "$1"
   echo "$2  $3" | sha256sum -c - >/dev/null || { echo "checksum mismatch for $1" >&2; rm -f "$3"; exit 1; }
 }
 
@@ -16,6 +17,7 @@ case "${1:?mac|linux|win}" in
     for pair in "arm64 arm64 fa3836128e19920ca7113bbcc9908399c56f0665b4b04f294dd76aa02ef38905" \
                 "x64 x86_64 1fa5211968d5a3f895fa2ddc9a36695ac287a3f6526b83147c62582d837055cc"; do
       set -- $pair
+      [ -x "assets/lima/$1/bin/limactl" ] && continue   # restored from the CI cache
       mkdir -p "assets/lima/$1"
       fetch "https://github.com/lima-vm/lima/releases/download/v$LIMA/lima-$LIMA-Darwin-$2.tar.gz" "$3" /tmp/lima.tgz
       # limactl, the guest agent for this arch (VM arch = host arch) and Lima's licence (Apache-2.0).

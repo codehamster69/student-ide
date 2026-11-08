@@ -10,7 +10,7 @@ starts. Code: `desktop/installer/` (package `@studentide/installer`), plan:
 
 | OS | Engine | Admin rights | Restart |
 | --- | --- | --- | --- |
-| Windows 10 2004+ / 11 | Our WSL2 distro `StudentIDE` (Alpine + rootless Podman, ~34 MB compressed), imported per user with `wsl --import` | Once, only when WSL2 is off: one UAC prompt (`wsl --install --no-distribution`; DISM on older inbox WSL) | Once, only when WSL2 was just turned on. Setup registers a RunOnce entry and carries on after sign-in |
+| Windows 10 2004+ / 11 | Our WSL2 distro `StudentIDE` (Alpine 3.22 + rootless Podman 5.6, ~36 MB compressed), imported per user with `wsl --import` | Once, only when WSL2 is off: one UAC prompt (`wsl --install --no-distribution`; DISM on older inbox WSL) | Once, only when WSL2 was just turned on. Setup registers a RunOnce entry and carries on after sign-in |
 | macOS 13+ (Intel, Apple Silicon) | Bundled Lima 1.0.7 starts a Fedora VM (Apple Virtualization framework, 2 CPU, 2 GB, 20 GB disk) with rootless Podman. No host folders are mounted | No | No |
 | Linux | Podman already there; else the distro package through one `pkexec` password prompt; else the bundled static Podman 5.3.1 unpacked into the app's data folder | Only for the package route | No |
 
@@ -88,7 +88,8 @@ the WSL root filesystem is built from `assets/wsl/Containerfile` by
 CI (`.github/workflows/desktop.yml`): unit tests on Windows, macOS and Linux,
 an end-to-end setup on a Linux runner as an ordinary user with Podman removed
 (the no-admin static route, pulling a real image), the WSL rootfs build, and
-packages for all three OS uploaded as workflow artifacts. Builds are unsigned
+packages for all three OS uploaded as workflow artifacts. Engine downloads and Electron zips are cached
+(keyed on the pinned versions), so a GitHub releases outage does not stop packaging. Builds are unsigned
 for now: Windows code signing and macOS notarization need certificates added
 as repository secrets.
 
