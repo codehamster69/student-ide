@@ -7,6 +7,8 @@ export interface EngineInfo {
   kind: "wsl-podman" | "lima-podman" | "podman" | "docker";
   cli: string[];          // argv prefix, e.g. ["wsl.exe", "-d", "StudentIDE", "--", "podman"]
   dockerHost?: string;    // unix:// socket when reachable from the host
+  env?: Record<string, string>; // extra environment the cli needs (LIMA_HOME, XDG_CONFIG_HOME, WSL_UTF8)
+  bundled?: boolean;      // true when our installer set it up (false: Docker/Podman the user already had)
   version: string;
   installedAt: string;
 }

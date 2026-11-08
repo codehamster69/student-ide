@@ -1,0 +1,6 @@
+#!/bin/sh
+# Rootless podman entry point used by the desktop app (wsl.exe -d StudentIDE --user student -- sid-podman ...).
+# No systemd here, so make the runtime dir podman expects.
+export XDG_RUNTIME_DIR="/tmp/podman-run-$(id -u)"
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+exec podman "$@"

@@ -17,6 +17,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@studentide/installer": "file:../installer",
     "@studentide/sandbox": "file:../sandbox"
   }
 }
