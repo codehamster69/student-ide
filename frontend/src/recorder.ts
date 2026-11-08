@@ -1,8 +1,14 @@
 // Buffers events and uploads them in batches. Field meanings are documented
 // in backend/studentide/schema.py and docs/event-schema.md.
+// In the desktop app the batches go to the main process journal instead
+// (window.studentDesktop.journal): written to disk first, then uploaded
+// signed and hash-chained, and kept through an outage (desktop/sandbox/src/journal.ts).
+
+import { desktop } from "./desktop";
 
 export const SCHEMA_VERSION = 3; // v2 and v3 are additive (Sandbox Labs); the server accepts 1, 2 and 3
-const FLUSH_MS = 2000;
+const journal = desktop?.journal ?? null;
+const FLUSH_MS = journal ? 500 : 2000; // the journal is local disk: hand events over sooner
 const MAX_BATCH = 500;
 
 export type EventType =
@@ -51,6 +57,13 @@ export class Recorder {
     this.inFlight = true;
     const batch = this.queue.slice(0, MAX_BATCH);
     try {
+      if (journal) {
+        const st = await journal.append(this.sessionId, batch);
+        const sent = new Set(batch.map((e) => e.seq));
+        this.queue = this.queue.filter((e) => !sent.has(e.seq));
+        this.onStatus(st.pending, st.online);
+        return;
+      }
       const res = await fetch(this.url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,6 +94,7 @@ export class Recorder {
       await this.flush();
       if (this.queue.length) await new Promise((r) => setTimeout(r, 500));
     }
+    if (journal) await journal.close(this.sessionId).catch(() => {});
   }
 
   /** Last-chance upload while the page is going away. */
@@ -88,6 +102,10 @@ export class Recorder {
     this.stopped = true;
     window.clearInterval(this.timer);
     if (!this.queue.length) return;
+    if (journal) {
+      void journal.append(this.sessionId, this.queue); // IPC outlives the page
+      return;
+    }
     const body = JSON.stringify({ schema_version: SCHEMA_VERSION, events: this.queue });
     if (!navigator.sendBeacon(this.url, body)) {
       void fetch(this.url, { method: "POST", body, keepalive: true });
