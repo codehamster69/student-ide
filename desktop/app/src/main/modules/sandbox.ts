@@ -4,6 +4,7 @@
  * <userData>/engine.json; without it every call explains that it is missing.
  */
 
+import { app } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { registerSandboxIpc, type EngineInfo } from "@studentide/sandbox";
@@ -24,7 +25,7 @@ export const sandboxModule = (): DesktopModule => {
     namespace: "sandbox",
     register(ctx) {
       // re-read on each first use, so an engine set up after launch is picked up
-      shutdown = registerSandboxIpc(ctx, { engine: () => savedEngine(ctx.userData), fail }).shutdown;
+      shutdown = registerSandboxIpc(ctx, { engine: () => savedEngine(ctx.userData), fail, appVersion: app.getVersion() }).shutdown;
     },
     dispose: () => shutdown?.() ?? Promise.resolve(),
   };

@@ -90,3 +90,12 @@ test("line diff finds inserted and removed lines", () => {
   assert.match(d.diff, /^ a\n-b\n\+B\n c\n\+d/);
   assert.equal(lineDiff("", "x").added, "x");
 });
+
+test("editor scratch files are ignored and a final newline is not a line", async () => {
+  const { isEditorScratch } = await import("../src/watcher.ts");
+  for (const p of ["/w/.notes.txt.swp", "/w/.main.c.swo", "/w/4913", "/w/main.c~", "/w/.#main.c"]) assert.ok(isEditorScratch(p), p);
+  assert.ok(!isEditorScratch("/w/main.c") && !isEditorScratch("/w/swp.c"));
+  const d = lineDiff("", "hello from vim\n");
+  assert.equal(d.added, "hello from vim");
+  assert.equal(d.addedLines, 1);
+});

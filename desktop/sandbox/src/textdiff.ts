@@ -23,8 +23,8 @@ export interface LineDiff {
 }
 
 export function lineDiff(before: string, after: string): LineDiff {
-  const a = before === "" ? [] : before.split("\n");
-  const b = after === "" ? [] : after.split("\n");
+  const a = lines(before);
+  const b = lines(after);
   let head = 0;
   while (head < a.length && head < b.length && a[head] === b[head]) head++;
   let tail = 0;
@@ -72,4 +72,12 @@ export function lineDiff(before: string, after: string): LineDiff {
     diff,
     truncated,
   };
+}
+
+/** a file's lines; the newline that ends the last line does not start another */
+function lines(text: string): string[] {
+  if (text === "") return [];
+  const l = text.split("\n");
+  if (l[l.length - 1] === "") l.pop();
+  return l;
 }

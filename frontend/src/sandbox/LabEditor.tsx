@@ -1,6 +1,6 @@
 // #/sandbox/labs/<id>: the lab wizard (plan §5.3). Basics, Assignments, Check
 // (reference solution against the tests in a preview instance), Publish, and
-// sharing to the library.
+// sharing to the library; once published, Class: the readiness board and live grid (ClassBoard.tsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, FilePlus2, FlaskConical, Play, Plus, Rocket, Share2, Trash2, X } from "lucide-react";
@@ -11,9 +11,10 @@ import { LessonText } from "../learn/LessonText";
 import { go, href } from "../routes";
 import { useLoad } from "./Subjects";
 import { FileEditor, NetworkBadge } from "./bits";
+import { ClassBoard } from "./ClassBoard";
 import { NETWORK, emptyTests, type Assignment, type LabDetail, type Network, type Preview, type SandboxFile, type TestCase, type Tests, type VerifyResult } from "./api";
 
-const STEPS = ["Basics", "Assignments", "Check", "Publish"] as const;
+const STEPS = ["Basics", "Assignments", "Check", "Publish", "Class"] as const;
 type Step = (typeof STEPS)[number];
 
 export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
@@ -57,7 +58,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
       <div className="grid gap-6 md:grid-cols-[180px_1fr]">
         <LayoutGroup id="wizard">
           <nav className="flex gap-1 overflow-x-auto md:sticky md:top-20 md:grid md:content-start">
-            {STEPS.map((s, i) => (
+            {STEPS.filter((s) => s !== "Class" || lab.status !== "draft").map((s, i) => (
               <button key={s} onClick={() => setStep(s)} className={cn("relative flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium",
                 step === s ? "text-text" : "text-muted hover:text-text")}>
                 {step === s && <motion.span layoutId="wizard-step" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
@@ -73,6 +74,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
             {step === "Assignments" && <Assignments lab={lab} readOnly={readOnly} save={save} />}
             {step === "Check" && <CheckStep lab={lab} />}
             {step === "Publish" && <Publish lab={lab} readOnly={readOnly} saving={saving} save={save} />}
+            {step === "Class" && <ClassBoard labId={lab.id} />}
           </motion.div>
         </AnimatePresence>
       </div>

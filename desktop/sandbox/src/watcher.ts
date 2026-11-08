@@ -123,6 +123,12 @@ const isText = (b: Buffer) => !b.subarray(0, 8000).includes(0);
  * lines directly. Call expect(path, text) before the app itself writes a file:
  * that save is then not reported (the editor already logged it as edits).
  */
+/** vim's .swp/.swo/4913 probe/~ backups and emacs/nano lock files: not the student's work */
+export function isEditorScratch(path: string): boolean {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  return /^\..+\.sw[a-p]$/.test(name) || name === "4913" || name.endsWith("~") || name.startsWith(".#") || /^\..+\.save$/.test(name);
+}
+
 export class FsWatch {
   private known = new Map<string, { sha: string; text: string | null }>();
   private expected = new Map<string, string>(); // path -> sha the app is about to write
@@ -157,6 +163,7 @@ export class FsWatch {
       this.onPort?.(null, ev);
       return;
     }
+    if (isEditorScratch(w.path)) return; // vim swap/backup files come and go with every edit
     const key = this.ctx.sessionKey(w.path);
     if (w.kind === "B") {
       if (this.known.has(w.path)) return;
