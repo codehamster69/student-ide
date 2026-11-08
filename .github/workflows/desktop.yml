@@ -113,6 +113,21 @@ jobs:
       # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo secrets.
       - run: npm run package -- ${{ matrix.target }}
         env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      # The packaged Mac app must start (a bad signature is a SIGKILL at launch) and its
+      # bundled Lima must accept our VM template.
+      - if: matrix.target == '--mac'
+        run: |
+          set -euo pipefail
+          dmg=$(ls out/*-mac-arm64.dmg)
+          vol=$(hdiutil attach -nobrowse -readonly "$dmg" | tail -1 | cut -f3-)
+          app=$(ls -d "$vol"/*.app)
+          "$app/Contents/Resources/installer/lima/bin/limactl" validate "$app/Contents/Resources/installer/lima/studentide.yaml"
+          "$app/Contents/MacOS/studentide" & pid=$!
+          sleep 15
+          kill -0 "$pid" || { echo "packaged app exited at launch"; exit 1; }
+          # Wait for the app to exit before detaching, or hdiutil fails with "resource busy" (exit 16).
+          kill "$pid"; wait "$pid" 2>/dev/null || true
+          hdiutil detach "$vol" -quiet || hdiutil detach "$vol" -force -quiet
       - uses: actions/upload-artifact@v4
         with:
           name: studentide-${{ runner.os }}
