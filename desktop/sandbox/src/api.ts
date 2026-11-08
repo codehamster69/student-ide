@@ -69,8 +69,9 @@ export interface SandboxApi {
   run(instanceId: string, assignmentId: string, opts?: { stdin?: string; timeoutMs?: number }): Promise<SandboxRunResult>;
   /** Visible tests, locally (practice; grades come from the server). */
   test(instanceId: string, assignmentId: string): Promise<SandboxTestResult[]>;
-  /** Upload the folder now with reason "submit"; returns its content hash for the submission. */
-  submit(instanceId: string, assignmentId: string): Promise<{ sha256: string }>;
+  /** Upload the folder now with reason "submit"; returns its content hash and, when the server grades
+   *  submissions, the queued submission (backend/studentide/submissions.py; poll /api/sandbox/my/submissions/{id}). */
+  submit(instanceId: string, assignmentId: string): Promise<{ sha256: string; submission?: unknown }>;
   recipe(instanceId: string): Promise<{ steps: Array<{ manager: string; action: string; packages: string[]; command: string }> }>;
 }
 

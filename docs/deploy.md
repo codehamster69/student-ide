@@ -116,6 +116,7 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | `STUDENTIDE_ROLLCALL_LINK_SECRET` | random, 16+ chars, same as Roll Call's `LINK_SECRET`: Roll Call's Google sign-in and Student IDE share one register per teacher |
 | `STUDENTIDE_DESKTOP_MIN_VERSION`, `STUDENTIDE_DESKTOP_DOWNLOAD_URL` | optional: oldest desktop app allowed to load the site, and where to get a new one (see [desktop.md](desktop.md)) |
 | `STUDENTIDE_PREVIEW_URL`, `STUDENTIDE_PREVIEW_TOKEN` | optional: Sandbox Labs teacher previews through the `previews` Compose profile (`docker compose --profile previews up -d`); caps in [sandbox-labs.md](sandbox-labs.md); the profile also starts `preview-proxy` (registries-only network) |
+| `STUDENTIDE_GRADING` | optional: `off` stops grading Sandbox Lab submissions (they are kept ungraded); grading uses the preview service, one run at a time, see [sandbox-labs.md](sandbox-labs.md#grading-submissions) |
 | `STUDENTIDE_BUILD_TOKEN`, `STUDENTIDE_SANDBOX_REGISTRY` | optional: the build service (GitHub Actions `sandbox-env-images.yml`, same token as a repo secret) that turns Sandbox Labs environment recipes into images |
 | `BACKUP_KEEP_DAYS` | how many days of nightly backups to keep (default 14) |
 

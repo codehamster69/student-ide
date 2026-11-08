@@ -74,6 +74,8 @@ export class WorkspaceSync {
   readonly studentId: string;
   private state: SyncState = { synced: {}, recipeAt: {} };
   private timers = new Map<string, NodeJS.Timeout>();
+  /** The server's reply to the last Submit per assignment: carries the queued submission (submissions.py). */
+  private submitted = new Map<string, unknown>();
   private loaded = false;
   onError: (e: unknown, a: Assignment) => void = () => {};
 
@@ -185,9 +187,15 @@ export class WorkspaceSync {
     });
     // the server's reason (lab closed, not on the roster) is what the student needs to read
     if (!r.ok) throw new Error(await r.json().then((j) => (typeof j?.detail === "string" ? j.detail : ""), () => "") || `workspace upload failed (${r.status})`);
+    if (reason === "submit") this.submitted.set(k, (await r.json().catch(() => ({})))?.submission ?? null);
     this.state.synced[k] = hash;
     await this.save();
     return hash;
+  }
+
+  /** The submission the server queued for this assignment's last Submit, if it grades them. */
+  lastSubmission(a: Assignment): unknown {
+    return this.submitted.get(this.key(a)) ?? null;
   }
 
   async flushAll(): Promise<void> {

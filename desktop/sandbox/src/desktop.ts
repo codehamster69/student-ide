@@ -202,7 +202,8 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
       const l = lab(instanceId);
       const a = asg(l, assignmentId);
       try {
-        return { sha256: await l.sync.upload(ref(l, a), { reason: "submit" }) };
+        const sha256 = await l.sync.upload(ref(l, a), { reason: "submit" });
+        return { sha256, submission: l.sync.lastSubmission(ref(l, a)) };
       } catch (e) {
         return o.fail({ code: "submit_failed", title: "Your work could not be sent to the server.", fix: "Check the connection and submit again; nothing is lost.", detail: String((e as Error)?.message ?? e) });
       }

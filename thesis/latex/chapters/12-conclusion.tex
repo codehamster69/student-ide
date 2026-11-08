@@ -100,3 +100,24 @@ sessions.
   preview with editor, terminal and the full test results.}
   \label{fig:sandbox-teacher}
 \end{figure}
+
+Submissions are graded on the server (Figure~\ref{fig:sandbox-grading}). A
+student's Submit uploads the assignment folder; the server first checks that
+the lab is open to that student and not past its due time, then queues the
+submission. A single grader runs the queue one submission at a time, each in a
+fresh, network-less container of the lab's own image started by the same
+service that runs previews, and records every test, hidden ones included.
+Students see hidden tests by name and outcome only; teachers get a gradebook of
+students by assignments, the full results, a link to how the work was written,
+and a regrade after fixing a test. One run at a time keeps grading within the
+small college VM: a class submitting together waits minutes, not the app.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-11-submissions}\hfill
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-12-submission-results}
+  \caption{Sandbox Labs grading: the gradebook a published lab opens on
+  (filters, attempts, regrade) and one submission's results, hidden tests in
+  full for the teacher.}
+  \label{fig:sandbox-grading}
+\end{figure}

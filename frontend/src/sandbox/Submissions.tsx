@@ -3,6 +3,7 @@
 // attention, one cell opens the test results (hidden tests in full for staff),
 // a link to the session's review, regrade, and a CSV download.
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { CircleAlert, Download, ExternalLink, RefreshCw, X } from "lucide-react";
 import { Badge, Button, Card, Spinner, cn, item, stagger } from "../ui";
@@ -167,9 +168,12 @@ function ResultPanel({ student, cell, title, readOnly, onClose, onRegraded }: {
   student: string; cell: SubmissionCell; title: string; readOnly: boolean; onClose: () => void; onRegraded: (c: SubmissionCell) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  return (
-    <motion.aside initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
-      className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-border bg-surface p-5 shadow-xl">
+  // portalled: the page's animated parent would otherwise trap it under the sticky header
+  return createPortal(
+    <>
+    <div className="fixed inset-0 z-[60] bg-black/20" onClick={onClose} aria-hidden />
+    <motion.aside initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} role="dialog" aria-label={`${student}: ${title}`}
+      className="fixed inset-y-0 right-0 z-[61] w-full max-w-lg overflow-y-auto border-l border-border bg-surface p-5 shadow-xl">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="font-mono text-sm text-text">{student}</div>
@@ -192,7 +196,7 @@ function ResultPanel({ student, cell, title, readOnly, onClose, onRegraded }: {
         {cell.results.map((r, i) => (
           <Card key={i} className="p-3">
             <div className="flex items-center justify-between gap-2 text-sm">
-              <span className="font-medium text-text">{r.name}{r.hidden && <Badge className="ml-2">hidden</Badge>}</span>
+              <span className="font-medium text-text">{r.name}{r.hidden && !/hidden/i.test(r.name) && <Badge className="ml-2">hidden</Badge>}</span>
               <Badge tone={r.passed ? "success" : "danger"}>{r.passed ? "passed" : r.timed_out ? "timed out" : "failed"}</Badge>
             </div>
             {!r.passed && (r.expected !== undefined || r.stdout !== undefined) && (
@@ -208,6 +212,7 @@ function ResultPanel({ student, cell, title, readOnly, onClose, onRegraded }: {
         ))}
       </div>
     </motion.aside>
+    </>, document.body,
   );
 }
 

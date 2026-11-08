@@ -145,9 +145,17 @@ GET/PUT /api/sandbox/previews/{id}/files       ?path=  read or write a file in t
 POST   /api/sandbox/previews/{id}/exec         {command, stdin?}  run a command (Run / Check)
 WS     /api/sandbox/previews/{id}/terminal     interactive shell
 
+GET    /api/sandbox/labs/{id}/submissions      gradebook: every rostered student x assignment (latest + attempts)
+GET    /api/sandbox/submissions/{id}           one submission, hidden tests in full, session_id for review
+POST   /api/sandbox/submissions/{id}/regrade
+POST   /api/sandbox/labs/{id}/regrade          the latest submission of every student and assignment
+
 Students (desktop app, same sign-in):
-GET    /api/sandbox/my/labs                    published labs of my subjects, grouped by subject
-GET    /api/sandbox/my/labs/{id}               the lab definition (format above)
+GET    /api/sandbox/my/labs                    published (and closed) labs of my subjects, grouped by subject;
+                                               each with closed, submitted, passed_all
+GET    /api/sandbox/my/labs/{id}               the lab definition (format above) + closed
+GET    /api/sandbox/my/labs/{id}/submissions   my latest submission per assignment (hidden tests: name + pass)
+GET    /api/sandbox/my/submissions/{id}        one, for polling while it grades (+ queue_ahead)
 POST   /api/sessions  {sandbox_lab_id, assignment_id, sitting_id, …}   one recorded session per assignment visited (docs/sandbox-student.md)
 ```
 
@@ -187,6 +195,43 @@ network, and accepts only containers named `sbxp-prv_…` and paths under
 The lab wizard's **Check** step uses a preview: per assignment, the reference
 solution laid over the starter must pass every test and the starter alone
 should fail at least one.
+
+## Grading submissions
+
+Submit in the desktop app uploads the assignment folder with reason `submit`
+(`PUT /api/workspaces/...`, see workspaces.py). Every upload is checked first:
+the lab must be open to the student (published or closed, on the roster and
+section, past `opens_at`) and contain the assignment, else 403/404. A Submit
+after the due time (plus 2 minutes' grace) or on a closed lab is refused with
+409 and a sentence the app shows ("This lab closed at …"); change and run
+backups are still kept, so no work is lost.
+
+A kept Submit becomes a row in `sbx_submissions` and joins a queue
+(`backend/studentide/submissions.py`). One grader thread works through it, so
+grading never competes with itself on the e2-medium VM: for each submission it
+starts a fresh container of the lab's environment image through the preview
+driver (in deployment `preview_service.py`, the only holder of the Docker
+socket; containers `sbxp-sub_*`), with **no network**, at most 1 CPU and
+1 GB, lays the starter files and then the student's UTF-8 files over them, runs
+every test (hidden ones too) with the assignment's Run command, records the
+result and removes the container. A run that fails (image not built, deleted
+lab) is recorded as `failed` with the reason and the queue goes on; a restart
+puts a run that was cut off back in the queue.
+
+The student gets status, passed/total and each visible test in full; hidden
+tests show only their name and whether they passed. Teachers open a published
+lab on its **Submissions** step: a gradebook of students × assignments with
+filters (not submitted, failing a test, all passed), attempt counts, a side
+panel with every test (hidden ones in full), a link to the session's review
+("How it was written"), Regrade one or all (after fixing a test), and a CSV
+download.
+
+Without a preview driver (`STUDENTIDE_PREVIEW_URL` or
+`STUDENTIDE_PREVIEW_DOCKER=1`) submissions are kept but wait ungraded, and the
+gradebook says so; `STUDENTIDE_GRADING=off` turns grading off while previews
+stay on. Grading uses the lab's image only, not packages a student installed in
+their own instance, like any autograder. e2e with screenshots:
+`frontend/e2e/sandbox-grading.mjs`.
 
 ### Registries-only network
 
