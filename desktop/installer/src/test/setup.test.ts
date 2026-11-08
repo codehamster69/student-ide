@@ -41,7 +41,7 @@ test('windows: WSL already on, imports our distro, saves engine.json, pulls imag
   const res = await runSetup(opts(host, { images: [{ ref: 'ghcr.io/x/env-c@sha256:1' }], onProgress: (p: { step: string }) => progress.push(p.step) }));
   assert.equal(res.engine.kind, 'wsl-podman');
   assert.deepEqual(res.engine.cli.slice(0, 3), ['wsl.exe', '-d', 'StudentIDE']);
-  assert.ok(calls.some((c) => /--import StudentIDE \/data[\\/]engine[\\/]wsl \/assets[\\/]wsl[\\/]studentide-rootfs\.tar\.gz --version 2/.test(c)));
+  assert.ok(calls.some((c) => /--import StudentIDE [\\/]data[\\/]engine[\\/]wsl [\\/]assets[\\/]wsl[\\/]studentide-rootfs\.tar\.gz --version 2/.test(c)));
   assert.ok(calls.some((c) => / pull ghcr\.io\/x\/env-c@sha256:1/.test(c)));
   assert.deepEqual([...new Set(progress)], ['check', 'engine', 'images', 'verify']);
   assert.equal(detectEngine('/data', host)?.kind, 'wsl-podman');
