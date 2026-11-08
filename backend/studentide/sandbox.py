@@ -845,7 +845,7 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
         if lab["status"] == "draft" and not force:
             return
         regraded = None
-        if assignment_id and set(cols or []) & REGRADE_FIELDS:
+        if assignment_id and set(cols or []) & REGRADE_FIELDS and on_tests_changed:  # None: nothing grades yet
             regraded = 0
             for fn in on_tests_changed:
                 try:
@@ -1257,7 +1257,7 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
         if lab["status"] != "draft" and diff:
             out["effects"] = [x for x in (
                 "Students get a quiet note about the change." if set(diff) & NOTE_FIELDS else "",
-                "Submissions are graded again with the new tests." if set(diff) & REGRADE_FIELDS else "",
+                "Submissions are graded again with the new tests." if set(diff) & REGRADE_FIELDS and on_tests_changed else "",
                 "Students who haven't opened this assignment get the new starter files; "
                 "those who have keep their work." if set(diff) & STARTER_FIELDS else "") if x]
         return out

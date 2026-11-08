@@ -5,7 +5,8 @@
  * learning lab, live view, review, attendance and View as student all work exactly
  * as on the web, and keystrokes are timed by the same Chromium. The shell adds:
  * browser sign-in, the `window.studentDesktop` bridge (src/shared/contract.ts) for
- * local features, a minimum-version gate, and an offline page. Navigation is locked
+ * local features, a minimum-version gate (which updates the app by itself where it
+ * can, modules/updates.ts), and an offline page. Navigation is locked
  * to the server origin; other links open in the system browser; camera, microphone,
  * screen and location permissions are always refused.
  */
@@ -15,6 +16,7 @@ import { join } from "node:path";
 import { compareVersions, Config, setupPaths } from "./config";
 import { Registry } from "./ipc";
 import { modules } from "./modules";
+import { Updater } from "./modules/updates";
 
 export interface Shell {
   config: Config;
@@ -33,6 +35,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 let win: BrowserWindow | null = null;
 let config: Config;
 let registry: Registry;
+let updater: Updater;
 
 const server = () => config.server();
 const sameOrigin = (url: string) => { try { return new URL(url).origin === server(); } catch { return false; } };
@@ -78,7 +81,21 @@ async function load() {
     if (r.ok) {
       const cfg = (await r.json()) as { min_version?: string | null; download_url?: string | null };
       if (cfg.min_version && compareVersions(app.getVersion(), cfg.min_version) < 0) {
-        staticPage("update.html", { version: app.getVersion(), min: cfg.min_version, download: cfg.download_url ?? "" });
+        const auto = updater.status.mode === "auto";
+        let download = cfg.download_url ? new URL(cfg.download_url, server()).href : "";
+        if (download.startsWith(`${server()}/api/desktop/download`)) {
+          download += `?os=${process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux"}&arch=${process.arch === "arm64" ? "arm64" : "x64"}`;
+        }
+        staticPage("update.html", { version: app.getVersion(), min: cfg.min_version, download, auto: auto ? "1" : "" });
+        if (auto) {  // show the download on the page, restart into the new version when it is here
+          updater.onChange = (st) => {
+            const text = st.state === "downloading" ? `Downloading the update… ${st.percent ?? 0}%`
+              : st.state === "ready" ? "Installing… the app opens again by itself."
+              : st.state === "error" ? `${st.reason ?? "The update failed."} Use the download link below.` : "Looking for the update…";
+            win?.webContents.executeJavaScript(`window.setProgress && window.setProgress(${JSON.stringify(text)})`).catch(() => undefined);
+          };
+          void updater.forceUpdate();
+        }
         return;
       }
     }
@@ -137,7 +154,8 @@ app.whenReady().then(() => {
     fetch: (path: string, init?: RequestInit) => session.defaultSession.fetch(server() + path, { credentials: "include", ...init }),
     userData: app.getPath("userData"),
   };
-  const mods = modules(shellApi);
+  updater = new Updater(shellApi);
+  const mods = modules(shellApi, updater);
   for (const m of mods) m.register(ctx as never);
   let disposed = false;
   app.on("before-quit", (e) => {

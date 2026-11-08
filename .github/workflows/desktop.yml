@@ -1,10 +1,13 @@
 # Desktop app: test the installer, then package Student IDE for Windows, macOS and Linux
 # with the bundled container engine (WSL distro / Lima / static Podman).
+# Pushing a tag desktop-vX.Y.Z also publishes a GitHub release of that version: the
+# server serves it to installed apps as their auto-update feed (desktop_updates.py).
 name: desktop
 on:
   push:
     branches: [main]
     paths: ['desktop/**', '.github/workflows/desktop.yml']
+    tags: ['desktop-v*']
   pull_request:
     paths: ['desktop/**', '.github/workflows/desktop.yml']
   workflow_dispatch:
@@ -110,7 +113,11 @@ jobs:
             ~/AppData/Local/electron/Cache
           key: electron-${{ runner.os }}-${{ hashFiles('desktop/app/package-lock.json') }}
       - run: npm ci && npm --prefix ../sandbox ci && npm --prefix ../app ci
-      # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo secrets.
+      - name: Version from the release tag
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        run: npm --prefix ../app version "${GITHUB_REF_NAME#desktop-v}" --no-git-tag-version --allow-same-version
+      # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo
+      # secrets; docs/desktop-installer.md (Signing) lists what each needs.
       - run: npm run package -- ${{ matrix.target }}
         env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
       # The packaged Mac app must start (a bad signature is a SIGKILL at launch) and its
@@ -136,6 +143,29 @@ jobs:
             desktop/installer/out/*.dmg
             desktop/installer/out/*.AppImage
             desktop/installer/out/*.deb
+            desktop/installer/out/latest*.yml
+            desktop/installer/out/*.blockmap
             desktop/installer/packaging/prepare-lab-pc.ps1
           if-no-files-found: error
           retention-days: 14
+
+  # Tag builds only: one GitHub release with every installer and the update feeds
+  # (latest.yml for Windows, latest-linux.yml for the AppImage).
+  release:
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, pattern: studentide-*, merge-multiple: true }
+      - name: Publish the release
+        env: { GH_TOKEN: '${{ github.token }}', GH_REPO: '${{ github.repository }}' }
+        run: |
+          set -euo pipefail
+          ls -la dist dist/out 2>/dev/null || true
+          files=$(find dist -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' \
+                  -o -name 'latest*.yml' -o -name '*.blockmap' -o -name 'prepare-lab-pc.ps1' \))
+          gh release create "$GITHUB_REF_NAME" $files --title "Student IDE ${GITHUB_REF_NAME#desktop-v}" \
+            --notes "Installed Windows and Linux AppImage apps update themselves the next time they close. Mac and portable builds: download the new version."

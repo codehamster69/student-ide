@@ -561,10 +561,10 @@ function LateEditor({ late, onChange, readOnly, hasDue }: { late: LatePolicy; on
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
             className="flex flex-wrap items-center gap-2 overflow-hidden text-[13px] text-text">
             Take off
-            <Input type="number" min={1} max={100} value={late.per_day_pct} disabled={readOnly} className="h-8 w-16"
+            <Input type="number" min={1} max={100} value={late.per_day_pct} disabled={readOnly} className="h-8" style={{ width: "4.5rem" }}
               onChange={(e) => onChange({ ...late, per_day_pct: Math.min(100, Math.max(1, Number(e.target.value) || 10)) })} />
             % per day, and stop accepting after
-            <Input type="number" min={0} max={60} value={late.max_days} disabled={readOnly} className="h-8 w-16"
+            <Input type="number" min={0} max={60} value={late.max_days} disabled={readOnly} className="h-8" style={{ width: "4.5rem" }}
               onChange={(e) => onChange({ ...late, max_days: Math.min(60, Math.max(0, Number(e.target.value) || 0)) })} />
             days <span className="text-xs text-muted">(0 = never)</span>
           </motion.div>

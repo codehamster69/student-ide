@@ -21,6 +21,8 @@ every student endpoint acts only for the signed-in student:
     GET  /api/me                                   the signed-in account (401 if none)
     POST /api/auth/logout
     GET  /api/desktop/config                       desktop app: min version, download link (desktop.py)
+    GET  /api/desktop/updates/{file}               auto-update feed from GitHub Releases (desktop_updates.py)
+    GET  /api/desktop/download?os=&arch=           the newest installer (302 to a signed GitHub link)
     POST /api/auth/desktop/grant        {challenge}             browser -> one-time code for the desktop app
     POST /api/auth/desktop/exchange     {code, verifier}        desktop app -> session cookie value
     GET  /api/admin/users                          admins only
@@ -81,7 +83,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import (attendance, compete, desktop, grading, learn, live as live_mod, previews, retention, runner, sandbox,
+from . import (attendance, compete, desktop, desktop_updates, grading, learn, live as live_mod, previews, retention, runner, sandbox,
                teach, workspaces)
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
@@ -157,7 +159,8 @@ def latest_code(db: Database, student_id: str, question_id: str, language: str |
 
 def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True,
                auth_config: Config | None = None, verify_google=None, live_mode: str | None = None,
-               attendance_transport=None, preview_driver=None, preview_limits=None) -> FastAPI:
+               attendance_transport=None, preview_driver=None, preview_limits=None,
+               update_releases=None) -> FastAPI:
     """`auth_config` / `verify_google` replace the environment and Google's token check in tests,
     `attendance_transport` the HTTP calls to Roll Call (see attendance.Transport)."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
@@ -512,7 +515,9 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
 
     app.include_router(learn.router(db, auth, _student_id))
     app.include_router(workspaces.router(db, auth, _student_id))
-    app.include_router(desktop.router(db, auth, me_json))
+    releases = update_releases if update_releases is not None else desktop_updates.releases_from_env()
+    app.include_router(desktop.router(db, auth, me_json, updates=releases is not None))
+    app.include_router(desktop_updates.router(releases))
     attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
     app.include_router(attendance_router)
     app.include_router(attendance_router.student_router)

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, Check, CircleStop, RefreshCw, Save, Terminal } from "lucide-react";
-import { Badge, Button, Card, Spinner, TextArea, cn } from "../ui";
+import { Button, Card, Spinner, TextArea, cn } from "../ui";
 import { get, send, token } from "../review/api";
 import { go, href } from "../routes";
 import { PreviewTerminal } from "./bits";
@@ -55,7 +55,6 @@ export function SetupByHand({ p, onReload, onAuthLost }: { p: Preview; onReload:
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={() => history.back()} className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-text"><ArrowLeft className="size-3.5" /> Back</button>
         <h1 className="text-base font-semibold text-text">{p.lab_title}</h1>
-        <Badge tone="accent">Set up by hand</Badge>
         <span className="flex-1" />
         {running && <Button size="sm" onClick={async () => { await send("POST", `/api/sandbox/previews/${p.id}/stop`); onReload(); }}><CircleStop className="size-3.5" /> Stop without saving</Button>}
       </div>
