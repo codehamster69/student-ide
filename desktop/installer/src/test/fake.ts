@@ -20,7 +20,7 @@ export function fakeHost(over: Partial<Host> & { rules: Rule[]; files?: Record<s
     assetsDir: '/assets',
     appExe: 'C:\\Program Files\\Student IDE\\Student IDE.exe',
     env: { XDG_RUNTIME_DIR: '/run/user/1000' },
-    exists: (p) => p in files || p.startsWith('/assets/'),
+    exists: (p) => p in files || p.replace(/\\/g, '/').startsWith('/assets/'), // Windows path.join uses backslashes
     writeFile: (p, d) => {
       files[p] = d;
     },
