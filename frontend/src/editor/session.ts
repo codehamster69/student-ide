@@ -39,9 +39,8 @@ export function newSittingId(): string {
   return crypto.randomUUID?.().replace(/-/g, "") ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function startSession(studentId: string, task: Task, sittingId?: string, language?: Language): Promise<LiveSession> {
-  language ??= preferredLanguage(task);
-  const meta = {
+async function clientMeta(): Promise<Record<string, unknown>> {
+  return {
     user_agent: navigator.userAgent,
     language: navigator.language,
     platform: (navigator as any).userAgentData?.platform ?? navigator.platform,
@@ -50,6 +49,21 @@ export async function startSession(studentId: string, task: Task, sittingId?: st
     client_schema_version: SCHEMA_VERSION,
     client: await clientInfo(),
   };
+}
+
+/** One assignment of a Sandbox lab in the desktop app: its own session, linked to the others by the sitting id. */
+export async function startSandboxSession(studentId: string, labId: string, assignmentId: string, sittingId: string): Promise<LiveSession> {
+  const { session_id } = await api<{ session_id: string }>("/api/sessions", {
+    student_id: studentId, client_meta: await clientMeta(), sandbox_lab_id: labId, assignment_id: assignmentId, sitting_id: sittingId,
+  });
+  const rec = new Recorder(session_id);
+  rec.log("session_start", { wall_clock_ms: Date.now() });
+  return { id: session_id, rec };
+}
+
+export async function startSession(studentId: string, task: Task, sittingId?: string, language?: Language): Promise<LiveSession> {
+  language ??= preferredLanguage(task);
+  const meta = await clientMeta();
   const { session_id, resume_code } = await api<{ session_id: string; resume_code?: string | null }>("/api/sessions", {
     student_id: studentId, client_meta: meta,
     // lab questions are checked against the teacher's roster on the server; lessons are open to everyone

@@ -5,7 +5,7 @@ Student-facing (no auth beyond a roll number, the lab is supervised):
     GET  /api/students/{id}/labs                   open labs assigned to this student
     POST /api/login                     {student_id}            -> consent status
     POST /api/consent                   {student_id}
-    POST /api/sessions                  {student_id, task_id | question_id | lesson_id, client_meta, language?}
+    POST /api/sessions                  {student_id, task_id | question_id | lesson_id | sandbox_lab_id+assignment_id, client_meta, language?}
                                                    (language: any-language competitions, one session per language)
     POST /api/sessions/{id}/events      {schema_version, events: [...]}
     POST /api/sessions/{id}/run         {code, stdin}   in the lab's language (Python for practice tasks)
@@ -114,6 +114,8 @@ class SessionIn(BaseModel):
     task_id: str | None = None      # a built-in practice task, or
     question_id: str | None = None  # a question from a lab the teacher assigned, or
     lesson_id: str | None = Field(default=None, max_length=200)  # a learning-lab lesson
+    sandbox_lab_id: str | None = Field(default=None, max_length=64)  # an assignment of a Sandbox lab (desktop app),
+    assignment_id: str | None = Field(default=None, max_length=64)   # one session per assignment visited, like questions
     sitting_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{8,64}$")  # one opening of that lab
     language: str | None = None     # an any-language competition: the language the student picked for this question
     client_meta: dict = Field(default_factory=dict)
@@ -284,6 +286,11 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                 raise HTTPException(404, "no such lesson")
             question, context = learn.snapshot(lesson), learn.CONTEXT
             task_id = lesson["id"]
+        elif body.sandbox_lab_id:
+            # its files live in the student's local instance, so there is no resume code; the
+            # session holds the editor (edit/snapshot carry path) and terminal events (schema v2)
+            question = sandbox_router.session_question(sid, body.sandbox_lab_id, body.assignment_id or "")
+            task_id = question["id"]
         elif body.question_id:
             q = db.get_question(body.question_id)
             open_labs = db.preview_labs(auth.preview_lab_ids(staff)) if staff else db.labs_for_student(sid)
@@ -310,11 +317,12 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                 raise HTTPException(403, "student view can't enter a competition: it would put you on the class board")
         elif not has_consent(db.get_or_create_student(sid)):
             raise HTTPException(403, "consent required before recording")
-        if question and question["lab_id"] and not staff:
+        sbx = bool(question and question.get("kind") == "sandbox")
+        if question and question["lab_id"] and not staff and not sbx:
             compete.can_start_session(db, question["lab_id"], sid)
         # Coming back to a question (a later lab sitting, back from a competition's
         # board, or a lesson opened again) picks up the code where the student left it, in the same language.
-        resume = latest_code(db, sid, question["id"], question["language"]) if question else None
+        resume = latest_code(db, sid, question["id"], question["language"]) if question and not sbx else None
         session_id = uuid.uuid4().hex
         db.create_session(session_id, sid, task_id, SCHEMA_VERSION, body.client_meta, question,
                           body.sitting_id if question else None, context)

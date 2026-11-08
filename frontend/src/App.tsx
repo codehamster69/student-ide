@@ -13,6 +13,7 @@ import { Workspace, type SessionSummary } from "./screens/Workspace";
 import { Saved } from "./screens/Saved";
 import { Arena } from "./compete/Arena";
 import { Learn } from "./learn/Learn";
+import { SandboxLab } from "./screens/SandboxLab";
 import { href } from "./routes";
 
 type Screen =
@@ -22,6 +23,8 @@ type Screen =
   | { name: "tasks"; studentId: string }
   | { name: "arena"; studentId: string; labId: string }
   | { name: "learn"; studentId: string }
+  // a Sandbox lab in the desktop app (its own instance, files and terminal; screens/SandboxLab.tsx)
+  | { name: "sandbox"; studentId: string; labId: string }
   // One practice task or competition question, a whole lab sitting (tasks = its questions),
   // or a learning-lab track (tasks = its lessons; back to the learning lab when done).
   | { name: "session"; studentId: string; tasks: Task[]; start: number; session: LiveSession; sitting?: string; arena?: string; learn?: boolean }
@@ -98,6 +101,7 @@ export function App() {
             }}
             onCompetition={(labId) => setScreen({ name: "arena", studentId: screen.studentId, labId })}
             onLearn={() => setScreen({ name: "learn", studentId: screen.studentId })}
+            onSandbox={(labId) => setScreen({ name: "sandbox", studentId: screen.studentId, labId })}
           />
         </Shell>
       );
@@ -115,6 +119,9 @@ export function App() {
           />
         </Shell>
       );
+      break;
+    case "sandbox":
+      content = <SandboxLab studentId={screen.studentId} labId={screen.labId} onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })} />;
       break;
     case "arena":
       content = (
@@ -157,7 +164,8 @@ export function App() {
 
   // Sign-in screens share one Shell so the stepper animates between them; the
   // editor gets its own full-screen layer.
-  const layer = screen.name === "session" ? `session-${screen.session.id}` : screen.name === "arena" ? `arena-${screen.labId}` : "shell";
+  const layer = screen.name === "session" ? `session-${screen.session.id}` : screen.name === "arena" ? `arena-${screen.labId}`
+    : screen.name === "sandbox" ? `sandbox-${screen.labId}` : "shell";
   return (
     <MotionConfig reducedMotion="user">
       <AnimatePresence mode="wait">

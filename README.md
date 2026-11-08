@@ -18,6 +18,7 @@ ever leads to a conversation, never a penalty.
 | Desktop app (Sandbox Labs) | shell in progress: Electron window on the site, browser sign-in, bridge for local labs, see [docs/desktop.md](docs/desktop.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
 | Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
+| Sandbox Labs (student side) | home shelf per subject; in the desktop app a lab workspace with files, editor, terminal, Run/Check/Submit and grade; website lists them with "Open in the Student IDE app"; see [docs/sandbox-student.md](docs/sandbox-student.md) |
 
 ## Stack
 

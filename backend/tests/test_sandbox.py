@@ -1,6 +1,8 @@
 """Sandbox Labs catalogue: subjects with people and rosters, environments and
 recipes, labs of assignments, the student lab definition, and the library."""
 
+import json
+
 import pytest
 
 from studentide import sandbox
@@ -286,3 +288,39 @@ def test_dev_mode_student_needs_id(tmp_path):
     assert c.get("/api/sandbox/my/labs").status_code == 400
     c.put(f"/api/sandbox/subjects/{s['id']}/roster", json={"students": [{"id": "S1"}]}, headers=h)
     assert c.get("/api/sandbox/my/labs", params={"student_id": "S1"}).json() == []
+
+
+def test_session_per_sandbox_assignment(app, priya):
+    """The desktop app records each assignment visited as a session (schema v2 events, sitting id)."""
+    s = make_subject(priya)
+    lab = make_lab(priya, s["id"], n=2)
+    priya.put(f"/api/sandbox/subjects/{s['id']}/roster", json={"text": "PG25CS07"})
+    priya.patch(f"/api/sandbox/labs/{lab['id']}", json={"status": "published"})
+    a1, a2 = (a["id"] for a in priya.get(f"/api/sandbox/labs/{lab['id']}").json()["definition"]["assignments"])
+    student = sign_in(app, "pg25cs07@" + DOMAIN)
+    student.post("/api/consent", json={"student_id": "PG25CS07"})
+    body = {"student_id": "PG25CS07", "sandbox_lab_id": lab["id"], "sitting_id": "sitting_1234", "client_meta": {}}
+    r = student.post("/api/sessions", json=body | {"assignment_id": a1})
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["lab_id"] == lab["id"] and out["question_id"] == a1 and out["resume_code"] is None
+    ev = [{"seq": 0, "t": 0, "type": "snapshot", "data": {"reason": "start", "text": "int main", "path": "main.c"}},
+          {"seq": 1, "t": 5, "type": "key", "data": {"action": "down", "code": "KeyA", "cls": "letter", "surface": "terminal"}},
+          {"seq": 2, "t": 9, "type": "term_cmd", "data": {"term_id": "t1", "phase": "start", "command": "make", "cwd": "/home/student"}}]
+    r = student.post(f"/api/sessions/{out['session_id']}/events", json={"schema_version": 2, "events": ev})
+    assert r.status_code == 200 and not r.json().get("rejected"), r.text
+    assert student.post("/api/sessions", json=body | {"assignment_id": a2}).json()["question_id"] == a2
+    # not on the roster, another lab's assignment, or a draft: refused
+    other = sign_in(app, "pg25cs09@" + DOMAIN)
+    other.post("/api/consent", json={"student_id": "PG25CS09"})
+    assert other.post("/api/sessions", json=body | {"student_id": "PG25CS09", "assignment_id": a1}).status_code == 403
+    draft = make_lab(priya, s["id"])
+    d1 = priya.get(f"/api/sandbox/labs/{draft['id']}").json()["definition"]["assignments"][0]["id"]
+    assert student.post("/api/sessions", json=body | {"sandbox_lab_id": draft["id"], "assignment_id": d1}).status_code == 403
+    assert student.post("/api/sessions", json=body | {"assignment_id": d1}).status_code == 403
+    with app.state.db.connect() as conn:
+        row = conn.execute("SELECT lab_id, question_id, sitting_id, context, question_json FROM sessions WHERE id = ?",
+                           (out["session_id"],)).fetchone()
+    assert (row["lab_id"], row["question_id"], row["sitting_id"], row["context"]) == (lab["id"], a1, "sitting_1234", None)
+    q = json.loads(row["question_json"])
+    assert q["kind"] == "sandbox" and q["main_file"] == "main.c" and q["language"] == "c" and q["subject_code"] == "CS201"

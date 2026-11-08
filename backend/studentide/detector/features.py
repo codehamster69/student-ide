@@ -218,7 +218,9 @@ def streams(events: list[dict]) -> Streams:
         elif typ == "edit":
             doc = doc or ""
             ch = d["changes"]
-            if d["origin"] == "reset":  # Reset button: back to the starter code, nothing typed
+            # Reset button (back to the starter code) or "reload" (a desktop file changed on disk by the
+            # terminal, vim or a tool): the text changes but nothing was typed in the editor
+            if d["origin"] in ("reset", "reload"):
                 doc = apply_edit(doc, d)
                 caret = 0
                 continue

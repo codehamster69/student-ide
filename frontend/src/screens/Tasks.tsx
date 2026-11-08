@@ -4,11 +4,12 @@ import { ArrowUpRight, CheckCircle2, Code2, NotebookPen, Play, Trophy } from "lu
 import { api, type Lab, type Task } from "../api";
 import { Badge, Button, LiveDot, Spinner, cn, item, spring, stagger } from "../ui";
 import { LearnCard } from "../learn/Learn";
+import { SandboxLabs } from "./SandboxLabs";
 
 /** Where "Start/Continue lab" lands: the first question not finished yet. */
 const firstOpen = (lab: Lab) => Math.max(0, lab.questions.findIndex((q) => !q.submitted));
 
-export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn }: {
+export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn, onSandbox }: {
   studentId: string;
   onPick: (task: Task) => Promise<void>;
   /** opens the whole lab as one sitting, on question `start` */
@@ -16,6 +17,8 @@ export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn }: 
   onCompetition: (labId: string) => void;
   /** the always-open learning lab */
   onLearn: () => void;
+  /** a Sandbox lab (desktop app only; the website lists them with a note) */
+  onSandbox: (labId: string) => void;
 }) {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [labs, setLabs] = useState<Lab[]>([]);
@@ -104,6 +107,8 @@ export function Tasks({ studentId, onPick, onOpenLab, onCompetition, onLearn }: 
           </div>
         </motion.section>
       ))}
+
+      {tasks && <SandboxLabs studentId={studentId} onOpen={(lab) => onSandbox(lab.id)} delay={0.1 + labs.length * 0.08} />}
 
       {tasks && <LearnCard onOpen={onLearn} delay={0.15 + labs.length * 0.08} />}
 

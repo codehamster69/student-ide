@@ -31,7 +31,7 @@ export function keyClass(e: KeyboardEvent): string {
   return "other";
 }
 
-function keyData(e: KeyboardEvent, action: "down" | "up") {
+export function keyData(e: KeyboardEvent, action: "down" | "up") {
   return {
     action,
     code: (e.code || e.key || "Unidentified").slice(0, 32),
@@ -55,8 +55,10 @@ function clipboard(rec: Recorder, action: "paste" | "copy" | "cut", text: string
   }, ts);
 }
 
-/** CodeMirror extension that records keys, edits, clipboard, cursor and focus. */
-export function captureExtension(rec: Recorder): Extension {
+/** CodeMirror extension that records keys, edits, clipboard, cursor and focus.
+ * `path`: the file of a multi-file desktop workspace (schema v2 key/edit `path`). */
+export function captureExtension(rec: Recorder, opts: { path?: string } = {}): Extension {
+  const at = opts.path ? { path: opts.path } : {};
   let lastCursor = 0;
   let pendingCursor: number | undefined;
 
@@ -78,6 +80,7 @@ export function captureExtension(rec: Recorder): Extension {
         changes,
         len_before: tr.startState.doc.length,
         len_after: tr.newDoc.length,
+        ...at,
       });
     }
     if (u.selectionSet && !u.docChanged) {
@@ -91,8 +94,8 @@ export function captureExtension(rec: Recorder): Extension {
 
   // Capture-phase listeners so we see keys even when CodeMirror handles them.
   const keys = ViewPlugin.define((view) => {
-    const down = (e: KeyboardEvent) => rec.log("key", keyData(e, "down"), e.timeStamp);
-    const up = (e: KeyboardEvent) => rec.log("key", keyData(e, "up"), e.timeStamp);
+    const down = (e: KeyboardEvent) => rec.log("key", { ...keyData(e, "down"), ...at }, e.timeStamp);
+    const up = (e: KeyboardEvent) => rec.log("key", { ...keyData(e, "up"), ...at }, e.timeStamp);
     view.dom.addEventListener("keydown", down, true);
     view.dom.addEventListener("keyup", up, true);
     return {

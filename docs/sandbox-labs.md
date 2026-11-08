@@ -148,6 +148,7 @@ WS     /api/sandbox/previews/{id}/terminal     interactive shell
 Students (desktop app, same sign-in):
 GET    /api/sandbox/my/labs                    published labs of my subjects, grouped by subject
 GET    /api/sandbox/my/labs/{id}               the lab definition (format above)
+POST   /api/sessions  {sandbox_lab_id, assignment_id, sitting_id, …}   one recorded session per assignment visited (docs/sandbox-student.md)
 ```
 
 ## Ownership
