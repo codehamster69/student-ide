@@ -29,6 +29,12 @@ already uploads every 2 s, applying only new events each time.
 A teacher cannot type in a student's editor, and nothing from a live view
 changes a mark or a competition score.
 
+For a Sandbox Lab session the live view also shows which file is open and a
+read-only **terminal mirror**: the recent commands and their output tails from
+the student's terminal events. The student's notice says "editor and
+terminal". The lab's **Class** step (sandbox lab page) is the readiness board
+and class grid for desktop labs; see [sandbox-labs.md](sandbox-labs.md).
+
 ## Students are always told
 
 - While a teacher has a student's editor open, that student's top bar shows

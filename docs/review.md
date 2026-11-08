@@ -67,6 +67,21 @@ Screenshots for the thesis: `BASE=http://127.0.0.1:8000 TOKEN=change-me node fro
   count, and warmed in a background thread at start-up when the token is
   set (36 demo sessions take ~6 s cold).
 
+## Sandbox Lab sessions
+
+Sessions from the desktop app replay one file at a time (file tabs over the
+editor) and add a collapsible **Terminal and files** section under the
+timeline (`GET /api/review/sessions/{id}/sandbox`, `sandbox_review.py`):
+terminal commands with exit code and output tail, saves from vim/nano (amber
+when the keys typed in vim cannot account for the added text), files written
+by a command or outside the app, ports, network and packages, offline gaps, and
+record breaks (a batch whose signature or chain did not check out). Beside it,
+the terminal as it stood at the playhead and **Appeared without typing**:
+lines in the latest workspace snapshot or a submission that nothing we saw
+explains (`evidence.py`: starter files, editor edits, terminal pastes and vim
+saves backed by keys; lines of 6+ characters, files with 40+ such characters).
+Same wording rule: something to ask about, not a verdict.
+
 ## Wording rules
 
 - Never "flag", "alert", "cheating" or "suspicious" on screen. Say

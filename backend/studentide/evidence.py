@@ -6,7 +6,7 @@ the terminal, `cat > main.c`, `curl`, `git checkout` or a tool on the host.
 This module compares what is in the student's files with what we saw being
 written, and names the content nothing explains. It is evidence for a
 conversation, like a large paste, never a verdict, and it does not feed the
-detector (see thesis brain 2026-11-08-xx, "terminal events and the detector").
+detector (see thesis brain 2026-11-08-13-sandbox-monitoring-detector-feed.md).
 
 What counts as seen:
   * the assignment's starter files;

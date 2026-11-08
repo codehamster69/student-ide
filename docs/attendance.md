@@ -44,6 +44,11 @@ Per student and lab day (timezone `STUDENTIDE_TIMEZONE`, default Asia/Kolkata):
 | Typed characters | ≥ 40 | typed text only; pastes, drops and Reset don't count |
 | Run or Check | off | when on, at least one |
 
+Sandbox Labs (desktop app) count the same way: printable keys typed in the
+terminal or in vim/nano count as typed characters (Rohan's pick), and a
+terminal command, a Run or Check, or a file saved from the terminal counts as
+an active minute. Closing a sandbox lab sends it like a web lab.
+
 Each lab sets its own thresholds (*Rule* on the attendance page), and whether to
 send on close. Learning-lab practice and View-as-student previews never count.
 The detector is never consulted: a highlighted moment does not change attendance.

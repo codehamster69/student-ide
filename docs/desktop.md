@@ -91,6 +91,15 @@ Edit only your two files: `src/shared/api/<ns>.ts` (types) and `src/main/modules
 `ctx.userData` (where `engine.json` lives). New namespaces add one line to `modules/index.ts`
 and one field to `DesktopBridge` in `contract.ts`.
 
+### `journal` namespace
+
+`journal.append(sessionId, events)`, `journal.close(sessionId)`, `journal.state()`
+and the `journal.state` event. The recorder uses it instead of `fetch` when
+present: batches go to disk first and are sent signed and hash-chained by the
+main process (`desktop/sandbox/src/journal.ts`). The per-install Ed25519 key
+is kept with `safeStorage` in `device-key.bin`. Additive: the contract
+version stays 2.
+
 ## Packaging
 
 The installer thread owns electron-builder config and `.github/workflows/desktop.yml` (NSIS,
