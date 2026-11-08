@@ -14,6 +14,7 @@ ever leads to a conversation, never a penalty.
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
+| Desktop app (Sandbox Labs) | shell in progress: Electron window on the site, browser sign-in, bridge for local labs, see [docs/desktop.md](docs/desktop.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
 
 ## Stack
