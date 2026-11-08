@@ -100,7 +100,9 @@ jobs:
           "$app/Contents/MacOS/studentide" & pid=$!
           sleep 15
           kill -0 "$pid" || { echo "packaged app exited at launch"; exit 1; }
-          kill "$pid"; hdiutil detach "$vol" -quiet
+          # Wait for the app to exit before detaching, or hdiutil fails with "resource busy" (exit 16).
+          kill "$pid"; wait "$pid" 2>/dev/null || true
+          hdiutil detach "$vol" -quiet || hdiutil detach "$vol" -force -quiet
       - uses: actions/upload-artifact@v4
         with:
           name: studentide-${{ runner.os }}
