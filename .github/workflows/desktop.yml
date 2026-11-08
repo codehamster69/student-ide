@@ -84,7 +84,7 @@ jobs:
         run: scripts/fetch-assets.sh mac
       - if: matrix.target == '--linux'
         run: scripts/fetch-assets.sh linux
-      - run: npm ci && npm --prefix ../app ci
+      - run: npm ci && npm --prefix ../sandbox ci && npm --prefix ../app ci
       # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo secrets.
       - run: npm run package -- ${{ matrix.target }}
         env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
