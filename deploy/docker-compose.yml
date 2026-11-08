@@ -59,8 +59,8 @@ services:
   # Teachers' "Try as a student" for Sandbox Labs (docs/sandbox-labs.md). Off unless started with
   #   docker compose --profile previews up -d
   # and STUDENTIDE_PREVIEW_URL / STUDENTIDE_PREVIEW_TOKEN set in .env. The only container with the Docker
-  # socket; preview instances it starts get small limits, no host mounts and no network (or registries
-  # only through STUDENTIDE_PREVIEW_NETWORK + STUDENTIDE_PREVIEW_PROXY). Students never run here.
+  # socket; preview instances it starts get small limits and no host mounts, and sit on the internal
+  # "previews" network where the only way out is preview-proxy (package registries only). Students never run here.
   previews:
     image: studentide:latest
     profiles: [previews]
@@ -69,11 +69,22 @@ services:
     command: ["uvicorn", "studentide.preview_service:app", "--host", "0.0.0.0", "--port", "8002"]
     environment:
       STUDENTIDE_PREVIEW_TOKEN: ${STUDENTIDE_PREVIEW_TOKEN:-}
-      STUDENTIDE_PREVIEW_NETWORK: ${STUDENTIDE_PREVIEW_NETWORK:-}
-      STUDENTIDE_PREVIEW_PROXY: ${STUDENTIDE_PREVIEW_PROXY:-}
+      STUDENTIDE_PREVIEW_NETWORK: studentide_previews      # "<project>_previews", below
+      STUDENTIDE_PREVIEW_PROXY: http://preview-proxy:8888
     volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
     networks: [sandbox]          # reachable from app only
     mem_limit: 256m
+
+  # The registries-only way out for preview instances: package registries pass, everything else gets 403.
+  preview-proxy:
+    image: studentide:latest
+    profiles: [previews]
+    restart: unless-stopped
+    command: ["python", "-m", "studentide.registry_proxy", "--port", "8888"]
+    networks: [previews, web]    # previews: where the instances are; web: the way out
+    read_only: true
+    cap_drop: [ALL]
+    mem_limit: 128m
 
   backup:
     image: studentide:latest
@@ -87,6 +98,7 @@ services:
 networks:
   web: {}
   sandbox: {internal: true}
+  previews: {internal: true}     # preview instances + preview-proxy only (name: studentide_previews)
 
 volumes:
   data: {}

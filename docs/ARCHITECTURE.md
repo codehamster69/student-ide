@@ -21,6 +21,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `learn.py` + `learn/<lang>/` | Always-open learning lab; lessons are Markdown files. |
 | `sandbox.py` | Sandbox Labs catalogue: subjects (people, roster), environments (recipes → Dockerfiles, build callbacks), labs of assignments, library, the `studentide.sandbox-lab/1` definition for the desktop app. |
 | `previews.py`, `preview_service.py` | Capped cloud instances for teachers' "Try as a student" (seats, idle stop, Run/Check/verify, terminal WebSocket); the service is the only holder of the Docker socket. |
+| `registry_proxy.py`, `sandbox_build.py` | Registries-only forward proxy for previews (Compose `preview-proxy`); the image build script run by `.github/workflows/sandbox-images.yml` (buildx → GHCR → digest callback). |
 | `attendance.py` | Roll Call integration: per-teacher keys, class groups, effective-participation rule, sends marks when a sitting/lab closes. |
 | `runner.py`, `runner_service.py` | Compile/run student code (Python, C, C++, Java, JS) with limits; the service form runs in its own container. |
 | `providers/` | Question sources (bundled CodeContests/Codeforces/LeetCode/original sets, live MBPP/Exercism, link-only platforms); `polyglot.py` adapts function-style questions to every language. |

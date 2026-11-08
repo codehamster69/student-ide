@@ -28,7 +28,7 @@ client ignores fields it does not know, and a breaking change gets a new
   "subject": { "id": "subj_8c1d0e2f4a", "code": "CS201", "title": "Data Structures" },
   "environment": {
     "id": "env_c_ds", "version": 3, "title": "C with gdb and valgrind",
-    "image": "ghcr.io/codehamster69/studentide-env-c_ds:3",
+    "image": "ghcr.io/codehamster69/studentide-env:env_c_ds-3",
     "digest": "sha256:…",            // null until built; pull by image@digest when set
     "recipe": { … },                  // see "Recipes" below; enough to build the image locally
     "resources": { "cpus": 2, "memory_mb": 2048, "disk_gb": 10, "pids": 512 }
@@ -78,7 +78,7 @@ Rules that follow from the plan:
   ignored), `json`, `tokens` (numbers within 1e-6). `checker` is web-only.
 - The reference solution, hidden tests and the recipe's admin-only parts are
   never in a student's copy.
-- Image name: `${STUDENTIDE_SANDBOX_REGISTRY}/studentide-env-<env id>:<version>`
+- Image name: `${STUDENTIDE_SANDBOX_REGISTRY}/studentide-env:<env id>-<version>` (one repository, so it is made public once)
   (default registry `ghcr.io/codehamster69`).
 - Previews and the desktop runtime start the image with `sleep infinity`; the image's
   `CMD` is the same, and it keeps `bash`, `tar` and `script` for the runtime.
@@ -172,7 +172,7 @@ with a `based_on` link.
 | `STUDENTIDE_PREVIEW_SEATS` | 3 | previews running at once, all teachers together; one per teacher |
 | `STUDENTIDE_PREVIEW_IDLE_MIN` / `_MAX_MIN` | 15 / 60 | idle stop and hard limit |
 | `STUDENTIDE_PREVIEW_CPUS` / `_MEMORY_MB` | 1 / 1024 | per preview, at most |
-| `STUDENTIDE_PREVIEW_NETWORK` + `STUDENTIDE_PREVIEW_PROXY` | unset | registries-only network (internal Docker network + allowlist proxy); without them previews have no network |
+| `STUDENTIDE_PREVIEW_NETWORK` + `STUDENTIDE_PREVIEW_PROXY` | set by Compose | registries-only network (internal Docker network + allowlist proxy); without them previews have no network |
 
 A preview never gets the open internet, even for an open-network lab. Its
 container uses the same `docker run` flags as the desktop runtime (`--init`,
@@ -187,21 +187,54 @@ The lab wizard's **Check** step uses a preview: per assignment, the reference
 solution laid over the starter must pass every test and the starter alone
 should fail at least one.
 
+### Registries-only network
+
+With the `previews` profile, Compose puts preview instances on the internal
+network `studentide_previews`, which has no route out. The one way out is
+`preview-proxy` (`backend/studentide/registry_proxy.py`, a small forward
+proxy, read-only, no capabilities), which the instance reaches through
+`HTTP(S)_PROXY`. It passes CONNECT (HTTPS, never decrypted) and plain-HTTP
+requests (apt) only to the package registries in `REGISTRY_HOSTS`, on ports 80
+and 443, and answers 403 to anything else. It logs host names only. The list is
+the desktop runtime's `desktop/sandbox/src/registries.ts`;
+`tests/test_registry_proxy.py` fails if the two drift. The image's sudoers keeps
+the proxy variables, so `sudo apt install` works too.
+
 ## Building environment images
 
-Images are built off the student-facing VM. A build service (any CI job) polls
-`GET /api/sandbox/builds` with `X-Build-Token: $STUDENTIDE_BUILD_TOKEN`, builds
-and pushes each `{image, dockerfile}` (amd64 + arm64), then posts
-`{status: "ready", digest}` (or `"failed"` with a log) to
-`/api/sandbox/builds/{env}/{version}`. A raw Dockerfile waits for an admin's
-approval first. Until a version is ready the lab definition carries
-`digest: null` and the recipe, so a client can build it locally.
+Images are built off the student-facing VM, by
+`backend/studentide/sandbox_build.py` (standard library only), run every 10
+minutes by the GitHub Actions workflow `.github/workflows/sandbox-images.yml`.
+It polls `GET /api/sandbox/builds` with `X-Build-Token: $STUDENTIDE_BUILD_TOKEN`,
+marks each job `building`, builds and pushes `{image, dockerfile}` for amd64 +
+arm64 with buildx, smoke-tests the result (student user, passwordless sudo,
+bash, tar, script, editors, git, curl), then posts `{status: "ready", digest}`
+(or `"failed"` with the log tail) to `/api/sandbox/builds/{env}/{version}`. A
+job left `building` for over 2 hours (a builder that died) is handed out again.
+A raw Dockerfile waits for an admin's approval first. Until a version is ready
+the lab definition carries `digest: null` and the recipe, so a client can build
+it locally.
+
+Every environment is a tag of one package,
+`ghcr.io/codehamster69/studentide-env:<env>-<version>`, so it is made public
+once and every image after that is pullable without a login. Setup, once:
+
+1. In the repo's Actions settings add the secret `STUDENTIDE_BUILD_TOKEN` (the
+   same value as on the VM) and the variable `STUDENTIDE_URL`
+   (`https://studentide.hokora.xyz`). Without the variable the job does nothing.
+2. After the first build, set the `studentide-env` package's visibility to public.
+
+Locally: `STUDENTIDE_BUILD_TOKEN=… python backend/studentide/sandbox_build.py
+--server http://127.0.0.1:8000 --no-push` builds for this machine only.
 
 ## Checks
 
 - `backend/tests/test_sandbox.py`: subjects, people and TAs, rosters with
   ranges and sections, recipes and Dockerfiles, build callbacks, publish rules,
-  the student definition (no hidden tests or solutions), library share/use/update.
+  the student definition (no hidden tests or solutions), library share/use/update, stale builds handed out again, and
+  `sandbox_build.py` against the real endpoints with Docker faked.
+- `backend/tests/test_registry_proxy.py`: allowlist, 403 for other hosts and
+  ports, CONNECT tunnel and plain-HTTP forwarding, same hosts as the desktop.
 - `backend/tests/test_previews.py`: seats, one per teacher, idle stop, time
   limit, files, run/check/verify; one test runs real Docker when
   `ubuntu:24.04` is present.

@@ -212,7 +212,9 @@ def registry() -> str:
 
 
 def image_name(env_id: str, version: int) -> str:
-    return f"{registry()}/studentide-env-{env_id.lower()}:{version}"
+    """One repository for every environment, tagged <env id>-<version>, so making
+    that one package public once lets every student pull every environment."""
+    return f"{registry()}/studentide-env:{env_id.lower()}-{version}"
 
 
 # -- request bodies
@@ -474,7 +476,10 @@ def dockerfile(env_id: str, version: int, recipe: dict) -> str:
         "    && rm -rf /var/lib/apt/lists/*",
         "RUN (userdel -r ubuntu 2>/dev/null || true) \\",
         "    && useradd -m -u 1000 -s /bin/bash student \\",
-        "    && echo 'student ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/student && chmod 0440 /etc/sudoers.d/student \\",
+        "    && echo 'student ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/student \\",
+        # sudo apt/pip must keep the registries proxy, or "registries only" breaks every install
+        "    && echo 'Defaults env_keep += \"http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY\"' >> /etc/sudoers.d/student \\",
+        "    && chmod 0440 /etc/sudoers.d/student \\",
         "    && mkdir -p /home/student/labs && chown -R student:student /home/student",
     ]
     if p["pip"]:
@@ -1197,6 +1202,9 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
     def builds(request: Request, status: str = "queued") -> list[dict]:
         build_token(request)
         rows = store.q("SELECT * FROM sbx_env_versions WHERE status = ? ORDER BY created_at", (status,))
+        if status == "queued":  # a builder that died mid-build: hand its job out again after 2 h
+            rows += store.q("SELECT * FROM sbx_env_versions WHERE status = 'building' AND updated_at < ? "
+                            "ORDER BY created_at", (_now() - 7200,))
         return [{"environment_id": v["environment_id"], "version": v["version"],
                  "image": image_name(v["environment_id"], v["version"]),
                  "dockerfile": dockerfile(v["environment_id"], v["version"], json.loads(v["recipe_json"]))} for v in rows]

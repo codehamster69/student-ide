@@ -55,7 +55,7 @@ def test_subject_with_new_environment(priya):
     envs = priya.get("/api/sandbox/environments").json()
     assert len(envs) == 1 and envs[0]["versions"][0]["size_mb"] > 500
     df = priya.get(f"/api/sandbox/environments/{envs[0]['id']}/versions/1/dockerfile").json()
-    assert df["image"].endswith(f"studentide-env-{envs[0]['id']}:1")
+    assert df["image"].endswith(f"studentide-env:{envs[0]['id']}-1")
     text = df["dockerfile"]
     assert "FROM ubuntu:24.04" in text and "valgrind" in text and "useradd -m -u 1000" in text
     assert 'CMD ["sleep", "infinity"]' in text and "util-linux" in text
@@ -101,6 +101,54 @@ def test_build_service_flow(priya, monkeypatch):
     r = anon.post(f"/api/sandbox/builds/{env_id}/1", json={"status": "ready", "digest": "sha256:" + "a" * 64}, headers=h)
     assert r.json()["status"] == "ready"
     assert priya.get(f"/api/sandbox/subjects/{s['id']}").json()["environment"]["status"] == "ready"
+
+
+def test_stale_building_is_handed_out_again(priya, monkeypatch):
+    from fastapi.testclient import TestClient
+    s = make_subject(priya)
+    env_id, h = s["environment"]["id"], {"x-build-token": "bt"}
+    monkeypatch.setenv("STUDENTIDE_BUILD_TOKEN", "bt")
+    anon = TestClient(priya.app)
+    anon.post(f"/api/sandbox/builds/{env_id}/1", json={"status": "building"}, headers=h)
+    assert anon.get("/api/sandbox/builds", headers=h).json() == []  # a builder has it
+    now = sandbox._now()
+    monkeypatch.setattr(sandbox, "_now", lambda: now + 3 * 3600)  # that builder died
+    assert [b["version"] for b in anon.get("/api/sandbox/builds", headers=h).json()] == [1]
+
+
+def test_build_script_reports_digest_and_failures(priya, monkeypatch):
+    """sandbox_build.run_once against the real endpoints, with docker faked."""
+    from fastapi.testclient import TestClient
+    from studentide import sandbox_build
+    s = make_subject(priya)
+    other = make_subject(priya, title="Databases", code="cs301", recipe={"base": "databases"})
+    monkeypatch.setenv("STUDENTIDE_BUILD_TOKEN", "bt")
+    anon = TestClient(priya.app)
+
+    def call(server, token, method, path, body=None):
+        r = anon.request(method, path, json=body, headers={"x-build-token": token})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    seen = []
+
+    def sh(args, stdin=None, timeout=0):
+        seen.append(args)
+        if args[:3] == ["docker", "buildx", "build"]:
+            if "postgresql" in open(args[-1] + "/Dockerfile").read():
+                return 1, "E: boom"
+            return 0, "built"
+        if args[:3] == ["docker", "image", "inspect"]:
+            return 0, "sha256:" + "b" * 64 + "\n"
+        return 0, ""  # smoke test passes
+
+    monkeypatch.setattr(sandbox_build, "call", call)
+    monkeypatch.setattr(sandbox_build, "sh", sh)
+    assert sandbox_build.run_once("http://x", "bt", push=False, platforms="linux/amd64") == 2
+    env = lambda sub: priya.get(f"/api/sandbox/subjects/{sub['id']}").json()["environment"]
+    assert env(s)["status"] == "ready" and env(other)["status"] == "failed"
+    assert any(a[:2] == ["docker", "run"] and sandbox_build.SMOKE in a for a in seen)
+    assert anon.get("/api/sandbox/builds", headers={"x-build-token": "bt"}).json() == []
 
 
 def test_ownership_people_and_tas(app, priya):

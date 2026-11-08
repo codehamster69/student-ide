@@ -162,7 +162,7 @@ class DockerDriver:
 
     def ensure_image(self, spec: dict) -> str:
         image, digest = spec["image"], spec.get("digest")
-        ref = f"{image.split(':')[0]}@{digest}" if digest else image
+        ref = f"{image.rsplit(':', 1)[0]}@{digest}" if digest else image
         if self._run(["image", "inspect", ref], timeout=30).returncode == 0:
             return ref
         if digest or not self.build_local:
@@ -183,7 +183,8 @@ class DockerDriver:
         if spec["network"] == "registries" and self.network and self.proxy:
             net = ["--network", self.network]
             env = ["-e", f"HTTP_PROXY={self.proxy}", "-e", f"HTTPS_PROXY={self.proxy}",
-                   "-e", f"http_proxy={self.proxy}", "-e", f"https_proxy={self.proxy}"]
+                   "-e", f"http_proxy={self.proxy}", "-e", f"https_proxy={self.proxy}",
+                   "-e", "NO_PROXY=localhost,127.0.0.1", "-e", "no_proxy=localhost,127.0.0.1"]
         r = spec["resources"]
         args = ["run", "-d", "--init", "--name", spec["container"], "--hostname", spec["hostname"],
                 "--user", "student", "-w", "/home/student",

@@ -114,8 +114,8 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | `STUDENTIDE_ATTENDANCE_URL` | Roll Call for lab attendance (default `https://attendance.hokora.xyz`), see [attendance.md](attendance.md) |
 | `STUDENTIDE_PUBLIC_URL` | e.g. `https://studentide.hokora.xyz`, for the link back from Roll Call |
 | `STUDENTIDE_ROLLCALL_LINK_SECRET` | random, 16+ chars, same as Roll Call's `LINK_SECRET`: Roll Call's Google sign-in and Student IDE share one register per teacher |
-| `STUDENTIDE_PREVIEW_URL`, `STUDENTIDE_PREVIEW_TOKEN` | optional: Sandbox Labs teacher previews through the `previews` Compose profile (`docker compose --profile previews up -d`); caps in [sandbox-labs.md](sandbox-labs.md) |
-| `STUDENTIDE_BUILD_TOKEN`, `STUDENTIDE_SANDBOX_REGISTRY` | optional: the build service that turns Sandbox Labs environment recipes into images |
+| `STUDENTIDE_PREVIEW_URL`, `STUDENTIDE_PREVIEW_TOKEN` | optional: Sandbox Labs teacher previews through the `previews` Compose profile (`docker compose --profile previews up -d`); caps in [sandbox-labs.md](sandbox-labs.md); the profile also starts `preview-proxy` (registries-only network) |
+| `STUDENTIDE_BUILD_TOKEN`, `STUDENTIDE_SANDBOX_REGISTRY` | optional: the build service (GitHub Actions `sandbox-images.yml`, same token as a repo secret) that turns Sandbox Labs environment recipes into images |
 | `BACKUP_KEEP_DAYS` | how many days of nightly backups to keep (default 14) |
 
 ## Who is who
