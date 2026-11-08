@@ -104,7 +104,8 @@ async function unpackStatic(host: Host): Promise<{ cli: string[]; env: Record<st
   const env: Record<string, string> = { XDG_CONFIG_HOME: xdg };
   // Podman needs a private runtime dir; without a login session (su, sudo -u, some kiosks) there is none.
   const runtime = host.env.XDG_RUNTIME_DIR;
-  if (!runtime || !host.exists(runtime)) {
+  // It must also be ours: sudo -u and su can leak the previous user's dir ("mkdir /run/user/1001/libpod: permission denied").
+  if (!runtime || (await host.run('test', ['-O', runtime, '-a', '-w', runtime])).code !== 0) {
     env.XDG_RUNTIME_DIR = path.join(root, 'run');
     await host.run('mkdir', ['-p', '-m', '700', env.XDG_RUNTIME_DIR]);
   }
