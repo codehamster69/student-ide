@@ -49,6 +49,13 @@ export interface InstanceSpec {
 export const USER = "student";
 export const HOME = "/home/student";
 export const PROXY_IMAGE = "ghcr.io/codehamster69/studentide-sidproxy:1";
+
+/** ".254" of the first IPv4 subnet in `network inspect` output, e.g. "10.89.1.0/24" -> "10.89.1.254". */
+export function proxyAddress(subnets: string): string {
+  const m = /(\d+)\.(\d+)\.(\d+)\.\d+\/(\d+)/.exec(subnets);
+  if (!m || Number(m[4]) > 24) throw new Error(`no usable IPv4 subnet for the lab network: ${subnets.trim()}`);
+  return `${m[1]}.${m[2]}.${m[3]}.254`;
+}
 export const PROXY_PORT = 8888;
 const LABEL = "studentide.instance";
 
@@ -87,6 +94,8 @@ export class Instance {
   readonly volume: string;
   readonly network: string;
   readonly proxy: string;
+  /** Podman only: the proxy's fixed address on the internal network (its DNS is off there). */
+  proxyIp: string | null = null;
   readonly limits: Limits;
   limitsEnforced = true;
   private lastActivity = Date.now();
@@ -157,6 +166,7 @@ export class Instance {
     if (s.network === "registries") {
       const p = `http://sidproxy:${PROXY_PORT}`;
       args.push("--network", this.network);
+      if (this.proxyIp) args.push("--add-host", `sidproxy:${this.proxyIp}`);
       for (const k of ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]) args.push("--env", `${k}=${p}`);
       args.push("--env", "no_proxy=localhost,127.0.0.1", "--env", "NO_PROXY=localhost,127.0.0.1");
     }
@@ -211,20 +221,34 @@ export class Instance {
     return "created";
   }
 
+  /**
+   * The proxy sits on the engine's ordinary `bridge` network (its way out) and on the
+   * lab's internal network. Rootless Podman cannot attach a second network to a
+   * container on its default (pasta) network, and the internal network's DNS server
+   * would shadow the outside one, so on Podman the internal network has no DNS and
+   * the lab reaches the proxy at a fixed address (.254) through --add-host instead.
+   */
   private async ensureProxy(): Promise<void> {
     const e = this.engine;
     if (!(await e.exists("network", this.network))) {
-      await e.ok(["network", "create", "--internal", "--label", `${LABEL}=1`, this.network], { timeoutMs: 60_000 });
+      await e.ok(["network", "create", "--internal", ...(e.podman ? ["--disable-dns"] : []), "--label", `${LABEL}=1`, this.network],
+        { timeoutMs: 60_000 });
+    }
+    if (e.podman) {
+      const r = await e.ok(["network", "inspect", "--format", "{{range .Subnets}}{{.Subnet}} {{end}}", this.network], { timeoutMs: 30_000 });
+      this.proxyIp = proxyAddress(r);
     }
     if (!(await e.exists("container", this.proxy))) {
       const img = this.spec.proxyImage ?? PROXY_IMAGE;
       if (!(await e.exists("image", img))) await pullImage(e, img);
       await e.ok([
         "create", "--name", this.proxy, "--label", `${LABEL}=1`, "--label", "studentide.role=proxy",
+        "--network", "bridge",
         "--memory", "64m", "--pids-limit", "64", "--cap-drop", "ALL", "--cap-add", "SETUID", "--cap-add", "SETGID",
         "--env", `SID_ALLOW=${REGISTRY_HOSTS.join(",")}`, img,
       ], { timeoutMs: 120_000 });
-      await e.ok(["network", "connect", "--alias", "sidproxy", this.network, this.proxy], { timeoutMs: 60_000 });
+      const at = this.proxyIp ? ["--ip", this.proxyIp] : ["--alias", "sidproxy"];
+      await e.ok(["network", "connect", ...at, this.network, this.proxy], { timeoutMs: 60_000 });
     }
     await e.call(["start", this.proxy], { timeoutMs: 60_000 });
   }
