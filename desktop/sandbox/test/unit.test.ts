@@ -8,7 +8,7 @@ import { MarkParser, terminalEditor } from "../src/marks.ts";
 import { parseCommandLine, record, emptyRecipe, replayScript } from "../src/recipe.ts";
 import { outputsMatch } from "../src/run.ts";
 import { Engine } from "../src/engine.ts";
-import { Instance, homePath, parseSize } from "../src/instance.ts";
+import { Instance, homePath, parseSize, proxyAddress } from "../src/instance.ts";
 import { explain, setupCheck } from "../src/doctor.ts";
 import { hostAllowed, tinyproxyFilter } from "../src/registries.ts";
 import { isBuildOrRun, termPaste } from "../src/events.ts";
@@ -107,6 +107,9 @@ test("instance flags: isolated, limited, one capability per flag, network per mo
   assert.match(s, /ghcr\.io\/x\/env@sha256:abc sleep infinity$/);
   assert.match(mk("registries").createArgs().join(" "), /--network sidnet-sid-pg25cs07-subj_8c1d .*https_proxy=http:\/\/sidproxy:8888/);
   assert.ok(!mk("open").createArgs().includes("--network"));
+  const pod = mk("registries");
+  pod.proxyIp = "10.89.1.254"; // Podman: internal network without DNS, proxy at a fixed address
+  assert.match(pod.createArgs().join(" "), /--add-host sidproxy:10\.89\.1\.254/);
   assert.ok(!off.createArgs(false).includes("--memory"));
   // lab definition names with {student}
   const named = new Instance(e, { studentId: "UG23CS01", subjectId: "s", image: "i", network: "off", name: "sid-{student}-subj_9", volume: "sidv-{student}-subj_9" });
@@ -218,4 +221,10 @@ test("setup check: small machine and rootless cgroup v1 are reported", async () 
   assert.equal(r.checks.find((x) => x.id === "host.memory")!.severity, "error");
   assert.equal(r.checks.find((x) => x.id === "host.disk")!.severity, "warning");
   assert.equal(r.checks.find((x) => x.id === "engine.limits")!.ok, false);
+});
+
+test("proxyAddress: .254 of the lab network's IPv4 subnet", () => {
+  assert.equal(proxyAddress("10.89.1.0/24 "), "10.89.1.254");
+  assert.equal(proxyAddress("fd00::/64 10.89.7.0/24"), "10.89.7.254");
+  assert.throws(() => proxyAddress("fd00::/64"));
 });
