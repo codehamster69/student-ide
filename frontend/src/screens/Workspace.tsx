@@ -7,6 +7,8 @@ import { cpp } from "@codemirror/lang-cpp";
 import { java } from "@codemirror/lang-java";
 import { javascript } from "@codemirror/lang-javascript";
 import { EditorView, keymap } from "@codemirror/view";
+import { applyVim, newVimCompartment, useVimMode, vimExtension, vimOn } from "../editor/vim";
+import { VimToggle } from "../editor/VimToggle";
 import { EditorState, Prec } from "@codemirror/state";
 import { indentUnit } from "@codemirror/language";
 import { indentWithTab } from "@codemirror/commands";
@@ -94,6 +96,8 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const host = useRef<HTMLDivElement>(null);
   const stdin = useRef<HTMLTextAreaElement>(null);
   const view = useRef<EditorView>();
+  const vimSlot = useRef(newVimCompartment());
+  const [vim, setVim] = useVimMode();
   const slots = useRef(new Map<string, Slot>());
   const activeRef = useRef(start);
   /** per question: the language it is open in (any-language competitions switch it) */
@@ -165,6 +169,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     const state = EditorState.create({
       doc,
       extensions: [
+        vimSlot.current.of(vimExtension(vimOn())), // first, so its keys win (plan §4.1)
         basicSetup,
         SYNTAX[language](),
         indentUnit.of("    "),
@@ -320,6 +325,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     }
     activeRef.current = to;
     v.setState(next.state);
+    applyVim(v, vimSlot.current, vimOn());
     if (stdin.current) stdin.current.value = next.stdin;
     (window as any).__studentide = { rec: next.session.rec, sessionId: next.session.id }; // for end-to-end tests
     setActive(to);
@@ -365,6 +371,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
     }
     langOf.current.set(i, to);
     v.setState(next.state);
+    applyVim(v, vimSlot.current, vimOn());
     if (stdin.current) stdin.current.value = next.stdin;
     (window as any).__studentide = { rec: next.session.rec, sessionId: next.session.id }; // for end-to-end tests
     setLangTick((n) => n + 1);
@@ -688,8 +695,10 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 {lang.file}
               </div>
             )}
+            <VimToggle on={vim} onChange={(on) => { setVim(on); applyVim(view.current, vimSlot.current, on); view.current?.focus(); }}
+              className={cn("mb-1 shrink-0 self-center", !pickLanguage && "ml-auto")} />
             <Button variant="ghost" size="sm" onClick={() => setResetting(true)} disabled={saving || running || timeUp}
-              className={cn("mb-1 shrink-0 self-center text-xs text-muted", !pickLanguage && "ml-auto")}
+              className="mb-1 shrink-0 self-center text-xs text-muted"
               title="Start this question again from the starter code">
               <RotateCcw className="size-3.5" />
               Reset

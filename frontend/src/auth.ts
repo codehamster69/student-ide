@@ -24,6 +24,8 @@ export interface Me {
   branch: string | null;
   roll: string | null;
   consented: boolean;
+  /** consent v3 (Sandbox Labs: terminal, file changes, offline journal) */
+  sandbox_consented?: boolean;
 }
 
 let config: Promise<AuthConfig> | null = null;

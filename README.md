@@ -16,9 +16,10 @@ ever leads to a conversation, never a penalty.
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
 | Sandbox Labs monitoring | file watcher (`fs_change`, `port_open`), 5-minute offline journal with signed hash-chained batches, review lanes and "appeared without typing", live terminal mirror, readiness board, consent v3, attendance; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) and [docs/review.md](docs/review.md) |
-| Desktop app (Sandbox Labs) | shell in progress: Electron window on the site, browser sign-in, bridge for local labs, see [docs/desktop.md](docs/desktop.md) |
+| Desktop app (Sandbox Labs) | Electron window on the site, browser sign-in, bridge for local labs, auto-update from GitHub Releases through the server (unsigned builds for now), see [docs/desktop.md](docs/desktop.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
-| Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
+| Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, server grading of submissions (hidden tests, gradebook, regrade), see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
+| Sandbox Labs (student side) | home shelf per subject; in the desktop app a lab workspace with files, editor, terminal, Run/Check/Submit and grade; website lists them with "Open in the Student IDE app"; see [docs/sandbox-student.md](docs/sandbox-student.md) |
 
 ## Stack
 
@@ -104,7 +105,7 @@ STUDENTIDE_DB=data/demo.sqlite3 STUDENTIDE_ADMIN_TOKEN=change-me uvicorn student
 
 Students also have an always-open learning lab (concept lessons with runnable examples and small exercises), see [docs/learning-lab.md](docs/learning-lab.md).
 
-Sandbox Labs (`#/sandbox`): teachers create subjects with a Linux environment built from a tool checklist, labs of assignments with tests and a reference solution, share labs to a library, and try any lab in a short cloud preview. Students run them in the desktop app. See [docs/sandbox-labs.md](docs/sandbox-labs.md).
+Sandbox Labs (`#/sandbox`): teachers create subjects with a Linux environment built from a tool checklist, labs of assignments with tests and a reference solution, share labs to a library, and try any lab in a short cloud preview. The lab wizard imports questions, sets up environments by hand in a terminal, sets grading and late policy, and keeps a history of mid-lab fixes with regrade and undo. Students run them in the desktop app. See [docs/sandbox-labs.md](docs/sandbox-labs.md).
 
 Labs can mark attendance in Roll Call (the attendance site): attach class groups to a lab, and students who effectively took part are marked present in their own group when the lab closes. See [docs/attendance.md](docs/attendance.md).
 

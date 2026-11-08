@@ -3,9 +3,10 @@
 The only container that holds the Docker socket. The app never gets it: it
 asks this service, over the internal network and with a shared token
 ($STUDENTIDE_PREVIEW_TOKEN), to start, stop and exec into preview
-containers, and proxies the terminal WebSocket to it (previews.RemoteDriver).
-Seats, idle stop and who may open what are decided by the app (previews.py);
-this service only refuses containers that are not previews.
+containers and the short-lived grading containers of submissions.py, and
+proxies the terminal WebSocket to it (previews.RemoteDriver). Seats, idle
+stop, the grading queue and who may open what are decided by the app; this
+service only refuses containers that are not previews or grading runs.
 
     uvicorn studentide.preview_service:app --port 8002
 """
@@ -23,7 +24,8 @@ from .previews import DockerDriver, PreviewError, pty_bridge
 
 app = FastAPI(title="Student IDE previews")
 driver = DockerDriver()
-CONTAINER = re.compile(r"^sbxp-prv_[0-9a-f]{10}$")  # previews.Previews names every container this way
+# previews.Previews names every preview this way, submissions.Grader every grading run
+CONTAINER = re.compile(r"^sbxp-(prv|sub)_[0-9a-f]{10}$")
 PATH = re.compile(r"^/(home/student|tmp)(/[^\0]*)?$")
 
 

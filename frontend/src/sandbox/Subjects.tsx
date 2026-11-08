@@ -2,14 +2,14 @@
 // with its labs, environment, people and roster (plan §5.1, §6.3).
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Boxes, ChevronRight, Copy, FileCode2, Library, Plus, Share2, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, Boxes, ChevronRight, Copy, FileCode2, Library, Plus, Share2, Terminal, Trash2, Users, X } from "lucide-react";
 import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { go, href } from "../routes";
 import { EnvironmentPicker, RecipeEditor, useCatalogue, type EnvChoice } from "./EnvironmentBuilder";
 import { BASE_ICON, BuildBadge, NetworkBadge, mb } from "./bits";
-import { COLOR_VAR, emptyRecipe, tint, type Environment, type Recipe, type SubjectDetail, type SubjectRow } from "./api";
+import { COLOR_VAR, emptyRecipe, tint, type Environment, type Preview, type Recipe, type SubjectDetail, type SubjectRow } from "./api";
 
 const LAB_TONE = { draft: "neutral", published: "success", closed: "warn" } as const;
 
@@ -284,12 +284,20 @@ function EnvironmentPanel({ s, canEdit, onChanged, onAuthLost }: { s: SubjectDet
           {dockerfile ? "Hide" : "Show"} Dockerfile
         </Button>
         {canEdit && env.mine && <Button size="sm" onClick={() => setEditing(editing ? null : latest.recipe)}>{editing ? "Cancel" : "Change tools"}</Button>}
+        {canEdit && env.mine && !latest.recipe.dockerfile && (
+          <Button size="sm" title="Open a fresh instance, install things in its terminal, and save the commands as the next version" onClick={async () => {
+            setMsg("");
+            try { const p = await send<Preview>("POST", "/api/sandbox/previews", { environment_id: env.id }); go(href.sbxPreview(p.id)); }
+            catch (e) { setMsg((e as Error).message); }
+          }}><Terminal className="size-3.5" /> Set up by hand</Button>
+        )}
         {env.mine && (
           <Button size="sm" variant="ghost" onClick={async () => { await send("PATCH", `/api/sandbox/environments/${env.id}`, { shared: !env.shared }); reload(); }}>
             <Share2 className="size-3.5" /> {env.shared ? "Shared with all teachers" : "Share with colleagues"}
           </Button>
         )}
       </div>
+      {msg && !editing && <p className="mt-2 text-xs text-danger">{msg}</p>}
       {dockerfile && <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-console p-3 font-mono text-[11px] leading-relaxed text-console-text">{dockerfile}</pre>}
       <AnimatePresence>
         {editing && (

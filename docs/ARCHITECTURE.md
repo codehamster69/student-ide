@@ -26,7 +26,8 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `desktop.py` | Desktop app support: minimum app version, browser sign-in handoff (one-time code + PKCE). |
 | `runner.py`, `runner_service.py` | Compile/run student code (Python, C, C++, Java, JS) with limits; the service form runs in its own container. |
 | `providers/` | Question sources (bundled CodeContests/Codeforces/LeetCode/original sets, live MBPP/Exercism, link-only platforms); `polyglot.py` adapts function-style questions to every language. |
-| `workspaces.py` | Sandbox Labs: workspace snapshots (checked gzip tars) and setup recipes, so desktop work follows the student between machines. |
+| `workspaces.py` | Sandbox Labs: workspace snapshots (checked gzip tars) and setup recipes, so desktop work follows the student between machines; uploads checked against the lab, roster and due time. |
+| `submissions.py` | Sandbox Labs grading: Submit snapshots queued in `sbx_submissions`, one grader thread runs every test in a no-network container through the preview driver; student and teacher (gradebook, regrade) routes. |
 | `retention.py`, `backup.py` | Purge raw key timings after N days (consent promise); gzipped SQLite backups. |
 | `replay.py`, `export.py` | Rebuild documents from edit events; load sessions for analysis. |
 | `detector/` | Phase 2: habit features per 30 s window, per-student baseline, two-channel (identity/process) CUSUM, synthetic typists, synthetic evaluation. |

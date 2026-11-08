@@ -19,6 +19,9 @@ Routes (teacher sign-in, like /api/teach):
 
     GET  /api/sandbox/previews                  mine (admins: all) + seats
     POST /api/sandbox/previews                  {lab_id}  start one (stops my older one)
+                                                {environment_id}  "set up by hand": a bare instance of
+                                                the environment whose shell history becomes the recipe
+    GET  /api/sandbox/previews/{id}/setup       the commands typed so far, distilled into a setup script
     GET  /api/sandbox/previews/{id}             status, the lab definition, files
     POST /api/sandbox/previews/{id}/stop
     GET  /api/sandbox/previews/{id}/files       ?assignment_id=  [{path, size}] / ?path= one file
@@ -27,6 +30,7 @@ Routes (teacher sign-in, like /api/teach):
     POST /api/sandbox/previews/{id}/check       {assignment_id}  every test, hidden ones too
     POST /api/sandbox/previews/{id}/verify      reference solution must pass, starter should fail
     WS   /api/sandbox/previews/{id}/terminal?assignment_id=   shell as `student` in the workdir
+                                                (no assignment_id: in the home folder, for set up by hand)
 """
 
 from __future__ import annotations
@@ -50,7 +54,8 @@ from pydantic import BaseModel, Field
 
 from . import grading
 from .db import Database
-from .sandbox import Store, definition, dockerfile
+from .sandbox import Store, definition, dockerfile, image_name, resources
+from .sandbox_authoring import BASH_PROFILE, SETUP_HISTORY, distill_setup
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sbx_previews (
@@ -68,6 +73,8 @@ CREATE TABLE IF NOT EXISTS sbx_previews (
 );
 CREATE INDEX IF NOT EXISTS sbx_previews_status ON sbx_previews(status, started_at);
 """
+# Set-up-by-hand previews have lab_id '' and this set (added after the first release).
+MIGRATION = ("environment_id", "TEXT")
 
 # Capability set shared with the desktop runtime (desktop/sandbox): enough for
 # sudo, apt, gdb/strace and services, never --privileged.
@@ -366,11 +373,29 @@ def starter_files(workdir: str, files: list[dict]) -> list[dict]:
             for f in files]
 
 
+def instance_spec(store: Store, container: str, lab, d: dict, limits: Limits, network: str | None = None) -> dict:
+    """What the driver starts: the lab's environment image, capped by `limits`.
+    Previews get "registries" at most (never the open internet); grading passes network="off"."""
+    env = d["environment"]
+    r = env["resources"]
+    subj = store.one("SELECT code, title FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
+    recipe_row = store.env_version(env["id"], env["version"])
+    return {
+        "container": container, "lab_id": lab["id"], "image": env["image"], "digest": env["digest"],
+        "dockerfile": dockerfile(env["id"], env["version"], json.loads(recipe_row["recipe_json"])),
+        "hostname": (subj["code"] or "preview").lower()[:30] or "preview",
+        "network": network or ("off" if d["network"] == "off" else "registries"),
+        "resources": {"cpus": min(r["cpus"], limits.cpus), "memory_mb": min(r["memory_mb"], limits.memory_mb),
+                      "pids": min(r["pids"], limits.pids)},
+    }
+
+
 # -- manager + routes
 
 
 class StartIn(BaseModel):
-    lab_id: str
+    lab_id: str | None = None
+    environment_id: str | None = None  # "set up by hand" instead of a lab
 
 
 class FileIn(BaseModel):
@@ -400,6 +425,8 @@ class Previews:
         self.background = True  # start containers on a thread (pulls can take minutes); tests turn it off
         with db.connect() as conn:
             conn.executescript(SCHEMA)
+            if MIGRATION[0] not in {r[1] for r in conn.execute("PRAGMA table_info(sbx_previews)")}:
+                conn.execute(f"ALTER TABLE sbx_previews ADD COLUMN {MIGRATION[0]} {MIGRATION[1]}")
 
     @property
     def enabled(self) -> bool:
@@ -453,18 +480,7 @@ class Previews:
                 "idle_minutes": self.limits.idle_s / 60, "max_minutes": self.limits.max_s / 60}
 
     def spec(self, pid: str, lab, d: dict) -> dict:
-        env = d["environment"]
-        r = env["resources"]
-        subj = self.store.one("SELECT code, title FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
-        recipe_row = self.store.env_version(env["id"], env["version"])
-        return {
-            "container": f"sbxp-{pid}", "lab_id": lab["id"], "image": env["image"], "digest": env["digest"],
-            "dockerfile": dockerfile(env["id"], env["version"], json.loads(recipe_row["recipe_json"])),
-            "hostname": (subj["code"] or "preview").lower()[:30] or "preview",
-            "network": "off" if d["network"] == "off" else "registries",  # previews never get the open internet
-            "resources": {"cpus": min(r["cpus"], self.limits.cpus), "memory_mb": min(r["memory_mb"], self.limits.memory_mb),
-                          "pids": min(r["pids"], self.limits.pids)},
-        }
+        return instance_spec(self.store, f"sbxp-{pid}", lab, d, self.limits)
 
     def start(self, lab, email: str) -> str:
         if not self.enabled:
@@ -474,6 +490,38 @@ class Previews:
             raise HTTPException(409, "give the subject an environment first")
         if not d["assignments"]:
             raise HTTPException(409, "add an assignment first")
+        pid = self._reserve(email, lab["id"], lab["version"])
+        spec = self.spec(pid, lab, d)
+        files = [f for a in d["assignments"] for f in starter_files(a["workdir"], a["files"])]
+        self._launch(pid, spec, files)
+        return pid
+
+    def start_setup(self, env, version, email: str) -> str:
+        """A bare instance of one environment version for "set up by hand": the
+        teacher installs in its terminal, every command lands in SETUP_HISTORY."""
+        if not self.enabled:
+            raise HTTPException(503, "Set up by hand needs cloud previews, which are not set up on this server "
+                                     "(see docs/sandbox-labs.md). Use the desktop app, or tick tools instead.")
+        pid = self._reserve(email, "", version["version"])
+        self.store.x("UPDATE sbx_previews SET environment_id = ? WHERE id = ?", (env["id"], pid))
+        recipe = json.loads(version["recipe_json"])
+        r = resources(recipe.get("resources"))
+        spec = {"container": f"sbxp-{pid}", "lab_id": "", "image": image_name(env["id"], version["version"]),
+                "digest": version["digest"], "dockerfile": dockerfile(env["id"], version["version"], recipe),
+                "hostname": "setup", "network": "registries",
+                "resources": {"cpus": min(r["cpus"], self.limits.cpus), "memory_mb": min(r["memory_mb"], self.limits.memory_mb),
+                              "pids": min(r["pids"], self.limits.pids)}}
+        self._launch(pid, spec, [{"path": "/home/student/.bash_profile", "content": BASH_PROFILE}])
+        return pid
+
+    def _launch(self, pid: str, spec: dict, files: list[dict]) -> None:
+        if self.background:
+            threading.Thread(target=self._boot, args=(pid, spec, files), daemon=True).start()
+        else:
+            self._boot(pid, spec, files)
+
+    def _reserve(self, email: str, lab_id: str, lab_version: int) -> str:
+        """A seat for a new preview (stopping this teacher's older one), as a 'starting' row."""
         with self.lock:
             self.reap()
             for p in self.active():
@@ -486,14 +534,9 @@ class Previews:
                                          + (f"; one frees up in about {wait} min." if wait else "."))
             pid = "prv_" + uuid.uuid4().hex[:10]
             now = self.clock()
-            self.store.x("INSERT INTO sbx_previews VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                         (pid, email, lab["id"], lab["version"], f"sbxp-{pid}", "starting", "", now, now, None, None))
-        spec = self.spec(pid, lab, d)
-        files = [f for a in d["assignments"] for f in starter_files(a["workdir"], a["files"])]
-        if self.background:
-            threading.Thread(target=self._boot, args=(pid, spec, files), daemon=True).start()
-        else:
-            self._boot(pid, spec, files)
+            self.store.x("INSERT INTO sbx_previews (id, teacher_email, lab_id, lab_version, container, status, error, "
+                         "started_at, last_active, stopped_at, stop_reason) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                         (pid, email, lab_id, lab_version, f"sbxp-{pid}", "starting", "", now, now, None, None))
         return pid
 
     def _boot(self, pid: str, spec: dict, files: list[dict]) -> None:
@@ -530,6 +573,10 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
         d["ends_at"] = min(p["last_active"] + pv.limits.idle_s, p["started_at"] + pv.limits.max_s)
         lab = store.one("SELECT title, subject_id FROM sbx_labs WHERE id = ?", (p["lab_id"],))
         d["lab_title"] = lab["title"] if lab else ""
+        d["kind"] = "setup" if p["environment_id"] else "lab"
+        if p["environment_id"]:
+            env = store.one("SELECT title FROM sbx_environments WHERE id = ?", (p["environment_id"],))
+            d["lab_title"] = f"Set up by hand: {env['title']}" if env else "Set up by hand"
         return d
 
     def mine(pid: str, request) -> dict:
@@ -580,9 +627,27 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
 
     @r.post("")
     def start(body: StartIn, request: Request) -> dict:
+        if body.environment_id:
+            env = sandbox_router.env_access(request, body.environment_id, write=True)
+            version = store.newest_version(env["id"], ready_only=True) or store.newest_version(env["id"])
+            return get(pv.start_setup(env, version, who(request)), request)
+        if not body.lab_id:
+            raise HTTPException(400, "send lab_id or environment_id")
         lab = sandbox_router.lab_access(request, body.lab_id, write=False)
         pid = pv.start(lab, who(request))
         return get(pid, request)
+
+    @r.get("/{pid}/setup")
+    def setup_log(pid: str, request: Request) -> dict:
+        """What the teacher has typed so far in a set-up-by-hand preview, and the recipe script it makes."""
+        p = running(pid, request)
+        if not p["environment_id"]:
+            raise HTTPException(409, "this preview is for a lab, not for setting up an environment")
+        try:
+            history = pv.driver.read_file(p["container"], SETUP_HISTORY)
+        except PreviewError:
+            history = ""  # nothing typed yet
+        return {"environment_id": p["environment_id"]} | distill_setup(history)
 
     @r.get("/{pid}")
     def get(pid: str, request: Request) -> dict:
@@ -672,13 +737,16 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
             pr.startswith(("No hidden", "No reference")) for pr in a["problems"]) for a in out)}
 
     @ws_r.websocket("/{pid}/terminal")
-    async def terminal(ws: WebSocket, pid: str, assignment_id: str, token: str = "") -> None:
+    async def terminal(ws: WebSocket, pid: str, assignment_id: str = "", token: str = "") -> None:
         # browsers can't set headers on a WebSocket: dev mode passes the admin token in the query
         req = _Headers(ws, token) if token else ws
         try:
             auth.require_teacher(req)
             p = running(pid, req)
-            _, a = lab_def(p, assignment_id)
+            if p["environment_id"]:  # set up by hand: no lab, the home folder
+                a = {"workdir": "/home/student"}
+            else:
+                _, a = lab_def(p, assignment_id)
         except HTTPException as e:
             await ws.close(code=4403 if e.status_code in (401, 403) else 4404, reason=str(e.detail)[:120])
             return

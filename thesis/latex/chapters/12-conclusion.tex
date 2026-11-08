@@ -100,3 +100,52 @@ sessions.
   preview with editor, terminal and the full test results.}
   \label{fig:sandbox-teacher}
 \end{figure}
+
+Submissions are graded on the server (Figure~\ref{fig:sandbox-grading}). A
+student's Submit uploads the assignment folder; the server first checks that
+the lab is open to that student and not past its due time, then queues the
+submission. A single grader runs the queue one submission at a time, each in a
+fresh, network-less container of the lab's own image started by the same
+service that runs previews, and records every test, hidden ones included.
+Students see hidden tests by name and outcome only; teachers get a gradebook of
+students by assignments, the full results, a link to how the work was written,
+and a regrade after fixing a test. One run at a time keeps grading within the
+small college VM: a class submitting together waits minutes, not the app.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-11-submissions}\hfill
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-12-submission-results}
+  \caption{Sandbox Labs grading: the gradebook a published lab opens on
+  (filters, attempts, regrade) and one submission's results, hidden tests in
+  full for the teacher.}
+  \label{fig:sandbox-grading}
+\end{figure}
+
+Two release pieces followed. The desktop app now keeps itself up to date: each
+release is published from CI, and installed apps read the update feed from the
+college server, which hands out short-lived download links, so the private
+repository's credentials never ship inside the app and installers never pass
+through the VM. An update downloads in the background and installs only when
+the app closes, so it never interrupts a lab; builds remain unsigned until
+certificates are bought, which on macOS also means updates are a download
+rather than automatic. The lab wizard gained the remaining authoring steps
+(Figure~\ref{fig:sandbox-wizard-extras}): importing a ready-made question from
+the same sources as web labs; ``set up by hand'', where a teacher installs what
+a subject needs in a terminal and the commands they ran become the
+environment's recipe; a grading mode and late policy with a summary of what
+students will see; and a history of every change made after publishing, where
+a fix to an assignment's tests regrades existing submissions and any change can
+be undone. The editor also offers Vim key bindings, so students who prefer vim
+can stay where every edit is recorded in full; normal-mode keys are ordinary
+key events, so the event schema did not change.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-11-publish-grading}\hfill
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-12-history}
+  \caption{Lab wizard extras: grading mode, late policy and the ``What students
+  will see'' summary in the Publish step, and the History step after a mid-lab
+  fix to the tests, with regrade count and Undo.}
+  \label{fig:sandbox-wizard-extras}
+\end{figure}

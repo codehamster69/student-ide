@@ -23,6 +23,7 @@ import type { AuthApi, AuthEvents } from "./api/auth";
 import type { EngineApi, EngineEvents } from "./api/engine";
 import type { SandboxApi, SandboxEvents } from "./api/sandbox";
 import type { TerminalApi, TerminalEvents } from "./api/terminal";
+import type { UpdatesApi, UpdatesEvents } from "./api/updates";
 import type { JournalApi, JournalEvents } from "./api/journal";
 
 export const CONTRACT_VERSION = 2; // 2: sandbox.* / terminal.* from @studentide/sandbox; journal.* added (additive)
@@ -45,7 +46,7 @@ export interface DesktopError {
 }
 
 /** All events, by full name. Each namespace file adds its own. */
-export type DesktopEvents = AppEvents & AuthEvents & EngineEvents & SandboxEvents & TerminalEvents & JournalEvents;
+export type DesktopEvents = AppEvents & AuthEvents & EngineEvents & SandboxEvents & TerminalEvents & UpdatesEvents & JournalEvents;
 
 export interface DesktopBridge {
   contract: number;
@@ -54,6 +55,8 @@ export interface DesktopBridge {
   engine: EngineApi;
   sandbox: SandboxApi;
   terminal: TerminalApi;
+  /** absent in apps older than 0.2.0 */
+  updates?: UpdatesApi;
   /** optional: older apps upload from the renderer as on the web */
   journal?: JournalApi;
   on<K extends keyof DesktopEvents>(name: K, cb: (data: DesktopEvents[K]) => void): () => void;
@@ -65,4 +68,5 @@ export type Manifest = { contract: number; namespaces: Record<string, string[]> 
 export type { AppInfo } from "./api/app";
 export type { SignInResult } from "./api/auth";
 export type { EngineInfo, EngineStatus, SetupProgress } from "./api/engine";
+export type { UpdateStatus } from "./api/updates";
 export type { JournalState } from "./api/journal";

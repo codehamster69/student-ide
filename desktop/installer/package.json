@@ -17,7 +17,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsc -p tsconfig.json && node --test dist/test/*.test.js",
-    "package": "npm run build && npm --prefix ../app run build && electron-builder --projectDir ../app --config ../installer/packaging/electron-builder.yml"
+    "package": "npm run build && npm --prefix ../app run build && electron-builder --projectDir ../app --config ../installer/packaging/electron-builder.yml --publish never"
   },
   "engines": {
     "node": ">=20"

@@ -9,6 +9,7 @@ import { get, send, token } from "../review/api";
 import { LessonText } from "../learn/LessonText";
 import { href } from "../routes";
 import { FileEditor, NetworkBadge, PreviewTerminal } from "./bits";
+import { SetupByHand } from "./SetupByHand";
 import type { CheckResult, Preview, RunResult } from "./api";
 
 export function SandboxPreview({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
@@ -28,6 +29,7 @@ export function SandboxPreview({ id, onAuthLost }: { id: string; onAuthLost: () 
 
   if (error) return <div className="mx-auto max-w-[1100px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
   if (!p) return <div className="grid place-items-center pt-24"><Spinner /></div>;
+  if (p.kind === "setup") return <SetupByHand p={p} onReload={() => void load()} onAuthLost={onAuthLost} />;
   const lab = p.lab;
   const a = lab?.assignments.find((x) => x.id === asg);
 
