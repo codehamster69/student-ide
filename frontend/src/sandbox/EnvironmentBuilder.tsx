@@ -94,6 +94,7 @@ export function RecipeEditor({ recipe, onChange, bases, tools }: {
           ))}
         </div>
         <SizeMeter mb={total} />
+        <p className="mt-1.5 text-xs text-muted">Not in the list? Save first, then use <b className="font-medium text-text">Set up by hand</b> on the subject: install it in a terminal and the commands become part of the environment.</p>
       </div>
 
       <div>

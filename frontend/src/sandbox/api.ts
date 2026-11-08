@@ -146,6 +146,11 @@ export interface LabDetail extends LabRow {
   definition: Definition;
   problems: string[];
   access: Access;
+  /** after an edit of a published lab: what students will notice, in plain words */
+  effects?: string[];
+  /** after an import: what changed on the way */
+  notes?: string[];
+  added?: string;
 }
 
 export interface LibraryEntry {
