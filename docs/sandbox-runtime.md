@@ -10,7 +10,9 @@ the terminal and run events the detector and review read. Plan:
 Code: `desktop/sandbox/` (package `@studentide/sandbox`, plain Node +
 TypeScript, no Electron import, no native modules) and
 `backend/studentide/workspaces.py` (snapshot and recipe storage). The shell
-(`desktop/app`, see [desktop.md](desktop.md)) calls `registerSandboxIpc(ctx)`;
+(`desktop/app`, see [desktop.md](desktop.md)) calls `registerSandboxIpc(ctx)` from
+`desktop/app/src/main/modules/sandbox.ts` with the engine saved in `<userData>/engine.json`,
+and stops instances on quit (`DesktopModule.dispose`; contract version 2);
 the installer calls `setupCheck(engine)`. The catalogue and lab definitions
 (`studentide.sandbox-lab/1`) are in [sandbox-labs.md](sandbox-labs.md).
 

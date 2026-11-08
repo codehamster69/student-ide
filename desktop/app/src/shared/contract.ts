@@ -24,7 +24,7 @@ import type { EngineApi, EngineEvents } from "./api/engine";
 import type { SandboxApi, SandboxEvents } from "./api/sandbox";
 import type { TerminalApi, TerminalEvents } from "./api/terminal";
 
-export const CONTRACT_VERSION = 1;
+export const CONTRACT_VERSION = 2; // 2: sandbox.* / terminal.* from @studentide/sandbox
 
 /** IPC channel prefix: method "engine.setup" travels as "sid:engine.setup". */
 export const CHANNEL_PREFIX = "sid:";
