@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { basicSetup } from "codemirror";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { applyVim, newVimCompartment, useVimMode, vimExtension, vimOn } from "../editor/vim";
 import { indentUnit } from "@codemirror/language";
 import { python } from "@codemirror/lang-python";
 import { cpp } from "@codemirror/lang-cpp";
@@ -49,13 +50,15 @@ export function FileEditor({ path, value, onChange, readOnly = false, extensions
   const view = useRef<EditorView | null>(null);
   const cb = useRef(onChange);
   cb.current = onChange;
+  const vimSlot = useRef(newVimCompartment());
+  const [vim] = useVimMode();
 
   useEffect(() => {
     view.current = new EditorView({
       parent: host.current!,
       state: EditorState.create({
         doc: value,
-        extensions: [basicSetup, languageFor(path), editorTheme, indentUnit.of("    "),
+        extensions: [vimSlot.current.of(vimExtension(vimOn() && !readOnly)), basicSetup, languageFor(path), editorTheme, indentUnit.of("    "),
           EditorState.readOnly.of(readOnly), EditorView.theme({ "&": { fontSize: "13px", height: "100%" } }),
           EditorView.updateListener.of((u) => { if (u.docChanged) cb.current?.(u.state.doc.toString()); }), ...extensions],
       }),
@@ -64,6 +67,8 @@ export function FileEditor({ path, value, onChange, readOnly = false, extensions
     // created once per file; the parent keys this by path
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => applyVim(view.current ?? undefined, vimSlot.current, vim && !readOnly), [vim, readOnly]);
 
   useEffect(() => {  // a value from outside (e.g. reloaded from the instance)
     const v = view.current;

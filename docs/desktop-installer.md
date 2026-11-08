@@ -89,9 +89,21 @@ CI (`.github/workflows/desktop.yml`): unit tests on Windows, macOS and Linux,
 an end-to-end setup on a Linux runner as an ordinary user with Podman removed
 (the no-admin static route, pulling a real image), the WSL rootfs build, and
 packages for all three OS uploaded as workflow artifacts. Engine downloads and Electron zips are cached
-(keyed on the pinned versions), so a GitHub releases outage does not stop packaging. Builds are unsigned
-for now: Windows code signing and macOS notarization need certificates added
-as repository secrets.
+(keyed on the pinned versions), so a GitHub releases outage does not stop packaging. A `desktop-vX.Y.Z`
+tag also publishes a GitHub release that installed apps update from (docs/desktop.md, Updates).
+
+## Signing (not set up yet)
+
+Builds are unsigned on purpose until certificates are bought; nothing in CI needs changing except
+adding secrets. What each OS shows today and what signing needs:
+
+| | Today, unsigned | To sign | Cost |
+|---|---|---|---|
+| Windows | SmartScreen "Windows protected your PC" on first run: More info, Run anyway. Updates install fine. | An OV or EV code-signing certificate. Since 2023 the private key must live on a hardware token or a cloud HSM, so the simplest fit for CI is Azure Trusted Signing (electron-builder `win.azureSignOptions`) or a cloud HSM vendor; secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` plus the account and profile names. | Azure Trusted Signing about $10/month (check it accepts the college or an individual in India: it has been limited to some countries); OV certificates roughly $200-400/year. |
+| macOS | Gatekeeper refuses a downloaded unsigned app: right-click, Open (or System Settings, Privacy & Security, Open Anyway). No auto-update. | Apple Developer Program membership, a "Developer ID Application" certificate, and notarization. Secrets `CSC_LINK` (the .p12, base64), `CSC_KEY_PASSWORD`, `APPLE_API_KEY` (.p8), `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`; set `mac.notarize: true`, drop `resetAdHocDarwinSignature`, and add a `zip` target next to dmg (Squirrel.Mac updates from the zip). Then `modules/updates.ts` can treat macOS as `auto`. | $99/year. |
+| Linux | Nothing to sign for AppImage; the .deb can be signed with a GPG key if it is ever put in an apt repository. | | Free |
+
+Remove `CSC_IDENTITY_AUTO_DISCOVERY: 'false'` from the package step once the secrets exist.
 
 ## Commands
 

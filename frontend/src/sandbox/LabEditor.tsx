@@ -3,7 +3,7 @@
 // sharing to the library; once published, Submissions (grades, Submissions.tsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, FilePlus2, FlaskConical, Play, Plus, Rocket, Share2, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
 import { Badge, Button, Card, Checkbox, Field, Input, Spinner, TextArea, cn, item, spring, stagger } from "../ui";
 import { get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
@@ -12,21 +12,31 @@ import { go, href } from "../routes";
 import { useLoad } from "./Subjects";
 import { FileEditor, NetworkBadge } from "./bits";
 import { Submissions } from "./Submissions";
-import { NETWORK, emptyTests, type Assignment, type LabDetail, type Network, type Preview, type SandboxFile, type TestCase, type Tests, type VerifyResult } from "./api";
+import { SourcePicker } from "../teach/SourcePicker";
+import type { Language } from "../teach/api";
+import { GRADING, NETWORK, emptyTests, type Assignment, type CopyCandidate, type GradingMode, type LabChange, type LabDetail, type LatePolicy,
+  type Network, type Preview, type SandboxFile, type TestCase, type Tests, type VerifyResult } from "./api";
 
-const STEPS = ["Basics", "Assignments", "Check", "Publish", "Submissions"] as const;
+const STEPS = ["Basics", "Assignments", "Check", "Publish", "History", "Submissions"] as const;
 type Step = (typeof STEPS)[number];
 
 export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
   const [lab, error, , setLab] = useLoad<LabDetail>(`/api/sandbox/labs/${id}`, onAuthLost);
   const [step, setStep] = useState<Step | null>(null);
   const [msg, setMsg] = useState("");
+  const [note, setNote] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const save = async (method: string, path: string, body?: unknown) => {
     setSaving(true);
     setMsg("");
-    try { setLab(await send<LabDetail>(method, path, body)); return true; }
+    setNote([]);
+    try {
+      const got = await send<LabDetail>(method, path, body);
+      setLab(got);
+      setNote([...(got.effects ?? []), ...(got.notes ?? [])]);
+      return true;
+    }
     catch (e) { setMsg((e as Error).message); return false; }
     finally { setSaving(false); }
   };
@@ -35,7 +45,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
   if (!lab) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Skeleton className="h-60 rounded-2xl" /></div>;
   const readOnly = lab.access === "ta";
   const live = lab.status !== "draft";
-  const steps = STEPS.filter((s) => s !== "Submissions" || live);
+  const steps = STEPS.filter((s) => (s !== "Submissions" || live) && (s !== "History" || live || lab.n_changes > 0));
   // a published lab opens on its grades; a draft on its first step
   const current: Step = step ?? (live ? "Submissions" : "Basics");
 
@@ -58,6 +68,17 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
         <TryButton labId={lab.id} />
       </motion.div>
       {msg && <Card className="mb-4 flex items-start gap-2 p-4 text-sm text-danger"><CircleAlert className="mt-0.5 size-4 shrink-0" />{msg}</Card>}
+      <AnimatePresence>
+        {note.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
+            <Card className="mb-4 flex items-start gap-2 border-accent/40 bg-accent-soft p-4 text-sm text-text" role="status">
+              <Info className="mt-0.5 size-4 shrink-0 text-accent" />
+              <ul className="grid flex-1 gap-0.5">{note.map((n) => <li key={n}>{n}</li>)}</ul>
+              <button onClick={() => setNote([])} aria-label="Dismiss"><X className="size-4 text-muted" /></button>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid gap-6 md:grid-cols-[180px_1fr]">
         <LayoutGroup id="wizard">
@@ -68,6 +89,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
                 {current === s && <motion.span layoutId="wizard-step" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
                 <span className={cn("relative grid size-5 place-items-center rounded-full border text-[11px]", current === s ? "border-accent bg-accent text-accent-fg" : "border-border")}>{s === "Submissions" ? "✓" : i + 1}</span>
                 <span className="relative">{s}</span>
+                {s === "History" && lab.n_changes > 0 && <span className="relative ml-auto font-mono text-[11px] text-faint">{lab.n_changes}</span>}
               </button>
             ))}
           </nav>
@@ -75,9 +97,10 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
         <AnimatePresence mode="wait">
           <motion.div key={current} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
             {current === "Basics" && <Basics lab={lab} readOnly={readOnly} saving={saving} save={save} />}
-            {current === "Assignments" && <Assignments lab={lab} readOnly={readOnly} save={save} />}
+            {current === "Assignments" && <Assignments lab={lab} readOnly={readOnly} save={save} onAuthLost={onAuthLost} />}
             {current === "Check" && <CheckStep lab={lab} />}
             {current === "Publish" && <Publish lab={lab} readOnly={readOnly} saving={saving} save={save} />}
+            {current === "History" && <HistoryStep lab={lab} readOnly={readOnly} save={save} />}
             {current === "Submissions" && <Submissions lab={lab} />}
           </motion.div>
         </AnimatePresence>
@@ -120,10 +143,15 @@ function Basics({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: boo
   );
 }
 
-function Assignments({ lab, readOnly, save }: { lab: LabDetail; readOnly: boolean; save: Save }) {
+const BASE_LANGUAGE: Record<string, Language> = { "c-cpp": "c", python: "python", java: "java", "web-node": "javascript" };
+
+function Assignments({ lab, readOnly, save, onAuthLost }: { lab: LabDetail; readOnly: boolean; save: Save; onAuthLost: () => void }) {
   const list = lab.definition.assignments;
   const [open, setOpen] = useState<string | null>(list[0]?.id ?? null);
   const [title, setTitle] = useState("");
+  const [adding, setAdding] = useState<null | "import" | "copy">(null);
+  const [language, setLanguage] = useState<Language>(BASE_LANGUAGE[lab.definition.environment?.recipe.base ?? ""] ?? "python");
+  const added = (ok: boolean) => { if (ok) setAdding(null); return ok; };
   const move = (i: number, d: number) => {
     const ids = list.map((a) => a.id);
     [ids[i], ids[i + d]] = [ids[i + d], ids[i]];
@@ -160,15 +188,84 @@ function Assignments({ lab, readOnly, save }: { lab: LabDetail; readOnly: boolea
         ))}
       </LayoutGroup>
       {!readOnly && (
-        <form className="flex gap-2" onSubmit={async (e) => {
-          e.preventDefault();
-          if (await save("POST", `/api/sandbox/labs/${lab.id}/assignments`, { title, tests: emptyTests() })) setTitle("");
-        }}>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New assignment, e.g. Insert at head" className="h-9" />
-          <Button type="submit" disabled={!title.trim()}><Plus className="size-4" /> Add assignment</Button>
-        </form>
+        <div className="grid gap-2">
+          <form className="flex gap-2" onSubmit={async (e) => {
+            e.preventDefault();
+            if (await save("POST", `/api/sandbox/labs/${lab.id}/assignments`, { title, tests: emptyTests() })) setTitle("");
+          }}>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New assignment, e.g. Insert at head" className="h-9" />
+            <Button type="submit" disabled={!title.trim()}><Plus className="size-4" /> Write one</Button>
+          </form>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span>or</span>
+            <Button size="sm" variant={adding === "import" ? "primary" : "secondary"} onClick={() => setAdding(adding === "import" ? null : "import")}>
+              <Download className="size-3.5" /> Import a question
+            </Button>
+            <Button size="sm" variant={adding === "copy" ? "primary" : "secondary"} onClick={() => setAdding(adding === "copy" ? null : "copy")}>
+              <Copy className="size-3.5" /> Copy from another lab
+            </Button>
+          </div>
+          <AnimatePresence>
+            {adding === "import" && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                <Card className="grid gap-3 p-4">
+                  <label className="flex flex-wrap items-center gap-2 text-[13px] text-text">Students answer in
+                    <select value={language} onChange={(e) => setLanguage(e.target.value as Language)} className="h-8 rounded-md border border-border bg-surface px-2">
+                      <option value="c">C</option><option value="cpp">C++</option><option value="python">Python</option>
+                      <option value="java">Java</option><option value="javascript">JavaScript</option>
+                    </select>
+                    <span className="text-xs text-muted">The statement, a starter file, a Run command and the tests come along; you can change any of it after.</span>
+                  </label>
+                  <SourcePicker language={language} onClose={() => setAdding(null)} onAuthLost={onAuthLost}
+                    onImport={async (provider, ref) => added(await save("POST", `/api/sandbox/labs/${lab.id}/import`, { provider, ref, language }))} />
+                </Card>
+              </motion.div>
+            )}
+            {adding === "copy" && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                <CopyPicker labId={lab.id} onPick={async (assignment_id) => added(await save("POST", `/api/sandbox/labs/${lab.id}/assignments/copy`, { assignment_id }))} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
     </div>
+  );
+}
+
+function CopyPicker({ labId, onPick }: { labId: string; onPick: (assignmentId: string) => Promise<boolean> }) {
+  const [labs, setLabs] = useState<CopyCandidate[] | null>(null);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState("");
+  useEffect(() => { get<CopyCandidate[]>("/api/sandbox/assignments").then(setLabs, () => setLabs([])); }, []);
+  const shown = (labs ?? []).filter((l) => l.lab_id !== labId).map((l) => ({
+    ...l, assignments: l.assignments.filter((a) => !q || `${a.title} ${l.lab_title} ${l.subject_title}`.toLowerCase().includes(q.toLowerCase())),
+  })).filter((l) => l.assignments.length);
+  return (
+    <Card className="grid gap-3 p-4">
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your labs" className="h-9" />
+      {labs === null ? <Skeleton className="h-20" /> : shown.length === 0 ? (
+        <p className="text-sm text-muted">No other labs with assignments yet. The library has labs your colleagues shared.</p>
+      ) : (
+        <div className="grid max-h-80 gap-3 overflow-y-auto">
+          {shown.map((l) => (
+            <div key={l.lab_id}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-faint">{l.subject_title} · {l.lab_title}</p>
+              <div className="mt-1 grid gap-1">
+                {l.assignments.map((a) => (
+                  <button key={a.id} disabled={!!busy} onClick={async () => { setBusy(a.id); await onPick(a.id); setBusy(""); }}
+                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm text-text hover:border-accent hover:bg-accent-soft">
+                    <span className="flex-1">{a.title}</span>
+                    {busy === a.id ? <Spinner /> : <Plus className="size-3.5 text-accent" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-muted">The copy is independent: changing it later doesn't touch the original.</p>
+    </Card>
   );
 }
 
@@ -208,7 +305,8 @@ function AssignmentForm({ a, readOnly, published, onSave, onDelete }: {
       {tab === "tests" && <TestsEditor tests={f.tests} readOnly={readOnly} onChange={(tests) => setF({ ...f, tests })} />}
       {!readOnly && (
         <div className="flex items-center justify-between gap-2">
-          {!published ? <Button variant="ghost" size="sm" onClick={() => confirm(`Remove ${a.title}?`) && onDelete()}><Trash2 className="size-3.5" /> Remove</Button> : <span className="text-xs text-muted">Published: fixes apply at once; students who started keep their files.</span>}
+          {!published ? <Button variant="ghost" size="sm" onClick={() => confirm(`Remove ${a.title}?`) && onDelete()}><Trash2 className="size-3.5" /> Remove</Button>
+            : <span className="text-xs text-muted">Students have this lab: fixes apply at once, test changes regrade their work, and every change can be undone from History.</span>}
           <Button variant="primary" size="sm" disabled={!dirty} onClick={() => onSave(f)}><Check className="size-3.5" /> Save assignment</Button>
         </div>
       )}
@@ -373,7 +471,10 @@ function Publish({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: bo
   const [summary, setSummary] = useState("");
   const [topics, setTopics] = useState("");
   const [shareMsg, setShareMsg] = useState("");
-  const body = { network, assessed, sections: sections.split(/[\s,]+/).filter(Boolean), due_at: due ? fromLocal(due) : null, opens_at: opens ? fromLocal(opens) : null };
+  const [grading, setGrading] = useState<GradingMode>(lab.grading_mode);
+  const [late, setLate] = useState<LatePolicy>(lab.late);
+  const body = { network, assessed, sections: sections.split(/[\s,]+/).filter(Boolean), due_at: due ? fromLocal(due) : null,
+                 opens_at: opens ? fromLocal(opens) : null, grading_mode: grading, late };
 
   return (
     <div className="grid gap-4">
@@ -394,6 +495,19 @@ function Publish({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: bo
           <Field label="Opens"><Input type="datetime-local" value={opens} disabled={readOnly} onChange={(e) => setOpens(e.target.value)} className="h-9" /></Field>
           <Field label="Due"><Input type="datetime-local" value={due} disabled={readOnly} onChange={(e) => setDue(e.target.value)} className="h-9" /></Field>
         </div>
+        <div className="grid gap-2">
+          <span className="text-[13px] font-medium text-text">Grading</span>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(Object.keys(GRADING) as GradingMode[]).map((g) => (
+              <label key={g} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", grading === g ? "border-accent bg-accent-soft" : "border-border")}>
+                <input type="radio" disabled={readOnly} checked={grading === g} onChange={() => setGrading(g)} className="mt-1" />
+                <span><span className="block text-sm font-medium text-text">{GRADING[g].label}</span><span className="text-xs text-muted">{GRADING[g].hint}</span></span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <LateEditor late={late} onChange={setLate} readOnly={readOnly} hasDue={!!due} />
+        <Summary lab={lab} network={network} sections={body.sections} opens={body.opens_at} due={body.due_at} grading={grading} late={late} />
         {!readOnly && (
           <div className="flex flex-wrap justify-end gap-2">
             <Button disabled={saving} onClick={() => save("PATCH", `/api/sandbox/labs/${lab.id}`, body)}>Save settings</Button>
@@ -428,6 +542,102 @@ function Publish({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: bo
         </>}
       </Card>
     </div>
+  );
+}
+
+function LateEditor({ late, onChange, readOnly, hasDue }: { late: LatePolicy; onChange: (l: LatePolicy) => void; readOnly: boolean; hasDue: boolean }) {
+  const opts: [LatePolicy["mode"], string, string][] = [
+    ["closed", "Not accepted", "Submit stops at the due time."],
+    ["accept", "Accepted, marked late", "No penalty; you see who was late."],
+    ["penalty", "Accepted with a penalty", "A share of the score is taken off per day."],
+  ];
+  return (
+    <div className={cn("grid gap-2", !hasDue && "opacity-60")}>
+      <span className="text-[13px] font-medium text-text">Late work {!hasDue && <span className="font-normal text-muted">(set a due time first)</span>}</span>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {opts.map(([m, label, hint]) => (
+          <label key={m} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", late.mode === m ? "border-accent bg-accent-soft" : "border-border")}>
+            <input type="radio" disabled={readOnly} checked={late.mode === m} onChange={() => onChange({ ...late, mode: m })} className="mt-1" />
+            <span><span className="block text-sm font-medium text-text">{label}</span><span className="text-xs text-muted">{hint}</span></span>
+          </label>
+        ))}
+      </div>
+      <AnimatePresence initial={false}>
+        {late.mode === "penalty" && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap items-center gap-2 overflow-hidden text-[13px] text-text">
+            Take off
+            <Input type="number" min={1} max={100} value={late.per_day_pct} disabled={readOnly} className="h-8" style={{ width: "4.5rem" }}
+              onChange={(e) => onChange({ ...late, per_day_pct: Math.min(100, Math.max(1, Number(e.target.value) || 10)) })} />
+            % per day, and stop accepting after
+            <Input type="number" min={0} max={60} value={late.max_days} disabled={readOnly} className="h-8" style={{ width: "4.5rem" }}
+              onChange={(e) => onChange({ ...late, max_days: Math.min(60, Math.max(0, Number(e.target.value) || 0)) })} />
+            days <span className="text-xs text-muted">(0 = never)</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+const lateWords = (l: LatePolicy) => l.mode === "closed" ? "Submissions close at the due time."
+  : l.mode === "accept" ? "Late work is accepted and marked late."
+  : `Late work loses ${l.per_day_pct}% per day${l.max_days ? `, not accepted after ${l.max_days} day${l.max_days === 1 ? "" : "s"}` : ""}.`;
+
+/** What students will see, in one card, before the final button (plan §5.3 step 4). */
+function Summary({ lab, network, sections, opens, due, grading, late }: {
+  lab: LabDetail; network: Network; sections: string[]; opens: number | null; due: number | null; grading: GradingMode; late: LatePolicy;
+}) {
+  const n = lab.definition.assignments.length;
+  const hidden = lab.definition.assignments.reduce((s, a) => s + (a.tests.cases?.filter((c) => c.hidden).length ?? 0), 0);
+  const when = (t: number) => new Date(t * 1000).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const rows: [string, string][] = [
+    ["Who", sections.length ? `Sections ${sections.join(", ")}` : "Every student of the subject"],
+    ["When", `${opens ? `Opens ${when(opens)}` : "Opens as soon as you publish"}${due ? `, due ${when(due)}` : ", no due time"}`],
+    ["Work", `${n} assignment${n === 1 ? "" : "s"}${hidden ? `, ${hidden} hidden test${hidden === 1 ? "" : "s"}` : ""}, in the desktop app`],
+    ["Network", NETWORK[network].label],
+    ["Grading", GRADING[grading].label],
+    ...(due ? [["Late", lateWords(late)] as [string, string]] : []),
+  ];
+  return (
+    <div className="rounded-xl border border-border bg-surface-2 p-4">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">What students will see</p>
+      <dl className="grid gap-1.5 text-[13px] sm:grid-cols-[90px_1fr]">
+        {rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-muted">{k}</dt><dd className="text-text">{v}</dd></div>)}
+      </dl>
+    </div>
+  );
+}
+
+function HistoryStep({ lab, readOnly, save }: { lab: LabDetail; readOnly: boolean; save: Save }) {
+  const [rows, setRows] = useState<LabChange[] | null>(null);
+  useEffect(() => { get<LabChange[]>(`/api/sandbox/labs/${lab.id}/history`).then(setRows, () => setRows([])); }, [lab.id, lab.version]);
+  const ago = (t: number) => new Date(t * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return (
+    <Card className="p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><History className="size-4 text-accent" /> Changes since students got this lab</h2>
+      <p className="mt-1 text-xs text-muted">Fixing a typo or a wrong test mid-lab is safe: statement and test fixes reach students at once, test changes regrade every
+        submission, and new starter files go only to students who haven't opened that assignment. Undo puts back exactly what a change replaced.</p>
+      {rows === null ? <Skeleton className="mt-4 h-24" /> : rows.length === 0 ? <p className="mt-4 text-sm text-muted">No changes yet.</p> : (
+        <motion.ol variants={stagger(0.04)} initial="initial" animate="animate" className="mt-4 grid gap-0">
+          {rows.map((c) => (
+            <motion.li key={c.id} variants={item} className="relative grid grid-cols-[18px_1fr_auto] items-start gap-3 pb-4 last:pb-0">
+              <span className="relative mt-1.5 grid place-items-center"><span className="size-2.5 rounded-full bg-accent" /></span>
+              <div className="min-w-0">
+                <p className="text-sm text-text">{c.summary}</p>
+                <p className="text-xs text-muted">{ago(c.at)}{c.by ? ` · ${c.by}` : ""} · v{c.lab_version}
+                  {c.regraded !== null && <span className="ml-1 text-accent">· {c.regraded} submission{c.regraded === 1 ? "" : "s"} regraded</span>}</p>
+              </div>
+              {!readOnly && c.can_undo && c.fields.some((f) => f !== "status") && (
+                <Button size="sm" variant="ghost" onClick={() => confirm(`Undo "${c.summary}"?`) && save("POST", `/api/sandbox/labs/${lab.id}/history/${c.id}/undo`)}>
+                  <Undo2 className="size-3.5" /> Undo
+                </Button>
+              )}
+            </motion.li>
+          ))}
+        </motion.ol>
+      )}
+    </Card>
   );
 }
 

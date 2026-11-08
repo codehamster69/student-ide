@@ -47,7 +47,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .db import Database
 from .previews import Driver, Limits, PreviewError, instance_spec, run_tests, starter_files
-from .sandbox import Store, definition
+from .sandbox import Store, definition, late_policy
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sbx_submissions (
@@ -128,7 +128,7 @@ class Grader:
 
     def submit(self, student_id: str, lab_id: str, assignment_id: str, snapshot_id: int, sha: str) -> str:
         sub_id = "sub_" + uuid.uuid4().hex[:10]
-        status = "queued" if self.has_tests(lab_id, assignment_id) else "no_tests"
+        status = "queued" if self.has_tests(lab_id, assignment_id) else "no_tests"  # also for labs graded by hand
         self.store.x("""INSERT INTO sbx_submissions (id, student_id, lab_id, assignment_id, snapshot_id, sha256, status,
                         error, submitted_at) VALUES (?,?,?,?,?,?,?,?,?)""",
                      (sub_id, student_id, lab_id, assignment_id, snapshot_id, sha, status,
@@ -138,6 +138,9 @@ class Grader:
         return sub_id
 
     def has_tests(self, lab_id: str, assignment_id: str) -> bool:
+        lab = self.store.one("SELECT * FROM sbx_labs WHERE id = ?", (lab_id,))
+        if lab is not None and "grading_mode" in lab.keys() and lab["grading_mode"] == "manual":
+            return False
         a = self.store.one("SELECT tests_json FROM sbx_assignments WHERE id = ? AND lab_id = ?", (assignment_id, lab_id))
         t = json.loads(a["tests_json"] or "{}") if a else {}
         return bool(t.get("cases")) if t.get("kind", "io") == "io" else bool((t.get("command") or "").strip())
@@ -239,7 +242,8 @@ class Grader:
                          "WHERE id = ?", (msg[:1000], self.clock(), row["id"]))
 
 
-def submission_json(row, student: bool, attempts: int | None = None) -> dict:
+def submission_json(row, student: bool, attempts: int | None = None, lab=None) -> dict:
+    """`lab`: its row, to add the late policy's verdict (days late, score factor)."""
     results = json.loads(row["results_json"] or "[]")
     d = {"id": row["id"], "lab_id": row["lab_id"], "assignment_id": row["assignment_id"], "status": row["status"],
          "passed": row["passed"], "total": row["total"], "submitted_at": row["submitted_at"],
@@ -249,6 +253,9 @@ def submission_json(row, student: bool, attempts: int | None = None) -> dict:
         d |= {"student_id": row["student_id"], "sha256": row["sha256"], "lab_version": row["lab_version"]}
     if attempts is not None:
         d["attempts"] = attempts
+    if lab is not None:
+        late = late_policy(lab, row["submitted_at"])
+        d["late"] = {"days": late["days_late"], "factor": late["factor"], "reason": late["reason"]}
     return d
 
 
@@ -286,8 +293,9 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
     def my_submissions(lab_id: str, request: Request, student_id: str | None = None) -> dict:
         sid = student_lab(request, lab_id, student_id)
         got = latest(lab_id, sid)
+        lab = store.one("SELECT * FROM sbx_labs WHERE id = ?", (lab_id,))
         return {"grader": {"enabled": grader.enabled},
-                "assignments": {a["id"]: (submission_json(got[(sid, a["id"])][0], True, got[(sid, a["id"])][1])
+                "assignments": {a["id"]: (submission_json(got[(sid, a["id"])][0], True, got[(sid, a["id"])][1], lab)
                                           if (sid, a["id"]) in got else None) for a in store.assignments(lab_id)}}
 
     @open_r.get("/my/submissions/{sub_id}")
@@ -296,7 +304,8 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
         row = grader.row(sub_id)
         if row is None or row["student_id"] != sid:
             raise HTTPException(404, "unknown submission")
-        return submission_json(row, True) | {"queue_ahead": queue_ahead(row)}
+        lab = store.one("SELECT * FROM sbx_labs WHERE id = ?", (row["lab_id"],))
+        return submission_json(row, True, lab=lab) | {"queue_ahead": queue_ahead(row)}
 
     def queue_ahead(row) -> int:
         if row["status"] != "queued":
@@ -318,7 +327,7 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
             cells = {}
             for a in assignments:
                 hit = got.get((sid, a["id"]))
-                cells[a["id"]] = None if hit is None else submission_json(hit[0], False, hit[1]) | {
+                cells[a["id"]] = None if hit is None else submission_json(hit[0], False, hit[1], lab) | {
                     "session_id": session_for(sid, lab_id, a["id"])}
             students.append({"student_id": sid, "section": section.get(sid, ""), "on_roster": sid in section,
                              "assignments": cells})
@@ -349,7 +358,8 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
         with db.connect() as conn:
             n = conn.execute("SELECT COUNT(*) n FROM sbx_submissions WHERE lab_id = ? AND student_id = ? AND assignment_id = ?",
                              (row["lab_id"], row["student_id"], row["assignment_id"])).fetchone()["n"]
-        return submission_json(row, False, n) | {"session_id": session_for(row["student_id"], row["lab_id"], row["assignment_id"])}
+        lab = store.one("SELECT * FROM sbx_labs WHERE id = ?", (row["lab_id"],))
+        return submission_json(row, False, n, lab) | {"session_id": session_for(row["student_id"], row["lab_id"], row["assignment_id"])}
 
     @r.post("/submissions/{sub_id}/regrade")
     def regrade_one(sub_id: str, request: Request) -> dict:

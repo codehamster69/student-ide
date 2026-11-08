@@ -69,7 +69,8 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
   `data/studentide.sqlite3`), `STUDENTIDE_GOOGLE_CLIENT_ID` (set = Google mode, roll-number login off),
   `STUDENTIDE_ADMINS`, `STUDENTIDE_RUNNER_URL` (remote runner), `STUDENTIDE_LIVE` (editor|class|off),
   `STUDENTIDE_ROLLCALL_LINK_SECRET` + `STUDENTIDE_ATTENDANCE_URL` (Roll Call), `STUDENTIDE_PREVIEW_*` (Sandbox Labs
-  previews; `STUDENTIDE_PREVIEW_DOCKER=1 STUDENTIDE_PREVIEW_BUILD_LOCAL=1` in dev). Full list in docs/deploy.md.
+  previews; `STUDENTIDE_PREVIEW_DOCKER=1 STUDENTIDE_PREVIEW_BUILD_LOCAL=1` in dev), `STUDENTIDE_UPDATES_REPO` + `_TOKEN` (desktop
+  auto-update feed). Full list in docs/deploy.md.
 - Sandbox Labs: the lab definition `studentide.sandbox-lab/1` (docs/sandbox-labs.md) is a contract with `desktop/`;
   keep it additive. Previews are teachers only and never study data; students run labs locally.
 - `harness/report.py` outputs under `thesis/latex/` (tables, graphs, ablations) are generated: rerun, don't edit.
@@ -78,6 +79,8 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `runner.py` has limits but is not a sandbox; in deployment code runs in the separate `runner` container.
 - Cloud sessions: npm downloads can stall; `bun install` is a working fallback (bun.lock is kept).
 - The e2e scripts need a running server with a built frontend and the same admin token.
+- Desktop releases: push a `desktop-vX.Y.Z` tag; CI publishes the GitHub release the server serves as the update feed.
+  Builds are unsigned (docs/desktop-installer.md, Signing).
 - Roll Call (codehamsters/attendance) shares Google client, admins and link secret; change both sides together.
 
 ## Compact instructions

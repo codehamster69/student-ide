@@ -25,18 +25,20 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
   /** an any-language competition: browse in `language`, import in every language the source serves */
   anyLanguage?: boolean;
   onImport: (provider: string, ref: string) => Promise<boolean>;
-  onLink: (provider: string, url: string, title: string) => Promise<boolean>;
+  /** leave out where a linked-only question makes no sense (Sandbox Labs): only importable sources are shown */
+  onLink?: (provider: string, url: string, title: string) => Promise<boolean>;
   onClose: () => void;
   onAuthLost: () => void;
 }) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [pid, setPid] = useState("");
   const [error, setError] = useState("");
+  const linkable = Boolean(onLink);
 
   useEffect(() => {
-    get<Provider[]>("/api/teach/sources").then((ps) => { setProviders(ps); setPid((cur) => cur || ps[0]?.id || ""); })
+    get<Provider[]>("/api/teach/sources").then((all) => { const ps = linkable ? all : all.filter((x) => x.can_browse); setProviders(ps); setPid((cur) => cur || ps[0]?.id || ""); })
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(e.message)));
-  }, [onAuthLost]);
+  }, [onAuthLost, linkable]);
 
   const p = providers?.find((x) => x.id === pid);
 
@@ -75,9 +77,9 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
             <p className="font-medium text-text">
               {p.name} questions are for {p.languages.map((l) => LANGUAGES[l].label).join(" and ")} labs only
             </p>
-            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or switch the lab's language in Session settings.</p>
+            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or {onLink ? "switch the lab's language in Session settings" : "pick another language"}.</p>
           </div>
-          {p.can_link && (
+          {p.can_link && onLink && (
             <details className="border-t border-border">
               <summary className="cursor-pointer px-5 py-3 text-xs font-medium text-muted hover:text-text">
                 Link a {p.name} problem and write it yourself
@@ -89,7 +91,7 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
       ) : p && (p.can_browse ? (
         <>
           <LiveBrowser key={p.id + language} provider={p} language={language} onImport={onImport} onAuthLost={onAuthLost} />
-          {p.can_link && (
+          {p.can_link && onLink && (
             <details className="border-t border-border">
               <summary className="cursor-pointer px-5 py-3 text-xs font-medium text-muted hover:text-text">
                 Not in the list? Link any other {p.name} problem and write it yourself
@@ -98,7 +100,7 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
             </details>
           )}
         </>
-      ) : <LinkOnly key={p.id} provider={p} onLink={onLink} />)}
+      ) : onLink && <LinkOnly key={p.id} provider={p} onLink={onLink} />)}
     </Card>
   );
 }

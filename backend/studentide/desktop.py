@@ -6,6 +6,7 @@ endpoint is shared with the browser. Two things are desktop-only:
 * GET /api/desktop/config: the oldest app version this server accepts and where
   to get a new one ($STUDENTIDE_DESKTOP_MIN_VERSION, $STUDENTIDE_DESKTOP_DOWNLOAD_URL).
   The app checks it before loading and shows an update page when it is too old.
+  `updates` says whether this server serves the auto-update feed (desktop_updates.py).
 
 * Browser sign-in handoff (Google mode). Google refuses sign-in inside embedded
   browsers, so the app opens #/desktop/signin in the system browser (RFC 8252,
@@ -66,7 +67,7 @@ def challenge_of(verifier: str) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
 
 
-def router(db: Database, auth: Auth, me_json: Callable[[dict], dict]) -> APIRouter:
+def router(db: Database, auth: Auth, me_json: Callable[[dict], dict], updates: bool = False) -> APIRouter:
     with db.connect() as conn:
         conn.executescript(SCHEMA)
     r = APIRouter()
@@ -75,7 +76,9 @@ def router(db: Database, auth: Auth, me_json: Callable[[dict], dict]) -> APIRout
     def config() -> dict:
         return {
             "min_version": os.environ.get("STUDENTIDE_DESKTOP_MIN_VERSION") or None,
-            "download_url": os.environ.get("STUDENTIDE_DESKTOP_DOWNLOAD_URL") or None,
+            # with updates on, the newest installer from GitHub Releases (desktop_updates.py)
+            "download_url": os.environ.get("STUDENTIDE_DESKTOP_DOWNLOAD_URL") or ("/api/desktop/download" if updates else None),
+            "updates": updates,
             "sign_in": "browser" if auth.cfg.google else "in-app",
         }
 

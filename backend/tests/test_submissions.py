@@ -163,3 +163,17 @@ def test_snapshot_files_text_only():
     files = snapshot_files(data, "/home/student/labs/l/a")
     assert {f["path"]: f["content"] for f in files} == {"/home/student/labs/l/a/main.c": "int x;",
                                                        "/home/student/labs/l/a/sub/notes.txt": "héllo"}
+
+
+def test_late_policy_decides_after_the_due_time(env):
+    import time
+    app, driver, priya, lab_id, (a1, a2) = env
+    student = sign_in(app, STUDENT)
+    two_days_ago = time.time() - 2 * 86400
+    priya.patch(f"/api/sandbox/labs/{lab_id}", json={"due_at": two_days_ago,
+                                                      "late": {"mode": "penalty", "per_day_pct": 10, "max_days": 3}})
+    sub = submit(student, lab_id, a1, b"// ECHO").json()["submission"]
+    got = student.get(f"/api/sandbox/my/submissions/{sub['id']}").json()
+    assert got["late"]["days"] == 2 and got["late"]["factor"] == pytest.approx(0.8)
+    priya.patch(f"/api/sandbox/labs/{lab_id}", json={"late": {"mode": "closed"}})
+    assert submit(student, lab_id, a1, b"// ECHO").status_code == 409

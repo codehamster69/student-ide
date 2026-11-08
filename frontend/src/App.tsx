@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DesktopUpdate } from "./screens/DesktopUpdate";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { ArrowLeft, Eye } from "lucide-react";
 import { setPreviewToken, type Lab, type LearnTrack, type Task } from "./api";
@@ -174,6 +175,7 @@ export function App() {
         </motion.div>
       </AnimatePresence>
       {preview && <PreviewBar />}
+      <DesktopUpdate hidden={layer !== "shell"} />
     </MotionConfig>
   );
 }

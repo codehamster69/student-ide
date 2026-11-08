@@ -30,9 +30,13 @@ from pydantic import BaseModel, Field, field_validator
 from .auth import not_yours, roster_id
 from .db import Database
 from .grading import MAX_TESTS
+from .sandbox_authoring import (GRADING_MODES, NOTE_FIELDS, REGRADE_FIELDS, STARTER_FIELDS, LatePolicy,
+                                assignment_from_question, change_summary, changed, grading_of, late_policy,
+                                late_summary)
+
+__all__ = ["late_policy"]  # submissions.py takes it from here
 
 FORMAT = "studentide.sandbox-lab/1"
-SUBMIT_GRACE_S = 120  # a Submit pressed just before the due time may arrive a little after it
 Network = Literal["open", "registries", "off"]
 Compare = Literal["text", "json", "tokens"]  # grading.outputs_match; "checker" is web-only
 
@@ -136,7 +140,26 @@ CREATE TABLE IF NOT EXISTS sbx_library (
     shared_at     REAL NOT NULL,
     withdrawn_at  REAL
 );
+-- What changed in a lab after it was first published, newest last (plan §5.5).
+CREATE TABLE IF NOT EXISTS sbx_lab_changes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    lab_id        TEXT NOT NULL REFERENCES sbx_labs(id) ON DELETE CASCADE,
+    lab_version   INTEGER NOT NULL,            -- the version this change made
+    assignment_id TEXT,                        -- NULL = a lab-level change
+    by_email      TEXT,
+    at            REAL NOT NULL,
+    summary       TEXT NOT NULL,               -- one plain sentence
+    fields_json   TEXT NOT NULL DEFAULT '[]',  -- changed columns
+    before_json   TEXT NOT NULL DEFAULT '{}',  -- old values of those columns, so a mistake can be undone
+    regraded      INTEGER                      -- submissions queued for grading again (NULL = not a test change)
+);
+CREATE INDEX IF NOT EXISTS sbx_lab_changes_by_lab ON sbx_lab_changes(lab_id, id);
 """
+# Columns added after the first release of these tables: (table, column, type)
+MIGRATIONS = [
+    ("sbx_labs", "grading_mode", "TEXT NOT NULL DEFAULT 'tests'"),  # GRADING_MODES
+    ("sbx_labs", "late_json", "TEXT NOT NULL DEFAULT '{}'"),        # LatePolicy
+]
 
 COLORS = ("indigo", "teal", "amber", "rose", "sky", "violet", "emerald", "orange")
 
@@ -346,6 +369,8 @@ class LabPatch(BaseModel):
     opens_at: float | None = None
     due_at: float | None = None
     min_desktop_version: str | None = Field(default=None, max_length=20)
+    grading_mode: Literal[GRADING_MODES] | None = None
+    late: LatePolicy | None = None
 
 
 class SandboxFile(BaseModel):
@@ -423,6 +448,16 @@ class ShareIn(BaseModel):
 
 class UseIn(BaseModel):
     subject_id: str
+
+
+class ImportIn(BaseModel):
+    provider: str
+    ref: str = Field(min_length=1, max_length=200)
+    language: Literal["python", "c", "cpp", "java", "javascript"]
+
+
+class CopyAssignmentIn(BaseModel):
+    assignment_id: str
 
 
 # -- recipes → Dockerfile
@@ -542,6 +577,9 @@ def expand_roster(text: str, to_id: Callable[[str], str]) -> list[dict]:
 def ensure_schema(db: Database) -> None:
     with db.connect() as conn:
         conn.executescript(SCHEMA)
+        for table, col, kind in MIGRATIONS:
+            if col not in {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
 
 
 def _now() -> float:
@@ -724,6 +762,7 @@ def definition(store: Store, lab, student: bool = True) -> dict:
                      "user": "student", "home": "/home/student"},
         "network": lab["network"], "assessed": bool(lab["assessed"]), "status": lab["status"],
         "opens_at": lab["opens_at"], "due_at": lab["due_at"], "min_desktop_version": lab["min_desktop_version"],
+        "grading": (g := grading_of(lab)) | {"late_summary": late_summary(g["late"])},
         "assignments": assignments, "updated_at": lab["updated_at"],
     }
 
@@ -732,6 +771,10 @@ def lab_row_json(store: Store, lab) -> dict:
     d = dict(lab)
     d["assessed"] = bool(d["assessed"])
     d["sections"] = json.loads(d.pop("sections_json"))
+    g = grading_of(lab)
+    d.pop("late_json", None)
+    d["grading_mode"], d["late"], d["late_summary"] = g["mode"], g["late"], late_summary(g["late"])
+    d["n_changes"] = store.one("SELECT COUNT(*) FROM sbx_lab_changes WHERE lab_id = ?", (lab["id"],))[0]
     d["n_assignments"] = len(store.assignments(lab["id"]))
     lib = store.one("SELECT id, version, withdrawn_at FROM sbx_library WHERE lab_id = ?", (lab["id"],))
     d["shared"] = bool(lib and lib["withdrawn_at"] is None)
@@ -793,6 +836,27 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
             raise HTTPException(404, "unknown lab")
         subject_access(request, lab["subject_id"], write)
         return lab
+
+    on_tests_changed: list[Callable[[str, str], int]] = []  # submissions.py registers its regrade here
+
+    def record(request: Request, lab, summary: str, cols: list[str] | None = None, before: dict | None = None,
+               assignment_id: str | None = None, force: bool = False) -> None:
+        """Keep a change in the lab's history once students can see the lab (drafts change all the time)."""
+        if lab["status"] == "draft" and not force:
+            return
+        regraded = None
+        if assignment_id and set(cols or []) & REGRADE_FIELDS and on_tests_changed:  # None: nothing grades yet
+            regraded = 0
+            for fn in on_tests_changed:
+                try:
+                    regraded += int(fn(lab["id"], assignment_id) or 0)
+                except Exception:  # grading trouble must never lose the teacher's edit
+                    pass
+        version = store.one("SELECT version FROM sbx_labs WHERE id = ?", (lab["id"],))[0]
+        store.x("INSERT INTO sbx_lab_changes (lab_id, lab_version, assignment_id, by_email, at, summary, fields_json, "
+                "before_json, regraded) VALUES (?,?,?,?,?,?,?,?,?)",
+                (lab["id"], version, assignment_id, me(request).email, _now(), summary, json.dumps(cols or []),
+                 json.dumps(before or {}), regraded))
 
     def assignment_access(request: Request, aid: str):
         a = store.one("SELECT * FROM sbx_assignments WHERE id = ?", (aid,))
@@ -1043,6 +1107,12 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
             f["assessed"] = int(f["assessed"])
         if "sections" in f:
             f["sections_json"] = json.dumps([s.strip().upper() for s in f.pop("sections") if s.strip()])
+        if "grading_mode" in f and f["grading_mode"] is None:
+            del f["grading_mode"]
+        if "late" in f:
+            late = f.pop("late")
+            if late is not None:
+                f["late_json"] = json.dumps(late)
         if "environment_version" in f:
             subj = store.one("SELECT environment_id FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
             if not subj["environment_id"] or store.env_version(subj["environment_id"], f["environment_version"]) is None:
@@ -1055,8 +1125,16 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
                 raise HTTPException(409, " ".join(problems))
             if lab["env_version"] is None and "env_version" not in f:  # running labs keep the version they started with
                 f["env_version"] = d["environment"]["version"]
+        cols = changed(dict(lab), f)
         store.update("sbx_labs", "id", lab_id, f)
         store.bump(lab_id)
+        if cols:
+            status = f.get("status") if "status" in cols else None
+            rest = [c for c in cols if c != "status"]
+            if status:
+                record(request, lab, change_summary([], status=status), ["status"], {"status": lab["status"]}, force=True)
+            if rest:
+                record(request, lab, change_summary(rest), rest, {c: lab[c] for c in rest})
         return get_lab(lab_id, request)
 
     @r.delete("/labs/{lab_id}")
@@ -1069,9 +1147,94 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
 
     @r.post("/labs/{lab_id}/assignments")
     def add_assignment(lab_id: str, body: AssignmentIn, request: Request) -> dict:
-        lab_access(request, lab_id)
-        store.add_assignment(lab_id, body.model_dump())
+        lab = lab_access(request, lab_id)
+        aid = store.add_assignment(lab_id, body.model_dump())
         store.bump(lab_id)
+        record(request, lab, f"Added the assignment \u201c{body.title}\u201d.", assignment_id=aid)
+        return get_lab(lab_id, request) | {"added": aid}
+
+    @r.post("/labs/{lab_id}/import")
+    def import_question(lab_id: str, body: ImportIn, request: Request) -> dict:
+        """A ready-made question from a question source (the web labs' providers) as a new assignment."""
+        from .providers import PROVIDERS, ProviderError
+        lab = lab_access(request, lab_id)
+        p = PROVIDERS.get(body.provider)
+        if p is None:
+            raise HTTPException(404, "unknown question source")
+        try:
+            got = p.fetch(body.language, body.ref)
+        except ProviderError as e:
+            raise HTTPException(e.status, str(e)) from e
+        a, notes = assignment_from_question(got, body.language)
+        aid = store.add_assignment(lab_id, AssignmentIn.model_validate(a).model_dump())
+        store.bump(lab_id)
+        record(request, lab, f"Imported \u201c{a['title']}\u201d from {p.name}.", assignment_id=aid)
+        return get_lab(lab_id, request) | {"added": aid, "notes": notes}
+
+    @r.post("/labs/{lab_id}/assignments/copy")
+    def copy_assignment(lab_id: str, body: CopyAssignmentIn, request: Request) -> dict:
+        """An assignment from another sandbox lab you can see (yours, a co-teacher's), as an independent copy."""
+        lab = lab_access(request, lab_id)
+        src = store.one("SELECT * FROM sbx_assignments WHERE id = ?", (body.assignment_id,))
+        if src is None:
+            raise HTTPException(404, "unknown assignment")
+        lab_access(request, src["lab_id"], write=False)
+        aid = store.add_assignment(lab_id, assignment_fields(src))
+        store.bump(lab_id)
+        record(request, lab, f"Copied the assignment \u201c{src['title']}\u201d from another lab.", assignment_id=aid)
+        return get_lab(lab_id, request) | {"added": aid}
+
+    @r.get("/assignments")
+    def assignments_to_copy(request: Request) -> list[dict]:
+        """Every lab you can see with its assignments, for "Copy from another lab"."""
+        t = me(request)
+        ids = None if t.admin else store.subject_ids(t.email or "")
+        out = []
+        for subj in store.q("SELECT * FROM sbx_subjects ORDER BY updated_at DESC"):
+            if ids is not None and subj["id"] not in ids:
+                continue
+            for lab in store.labs(subj["id"]):
+                asg = [{"id": a["id"], "title": a["title"]} for a in store.assignments(lab["id"])]
+                if asg:
+                    out.append({"lab_id": lab["id"], "lab_title": lab["title"], "subject_title": subj["title"],
+                                "assignments": asg})
+        return out
+
+    @r.get("/labs/{lab_id}/history")
+    def history(lab_id: str, request: Request) -> list[dict]:
+        lab_access(request, lab_id, write=False)
+        titles = {a["id"]: a["title"] for a in store.assignments(lab_id)}
+        rows = store.q("SELECT * FROM sbx_lab_changes WHERE lab_id = ? ORDER BY id DESC LIMIT 200", (lab_id,))
+        return [{"id": c["id"], "lab_version": c["lab_version"], "assignment_id": c["assignment_id"],
+                 "assignment_title": titles.get(c["assignment_id"]), "by": c["by_email"], "at": c["at"],
+                 "summary": c["summary"], "fields": json.loads(c["fields_json"]), "regraded": c["regraded"],
+                 "can_undo": bool(json.loads(c["before_json"])) and (c["assignment_id"] is None or c["assignment_id"] in titles)}
+                for c in rows]
+
+    @r.post("/labs/{lab_id}/history/{change_id}/undo")
+    def undo(lab_id: str, change_id: int, request: Request) -> dict:
+        """Put back what one change replaced (itself recorded as a new change)."""
+        lab = lab_access(request, lab_id)
+        c = store.one("SELECT * FROM sbx_lab_changes WHERE id = ? AND lab_id = ?", (change_id, lab_id))
+        before = json.loads(c["before_json"]) if c else {}
+        if not before:
+            raise HTTPException(404, "this change can't be undone")
+        before.pop("status", None)  # publishing and closing have their own buttons
+        if not before:
+            raise HTTPException(409, "use Publish or Close for the lab's status")
+        if c["assignment_id"]:
+            a = store.one("SELECT * FROM sbx_assignments WHERE id = ?", (c["assignment_id"],))
+            if a is None:
+                raise HTTPException(404, "that assignment was removed")
+            cols = changed(dict(a), before)
+            store.update("sbx_assignments", "id", a["id"], before)
+            store.bump(lab_id)
+            record(request, lab, "Undid: " + c["summary"], cols, {k: a[k] for k in cols}, assignment_id=a["id"])
+        else:
+            cols = changed(dict(lab), before)
+            store.update("sbx_labs", "id", lab_id, before)
+            store.bump(lab_id)
+            record(request, lab, "Undid: " + c["summary"], cols, {k: lab[k] for k in cols})
         return get_lab(lab_id, request)
 
     @r.patch("/assignments/{aid}")
@@ -1083,9 +1246,21 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
                        ("solution_files", "solution_json")):
             if k in f:
                 cols[col] = json.dumps(f.pop(k))
+        diff = changed(dict(a), f | cols)
         store.update("sbx_assignments", "id", aid, f | cols)
         store.bump(a["lab_id"])
-        return get_lab(a["lab_id"], request)
+        lab = store.one("SELECT * FROM sbx_labs WHERE id = ?", (a["lab_id"],))
+        if diff:
+            record(request, lab, change_summary(diff, assignment=f.get("title", a["title"])), diff,
+                   {k: a[k] for k in diff}, assignment_id=aid)
+        out = get_lab(a["lab_id"], request)
+        if lab["status"] != "draft" and diff:
+            out["effects"] = [x for x in (
+                "Students get a quiet note about the change." if set(diff) & NOTE_FIELDS else "",
+                "Submissions are graded again with the new tests." if set(diff) & REGRADE_FIELDS and on_tests_changed else "",
+                "Students who haven't opened this assignment get the new starter files; "
+                "those who have keep their work." if set(diff) & STARTER_FIELDS else "") if x]
+        return out
 
     @r.delete("/assignments/{aid}")
     def delete_assignment(aid: str, request: Request) -> dict:
@@ -1107,6 +1282,7 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
             conn.executemany("UPDATE sbx_assignments SET position = ? WHERE id = ?",
                              [(i, aid) for i, aid in enumerate(body.assignment_ids)])
         store.bump(lab_id)
+        record(request, store.one("SELECT * FROM sbx_labs WHERE id = ?", (lab_id,)), "Changed the order of the assignments.")
         return get_lab(lab_id, request)
 
     # library
@@ -1246,8 +1422,8 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
         return [l for l in rows if not json.loads(l["sections_json"]) or l["section"] in json.loads(l["sections_json"])]
 
     def is_closed(lab) -> bool:
-        """No more submits: the teacher closed it, or the due time (plus a short grace) has passed."""
-        return lab["status"] == "closed" or (lab["due_at"] is not None and _now() > lab["due_at"] + SUBMIT_GRACE_S)
+        """No more submits: the teacher closed it, or the lab's late policy takes nothing now."""
+        return not late_policy(lab, _now())["accepted"]
 
     def upload_gate(student_id: str, lab_id: str, assignment_id: str, reason: str):
         """workspaces.py, before keeping an upload: the lab must be open for this student and
@@ -1257,10 +1433,12 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
             raise HTTPException(403, "This lab is not open for you.")
         if not store.one("SELECT 1 FROM sbx_assignments WHERE id = ? AND lab_id = ?", (assignment_id, lab_id)):
             raise HTTPException(404, "This assignment is not part of the lab any more.")
-        if reason == "submit" and is_closed(lab):
+        late = late_policy(lab, _now()) if reason == "submit" else None
+        if late and not late["accepted"]:
             when = "" if lab["status"] == "closed" or lab["due_at"] is None else (
                 " at " + time.strftime("%d %b, %H:%M", time.localtime(lab["due_at"])))
-            raise HTTPException(409, f"This lab closed{when}. Your work is saved, but it can no longer be submitted.")
+            why = "" if lab["status"] == "closed" else f" ({late['reason']})"
+            raise HTTPException(409, f"This lab closed{when}{why}. Your work is saved, but it can no longer be submitted.")
         return lab
 
     @open_r.get("/my/labs")
@@ -1308,6 +1486,8 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
     r.upload_gate = upload_gate
     r.lab_progress = None  # set by submissions.router: {submitted, passed_all} for a student's lab card
     r.session_question = session_question
+    r.on_tests_changed = on_tests_changed
+    r.env_access = env_access
     r.lab_access = lab_access
     r.student_router = open_r
     return r

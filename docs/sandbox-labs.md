@@ -43,6 +43,11 @@ client ignores fields it does not know, and a breaking change gets a new
   "status": "published",               // "draft" only in teacher previews
   "min_desktop_version": null,         // e.g. "0.3.0": older apps say "Update the app to open this lab"
   "opens_at": null, "due_at": null,    // unix seconds or null
+  "grading": {                         // set in the wizard's Publish step (sandbox_authoring.py)
+    "mode": "tests",                   // "tests" | "tests_manual" (tests, then the teacher may change the score) | "manual"
+    "late": { "mode": "penalty", "per_day_pct": 10, "max_days": 3 },  // "closed" (default) | "accept" | "penalty"
+    "late_summary": "Late work loses 10% per day, not accepted after 3 days."
+  },
   "assignments": [
     {
       "id": "asg_51d0c9e2aa",
@@ -125,7 +130,13 @@ POST   /api/sandbox/environments/{id}/versions/{v}/approve   admins: a raw Docke
 POST   /api/sandbox/builds/{env}/{v}           build service callback {status, digest?, log?}  (X-Build-Token)
 POST   /api/sandbox/subjects/{id}/labs         {title, description?}
 GET    /api/sandbox/labs/{id}                  teacher view: everything incl. hidden tests + solution
-PATCH  /api/sandbox/labs/{id}                  {title, description, network, assessed, status, opens_at, due_at, environment_version}
+PATCH  /api/sandbox/labs/{id}                  {title, description, network, assessed, status, opens_at, due_at, environment_version,
+                                                grading_mode, late: {mode, per_day_pct, max_days}}
+GET    /api/sandbox/labs/{id}/history          changes made after the lab was published, newest first
+POST   /api/sandbox/labs/{id}/history/{c}/undo put back what change c replaced (recorded as a new change)
+POST   /api/sandbox/labs/{id}/import           {provider, ref, language}  a question from a question source as an assignment
+POST   /api/sandbox/labs/{id}/assignments/copy {assignment_id}  copy one from another lab you can see
+GET    /api/sandbox/assignments                every lab you can see with its assignments (for copying)
 DELETE /api/sandbox/labs/{id}                  drafts only
 POST   /api/sandbox/labs/{id}/assignments      {title, statement, files, open, run, tests, solution_files}
 PATCH  /api/sandbox/assignments/{id}
@@ -139,6 +150,8 @@ GET    /api/sandbox/library/{id}               preview (solutions shown to teach
 POST   /api/sandbox/library/{id}/use           {subject_id}  independent copy, based_on link
 GET    /api/sandbox/previews                   my running previews + seats left
 POST   /api/sandbox/previews                   {lab_id}  start "Try as a student" (capped)
+                                               {environment_id}  "set up by hand" (same seats)
+GET    /api/sandbox/previews/{id}/setup        set up by hand: commands typed so far -> {script, kept, dropped}
 GET    /api/sandbox/previews/{id}
 POST   /api/sandbox/previews/{id}/stop
 GET/PUT /api/sandbox/previews/{id}/files       ?path=  read or write a file in the preview
@@ -158,6 +171,38 @@ GET    /api/sandbox/my/labs/{id}/submissions   my latest submission per assignme
 GET    /api/sandbox/my/submissions/{id}        one, for polling while it grades (+ queue_ahead)
 POST   /api/sessions  {sandbox_lab_id, assignment_id, sitting_id, …}   one recorded session per assignment visited (docs/sandbox-student.md)
 ```
+
+## Lab wizard extras
+
+- **Import a question.** Assignments step, "Import a question": any importable question source of web
+  labs (Student IDE sets, Codeforces/CodeChef, MBPP; link-only sites are left out). The teacher picks the
+  language students answer in; the import brings the statement (with the source's credit line), one
+  starter file, a Run command for that language and the source's tests as input/output pairs. A
+  function-style question also gets its test driver as `.studentide/harness.<ext>`, which the Run command
+  joins to the student's file, as the web grader does. `checker` tests become `tokens` (with a note).
+  "Copy from another lab" copies one assignment from any lab the teacher can see.
+- **Set up by hand.** On the subject's Environment panel: a fresh preview instance of the environment
+  with a terminal, as on any Linux machine (sudo works; network is registries only). Every command lands
+  in `~/.studentide-setup-history` (`~/.bash_profile` turns on `history -a`). The page shows the recipe
+  live: commands that change the machine in order, look-around ones (`ls`, `cat`, `--version`, editors)
+  left out, `sudo` dropped and `apt` given `-y`, because the build runs as root without a terminal.
+  The teacher edits it if needed and saves: the script is appended to the recipe's `setup` and a new
+  environment version builds. Edits made inside vim or nano are not captured (the page says to use `tee`).
+- **Grading mode and late policy** (Publish step), with a "What students will see" summary card before
+  the button. `late_policy(lab, submitted_at)` in `sandbox_authoring.py` (re-exported by `sandbox.py`)
+  is the one rule: on time up to `due_at` + 120 s; then refused (`closed`), taken and marked late
+  (`accept`), or taken with `per_day_pct` off per started day and refused after `max_days` (`penalty`).
+  Submissions (`submissions.py`) call it for the gate and the score factor.
+- **Editing a lab students already have** (plan §5.5). Every change after the first publish is a row in
+  `sbx_lab_changes` with a plain-sentence summary and the old values, shown on the wizard's History step
+  with Undo. After a save the wizard says what students will notice: statement and test fixes reach them
+  at once; a change to an assignment's tests or Run command calls every hook in
+  `router.on_tests_changed` (submissions.py registers its regrade) and records how many submissions were
+  regraded; new starter files reach only students who have not opened that assignment yet (the runtime
+  seeds a folder only when it does not exist). A failing hook never loses the teacher's edit.
+- **Vim mode** in our editors (`frontend/src/editor/vim.ts`, `@replit/codemirror-vim`): a per-browser
+  switch next to Reset in the student editor and in every sandbox file editor. Normal-mode keys are
+  ordinary key events and the edits they cause ordinary edit events, so the event schema is unchanged.
 
 ## Ownership
 

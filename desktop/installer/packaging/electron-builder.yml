@@ -22,7 +22,13 @@ extraMetadata:
   author:
     name: Student IDE
     email: noreply@hokora.xyz
-publish: null
+# The update feed is the server itself (backend/studentide/desktop_updates.py), which
+# serves the newest GitHub release. Builds run with --publish never; CI's release job
+# uploads out/ (including latest.yml / latest-linux.yml) to a desktop-vX.Y.Z release.
+# The app points the updater at the server it is locked to at run time (modules/updates.ts).
+publish:
+  provider: generic
+  url: https://studentide.hokora.xyz/api/desktop/updates
 
 # Hardening asked for in docs/desktop.md (Packaging).
 electronFuses:
