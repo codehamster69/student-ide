@@ -22,6 +22,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `attendance.py` | Roll Call integration: per-teacher keys, class groups, effective-participation rule, sends marks when a sitting/lab closes. |
 | `runner.py`, `runner_service.py` | Compile/run student code (Python, C, C++, Java, JS) with limits; the service form runs in its own container. |
 | `providers/` | Question sources (bundled CodeContests/Codeforces/LeetCode/original sets, live MBPP/Exercism, link-only platforms); `polyglot.py` adapts function-style questions to every language. |
+| `workspaces.py` | Sandbox Labs: workspace snapshots (checked gzip tars) and setup recipes, so desktop work follows the student between machines. |
 | `retention.py`, `backup.py` | Purge raw key timings after N days (consent promise); gzipped SQLite backups. |
 | `replay.py`, `export.py` | Rebuild documents from edit events; load sessions for analysis. |
 | `detector/` | Phase 2: habit features per 30 s window, per-student baseline, two-channel (identity/process) CUSUM, synthetic typists, synthetic evaluation. |
@@ -33,6 +34,10 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 - `screens/`: student app (sign-in, consent, tasks, workspace, My attendance).
 - `teach/`, `live/`, `review/`, `compete/`, `learn/`: staff and student areas, each with its own `api.ts`.
 - `routes.ts`: every teacher-area hash route; `ui/`: design system (tokens, primitives, motion).
+
+### Desktop (`desktop/`)
+- `sandbox/` (`@studentide/sandbox`): local sandbox runtime, one Linux instance per (student, subject) through the
+  docker/podman CLI; terminal, runs, workspace sync, setup check, schema v2 events. See `docs/sandbox-runtime.md`.
 
 ## Main data paths
 

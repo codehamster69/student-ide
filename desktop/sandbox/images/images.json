@@ -1,0 +1,6 @@
+{
+  "comment": "Images the installer pre-pulls besides the student's subject environments (desktop/installer reads this). Digests are filled in by .github/workflows/sandbox-images.yml.",
+  "images": [
+    { "ref": "ghcr.io/codehamster69/studentide-sidproxy:1" }
+  ]
+}

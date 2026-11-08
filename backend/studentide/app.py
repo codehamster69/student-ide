@@ -49,6 +49,10 @@ Learning lab (always open, never reviewed; see learn.py):
     GET  /api/learn[?student_id=]                  tracks and lessons, with the student's progress
     GET  /api/learn/lessons/{track}/{slug}
 
+Sandbox Labs workspaces (desktop app; snapshots + setup recipe, see workspaces.py):
+    GET/PUT /api/workspaces/{lab_id}/{assignment_id}[/meta]?student_id=
+    GET/PUT /api/workspaces/recipes/{subject_id}?student_id=
+
 Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
 POST /api/sessions/{id}/submit, see compete.py.
@@ -72,13 +76,13 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import attendance, compete, grading, learn, live as live_mod, retention, runner, teach
+from . import attendance, compete, grading, learn, live as live_mod, retention, runner, teach, workspaces
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .providers import PROVIDERS, ProviderError
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .replay import ReplayError, final_text
-from .schema import SCHEMA_VERSION, Event
+from .schema import SCHEMA_VERSION, SUPPORTED_VERSIONS, Event
 
 PREVIEW = "preview"  # sessions.context of a teacher's "View as student" (see auth.previewer)
 STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
@@ -326,7 +330,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         try:
             body = json.loads(await request.body())
             raw_events = body["events"]
-            if body.get("schema_version", SCHEMA_VERSION) != SCHEMA_VERSION or not isinstance(raw_events, list):
+            if body.get("schema_version", SCHEMA_VERSION) not in SUPPORTED_VERSIONS or not isinstance(raw_events, list):
                 raise ValueError
         except (ValueError, KeyError, TypeError):
             raise HTTPException(400, f"expected {{schema_version: {SCHEMA_VERSION}, events: [...]}}")
@@ -501,6 +505,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return replay_data(db, session_id)
 
     app.include_router(learn.router(db, auth, _student_id))
+    app.include_router(workspaces.router(db, auth, _student_id))
     attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
     app.include_router(attendance_router)
     app.include_router(attendance_router.student_router)
