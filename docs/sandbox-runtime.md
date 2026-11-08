@@ -151,9 +151,44 @@ terminal commands, a paste, a vim session, a package command, Submit; then a
 back and the setup recipe replayed. It also checks the time and memory limits
 and the three network modes.
 
+## File watcher (sidecar)
+
+`watcher.ts` starts `sidwatch-<instance>` next to each running instance: the
+same image, `--pid container:<instance> --network none`, the workspace volume
+mounted read-only, all capabilities dropped except `DAC_READ_SEARCH` and
+`SYS_PTRACE`. A POSIX `sh` loop (works on busybox) prints a baseline and then
+one line per changed or deleted file and per listening port (from
+`/proc/1/net/tcp*`). Busybox only has whole-second mtimes, so each round
+compares against the stamp from two rounds ago; a change is reported within
+about 2 s.
+
+`FsWatch` turns lines into `fs_change` and `port_open` events (schema v3). The
+app's own saves are announced first (`expect`) and not reported again. The
+origin comes from the terminal's foreground: vim/nano (also for a save in the
+3 s after it exits, since `:wq` saves and quits at once), a command, the Run or
+Check button's command, or `outside`. Text files get a line diff
+(`textdiff.ts`). If the watcher cannot start the lab still runs and the review
+says files were not watched.
+
+## Offline journal and signed batches
+
+`journal.ts` (used by the app's `journal` namespace, see [desktop.md](desktop.md))
+keeps every batch the recorder flushes in a JSONL file per session, fsynced
+every 500 ms, and sends them in order as signed, hash-chained batches
+([event-schema.md](event-schema.md), v3). It survives restarts. While the
+server cannot be reached the student keeps working for 5 minutes; after that
+the editor and terminal turn read-only until the connection is back (the pill
+in the lab header says so) and nothing is lost. Each batch carries how long it
+was offline, which the review shows as a gap, never as a moment.
+
+## Presence
+
+The app reports its version, platform, engine, setup check result and open
+lab to `POST /api/sandbox/presence` every 60 s and after a setup check or
+opening a lab. That feeds the teacher's readiness board
+([sandbox-labs.md](sandbox-labs.md)).
+
 ## Not yet (later milestones)
 
-The sidecar file watcher and process observer (`fs_change`, `port_open`),
-port preview, signed hash-chained batches and the 5-minute reconnect journal
-belong to D3/D2 and the shell. Images are not published yet: the
-`sandbox-images` workflow builds the proxy image for amd64 and arm64.
+Port preview, update channel and code signing. Images are not published yet:
+the `sandbox-images` workflow builds the proxy image for amd64 and arm64.

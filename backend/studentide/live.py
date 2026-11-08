@@ -8,7 +8,9 @@ Two teacher views, both read-only:
   timeline has found so far. No code is shown here.
 * **Editor view** (one session): the student's code as it stands now (rebuilt
   from the edit events the recorder already uploads every 2 s), the caret,
-  their latest runs and checks.
+  their latest runs and checks. For a Sandbox Lab also the file being edited
+  and a read-only terminal mirror: the commands with their output tails, and
+  what is running now (the class grid for Sandbox Labs is sandbox_live.py).
 
 Live viewing goes beyond after-the-fact review, so it is never silent. Every
 teacher request is a heartbeat that is written to `live_views` (who looked at
@@ -93,7 +95,7 @@ class Live:
         self.mode = mode
         self._lock = threading.Lock()
         self._presence: dict[str, float] = {}                        # session id -> last IDE poll
-        self._code: dict[str, tuple[int, str, int | None]] = {}      # session id -> (seq, text, caret)
+        self._code: dict[str, tuple] = {}  # session id -> (seq, {path: text}, current path, caret)
         self._moments: dict[str, tuple[float, int, float | None]] = {}  # session id -> (computed at, n, last t)
         self._queue: queue.Queue = queue.Queue()
         self._queued: set[str] = set()
@@ -158,31 +160,68 @@ class Live:
 
     def code(self, session_id: str) -> tuple[str, int | None]:
         """Current text and caret, applying only the edits that arrived since the last call."""
-        with self._lock:
-            seq, text, caret = self._code.get(session_id, (-1, None, None))
-        try:
-            text, caret, seq = self._advance(session_id, seq, text, caret)
-        except ReplayError:  # out-of-order upload: start again from the first snapshot
-            text, caret, seq = self._advance(session_id, -1, None, None)
-        with self._lock:
-            self._code[session_id] = (seq, text or "", caret)
-        return text or "", caret
+        _path, docs, caret = self.files(session_id)
+        return docs.get(_path) or "", caret
 
-    def _advance(self, session_id: str, seq: int, text: str | None, caret: int | None):
+    def files(self, session_id: str) -> tuple[str | None, dict[str | None, str], int | None]:
+        """Every file of the session (Sandbox Labs: edit/snapshot `path`; web: one, path None),
+        the file edited last and the caret in it, incrementally like code()."""
+        with self._lock:
+            seq, docs, cur, caret = self._code.get(session_id, (-1, {}, None, None))
+            docs = dict(docs)
+        try:
+            seq, cur, caret = self._advance(session_id, seq, docs, cur, caret)
+        except ReplayError:  # out-of-order upload: start again from the first snapshot
+            docs = {}
+            seq, cur, caret = self._advance(session_id, -1, docs, None, None)
+        with self._lock:
+            self._code[session_id] = (seq, docs, cur, caret)
+        return cur, docs, caret
+
+    def _advance(self, session_id: str, seq: int, docs: dict, cur, caret):
         with self.db.connect() as conn:
             rows = conn.execute("""SELECT seq, type, data FROM events WHERE session_id = ? AND seq > ?
                                    AND type IN ('snapshot', 'edit', 'cursor') ORDER BY seq""", (session_id, seq)).fetchall()
         for r in rows:
             d = json.loads(r["data"])
             if r["type"] == "snapshot":
-                text = d["text"]  # a snapshot is the truth at that point, also after a gap
-            elif r["type"] == "edit" and text is not None:
-                text = apply_edit(text, d)
-                caret = _edit_caret(d, caret)
+                docs[d.get("path")] = d["text"]  # a snapshot is the truth at that point, also after a gap
+                if cur is None or d.get("path") == cur:
+                    cur = d.get("path")
+            elif r["type"] == "edit" and d.get("path") in docs:
+                p = d.get("path")
+                docs[p] = apply_edit(docs[p], d)
+                caret = _edit_caret(d, caret if p == cur else None)
+                cur = p
             elif r["type"] == "cursor":
                 caret = d["head"]
             seq = r["seq"]
-        return text, caret, seq
+        return seq, cur, caret
+
+    def terminal(self, session_id: str, n: int = 40) -> dict:
+        """Sandbox Labs: the read-only terminal mirror, as a transcript of the last n commands with
+        their output tails (the scrollback itself stays on the student's machine) and what runs now."""
+        with self.db.connect() as conn:
+            rows = conn.execute("""SELECT seq, type, data FROM events WHERE session_id = ? AND type IN ('term_cmd', 'term_output')
+                                   ORDER BY seq DESC LIMIT ?""", (session_id, n * 3)).fetchall()
+        lines: list[dict] = []
+        running = None
+        tails: dict[str, str] = {}
+        for r in reversed(rows):
+            d = json.loads(r["data"])
+            if r["type"] == "term_output":
+                if lines and lines[-1]["term_id"] == d["term_id"] and not lines[-1]["output"]:
+                    lines[-1]["output"] = d["tail"]
+                else:
+                    tails[d["term_id"]] = d["tail"]
+            elif d["phase"] == "start":
+                running = {"command": d["command"], "cwd": d["cwd"], "term_id": d["term_id"]}
+            else:
+                lines.append({"term_id": d["term_id"], "command": d["command"], "cwd": d["cwd"],
+                              "exit_code": d.get("exit_code"), "output": tails.pop(d["term_id"], "")})
+                if running and running["term_id"] == d["term_id"]:
+                    running = None
+        return {"commands": lines[-n:], "running": running}
 
     # -- moments (the review timeline's episodes), recomputed at most every 30 s
 
@@ -336,12 +375,14 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
         auth.check_lab(request, s["lab_id"])
         live.heartbeat(viewer(request), lab_id=s["lab_id"], session_id=session_id, student_id=s["student_id"])
         now = time.time()
-        text, caret = live.code(session_id)
+        cur, docs, caret = live.files(session_id)
+        text = docs.get(cur) or ""
         es = _event_stats(db, [session_id], now).get(session_id, {})
         q = json.loads(s["question_json"]) if s["question_json"] else {}
+        sandbox = q.get("kind") == "sandbox"
         rs = [dict(x) for x in db.list_runs(session_id)][-5:]
         cs = [dict(x) for x in db.list_checks(session_id)]
-        lab = db.get_lab(s["lab_id"]) if s["lab_id"] else None
+        lab = (db.get_lab(s["lab_id"]) or _sandbox_lab_title(db, s["lab_id"])) if s["lab_id"] else None
         return {
             "session": {"id": s["id"], "student_id": s["student_id"], "lab_id": s["lab_id"],
                         "lab_title": lab["title"] if lab else None, "question_id": s["question_id"],
@@ -351,6 +392,9 @@ def router(db: Database, require_teacher: Callable, auth, reviewer, live: Live) 
                         "ended_at": s["ended_at"], "end_reason": s["end_reason"]},
             "state": _state(s, es, live.online(session_id, now), now),
             "text": text, "caret": caret, "last_edit_at": es.get("last_edit"), "tab_away": es.get("away", False),
+            # Sandbox Labs: the file being edited, the other files' names, and the terminal mirror
+            "path": cur, "files": sorted(p for p in docs if p) if sandbox else None,
+            "terminal": live.terminal(session_id) if sandbox else None,
             "activity": es.get("activity", [0] * ACTIVITY_BINS),
             "runs": [{"created_at": x["created_at"], "exit_code": x["exit_code"], "error_type": x["error_type"],
                       "duration_ms": x["duration_ms"], "stdin": x["stdin"][:OUTPUT_CHARS],
@@ -456,3 +500,11 @@ def _check_stats(db: Database, ids: list[str]) -> dict[str, dict]:
             out[r["session_id"]] = {"passed": r["passed"], "total": r["total"], "at": r["created_at"],
                                     "best": max(r["passed"], prev["best"] if prev else 0)}
     return out
+
+
+def _sandbox_lab_title(db: Database, lab_id: str):
+    with db.connect() as conn:
+        try:
+            return conn.execute("SELECT title FROM sbx_labs WHERE id = ?", (lab_id,)).fetchone()
+        except Exception:
+            return None

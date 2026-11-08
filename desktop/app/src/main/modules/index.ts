@@ -7,6 +7,7 @@ import { authModule } from "./auth";
 import { engineModule } from "./engine";
 import { sandboxModule } from "./sandbox";
 import { updatesModule, type Updater } from "./updates";
+import { journalModule } from "./journal";
 
 export const modules = (s: Shell, updater: Updater): DesktopModule[] => [
   appModule(s),
@@ -14,4 +15,5 @@ export const modules = (s: Shell, updater: Updater): DesktopModule[] => [
   engineModule(), // installer thread
   sandboxModule(), // sandbox thread (sandbox.* and terminal.*)
   updatesModule(s, updater), // auto-update (updates.*)
+  journalModule(), // monitoring thread (event journal, signed batches)
 ];

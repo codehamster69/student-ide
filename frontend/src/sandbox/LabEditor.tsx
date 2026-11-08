@@ -1,6 +1,7 @@
 // #/sandbox/labs/<id>: the lab wizard (plan §5.3). Basics, Assignments, Check
 // (reference solution against the tests in a preview instance), Publish, and
-// sharing to the library; once published, Submissions (grades, Submissions.tsx).
+// sharing to the library; once published, Submissions (grades, Submissions.tsx) and Class: the readiness
+// board and live grid (ClassBoard.tsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
@@ -11,13 +12,14 @@ import { LessonText } from "../learn/LessonText";
 import { go, href } from "../routes";
 import { useLoad } from "./Subjects";
 import { FileEditor, NetworkBadge } from "./bits";
+import { ClassBoard } from "./ClassBoard";
 import { Submissions } from "./Submissions";
 import { SourcePicker } from "../teach/SourcePicker";
 import type { Language } from "../teach/api";
 import { GRADING, NETWORK, emptyTests, type Assignment, type CopyCandidate, type GradingMode, type LabChange, type LabDetail, type LatePolicy,
   type Network, type Preview, type SandboxFile, type TestCase, type Tests, type VerifyResult } from "./api";
 
-const STEPS = ["Basics", "Assignments", "Check", "Publish", "History", "Submissions"] as const;
+const STEPS = ["Basics", "Assignments", "Check", "Publish", "History", "Submissions", "Class"] as const;
 type Step = (typeof STEPS)[number];
 
 export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
@@ -45,7 +47,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
   if (!lab) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Skeleton className="h-60 rounded-2xl" /></div>;
   const readOnly = lab.access === "ta";
   const live = lab.status !== "draft";
-  const steps = STEPS.filter((s) => (s !== "Submissions" || live) && (s !== "History" || live || lab.n_changes > 0));
+  const steps = STEPS.filter((s) => (s !== "Submissions" && s !== "Class" || live) && (s !== "History" || live || lab.n_changes > 0));
   // a published lab opens on its grades; a draft on its first step
   const current: Step = step ?? (live ? "Submissions" : "Basics");
 
@@ -102,6 +104,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
             {current === "Publish" && <Publish lab={lab} readOnly={readOnly} saving={saving} save={save} />}
             {current === "History" && <HistoryStep lab={lab} readOnly={readOnly} save={save} />}
             {current === "Submissions" && <Submissions lab={lab} />}
+            {current === "Class" && <ClassBoard labId={lab.id} />}
           </motion.div>
         </AnimatePresence>
       </div>

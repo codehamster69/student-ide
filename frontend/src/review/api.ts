@@ -88,10 +88,37 @@ export interface Review {
   };
 }
 
+export interface ReplayFile {
+  path: string | null;
+  initial: string;
+  edits: [number, [number, number, string][], string][];
+}
+
 export interface ReplayData {
   initial: string;
   edits: [number, [number, number, string][], string][];
   keys: number[];
+  /** every file of a Sandbox Lab session (first = main file); one entry with path null on the web */
+  files?: ReplayFile[];
+}
+
+/** Sandbox Lab lanes (backend sandbox_review.py). Times are seconds into the session. */
+export interface SandboxLanes {
+  commands: { t: number; end: number | null; command: string; cwd: string; exit_code: number | null; tail: string }[];
+  saves: { t: number; path: string; origin: "terminal-editor" | "terminal" | "outside"; command: string | null; added_lines: number;
+    removed_lines: number; added_chars: number; typed_keys: number; deleted: boolean; binary: boolean; explained: boolean; diff: string }[];
+  pastes: { t: number; length: number; lines: number }[];
+  ports: { t: number; port: number; process: string; open: boolean }[];
+  network: { t: number; host: string; allowed: boolean }[];
+  packages: { t: number; manager: string; action: string; packages: string[] }[];
+  terminal_keys: number;
+  quiet: { t: number; end: number; enters: number }[];
+  signed: boolean;
+  offline: { t: number; end: number; seconds: number; lag_s: number | null }[];
+  breaks: { t: number | null; problem: string }[];
+  unseen: { sha256: string; reason: string; created_at: number; files: number;
+    unseen: { path: string; unseen_lines: number; unseen_chars: number; share: number; examples: string[] }[] }[];
+  watching: boolean | null;
 }
 
 /** One lab as the Review tab lists it: when it ran, who came, what stood out. */

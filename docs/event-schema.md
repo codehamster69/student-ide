@@ -99,6 +99,32 @@ Additive: every v1 batch is a valid v2 batch and the server accepts both
 - **`net_conn`** — the instance reached a new host through the registries-only
   proxy: `host`, `port`, `allowed`. Host names only, never contents.
 
+### Version 3 (Sandbox Labs: watcher, signed batches)
+
+Additive again (`SUPPORTED_VERSIONS = (1, 2, 3)`).
+
+- **`fs_change`** — a file in an assignment folder changed and the app did not
+  write it (the sidecar watcher, see [sandbox-runtime.md](sandbox-runtime.md)):
+  `path`, `size`, `sha256`, `origin` (`terminal-editor` = saved from vim/nano,
+  `terminal` = written by a command, `outside` = no command we could see),
+  `command`, `deleted`, `binary`, and for text files `added` (the new lines,
+  20 000 characters), `added_lines`, `removed_lines`, `diff` (8 KB), `truncated`.
+  Editor scratch files (`.swp`, `4913`, `~` backups) are never reported.
+- **`port_open`** — a program started or stopped listening: `port`, `process`, `open`.
+- **Signed batches.** The desktop app wraps each batch as
+  `{"signed": {"payload": "<json>", "sig": "<base64>", "device_id": "…"}}`, where
+  the payload is `{session_id, batch_seq, prev_hash, wall_ms, mono_ms, offline_ms,
+  events}`. The key is an Ed25519 key per install (`POST /api/devices`); the
+  server checks the signature and that `prev_hash` is the previous batch's hash,
+  and stores the batch row in `event_batches` with `problem` set to
+  `bad_signature`, `chain_break`, `rewritten` or `other_device` when it does not
+  check out. Events are never dropped for a problem; the review shows it as a
+  record break. Web batches stay unsigned.
+
+None of the v3 events feed the detector (see the thesis brain entry
+`2026-11-08-13-sandbox-monitoring-detector-feed.md`); they feed the review's
+evidence lanes.
+
 ## Reading the data
 
 ```python

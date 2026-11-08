@@ -57,7 +57,7 @@ export function proxyAddress(subnets: string): string {
   return `${m[1]}.${m[2]}.${m[3]}.254`;
 }
 export const PROXY_PORT = 8888;
-const LABEL = "studentide.instance";
+export const LABEL = "studentide.instance";
 
 // Docker's default set minus MKNOD and NET_RAW, plus ptrace for debuggers.
 const BASE_CAPS = ["CHOWN", "DAC_OVERRIDE", "FOWNER", "FSETID", "KILL", "SETGID", "SETUID", "SETPCAP", "NET_BIND_SERVICE", "SYS_CHROOT", "AUDIT_WRITE"];

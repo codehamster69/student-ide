@@ -516,15 +516,33 @@ def _evidence_events(events: list[dict]) -> dict:
 
 def replay_data(db: Database, session_id: str) -> dict:
     """Everything the browser needs to rebuild the code at any moment, plus
-    code key-press times for the rhythm strip. Offsets are UTF-16, like JS."""
-    initial, edits, keys = None, [], []
+    code key-press times for the rhythm strip. Offsets are UTF-16, like JS.
+
+    A Sandbox Lab session holds several files (edit/snapshot `path`): `initial`
+    and `edits` are the first file's (the assignment's main file, as before),
+    and `files` lists every file the same way, so the review can switch between
+    them. Web sessions have one document and `files` has one entry with path None."""
+    files: dict = {}
+    order: list = []
+    keys = []
     for ev in db.iter_events(session_id, ("snapshot", "edit", "key")):
-        if ev["type"] == "snapshot" and initial is None:
-            initial = ev["data"]["text"]
-        elif ev["type"] == "edit":
-            d = ev["data"]
-            edits.append([round(ev["t"], 1), d["changes"], d["origin"]])
-        elif ev["type"] == "key" and ev["data"]["action"] == "down" and not ev["data"].get("repeat") \
-                and ev["data"]["cls"] not in ("modifier", "nav"):
+        d = ev["data"]
+        if ev["type"] in ("snapshot", "edit"):
+            p = d.get("path")
+            if p not in files:
+                files[p] = {"path": p, "initial": None, "edits": []}
+                order.append(p)
+            f = files[p]
+            if ev["type"] == "snapshot":
+                if f["initial"] is None and not f["edits"]:
+                    f["initial"] = d["text"]
+            else:
+                if f["initial"] is None:
+                    f["initial"] = ""
+                f["edits"].append([round(ev["t"], 1), d["changes"], d["origin"]])
+        elif ev["type"] == "key" and d["action"] == "down" and not d.get("repeat") \
+                and d["cls"] not in ("modifier", "nav") and d.get("surface", "editor") == "editor":
             keys.append(round(ev["t"], 1))
-    return {"initial": initial or "", "edits": edits, "keys": keys}
+    out = [files[p] | {"initial": files[p]["initial"] or ""} for p in order]
+    main = out[0] if out else {"initial": "", "edits": []}
+    return {"initial": main["initial"], "edits": main["edits"], "keys": keys, "files": out}

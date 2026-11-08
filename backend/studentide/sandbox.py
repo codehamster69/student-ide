@@ -803,7 +803,7 @@ def lab_problems(d: dict) -> list[str]:
 # -- routes
 
 
-def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
+def router(db: Database, require_teacher: Callable, auth, on_lab_closed: Callable | None = None) -> APIRouter:
     """Teacher routes under /api/sandbox (sign-in like /api/teach); the student
     routes under /api/sandbox/my and the build-service callback are on
     `.student_router`, which has no teacher dependency."""
@@ -1135,7 +1135,13 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
                 record(request, lab, change_summary([], status=status), ["status"], {"status": lab["status"]}, force=True)
             if rest:
                 record(request, lab, change_summary(rest), rest, {c: lab[c] for c in rest})
-        return get_lab(lab_id, request)
+        out = get_lab(lab_id, request)
+        if f.get("status") == "closed" and lab["status"] != "closed" and on_lab_closed is not None:
+            try:  # attendance.py: send each lab day to Roll Call (when class groups are attached)
+                out["attendance_sent"] = on_lab_closed(lab_id, request)
+            except HTTPException as e:  # closing the lab never fails because attendance couldn't be sent
+                out["attendance_sent"] = [{"error": e.detail}]
+        return out
 
     @r.delete("/labs/{lab_id}")
     def delete_lab(lab_id: str, request: Request) -> dict:

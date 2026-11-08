@@ -67,6 +67,13 @@ export interface LiveEditor {
   activity: number[];
   runs: { created_at: number; exit_code: number | null; error_type: string | null; duration_ms: number; stdin: string; stdout: string; stderr: string }[];
   check: { passed: number; total: number; created_at: number; best: number } | null;
+  /** Sandbox Labs: the file being edited, every file, and the read-only terminal mirror */
+  path?: string | null;
+  files?: string[] | null;
+  terminal?: {
+    commands: { term_id: string; command: string; cwd: string; exit_code: number | null; output: string }[];
+    running: { command: string; cwd: string } | null;
+  } | null;
   now: number;
 }
 

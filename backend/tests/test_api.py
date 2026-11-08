@@ -31,7 +31,7 @@ def key(seq, t, action, code="KeyA", cls="letter"):
 
 
 def test_consent_is_required(client):
-    assert client.post("/api/login", json={"student_id": "s1"}).json() == {"student_id": "s1", "consented": False}
+    assert client.post("/api/login", json={"student_id": "s1"}).json() == {"student_id": "s1", "consented": False, "sandbox_consented": False}
     r = client.post("/api/sessions", json={"student_id": "s1", "task_id": "free"})
     assert r.status_code == 403
     client.post("/api/consent", json={"student_id": "s1"})

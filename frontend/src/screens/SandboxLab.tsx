@@ -24,6 +24,7 @@ import { desktop, desktopError } from "../desktop";
 import { newSittingId, startSandboxSession, type LiveSession } from "../editor/session";
 import { LessonText } from "../learn/LessonText";
 import { FileEditor } from "../sandbox/bits";
+import { ConnectionPill, useConnection } from "../connection";
 import type { Network } from "../sandbox/api";
 import { Badge, Button, Card, Dialog, LiveDot, Spinner, TextArea, cn, spring } from "../ui";
 import type { OpenedLab } from "@studentide/sandbox";
@@ -69,6 +70,7 @@ const HIDDEN = /(^|\/)(node_modules|__pycache__|\.venv|venv|\.git|target|build|d
 
 export function SandboxLab({ studentId, labId, onBack }: { studentId: string; labId: string; onBack: () => void }) {
   const [lab, setLab] = useState<StudentLab | null>(null);
+  const conn = useConnection(); // desktop journal: read-only after 5 minutes offline, nothing lost
   const [opened, setOpened] = useState<Opened | null>(null);
   const [progress, setProgress] = useState<{ message: string; percent?: number }>({ message: "Getting the lab ready…" });
   const [error, setError] = useState("");
@@ -208,6 +210,7 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
         <span className="flex-1" />
         {opened && <Usage instanceId={opened.instanceId} />}
         {opened && !opened.limitsEnforced && <Badge tone="warn" className="hidden md:inline-flex">No CPU/memory limits on this computer</Badge>}
+        <ConnectionPill state={conn} />
         {Object.keys(sessions).length > 0 && (
           <span className="flex items-center gap-1.5 text-xs text-muted" title="Your typing, edits, terminal commands and runs in this lab are recorded for your teacher">
             <LiveDot tone="danger" /> Recorded for this lab
@@ -267,7 +270,7 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
           {/* every visited assignment stays mounted, so its terminal and editor survive switching */}
           {opened.assignments.map((a) => sessions[a.id] && specOf(a.id) ? (
             <div key={a.id} className={cn("min-h-0 min-w-0 flex-1", a.id === active ? "flex" : "hidden")}>
-              <AssignmentPane instanceId={opened.instanceId} a={a} spec={specOf(a.id)!} session={sessions[a.id]}
+              <AssignmentPane instanceId={opened.instanceId} readOnly={conn.readOnly} a={a} spec={specOf(a.id)!} session={sessions[a.id]}
                 active={a.id === active} fsTick={fsTick[a.id] ?? 0} submission={subs?.[a.id] ?? null}
                 onSubmitted={(sub) => onSubmitted(a.id, sub)} />
             </div>
@@ -297,8 +300,8 @@ function Usage({ instanceId }: { instanceId: string }) {
   );
 }
 
-function AssignmentPane({ instanceId, a, spec, session, active, fsTick, submission, onSubmitted }: {
-  instanceId: string; a: OpenedAsg; spec: Spec; session: LiveSession; active: boolean; fsTick: number;
+function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick, submission, onSubmitted }: {
+  instanceId: string; readOnly: boolean; a: OpenedAsg; spec: Spec; session: LiveSession; active: boolean; fsTick: number;
   submission: Submission | null; onSubmitted: (sub?: Submission | null) => void;
 }) {
   const sb = desktop!.sandbox;
@@ -446,19 +449,19 @@ function AssignmentPane({ instanceId, a, spec, session, active, fsTick, submissi
             <span className="truncate font-mono text-xs text-text">{cur || "no file"}</span>
             <span className="text-[11px] text-faint">{saved ? "saved" : "saving…"}</span>
             <span className="flex-1" />
-            <Button size="sm" variant="primary" disabled={!!busy || !spec.run} onClick={() => act("run")} title={spec.run ? `${spec.run} (Ctrl+Enter)` : "this assignment has no Run command"}>
+            <Button size="sm" variant="primary" disabled={!!busy || readOnly || !spec.run} onClick={() => act("run")} title={spec.run ? `${spec.run} (Ctrl+Enter)` : "this assignment has no Run command"}>
               {busy === "run" ? <Spinner /> : <Play className="size-3.5 fill-current" />} Run
             </Button>
             {visible.length > 0 && (
-              <Button size="sm" disabled={!!busy} onClick={() => act("check")} title="Runs the tests you can see, on this computer">
+              <Button size="sm" disabled={!!busy || readOnly} onClick={() => act("check")} title="Runs the tests you can see, on this computer">
                 {busy === "check" ? <Spinner /> : <FlaskConical className="size-3.5" />} Check
               </Button>
             )}
-            <Button size="sm" disabled={!!busy} onClick={() => setConfirm(true)}>{busy === "submit" ? <Spinner /> : <Send className="size-3.5" />} Submit</Button>
+            <Button size="sm" disabled={!!busy || readOnly} onClick={() => setConfirm(true)}>{busy === "submit" ? <Spinner /> : <Send className="size-3.5" />} Submit</Button>
           </div>
           <div className="min-h-0 flex-1">
             {content === null ? <div className="grid h-full place-items-center"><Spinner /></div>
-              : cur ? <FileEditor key={cur} path={cur} value={content} onChange={edit} extensions={extensions} />
+              : cur ? <FileEditor key={cur} path={cur} value={content} onChange={edit} readOnly={readOnly} extensions={extensions} />
               : <div className="grid h-full place-items-center text-sm text-muted">Pick a file on the left.</div>}
           </div>
           <AnimatePresence>
@@ -519,7 +522,7 @@ function AssignmentPane({ instanceId, a, spec, session, active, fsTick, submissi
         <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-faint">
           <SquareTerminal className="size-3.5" /> Terminal <span className="font-mono font-normal normal-case tracking-normal">{a.workdir.replace("/home/student", "~")}</span>
         </div>
-        <DesktopTerminal instanceId={instanceId} assignmentId={a.id} session={session} visible={active} />
+        <DesktopTerminal instanceId={instanceId} assignmentId={a.id} session={session} visible={active} readOnly={readOnly} />
       </Card>
 
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Submit “${spec.title}”?`} icon={<Send className="size-5" />}
@@ -530,8 +533,12 @@ function AssignmentPane({ instanceId, a, spec, session, active, fsTick, submissi
 }
 
 /** One shell in the assignment folder, inside the instance. Keys are logged with their surface; pastes go through terminal.paste. */
-function DesktopTerminal({ instanceId, assignmentId, session, visible }: { instanceId: string; assignmentId: string; session: LiveSession; visible: boolean }) {
+function DesktopTerminal({ instanceId, assignmentId, session, visible, readOnly }: {
+  instanceId: string; assignmentId: string; session: LiveSession; visible: boolean; readOnly: boolean;
+}) {
   const host = useRef<HTMLDivElement>(null);
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
   const resizeRef = useRef<() => void>(() => {});
   const [gen, setGen] = useState(0);
   const [exited, setExited] = useState(false);
@@ -556,7 +563,7 @@ function DesktopTerminal({ instanceId, assignmentId, session, visible }: { insta
       d.on("terminal.surface", (e) => { if (e.id === id) surface = { surface: e.surface, ...(e.path ? { path: e.path } : {}) }; }),
     ];
     d.terminal.open(instanceId, { assignmentId, cols: term.cols, rows: term.rows }).then((r) => { id = r.id; }, (e) => term.write(`\x1b[31m${desktopError(e).message}\x1b[0m\r\n`));
-    const data = term.onData((s) => { if (id) void d.terminal.write(id, s); });
+    const data = term.onData((s) => { if (id && !readOnlyRef.current) void d.terminal.write(id, s); }); // offline too long: keys wait
     const resize = () => {
       try { fit.fit(); } catch { return; }
       if (id) void d.terminal.resize(id, term.cols, term.rows);

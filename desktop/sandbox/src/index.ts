@@ -27,6 +27,9 @@ export * from "./doctor.ts";
 export * from "./marks.ts";
 export * from "./registries.ts";
 export * from "./netlog.ts";
+export * from "./watcher.ts";
+export * from "./journal.ts";
+export * from "./textdiff.ts";
 export { registerSandboxIpc, type IpcContext, type SandboxIpcOptions } from "./desktop.ts";
 export type * from "./api.ts";
 

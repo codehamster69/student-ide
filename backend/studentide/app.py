@@ -54,9 +54,14 @@ Learning lab (always open, never reviewed; see learn.py):
     GET  /api/learn[?student_id=]                  tracks and lessons, with the student's progress
     GET  /api/learn/lessons/{track}/{slug}
 
+Desktop event signing (batches.py): POST /api/devices?student_id= {public_key, app_version, platform};
+    POST /api/sessions/{id}/events also takes {schema_version, signed: {device_id, payload, sig}}
 Sandbox Labs workspaces (desktop app; snapshots + setup recipe, see workspaces.py):
     GET/PUT /api/workspaces/{lab_id}/{assignment_id}[/meta]?student_id=
     GET/PUT /api/workspaces/recipes/{subject_id}?student_id=
+    GET  /api/review/sessions/{id}/sandbox          Sandbox Lab lanes (sandbox_review.py), staff
+    POST /api/sandbox/presence?student_id=          desktop app state for the readiness board (sandbox_live.py)
+    GET  /api/sandbox/labs/{id}/class               readiness board + live class tiles, staff
 
 Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
@@ -84,10 +89,10 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import (attendance, compete, desktop, desktop_updates, grading, learn, live as live_mod, previews, retention, runner,
-               sandbox, submissions, teach, workspaces)
+from . import (attendance, batches, compete, desktop, desktop_updates, grading, learn, live as live_mod, previews, retention,
+               runner, sandbox, sandbox_live, sandbox_review, submissions, teach, workspaces)
 from .auth import Auth, Config
-from .db import CONSENT_VERSION, Database, has_consent
+from .db import CONSENT_VERSION, SANDBOX_CONSENT_VERSION, Database, has_consent, has_sandbox_consent
 from .providers import PROVIDERS, ProviderError
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .replay import ReplayError, final_text
@@ -115,6 +120,10 @@ class FrontendFiles(StaticFiles):
 
 class LoginIn(BaseModel):
     student_id: str
+
+
+class ConsentIn(LoginIn):
+    scope: str = Field(default="web", pattern="^(web|sandbox)$")  # "sandbox" = consent v3 (Sandbox Labs)
 
 
 class GoogleIn(BaseModel):
@@ -180,6 +189,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     """`auth_config` / `verify_google` replace the environment and Google's token check in tests,
     `attendance_transport` the HTTP calls to Roll Call (see attendance.Transport)."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
+    batches.init(db)
     cfg = auth_config or Config.from_env(admin_token)
     auth = Auth(db, cfg, verify_google)
     app = FastAPI(title="Student IDE", version="0.2.0")
@@ -230,7 +240,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def me_json(user: dict) -> dict:
         st = db.get_or_create_student(user["student_id"])
         return {k: user[k] for k in ("email", "name", "role", "student_id", "program", "year", "branch", "roll")} | {
-            "consented": has_consent(st)}
+            "consented": has_consent(st), "sandbox_consented": has_sandbox_consent(st)}
 
     @app.get("/api/auth/config")
     def auth_config_json() -> dict:
@@ -280,15 +290,15 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         if cfg.google:
             raise HTTPException(410, "sign in with your college Google account")
         row = db.get_or_create_student(_student_id(body.student_id))
-        return {"student_id": row["id"], "consented": has_consent(row)}
+        return {"student_id": row["id"], "consented": has_consent(row), "sandbox_consented": has_sandbox_consent(row)}
 
     @app.post("/api/consent")
-    def consent(body: LoginIn, request: Request) -> dict:
+    def consent(body: ConsentIn, request: Request) -> dict:
         sid = _student_id(body.student_id)
         auth.own_student(request, sid)
         db.get_or_create_student(sid)
-        db.record_consent(sid)
-        return {"student_id": sid, "consented": True}
+        db.record_consent(sid, SANDBOX_CONSENT_VERSION if body.scope == "sandbox" else CONSENT_VERSION)
+        return {"student_id": sid, "consented": True, "sandbox_consented": body.scope == "sandbox" or has_sandbox_consent(db.get_or_create_student(sid))}
 
     @app.post("/api/sessions")
     def start_session(body: SessionIn, request: Request) -> dict:
@@ -335,6 +345,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         elif not has_consent(db.get_or_create_student(sid)):
             raise HTTPException(403, "consent required before recording")
         sbx = bool(question and question.get("kind") == "sandbox")
+        if sbx and not staff and not has_sandbox_consent(db.get_or_create_student(sid)):
+            raise HTTPException(403, "consent for Sandbox Labs required before recording")
         if question and question["lab_id"] and not staff and not sbx:
             compete.can_start_session(db, question["lab_id"], sid)
         # Coming back to a question (a later lab sitting, back from a competition's
@@ -357,9 +369,13 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     @app.post("/api/sessions/{session_id}/events")
     async def ingest(session_id: str, request: Request) -> dict:
         # Parsed by hand so navigator.sendBeacon (text/plain body) works on page close.
-        live_session(session_id, request)
+        row = live_session(session_id, request)
+        batch = None
         try:
             body = json.loads(await request.body())
+            if isinstance(body, dict) and isinstance(body.get("signed"), dict):
+                # desktop journal: signed, hash-chained envelope (batches.py)
+                body["events"], batch = batches.unwrap(db, row, body["signed"])
             raw_events = body["events"]
             if body.get("schema_version", SCHEMA_VERSION) not in SUPPORTED_VERSIONS or not isinstance(raw_events, list):
                 raise ValueError
@@ -378,10 +394,20 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                 seq = raw.get("seq") if isinstance(raw, dict) else None
                 rejected.append({"seq": seq, "error": e.errors(include_url=False)[0]["msg"]})
         inserted = db.insert_events(session_id, good)
+        if batch is not None:
+            batches.record(db, batch)
         for ev in good:
             if ev["type"] == "session_end":
                 db.end_session(session_id, ev["data"].get("reason") or "end")
         return {"accepted": len(good), "inserted": inserted, "rejected": rejected, "max_seq": db.max_seq(session_id)}
+
+    @app.post("/api/devices")
+    def register_device(body: batches.DeviceIn, request: Request, student_id: str) -> dict:
+        """The desktop app's install key, so its event batches can be signed (batches.py)."""
+        sid = _student_id(student_id)
+        auth.own_student(request, sid)
+        db.get_or_create_student(sid)
+        return batches.register_device(db, sid, body)
 
     @app.get("/api/sessions/{session_id}/viewers")
     def viewers(session_id: str, request: Request) -> dict:
@@ -535,6 +561,11 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         teacher_session(session_id, request)
         return replay_data(db, session_id)
 
+    @app.get("/api/review/sessions/{session_id}/sandbox", dependencies=[Depends(require_admin)])
+    def review_sandbox(session_id: str, request: Request) -> dict:
+        """Sandbox Lab lanes: terminal, saves, ports, offline, chain breaks, unseen content (sandbox_review.py)."""
+        return sandbox_review.lanes(db, teacher_session(session_id, request))
+
     app.include_router(learn.router(db, auth, _student_id))
     releases = update_releases if update_releases is not None else desktop_updates.releases_from_env()
     app.include_router(desktop.router(db, auth, me_json, updates=releases is not None))
@@ -544,9 +575,11 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     app.include_router(attendance_router.student_router)
     app.include_router(teach.router(db, require_admin, auth, attendance_router.on_lab_closed, attendance_router.sittings))
     app.include_router(compete.router(db, require_admin, auth))
-    sandbox_router = sandbox.router(db, require_admin, auth)
+    sandbox_router = sandbox.router(db, require_admin, auth, attendance_router.on_lab_closed)
     app.include_router(sandbox_router)
     app.include_router(sandbox_router.student_router)
+    for rt in sandbox_live.router(db, require_admin, auth):  # readiness board, desktop presence
+        app.include_router(rt)
     app.state.sandbox = sandbox_router  # on_tests_changed: grading hooks its regrade in here
     driver = preview_driver if preview_driver is not None else previews.driver_from_env()
     submissions_router = submissions.router(db, require_admin, auth, sandbox_router,

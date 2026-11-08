@@ -15,7 +15,7 @@ const FACTS = [
 /** `cfg.mode` "google": the college Google account; "dev": a typed roll number (local work, staged sessions). */
 export function Login({ cfg, onDone, onTeacher }: {
   cfg: AuthConfig;
-  onDone: (studentId: string, consented: boolean) => void;
+  onDone: (studentId: string, consented: boolean, sandboxConsented?: boolean) => void;
   onTeacher?: (me: Me) => void;
 }) {
   const [id, setId] = useState("");
@@ -27,8 +27,8 @@ export function Login({ cfg, onDone, onTeacher }: {
     setBusy(true);
     setError("");
     try {
-      const r = await api<{ student_id: string; consented: boolean }>("/api/login", { student_id: id });
-      onDone(r.student_id, r.consented);
+      const r = await api<{ student_id: string; consented: boolean; sandbox_consented?: boolean }>("/api/login", { student_id: id });
+      onDone(r.student_id, r.consented, r.sandbox_consented);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -54,7 +54,7 @@ export function Login({ cfg, onDone, onTeacher }: {
           <>
             <p className="mt-1 text-sm text-muted">Use your college Google account (<span className="font-mono text-xs">@{cfg.domain}</span>).</p>
             <div className="mt-6">
-              <GoogleSignIn cfg={cfg} onDone={(me) => (me.role !== "student" && onTeacher ? onTeacher(me) : onDone(me.student_id, me.consented))} />
+              <GoogleSignIn cfg={cfg} onDone={(me) => (me.role !== "student" && onTeacher ? onTeacher(me) : onDone(me.student_id, me.consented, me.sandbox_consented))} />
             </div>
           </>
         ) : (

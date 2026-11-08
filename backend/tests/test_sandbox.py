@@ -300,6 +300,10 @@ def test_session_per_sandbox_assignment(app, priya):
     student = sign_in(app, "pg25cs07@" + DOMAIN)
     student.post("/api/consent", json={"student_id": "PG25CS07"})
     body = {"student_id": "PG25CS07", "sandbox_lab_id": lab["id"], "sitting_id": "sitting_1234", "client_meta": {}}
+    # web consent (v2) is not enough: Sandbox Labs need consent v3 (terminal, file changes)
+    r = student.post("/api/sessions", json=body | {"assignment_id": a1})
+    assert r.status_code == 403 and "Sandbox" in r.json()["detail"]
+    assert student.post("/api/consent", json={"student_id": "PG25CS07", "scope": "sandbox"}).json()["sandbox_consented"] is True
     r = student.post("/api/sessions", json=body | {"assignment_id": a1})
     assert r.status_code == 200, r.text
     out = r.json()

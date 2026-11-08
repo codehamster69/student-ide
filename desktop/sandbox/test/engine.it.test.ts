@@ -147,6 +147,14 @@ test("a student does a lab, then carries on on another machine", { skip: !RUN, t
   await until(() => term("terminal.surface").some((e) => e.data.surface === "terminal-editor" && e.data.path === "notes.txt"));
   await m1.call("terminal.write", id, "ihello from vim\x1b:wq\r");
   await until(() => term("terminal.surface").at(-1)?.data.surface === "terminal");
+  // the sidecar watcher saw the vim save (schema v3 fs_change), with the new line as its diff
+  await until(() => sbx().some((e) => e.type === "fs_change" && String(e.data.path).endsWith("/notes.txt")), 10_000);
+  const save = sbx().find((e) => e.type === "fs_change" && String(e.data.path).endsWith("/notes.txt"))!;
+  assert.equal(save.data.origin, "terminal-editor");
+  assert.equal(save.data.added, "hello from vim");
+  assert.ok(!sbx().some((e) => e.type === "fs_change" && String(e.data.path).endsWith(".swp")));
+  // the editor's own saves are not reported again as fs_change (they are edits already)
+  assert.ok(!sbx().some((e) => e.type === "fs_change" && String(e.data.path).endsWith("/main.c")));
   // a package command that succeeds without network (sudo is already installed)
   await m1.call("terminal.write", id, "sudo apt-get install -y --no-download sudo\n");
   await until(() => sbx().some((e) => e.type === "pkg_install"), 30_000);

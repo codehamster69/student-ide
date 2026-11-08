@@ -23,6 +23,8 @@ export interface OpenedLab {
   subjectId: string;
   /** false on engines that cannot enforce CPU/memory limits (the setup check explains) */
   limitsEnforced: boolean;
+  /** the sidecar file watcher runs (fs_change, port_open); false = terminal file changes are not seen */
+  watching: boolean;
   network: "off" | "registries" | "open";
   /** the setup recipe was replayed because the instance was new on this machine */
   setup: { replayed: number; ok: number } | null;

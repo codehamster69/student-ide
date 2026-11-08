@@ -16,6 +16,7 @@ import { termPaste } from "./events.ts";
 import { replayRecipe, type FetchLike, type WorkspaceSync, type Assignment } from "./workspace.ts";
 import type { Terminal } from "./terminal.ts";
 import { watchProxy } from "./netlog.ts";
+import { FsWatch, readViaWatcher, startWatcher } from "./watcher.ts";
 import type { OpenedLab, SandboxApi, TerminalApi } from "./api.ts";
 import type { TestSpec } from "./run.ts";
 
@@ -32,6 +33,8 @@ export interface SandboxIpcOptions {
   engine: () => EngineInfo | null | Promise<EngineInfo | null>;
   /** thrown as the shell's DesktopError (its fail()) so the renderer shows title + fix */
   fail: (info: { code: string; title: string; fix?: string; detail?: string }) => never;
+  /** the desktop app's version, for the readiness board */
+  appVersion?: string;
 }
 
 interface LabDef {
@@ -54,6 +57,13 @@ interface OpenLabState {
   /** session key of the assignment used last; instance-wide events (net_conn) go there */
   active: string;
   stopNet?: () => void;
+  /** the sidecar watcher (fs_change, port_open); undefined while it is not running */
+  watch?: FsWatch;
+  /** the Run button's or Check's command while it runs: files it writes are "written by a command" */
+  appCommand?: string;
+  /** vim/nano that just exited: `:wq` saves and quits at once, and the watcher reports ~1-2 s later */
+  lastEditor?: { command: string; file: string; at: number };
+  stopWatch?: () => void;
 }
 
 export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shutdown(): Promise<void> } {
@@ -103,6 +113,39 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     return (await r.json()) as T;
   }
 
+  /** The sidecar file and port watcher, started after the instance (it joins its PID namespace). */
+  async function watch(l: OpenLabState): Promise<boolean> {
+    l.stopWatch?.();
+    const w = new FsWatch({
+      sessionKey: (path) => { const a = owner(l, path); return a ? keyOf2(l.def.id, a.id) : null; },
+      foreground: () => {
+        let shell: { command: string; editorFile: string | null } | null = null;
+        for (const t of terms.values()) {
+          if (t.instance !== l.instance) continue;
+          const fg = t.foreground();
+          if (!fg) continue;
+          const s = t.surface();
+          if (s.surface === "terminal-editor") return { command: fg.command, editorFile: s.path ?? "" };
+          shell ??= { command: fg.command, editorFile: null };
+        }
+        const e = l.lastEditor;
+        if (e && Date.now() - e.at < 3000) return { command: e.command, editorFile: e.file };
+        if (l.appCommand) return { command: l.appCommand, editorFile: null };
+        return shell;
+      },
+      read: (path) => readViaWatcher(l.instance, path),
+    }, (sessionKey, ev) => ctx.emit("sandbox.event", { sessionKey, ...ev }), (_k, ev) => ctx.emit("sandbox.event", { sessionKey: l.active, ...ev }));
+    try {
+      l.stopWatch = await startWatcher(l.instance, w, () => { l.watch = undefined; });
+      l.watch = w;
+      return true;
+    } catch (e) {
+      // best effort: the lab still runs; the review shows that terminal file changes were not watched
+      ctx.emit("sandbox.progress", { instanceId: l.instance.name, message: `File watcher unavailable: ${String((e as Error)?.message ?? e)}` });
+      return false;
+    }
+  }
+
   async function replay(l: OpenLabState, instanceId: string): Promise<OpenedLab["setup"]> {
     if (!l.recipe.steps.length) return null;
     ctx.emit("sandbox.progress", { instanceId, message: `Restoring your setup: ${l.recipe.steps.length} package command(s)…` });
@@ -110,11 +153,53 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     return { replayed: r.total, ok: r.ok };
   }
 
+  // Readiness board (backend sandbox_live.py): what this machine can do, about once a minute,
+  // and whenever the setup check runs or a lab opens. Best effort: never blocks the student.
+  let lastCheck: { ok: boolean; checks: Array<{ id: string; ok: boolean; message: string; fix?: string; severity: string }> } | null = null;
+  let studentId: string | null = null;
+  async function report(): Promise<void> {
+    try {
+      const engine = await o.engine();
+      if (!studentId) {
+        const r = await ctx.fetch("/api/me");
+        if (!r.ok) return;
+        studentId = String((await r.json()).student_id ?? "") || null;
+        if (!studentId) return;
+      }
+      let images: string[] = [];
+      if (engine && sandbox) {
+        const r = await sandbox.engine.call(["images", "--format", "{{.Repository}}:{{.Tag}}"], { timeoutMs: 15_000 }).catch(() => null);
+        images = r && r.code === 0 ? r.stdout.toString("utf8").split("\n").filter((x) => x.includes("studentide")).slice(0, 50) : [];
+      }
+      const open = [...labs.values()].at(-1);
+      const problems = (lastCheck?.checks ?? []).filter((c) => !c.ok && c.severity === "error").slice(0, 5)
+        .map((c) => ({ id: c.id, message: c.message.slice(0, 300), fix: c.fix?.slice(0, 300) }));
+      await ctx.fetch(`/api/sandbox/presence?student_id=${encodeURIComponent(studentId)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          app_version: o.appVersion ?? "", platform: process.platform, engine: engine?.kind ?? "",
+          setup_ok: Boolean(engine) && (lastCheck ? lastCheck.ok : true), problems, images,
+          lab_id: open?.def.id ?? null, instance: open ? "running" : "",
+        }),
+      });
+    } catch { /* offline: the board shows the machine as not seen lately */ }
+  }
+  const presenceTimer = setInterval(() => void report(), 60_000);
+  presenceTimer.unref?.();
+  setTimeout(() => void report(), 3000).unref?.();
+
   const api: SandboxApi = {
     async setupCheck() {
       const engine = await o.engine();
-      if (!engine) return { ok: false, checks: [{ id: "engine.cli", ok: false, severity: "error", message: "The lab engine is not set up on this computer.", fix: "Run the Student IDE installer." }] };
-      return (await sb()).setupCheck();
+      if (!engine) {
+        lastCheck = { ok: false, checks: [{ id: "engine.cli", ok: false, severity: "error", message: "The lab engine is not set up on this computer.", fix: "Run the Student IDE installer." }] };
+        void report();
+        return lastCheck as Awaited<ReturnType<SandboxApi["setupCheck"]>>;
+      }
+      const r = await (await sb()).setupCheck();
+      lastCheck = r;
+      void report();
+      return r;
     },
 
     async openLab(labId) {
@@ -148,13 +233,16 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
         const files = await sync.open(ref(l, a), a.files ?? []);
         assignments.push({ id: a.id, title: a.title, workdir: a.workdir, sessionKey: keyOf2(def.id, a.id), files, open: a.open ?? [] });
       }
+      const watching = await watch(l);
       ctx.emit("sandbox.progress", { instanceId: id, message: "Ready", percent: 100 });
-      return { instanceId: id, labId: def.id, subjectId: def.subject.id, limitsEnforced: instance.limitsEnforced, network: def.network, setup, assignments };
+      void report();
+      return { instanceId: id, watching, labId: def.id, subjectId: def.subject.id, limitsEnforced: instance.limitsEnforced, network: def.network, setup, assignments };
     },
 
     async stop(instanceId) {
       const l = lab(instanceId);
       l.stopNet?.();
+      l.stopWatch?.();
       await l.sync.flushAll();
       for (const [tid, t] of terms) if (t.instance === l.instance) { t.close(); terms.delete(tid); }
       await l.instance.stop();
@@ -163,8 +251,11 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     async reset(instanceId) {
       const l = lab(instanceId);
       await l.sync.flushAll();
+      l.stopWatch?.();
       await l.instance.reset();
-      return replay(l, instanceId);
+      const r = await replay(l, instanceId);
+      await watch(l);
+      return r;
     },
 
     async stats(instanceId) {
@@ -178,6 +269,7 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
 
     async writeFile(instanceId, path, content) {
       const l = lab(instanceId);
+      l.watch?.expect(homePath(path), content); // the editor logged this save as edits already
       await l.instance.writeFile(path, content);
       const a = owner(l, path);
       if (a) l.sync.changed(ref(l, a));
@@ -186,7 +278,9 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     async run(instanceId, assignmentId, opts = {}) {
       const l = lab(instanceId);
       const a = asg(l, assignmentId);
-      const r = await (await sb()).run(l.instance, keyOf(l, a.id), { workdir: a.workdir, command: a.run, stdin: opts.stdin, timeoutMs: opts.timeoutMs ?? (a.tests?.timeout_s ?? 10) * 1000 });
+      l.appCommand = a.run;
+      const r = await (await sb()).run(l.instance, keyOf(l, a.id), { workdir: a.workdir, command: a.run, stdin: opts.stdin, timeoutMs: opts.timeoutMs ?? (a.tests?.timeout_s ?? 10) * 1000 })
+        .finally(() => setTimeout(() => { l.appCommand = undefined; }, 2500)); // the watcher reports up to ~2 s late
       l.sync.upload(ref(l, a), { reason: "run" }).catch((e) => l.sync.onError(e, ref(l, a)));
       return r;
     },
@@ -195,7 +289,9 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
       const l = lab(instanceId);
       const a = asg(l, assignmentId);
       if (!a.tests) return [];
-      return (await sb()).runTests(l.instance, keyOf(l, a.id), a.workdir, a.run, a.tests);
+      l.appCommand = a.run;
+      return (await sb()).runTests(l.instance, keyOf(l, a.id), a.workdir, a.run, a.tests)
+        .finally(() => setTimeout(() => { l.appCommand = undefined; }, 2500));
     },
 
     async submit(instanceId, assignmentId) {
@@ -220,6 +316,7 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
       const a = asg(l, opts.assignmentId);
       const s = await sb();
       let surface = "terminal";
+      let editor: { command: string; file: string } | null = null;
       const t = s.terminal(l.instance, keyOf(l, a.id), {
         cwd: a.workdir, cols: opts.cols, rows: opts.rows,
         onPackageCommand: (command, cwd) => {
@@ -235,7 +332,9 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
       });
       t.on("event", (ev: { type: string; data: Record<string, unknown> }) => {
         const now = t.surface();
+        if (now.surface === "terminal-editor") editor = { command: t.foreground()?.command ?? "vim", file: now.path ?? "" };
         if (now.surface !== surface) {
+          if (surface === "terminal-editor" && editor) l.lastEditor = { ...editor, at: Date.now() };
           surface = now.surface;
           ctx.emit("terminal.surface", { id: t.id, ...now });
         }
@@ -269,8 +368,10 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
 
   return {
     async shutdown() {
+      clearInterval(presenceTimer);
       for (const l of labs.values()) {
         l.stopNet?.();
+        l.stopWatch?.();
         await l.sync.flushAll().catch(() => {});
       }
       for (const t of terms.values()) t.close();

@@ -39,8 +39,12 @@ export function App() {
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
   // "View as student" (#/student from the teacher area): a teacher or admin under their own staff id
   const [preview, setPreview] = useState(false);
-  const signedIn = (studentId: string, consented: boolean) =>
+  // Sandbox Labs ask for consent v3 once, the first time a student opens one (the server enforces it too)
+  const [sandboxConsented, setSandboxConsented] = useState(false);
+  const signedIn = (studentId: string, consented: boolean, sandbox?: boolean) => {
+    setSandboxConsented(!!sandbox);
     setScreen(consented ? { name: "tasks", studentId } : { name: "consent", studentId });
+  };
   const signOut = () => {
     if (preview) {
       location.hash = href.labs;
@@ -56,7 +60,7 @@ export function App() {
       setCfg(c);
       const me = c.mode === "google" ? await currentUser() : null;
       const wantsPreview = location.hash.startsWith("#/student");
-      if (me && me.role === "student") signedIn(me.student_id, me.consented);
+      if (me && me.role === "student") signedIn(me.student_id, me.consented, me.sandbox_consented);
       // staff skip consent: nothing they do here is study data (the server files it as a preview)
       else if (wantsPreview && me) { setPreview(true); setScreen({ name: "tasks", studentId: me.student_id }); }
       else if (wantsPreview && c.mode === "dev" && teacherToken()) {
@@ -122,7 +126,13 @@ export function App() {
       );
       break;
     case "sandbox":
-      content = <SandboxLab studentId={screen.studentId} labId={screen.labId} onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })} />;
+      content = sandboxConsented || preview
+        ? <SandboxLab studentId={screen.studentId} labId={screen.labId} onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })} />
+        : (
+          <Shell step={1} studentId={screen.studentId} onSignOut={signOut}>
+            <Consent scope="sandbox" studentId={screen.studentId} onDone={() => setSandboxConsented(true)} />
+          </Shell>
+        );
       break;
     case "arena":
       content = (

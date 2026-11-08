@@ -92,14 +92,15 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
 
       <motion.div variants={item} className="mb-4 flex items-center gap-2 rounded-xl bg-warn-soft px-4 py-2.5 text-[13px] text-text" role="status">
         <Eye className="size-4 shrink-0 text-warn" />
-        <p><span className="font-mono">{s.student_id}</span> can see that you are viewing their editor. This view is read-only and is logged.</p>
+        <p><span className="font-mono">{s.student_id}</span> can see that you are viewing their editor{d.terminal ? " and terminal" : ""}. This view is read-only and is logged.</p>
       </motion.div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <motion.div variants={item} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
           <div className="flex h-10 items-center justify-between gap-2 border-b border-border bg-surface-2 px-3">
             <span className="flex items-center gap-2 font-mono text-xs text-text">
-              <span className="size-2 rounded-sm" style={{ background: lang.color }} />{lang.file}
+              <span className="size-2 rounded-sm" style={{ background: lang.color }} />{d.path ? d.path.split("/").pop() : lang.file}
+              {d.files && d.files.length > 1 && <span className="font-sans text-faint">· {d.files.length} files, showing the one edited last</span>}
             </span>
             <span className="flex items-center gap-1.5 text-[11px] text-faint">
               <LiveDot tone={d.state === "typing" ? "success" : "neutral"} live={d.state === "typing"} /> updates every 2 s
@@ -111,6 +112,7 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
         </motion.div>
 
         <motion.aside variants={item} className="grid gap-4">
+          {d.terminal && <TerminalMirror term={d.terminal} />}
           <Card className="p-4">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-faint">Activity, last 10 minutes</p>
             <ActivityBars bins={d.activity} className="h-10" />
@@ -163,5 +165,31 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
         </motion.aside>
       </div>
     </motion.div>
+  );
+}
+
+/** Sandbox Labs: the student's terminal as a read-only transcript (commands and the tail of their output;
+ * the full scrollback stays on the student's machine), newest at the bottom, with what is running now. */
+function TerminalMirror({ term }: { term: NonNullable<LiveEditorData["terminal"]> }) {
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => { end.current?.scrollIntoView({ block: "nearest" }); }, [term.commands.length, term.running?.command]);
+  return (
+    <Card className="overflow-hidden">
+      <p className="flex items-center gap-1.5 border-b border-border px-4 py-2.5 text-xs font-medium text-muted">
+        <Terminal className="size-3.5" /> Terminal <span className="text-faint">read-only</span>
+        {term.running && <span className="ml-auto inline-flex items-center gap-1.5 text-success"><LiveDot tone="success" /> running</span>}
+      </p>
+      <div className="max-h-[38vh] overflow-auto bg-console px-3 py-2 font-mono text-[11.5px] leading-relaxed text-console-text">
+        {term.commands.length === 0 && !term.running && <p className="opacity-60">No commands yet.</p>}
+        {term.commands.map((c, i) => (
+          <div key={i} className="mb-1.5">
+            <p><span className="opacity-60">$ </span>{c.command}{c.exit_code ? <span className="text-console-danger"> · exit {c.exit_code}</span> : null}</p>
+            {c.output && <pre className="m-0 whitespace-pre-wrap opacity-80">{c.output.split("\n").slice(-6).join("\n")}</pre>}
+          </div>
+        ))}
+        {term.running && <p><span className="opacity-60">$ </span>{term.running.command} <span className="animate-pulse">▍</span></p>}
+        <div ref={end} />
+      </div>
+    </Card>
   );
 }

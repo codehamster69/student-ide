@@ -16,6 +16,12 @@ Version 2 (Sandbox Labs, desktop app) is additive: key.surface/path,
 edit.path, snapshot.path, run.source/command, and the terminal and instance
 events term_cmd, term_output, term_paste, pkg_install, net_conn. Every v1
 batch is a valid v2 batch, so the server accepts both versions.
+
+Version 3 (Sandbox Labs monitoring) is additive again: fs_change (a workspace
+file changed outside our editor, from the sidecar watcher) and port_open
+(something in the instance started or stopped listening). The desktop app
+also sends batches with a signed, hash-chained envelope (batches.py); that is
+transport, not payload, so it is not part of this schema.
 """
 
 from __future__ import annotations
@@ -24,8 +30,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-SCHEMA_VERSION = 2
-SUPPORTED_VERSIONS = (1, 2)
+SCHEMA_VERSION = 3
+SUPPORTED_VERSIONS = (1, 2, 3)
 
 
 class _Payload(BaseModel):
@@ -193,6 +199,35 @@ class NetConnData(_Payload):
     allowed: bool
 
 
+class FsChangeData(_Payload):
+    """v3: a workspace file changed and our editor did not write it, seen by the sidecar watcher
+    (root in the instance cannot stop it). origin: "terminal-editor" (vim/nano was in the
+    foreground), "terminal" (another command was running: cat >, git checkout, a script),
+    "outside" (no command we can see: docker cp, a host tool, a background job).
+    added = the new lines of this save (clipped), the evidence check reads it."""
+
+    path: str = Field(max_length=512)
+    size: int = Field(ge=0)
+    sha256: str = Field(max_length=64)
+    origin: Literal["terminal-editor", "terminal", "outside"]
+    command: str | None = Field(default=None, max_length=4096)
+    deleted: bool = False
+    binary: bool = False
+    added: str = Field(default="", max_length=20000)
+    added_lines: int = Field(default=0, ge=0)
+    removed_lines: int = Field(default=0, ge=0)
+    diff: str = Field(default="", max_length=8000)
+    truncated: bool = False
+
+
+class PortOpenData(_Payload):
+    """v3: a program in the instance started (open) or stopped listening on a TCP port."""
+
+    port: int = Field(ge=0, le=65535)
+    process: str = Field(default="", max_length=64)
+    open: bool
+
+
 PAYLOADS: dict[str, type[_Payload]] = {
     "key": KeyData,
     "edit": EditData,
@@ -208,6 +243,8 @@ PAYLOADS: dict[str, type[_Payload]] = {
     "term_paste": TermPasteData,
     "pkg_install": PkgInstallData,
     "net_conn": NetConnData,
+    "fs_change": FsChangeData,
+    "port_open": PortOpenData,
 }
 EVENT_TYPES = tuple(PAYLOADS)
 

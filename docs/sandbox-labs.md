@@ -204,6 +204,17 @@ POST   /api/sessions  {sandbox_lab_id, assignment_id, sitting_id, …}   one rec
   switch next to Reset in the student editor and in every sandbox file editor. Normal-mode keys are
   ordinary key events and the edits they cause ordinary edit events, so the event schema is unchanged.
 
+## Running the class (readiness board)
+
+A published lab has a **Class** step (`ClassBoard.tsx`, `GET /api/sandbox/labs/{id}/class`,
+`sandbox_live.py`). Before the lab it reads "48 of 52 machines ready" with one
+tile per student on the roster: ready, not ready with the setup check's own
+one-line reason (so IT can fix that PC beforehand), or app never opened; plus
+OS, engine and app version from the desktop app's presence reports. During the
+lab tiles show the assignment, typing now, the command running and counts of
+commands and vim saves, and open the live editor with the terminal mirror.
+Tiles sort by attention. Never study data.
+
 ## Ownership
 
 Subjects follow the lab rules of PR #19: the owner and co-teachers edit, TAs
