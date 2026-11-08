@@ -39,6 +39,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `backend/tests/` pytest, one file per feature
 - `frontend/src/` `recorder.ts` + `capture.ts` (framework-free event capture), `screens/` (student app),
   `teach/`, `live/`, `review/`, `compete/`, `learn/` (staff areas), `ui/` (design system, see its README)
+- `desktop/sandbox/` Sandbox Labs runtime (Node+TS, no Electron): `npm test`; `SANDBOX_IT=1 npm run test:engine` needs Docker
 - `frontend/e2e/*.mjs` Playwright scripts, one per feature, run against a live server
 - `docs/` one doc per feature (detector, review, teaching, deploy, attendance…)
 - `desktop/app/` Electron shell (`src/shared/contract.ts` = bridge contract, `src/main/modules/<ns>.ts` per namespace);

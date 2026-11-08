@@ -31,15 +31,28 @@ def apply_edit(doc: str, data: dict) -> str:
     return buf.decode("utf-16-le")
 
 
-def replay(events: Iterable[dict], initial: str | None = None) -> Iterator[tuple[dict, str]]:
+_FIRST = object()
+
+
+def replay(events: Iterable[dict], initial: str | None = None, path=_FIRST) -> Iterator[tuple[dict, str]]:
     """Yield (event, document_after_event) for every event, in seq order.
 
     The document starts from `initial`, or from the first `snapshot` event.
     Each later snapshot is checked against the replayed text; a mismatch means
     lost or reordered events and raises ReplayError.
+
+    Schema v2 desktop sessions hold several files (edit/snapshot `path`).
+    Only one file is replayed: `path`, or by default the file of the first
+    snapshot or edit (the assignment's main file); web sessions have no path.
     """
     doc = initial
     for ev in events:
+        if ev["type"] in ("snapshot", "edit"):
+            p = ev["data"].get("path")
+            if path is _FIRST:
+                path = p
+            if p != path:
+                continue
         if ev["type"] == "snapshot":
             if doc is None:
                 doc = ev["data"]["text"]

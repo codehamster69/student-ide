@@ -38,6 +38,21 @@ their own machine, the client cannot be made tamper-proof; instead batches are
 signed and hash-chained, submissions are graded on the server, and at
 submission the server checks every file against the typing evidence behind it.
 
+The local runtime is now built (\texttt{desktop/sandbox}, documented in
+\texttt{docs/sandbox-runtime.md}). It drives Docker or Podman only through
+their shared command line, so the same code serves the installer's private
+engine on Windows, macOS and Linux. Each instance is isolated from the host
+but open inside (sudo, no privileged mode, a short list of capabilities, CPU,
+memory and process limits), and a lab is offline, limited to package
+registries through a proxy container that is its only route out, or open.
+Terminal commands are captured by shell hooks that the runtime installs on
+every start; because the student is root inside, these are best effort, while
+key timing stays in the app. The event schema moved to version~2, additively:
+keys carry the surface they were typed on, and only editor keys feed the
+identity channel until terminal typing has been tested on the development
+split; compile and run commands typed in the terminal count as runs for the
+process channel. Version~1 recordings produce exactly the same features.
+
 \begin{figure}[ht]
   \centering
   \resizebox{0.9\linewidth}{!}{\tikzfig{desktop-client}}

@@ -11,6 +11,11 @@ Every event the editor records has the same envelope:
 
 Bump SCHEMA_VERSION whenever a payload changes shape, so later phases can
 tell old recordings apart. See docs/event-schema.md for the prose version.
+
+Version 2 (Sandbox Labs, desktop app) is additive: key.surface/path,
+edit.path, snapshot.path, run.source/command, and the terminal and instance
+events term_cmd, term_output, term_paste, pkg_install, net_conn. Every v1
+batch is a valid v2 batch, so the server accepts both versions.
 """
 
 from __future__ import annotations
@@ -19,13 +24,15 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+SUPPORTED_VERSIONS = (1, 2)
 
 
 class _Payload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+Surface = Literal["editor", "terminal", "terminal-editor"]
 KeyClass = Literal["letter", "digit", "space", "enter", "tab", "punct", "backspace", "delete", "nav", "modifier", "other"]
 
 
@@ -40,6 +47,10 @@ class KeyData(_Payload):
     ctrl: bool = False
     alt: bool = False
     meta: bool = False
+    # v2: where the key was typed. "terminal" = shell prompt, "terminal-editor" = vim/nano in the
+    # desktop terminal (path = the file it opened). Only "editor" keys feed the identity channel.
+    surface: Surface = "editor"
+    path: str | None = Field(default=None, max_length=512)
 
 
 class EditData(_Payload):
@@ -55,6 +66,7 @@ class EditData(_Payload):
     changes: list[tuple[int, int, str]]
     len_before: int
     len_after: int
+    path: str | None = Field(default=None, max_length=512)  # v2: file of a multi-file workspace; None = the one document
 
     @model_validator(mode="after")
     def _check(self) -> "EditData":
@@ -97,6 +109,10 @@ class RunData(_Payload):
     exit_code: int | None = None
     duration_ms: float | None = None
     error_type: str | None = None  # e.g. "SyntaxError", "Timeout", None if clean
+    # v2 (desktop): "button" (Run), "test" (local Check) or "terminal" (a compile/run command typed
+    # in the terminal, run_id "t-…" has no row in the runs table); command = what ran.
+    source: Literal["button", "test", "terminal"] | None = None
+    command: str | None = Field(default=None, max_length=4096)
 
 
 class SnapshotData(_Payload):
@@ -105,6 +121,7 @@ class SnapshotData(_Payload):
 
     reason: Literal["start", "periodic", "run", "end"]
     text: str
+    path: str | None = Field(default=None, max_length=512)  # v2: as edit.path
 
 
 class FocusData(_Payload):
@@ -125,6 +142,57 @@ class SessionData(_Payload):
     reason: str | None = None  # for session_end: "submit", "pagehide", ...
 
 
+class TermCmdData(_Payload):
+    """v2: a command line the desktop terminal's shell ran, from its shell hooks (best effort:
+    the student has sudo and can remove them). phase "start" when it begins, "end" when the
+    prompt is back, with the exit code and duration."""
+
+    term_id: str = Field(max_length=32)
+    phase: Literal["start", "end"]
+    command: str = Field(max_length=4096)
+    cwd: str = Field(max_length=1024)
+    truncated: bool = False
+    exit_code: int | None = None
+    duration_ms: float | None = None
+
+
+class TermOutputData(_Payload):
+    """v2: output of one terminal command: bytes written and a clipped, escape-free tail."""
+
+    term_id: str = Field(max_length=32)
+    bytes: int = Field(ge=0)
+    tail: str = Field(max_length=4096)
+    truncated: bool = False
+
+
+class TermPasteData(_Payload):
+    """v2: a paste into the terminal, like ClipboardData for the editor."""
+
+    term_id: str = Field(max_length=32)
+    length: int
+    lines: int
+    text: str
+    truncated: bool = False
+    sha256: str = Field(max_length=64)
+
+
+class PkgInstallData(_Payload):
+    """v2: a package command that succeeded in the student's instance (feeds the setup recipe)."""
+
+    manager: str = Field(max_length=16)
+    action: Literal["install", "remove"]
+    packages: list[str] = Field(max_length=200)
+    command: str = Field(max_length=4096)
+
+
+class NetConnData(_Payload):
+    """v2: the instance reached a new host through the lab's proxy. Host name only, never contents."""
+
+    host: str = Field(max_length=253)
+    port: int | None = None
+    allowed: bool
+
+
 PAYLOADS: dict[str, type[_Payload]] = {
     "key": KeyData,
     "edit": EditData,
@@ -135,6 +203,11 @@ PAYLOADS: dict[str, type[_Payload]] = {
     "focus": FocusData,
     "session_start": SessionData,
     "session_end": SessionData,
+    "term_cmd": TermCmdData,
+    "term_output": TermOutputData,
+    "term_paste": TermPasteData,
+    "pkg_install": PkgInstallData,
+    "net_conn": NetConnData,
 }
 EVENT_TYPES = tuple(PAYLOADS)
 
@@ -157,5 +230,5 @@ class Event(BaseModel):
 
 
 class EventBatch(BaseModel):
-    schema_version: int = SCHEMA_VERSION
+    schema_version: Literal[SUPPORTED_VERSIONS] = SCHEMA_VERSION  # type: ignore[valid-type]
     events: list[Event] = Field(max_length=5000)

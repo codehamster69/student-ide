@@ -1,0 +1,26 @@
+{
+  "name": "@studentide/sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local sandbox runtime for Sandbox Labs: one Linux instance per (student, subject) in Docker or Podman, terminal, runs, workspace snapshots, setup check.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./doctor": { "types": "./dist/doctor.d.ts", "default": "./dist/doctor.js" }
+  },
+  "bin": { "sandbox-doctor": "bin/sandbox-doctor.mjs" },
+  "files": ["dist", "bin", "images"],
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts",
+    "test:engine": "SANDBOX_IT=1 node --test --test-concurrency=1 test/*.it.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -137,7 +137,16 @@ app.whenReady().then(() => {
     fetch: (path: string, init?: RequestInit) => session.defaultSession.fetch(server() + path, { credentials: "include", ...init }),
     userData: app.getPath("userData"),
   };
-  for (const m of modules(shellApi)) m.register(ctx as never);
+  const mods = modules(shellApi);
+  for (const m of mods) m.register(ctx as never);
+  let disposed = false;
+  app.on("before-quit", (e) => {
+    if (disposed) return;
+    e.preventDefault(); // let modules stop lab instances and flush uploads first (at most 10 s)
+    disposed = true;
+    const done = Promise.all(mods.map((m) => m.dispose?.().catch(() => {})));
+    Promise.race([done, new Promise((r) => setTimeout(r, 10_000))]).finally(() => app.quit());
+  });
 
   const ses = session.defaultSession;
   ses.setUserAgent(`${ses.getUserAgent()} StudentIDE-Desktop/${app.getVersion()}`);

@@ -33,6 +33,8 @@ export interface ModuleContext {
 export interface DesktopModule {
   namespace: string;
   register(ctx: ModuleContext): void;
+  /** called once when the app quits (e.g. stop lab instances, flush uploads) */
+  dispose?(): Promise<void>;
 }
 
 export class Registry {
