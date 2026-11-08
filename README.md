@@ -102,4 +102,6 @@ Students also have an always-open learning lab (concept lessons with runnable ex
 
 Labs can mark attendance in Roll Call (the attendance site): attach class groups to a lab, and students who effectively took part are marked present in their own group when the lab closes. See [docs/attendance.md](docs/attendance.md).
 
+The desktop app (Sandbox Labs) installs with no prerequisites: its installer sets up its own container engine (a WSL2 distro on Windows, a Lima VM on macOS, rootless Podman on Linux), pulls the lab images and checks a lab starts. See [docs/desktop-installer.md](docs/desktop-installer.md).
+
 Open http://localhost:8000/#/review for the timeline and http://localhost:8000/#/teach to create labs and questions. Details in [docs/review.md](docs/review.md) and [docs/teaching.md](docs/teaching.md).

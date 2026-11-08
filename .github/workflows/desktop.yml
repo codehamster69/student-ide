@@ -1,0 +1,100 @@
+# Desktop app: test the installer, then package Student IDE for Windows, macOS and Linux
+# with the bundled container engine (WSL distro / Lima / static Podman).
+name: desktop
+on:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: desktop/installer } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npm test
+      - name: App typechecks against the installer
+        run: npm run build && npm --prefix ../app ci && npm --prefix ../app run typecheck
+        env: { ELECTRON_SKIP_BINARY_DOWNLOAD: '1' }
+
+  wsl-rootfs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: desktop/installer/scripts/fetch-assets.sh win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wsl-rootfs
+          path: desktop/installer/assets/wsl/studentide-rootfs.tar.gz
+          retention-days: 7
+
+  # Real end-to-end setup on a Linux runner as an ordinary user: no-admin static Podman route.
+  linux-setup-e2e:
+    needs: test
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: desktop/installer } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci && npm run build && scripts/fetch-assets.sh linux
+      - name: Run setup as a user without sudo or Podman
+        run: |
+          sudo apt-get remove -y podman buildah >/dev/null 2>&1 || true
+          sudo useradd -m student-ci
+          sudo sed -i '/^student-ci:/d' /etc/subuid /etc/subgid
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo cp -r dist assets /home/student-ci/ && sudo chown -R student-ci /home/student-ci
+          echo '{"images":[{"ref":"docker.io/library/alpine:3.20","subject":"CI"}]}' | sudo -u student-ci tee /home/student-ci/images.json
+          cd /home/student-ci && sudo -u student-ci env HOME=/home/student-ci USER=student-ci PATH=/usr/bin:/bin \
+            node dist/cli.js --data-dir /home/student-ci/sid --assets /home/student-ci/assets --images /home/student-ci/images.json
+
+  package:
+    needs: [test, wsl-rootfs]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, target: --win }
+          - { os: macos-latest, target: --mac }
+          - { os: ubuntu-latest, target: --linux }
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: desktop/installer, shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v4
+        if: matrix.target == '--win'
+        with: { name: wsl-rootfs, path: desktop/installer/assets/wsl }
+      - if: matrix.target == '--mac'
+        run: scripts/fetch-assets.sh mac
+      - if: matrix.target == '--linux'
+        run: scripts/fetch-assets.sh linux
+      - run: npm ci && npm --prefix ../app ci
+      # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo secrets.
+      - run: npm run package -- ${{ matrix.target }}
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studentide-${{ runner.os }}
+          path: |
+            desktop/installer/out/*.exe
+            desktop/installer/out/*.dmg
+            desktop/installer/out/*.AppImage
+            desktop/installer/out/*.deb
+            desktop/installer/packaging/prepare-lab-pc.ps1
+          if-no-files-found: error
+          retention-days: 14

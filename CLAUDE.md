@@ -24,6 +24,7 @@ node frontend/e2e/screenshots.mjs out/ light          # thesis screenshots (or d
 python -m studentide.seed --db data/demo.sqlite3      # demo data for the review timeline
 cd backend && python -m studentide.harness dev --thesis ../thesis/latex   # test = held-out, run once, logged
 cd thesis/latex && latexmk -pdf main.tex              # thesis PDF into build/
+cd desktop/installer && npm test                     # installer tests; npm run package -- --linux packages the app
 ```
 No linter is configured; `tsc --noEmit` (part of `npm run build`) is the frontend check.
 
@@ -39,6 +40,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
   `teach/`, `live/`, `review/`, `compete/`, `learn/` (staff areas), `ui/` (design system, see its README)
 - `frontend/e2e/*.mjs` Playwright scripts, one per feature, run against a live server
 - `docs/` one doc per feature (detector, review, teaching, deploy, attendance…)
+- `desktop/installer/` one-click engine setup (WSL2 distro / Lima / Podman) + electron-builder packaging; see docs/desktop-installer.md
 - `deploy/` Compose, Caddyfile, GCP startup script
 - `thesis/` brain log, LaTeX, evaluation ledger, progress diagram, plans
 

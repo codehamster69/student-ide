@@ -1,0 +1,91 @@
+# Packages desktop/app with the engine assets from desktop/installer.
+# Run from desktop/installer:  npm run package -- --linux   (or --win, --mac)
+# Paths are relative to the app (projectDir = ../app).
+appId: xyz.hokora.studentide
+productName: Student IDE
+artifactName: StudentIDE-${version}-${os}-${arch}.${ext}
+copyright: Student IDE, IIIT Surat
+directories:
+  output: ../installer/out
+  buildResources: ../installer/packaging/build
+files:
+  - dist/**
+  - static/**
+  - package.json
+  # @studentide/installer is a file: dependency (a symlink), so its package "files" list is ignored: keep only dist/.
+  - "!node_modules/@studentide/installer/{assets,src,scripts,packaging,node_modules,out}/**"
+  - "!node_modules/@studentide/installer/dist/test/**"
+asar: true
+executableName: studentide
+extraMetadata:
+  homepage: https://studentide.hokora.xyz
+  author:
+    name: Student IDE
+    email: noreply@hokora.xyz
+publish: null
+
+# Hardening asked for in docs/desktop.md (Packaging).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  enableCookieEncryption: true
+
+# Shared by every OS: images every machine pulls (desktop/sandbox owns the list; optional until it exists).
+extraResources:
+  - from: ../sandbox/images/images.json
+    to: sandbox/images.json
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  extraResources:
+    - from: ../installer/assets/wsl/studentide-rootfs.tar.gz
+      to: installer/wsl/studentide-rootfs.tar.gz
+    - from: ../installer/packaging/prepare-lab-pc.ps1
+      to: installer/prepare-lab-pc.ps1
+
+nsis:
+  # One click, per user, no admin: the only admin step (turning on WSL2) is asked for by
+  # the app itself through one UAC prompt, or done by IT with prepare-lab-pc.ps1.
+  oneClick: true
+  perMachine: false
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  include: ../installer/packaging/build/installer.nsh
+
+portable:
+  artifactName: StudentIDE-${version}-portable.${ext}
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  category: public.app-category.education
+  extraResources:
+    # assets/lima/<arch> is filled by scripts/fetch-assets.sh mac
+    - from: ../installer/assets/lima/${arch}
+      to: installer/lima
+    - from: ../installer/assets/lima/studentide.yaml
+      to: installer/lima/studentide.yaml
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Education
+  maintainer: Student IDE <noreply@hokora.xyz>
+  extraResources:
+    - from: ../installer/assets/podman-static/podman-linux-amd64.tar.gz
+      to: installer/podman-static/podman-linux-amd64.tar.gz
+
+deb:
+  # The .deb route may pull Podman from the distro (apt asks for admin anyway).
+  depends: [podman, uidmap]

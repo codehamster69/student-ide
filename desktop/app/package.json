@@ -15,5 +15,8 @@
     "@types/node": "^22.10.0",
     "electron": "^45.2.3",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@studentide/installer": "file:../installer"
   }
 }
