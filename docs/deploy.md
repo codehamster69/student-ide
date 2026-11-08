@@ -114,6 +114,7 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | `STUDENTIDE_ATTENDANCE_URL` | Roll Call for lab attendance (default `https://attendance.hokora.xyz`), see [attendance.md](attendance.md) |
 | `STUDENTIDE_PUBLIC_URL` | e.g. `https://studentide.hokora.xyz`, for the link back from Roll Call |
 | `STUDENTIDE_ROLLCALL_LINK_SECRET` | random, 16+ chars, same as Roll Call's `LINK_SECRET`: Roll Call's Google sign-in and Student IDE share one register per teacher |
+| `STUDENTIDE_DESKTOP_MIN_VERSION`, `STUDENTIDE_DESKTOP_DOWNLOAD_URL` | optional: oldest desktop app allowed to load the site, and where to get a new one (see [desktop.md](desktop.md)) |
 | `BACKUP_KEEP_DAYS` | how many days of nightly backups to keep (default 14) |
 
 ## Who is who

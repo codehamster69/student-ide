@@ -2,6 +2,7 @@
 // session on the server, start the recorder, and log session_start.
 
 import { api, type Task } from "../api";
+import { clientInfo } from "../desktop";
 import type { Language } from "../teach/api";
 import { Recorder, SCHEMA_VERSION } from "../recorder";
 
@@ -47,6 +48,7 @@ export async function startSession(studentId: string, task: Task, sittingId?: st
     screen: { w: window.screen.width, h: window.screen.height, dpr: devicePixelRatio },
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     client_schema_version: SCHEMA_VERSION,
+    client: await clientInfo(),
   };
   const { session_id, resume_code } = await api<{ session_id: string; resume_code?: string | null }>("/api/sessions", {
     student_id: studentId, client_meta: meta,
