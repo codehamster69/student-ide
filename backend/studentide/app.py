@@ -58,6 +58,8 @@ Sandbox Labs workspaces (desktop app; snapshots + setup recipe, see workspaces.p
     GET/PUT /api/workspaces/{lab_id}/{assignment_id}[/meta]?student_id=
     GET/PUT /api/workspaces/recipes/{subject_id}?student_id=
     GET  /api/review/sessions/{id}/sandbox          Sandbox Lab lanes (sandbox_review.py), staff
+    POST /api/sandbox/presence?student_id=          desktop app state for the readiness board (sandbox_live.py)
+    GET  /api/sandbox/labs/{id}/class               readiness board + live class tiles, staff
 
 Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
@@ -85,7 +87,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
 from . import (attendance, batches, compete, desktop, grading, learn, live as live_mod, previews, retention, runner, sandbox,
-               sandbox_review, teach, workspaces)
+               sandbox_live, sandbox_review, teach, workspaces)
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, SANDBOX_CONSENT_VERSION, Database, has_consent, has_sandbox_consent
 from .providers import PROVIDERS, ProviderError
@@ -548,6 +550,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     sandbox_router = sandbox.router(db, require_admin, auth, attendance_router.on_lab_closed)
     app.include_router(sandbox_router)
     app.include_router(sandbox_router.student_router)
+    for rt in sandbox_live.router(db, require_admin, auth):  # readiness board, desktop presence
+        app.include_router(rt)
     preview_router = previews.router(db, require_admin, auth, sandbox_router,
                                      preview_driver if preview_driver is not None else previews.driver_from_env(),
                                      preview_limits)

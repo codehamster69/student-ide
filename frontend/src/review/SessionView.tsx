@@ -6,9 +6,10 @@ import {
   Trophy,
 } from "lucide-react";
 import { Badge, Button, Card, RhythmBars, cn, item, pop, spring, stagger } from "../ui";
-import { AuthError, CHANNELS, get, type Episode, type ReplayData, type Review } from "./api";
+import { AuthError, CHANNELS, get, type Episode, type ReplayData, type Review, type SandboxLanes as Lanes } from "./api";
+import { SandboxLanes } from "./SandboxLanes";
 import { CH_CHANGED, CH_COLOR, ChannelTag, Skeleton } from "./bits";
-import { CodeReplay } from "./CodeReplay";
+import { CodeReplay, type ReplayLanguage } from "./CodeReplay";
 import { Timeline } from "./Timeline";
 import { changedLines, Replayer } from "./replay";
 import { clock, CONDITION, dayKey, dayTime, TASKS, value } from "./format";
@@ -20,6 +21,10 @@ const RECENT_S = 30;
 export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
   const [review, setReview] = useState<Review | null>(null);
   const [replay, setReplay] = useState<Replayer | null>(null);
+  // Sandbox Labs: one replayer per file, and the terminal/file lanes
+  const [files, setFiles] = useState<{ path: string | null; r: Replayer }[]>([]);
+  const [fileIx, setFileIx] = useState(0);
+  const [lanes, setLanes] = useState<Lanes | null>(null);
   const [error, setError] = useState("");
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -32,12 +37,18 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
     Promise.all([get<Review>(`/api/review/sessions/${id}`), get<ReplayData>(`/api/review/sessions/${id}/replay`)])
       .then(([r, rep]) => {
         setReview(r);
-        setReplay(new Replayer(rep));
+        const fs = (rep.files?.length ? rep.files : [{ path: null, initial: rep.initial, edits: rep.edits }])
+          .map((f) => ({ path: f.path, r: new Replayer({ initial: f.initial, edits: f.edits, keys: rep.keys }) }));
+        setFiles(fs);
+        setReplay(fs[0].r);
         // open at the first moment to discuss, else at the end
         setT(r.episodes.length ? Math.max(0, r.episodes[0].switch_est - 15) : r.session.duration_s);
       })
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(e.message)));
+    get<Lanes>(`/api/review/sessions/${id}/sandbox`).then(setLanes).catch(() => setLanes(null));
   }, [id, onAuthLost]);
+
+  const pickFile = (i: number) => { setFileIx(i); setReplay(files[i].r); };
 
   // playback
   const last = useRef<number | null>(null);
@@ -183,6 +194,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
         <div onPointerDown={() => { setPlaying(false); setDragging(true); }} onPointerUp={() => setDragging(false)}>
           <Timeline review={review} t={t} onSeek={seek} instant={playing || dragging} showTruth={truth} focusEpisode={focusEp} onFocusEpisode={setFocusEp} />
         </div>
+        {lanes && <SandboxLanes lanes={lanes} duration={review.session.duration_s} t={t} onSeek={(v) => { setPlaying(false); setT(v); }} />}
       </Card>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_1fr]">
@@ -196,7 +208,17 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
               {code.origin === "reset" && <Badge className="h-5 px-2 text-[11px]"><RotateCcw className="size-3" /> student reset to the starter code</Badge>}
             </p>
           </div>
-          <div className="h-[430px]"><CodeReplay doc={code.doc} changed={code.changed} caret={code.caret} /></div>
+          {files.length > 1 && (
+            <div role="tablist" aria-label="Files" className="flex gap-1 overflow-x-auto border-b border-border bg-surface-2/50 px-2 py-1">
+              {files.map((f, i) => (
+                <button key={f.path ?? i} role="tab" aria-selected={i === fileIx} onClick={() => pickFile(i)}
+                  className={cn("shrink-0 rounded-md px-2.5 py-1 font-mono text-xs transition-colors", i === fileIx ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+                  {(f.path ?? "code").split("/").pop()}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="h-[430px]"><CodeReplay key={fileIx} doc={code.doc} changed={code.changed} caret={code.caret} language={langOf(files[fileIx]?.path)} /></div>
           <div className="border-t border-border bg-surface-2/50 px-4 py-3">
             <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
               <span>Typing rhythm just before the playhead</span>
@@ -219,6 +241,12 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
       </div>
     </motion.div>
   );
+}
+
+const LANG_BY_EXT: Record<string, ReplayLanguage> = { py: "python", c: "c", h: "c", cpp: "cpp", cc: "cpp", hpp: "cpp", java: "java", js: "javascript", ts: "javascript" };
+function langOf(path: string | null | undefined): ReplayLanguage | undefined {
+  const ext = path?.split(".").pop()?.toLowerCase();
+  return ext ? LANG_BY_EXT[ext] : undefined;
 }
 
 function Verdict({ review }: { review: Review }) {

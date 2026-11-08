@@ -400,6 +400,18 @@ class Database:
             return {r[0] for r in conn.execute(
                 "SELECT id FROM labs WHERE owner_email = ? UNION SELECT lab_id FROM lab_teachers WHERE email = ?", (email, email))}
 
+    def sandbox_lab_teacher(self, lab_id: str, email: str | None) -> bool:
+        """A Sandbox Lab (sandbox.py) whose subject this teacher owns or was added to (teacher or TA)."""
+        if not email:
+            return False
+        with self.connect() as conn:
+            try:
+                return conn.execute("""SELECT 1 FROM sbx_labs l JOIN sbx_subjects s ON s.id = l.subject_id WHERE l.id = ?
+                                       AND (s.owner_email = ? OR EXISTS (SELECT 1 FROM sbx_subject_people p
+                                            WHERE p.subject_id = s.id AND p.email = ?))""", (lab_id, email, email)).fetchone() is not None
+            except sqlite3.OperationalError:  # sandbox tables not created
+                return False
+
     def delete_lab(self, lab_id: str) -> None:
         with self.connect() as conn:
             conn.execute("DELETE FROM labs WHERE id = ?", (lab_id,))

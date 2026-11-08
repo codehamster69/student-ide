@@ -320,10 +320,11 @@ class Auth:
         return None if t.admin else self.db.teacher_lab_ids(t.email)
 
     def check_lab(self, request: Request, lab_id: str | None) -> Teacher:
-        """403 unless the lab is the teacher's own or shared with them. A session
-        outside any lab (practice tasks) is for admins only."""
+        """403 unless the lab is the teacher's own or shared with them (a Sandbox Lab: its
+        subject's owner, teachers and TAs). A session outside any lab (practice tasks) is for admins only."""
         t = self.teacher(request)
-        if not t.admin and (lab_id is None or lab_id not in self.db.teacher_lab_ids(t.email)):
+        if not t.admin and (lab_id is None or (lab_id not in self.db.teacher_lab_ids(t.email)
+                                               and not self.db.sandbox_lab_teacher(lab_id, t.email))):
             raise not_yours("this lab belongs to another teacher" if lab_id else "only admins see practice sessions")
         return t
 

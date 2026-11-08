@@ -508,20 +508,8 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         lab = sandbox_lab(db, lab_id)
         if lab is None:
             raise HTTPException(404, "unknown lab")
-        check_sandbox(request, lab)
+        auth.check_lab(request, lab_id)  # a Sandbox Lab: its subject's people (Auth.check_lab)
         return lab
-
-    def check_sandbox(request: Request, lab: dict) -> None:
-        """Sandbox Labs belong to a subject: its owner, teachers and TAs (sandbox.py) may use its attendance."""
-        t = auth.teacher(request)
-        if t.admin:
-            return
-        with db.connect() as conn:
-            ok = conn.execute("""SELECT 1 FROM sbx_subjects WHERE id = ? AND owner_email = ? UNION
-                                 SELECT 1 FROM sbx_subject_people WHERE subject_id = ? AND email = ?""",
-                              (lab["subject_id"], t.email, lab["subject_id"], t.email)).fetchone()
-        if ok is None:
-            raise HTTPException(403, "this lab belongs to another teacher")
 
     # connection -----------------------------------------------------------
 
