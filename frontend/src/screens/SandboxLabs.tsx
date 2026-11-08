@@ -14,6 +14,8 @@ import { COLOR_VAR, tint, type Network } from "../sandbox/api";
 export interface MyLab {
   id: string; version: number; title: string; description: string; due_at: number | null; assessed: boolean;
   network: Network; min_desktop_version: string | null; n_assignments: number;
+  // from the grading side (optional until it is on the server): submitted / all tests passing counts, past due or closed
+  submitted?: number; passed_all?: number; closed?: boolean;
 }
 export interface MySubject { id: string; title: string; code: string; semester: string; color: string; labs: MyLab[] }
 
@@ -48,6 +50,7 @@ export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
   const [subjects, setSubjects] = useState<MySubject[] | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [download, setDownload] = useState<string | null>(null);
+  const last = (() => { try { return localStorage.getItem("studentide.sandbox.last"); } catch { return null; } })();
 
   useEffect(() => {
     // dev mode needs ?student_id=; with Google sign-in the server uses the cookie and ignores it
@@ -123,6 +126,13 @@ export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
                       <Badge>{lab.n_assignments} assignment{lab.n_assignments === 1 ? "" : "s"}</Badge>
                       <Badge tone={lab.network === "open" ? "neutral" : "accent"}>{NETWORK_LABEL[lab.network]}</Badge>
                       {lab.assessed && <Badge tone="warn"><ShieldCheck className="size-3" /> Assessed</Badge>}
+                      {lab.submitted != null && lab.n_assignments > 0 && (
+                        <Badge tone={lab.passed_all === lab.n_assignments ? "success" : lab.submitted ? "accent" : "neutral"}>
+                          {lab.submitted} of {lab.n_assignments} submitted
+                        </Badge>
+                      )}
+                      {lab.closed && <Badge>Closed: open to look, not to submit</Badge>}
+                      {desktop && lab.id === last && <Badge tone="accent">Last opened</Badge>}
                       {due && <span className="inline-flex items-center gap-1 text-[11px] text-faint"><CalendarClock className="size-3" />{due}</span>}
                       {tooOld && <Badge tone="danger">Update the app to open</Badge>}
                       {!desktop && <span className="text-[11px] text-faint">Open in the app</span>}

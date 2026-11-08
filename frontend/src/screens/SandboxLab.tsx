@@ -47,6 +47,23 @@ interface StudentLab {
 }
 type Spec = StudentLab["assignments"][number];
 
+/** A graded submission (server side: "Record and grade sandbox lab work"); hidden tests carry only name + passed. */
+export interface Submission {
+  id: string; assignment_id: string; status: "queued" | "grading" | "graded" | "failed" | "no_tests";
+  passed: number | null; total: number | null; late?: boolean; submitted_at: number; graded_at: number | null; error?: string | null;
+  results?: Array<{ name: string; hidden?: boolean; passed: boolean; expected?: string; got?: string; stderr?: string; timed_out?: boolean }>;
+}
+const GRADING = new Set(["queued", "grading"]);
+
+/** Latest submission per assignment, or null where the server has no grading yet (404) . */
+async function latestSubmissions(labId: string, studentId: string): Promise<Record<string, Submission | null> | null> {
+  try {
+    const r = await api<{ assignments: Record<string, Submission | null> }>(
+      `/api/sandbox/my/labs/${encodeURIComponent(labId)}/submissions?student_id=${encodeURIComponent(studentId)}`);
+    return r.assignments ?? {};
+  } catch { return null; }
+}
+
 /** Build outputs and tool folders that the file list leaves out (the runtime does not sync them either). */
 const HIDDEN = /(^|\/)(node_modules|__pycache__|\.venv|venv|\.git|target|build|dist|\.cache)(\/|$)|\.(o|class|pyc)$|(^|\/)a\.out$/;
 
@@ -59,7 +76,8 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
   const [active, setActive] = useState("");
   const [sessions, setSessions] = useState<Record<string, LiveSession>>({});
   const [fsTick, setFsTick] = useState<Record<string, number>>({});
-  const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
+  const [subs, setSubs] = useState<Record<string, Submission | null> | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState<Record<string, boolean>>({});
   const sitting = useMemo(newSittingId, []);
   const live = useRef(new Map<string, LiveSession>());           // by assignment id
   const starting = useRef(new Map<string, Promise<LiveSession>>());
@@ -115,6 +133,8 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
     ]).then(([l, o]) => {
       if (cancelled) return;
       setLab(l);
+      try { localStorage.setItem("studentide.sandbox.last", labId); } catch { /* private mode */ }
+      void latestSubmissions(labId, studentId).then(setSubs);
       openedRef.current = o;
       setOpened(o);
       if (o.assignments[0]) switchTo(o.assignments[0].id);
@@ -141,7 +161,37 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
     };
   }, []);
 
+  // grading takes a few seconds on the server: poll while any submission is queued or grading
+  const grading = !!subs && Object.values(subs).some((x) => x && GRADING.has(x.status));
+  useEffect(() => {
+    if (!grading) return;
+    const t = setInterval(() => void latestSubmissions(labId, studentId).then((x) => x && setSubs(x)), 3000);
+    return () => clearInterval(t);
+  }, [grading, labId, studentId]);
+  const onSubmitted = (asgId: string, sub?: Submission | null) => {
+    setJustSubmitted((m) => ({ ...m, [asgId]: true }));
+    if (sub) setSubs((m) => ({ ...(m ?? {}), [asgId]: sub }));
+    void latestSubmissions(labId, studentId).then((x) => x && setSubs(x));
+  };
+
+  // Ctrl/Cmd+1…9: switch assignment (Run is Ctrl/Cmd+Enter inside the pane)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || !/^[1-9]$/.test(e.key)) return;
+      const a = openedRef.current?.assignments[Number(e.key) - 1];
+      if (a) { e.preventDefault(); switchTo(a.id); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [switchTo]);
+
   const leave = () => onBack();
+  const chip = (id: string) => {
+    const x = subs?.[id];
+    if (x?.status === "graded" && x.total) return x.passed === x.total ? "pass" : "partial";
+    if (x || justSubmitted[id]) return "submitted";
+    return sessions[id] ? "started" : "new";
+  };
   const specOf = (id: string) => lab?.assignments.find((a) => a.id === id);
 
   return (
@@ -200,10 +250,16 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
                 className={cn("relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px]", a.id === active ? "text-text" : "text-muted hover:text-text")}>
                 {a.id === active && <motion.span layoutId="sbx-asg" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
                 <span className={cn("relative grid size-6 shrink-0 place-items-center rounded-md font-mono text-[11px] font-semibold",
-                  submitted[a.id] ? "bg-success-soft text-success" : "bg-accent-soft text-accent")}>
-                  {submitted[a.id] ? <Check className="size-3.5" /> : i + 1}
+                  { pass: "bg-success-soft text-success", partial: "bg-warn-soft text-warn", submitted: "bg-success-soft text-success",
+                    started: "bg-accent-soft text-accent", new: "bg-surface-3 text-muted" }[chip(a.id)])}>
+                  {chip(a.id) === "pass" || chip(a.id) === "submitted" ? <Check className="size-3.5" /> : i + 1}
                 </span>
-                <span className="relative hidden min-w-0 flex-1 truncate md:block">{a.title}</span>
+                <span className="relative hidden min-w-0 flex-1 md:block">
+                  <span className="block truncate">{a.title}</span>
+                  <span className="block text-[11px] text-faint">{{ pass: "All tests pass", partial: `${subs?.[a.id]?.passed} of ${subs?.[a.id]?.total} tests pass`,
+                    submitted: GRADING.has(subs?.[a.id]?.status ?? "") ? "Grading…" : "Submitted", started: "In progress", new: "Not started" }[chip(a.id)]}
+                    {i < 9 && <span className="ml-1 hidden font-mono opacity-60 lg:inline">⌃{i + 1}</span>}</span>
+                </span>
               </button>
             ))}
             {opened.setup && <p className="mt-auto hidden px-2 text-[11px] text-faint md:block">Setup restored: {opened.setup.ok} of {opened.setup.replayed} package commands</p>}
@@ -212,7 +268,8 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
           {opened.assignments.map((a) => sessions[a.id] && specOf(a.id) ? (
             <div key={a.id} className={cn("min-h-0 min-w-0 flex-1", a.id === active ? "flex" : "hidden")}>
               <AssignmentPane instanceId={opened.instanceId} a={a} spec={specOf(a.id)!} session={sessions[a.id]}
-                active={a.id === active} fsTick={fsTick[a.id] ?? 0} onSubmitted={() => setSubmitted((s) => ({ ...s, [a.id]: true }))} />
+                active={a.id === active} fsTick={fsTick[a.id] ?? 0} submission={subs?.[a.id] ?? null}
+                onSubmitted={(sub) => onSubmitted(a.id, sub)} />
             </div>
           ) : a.id === active ? <div key={a.id} className="grid flex-1 place-items-center"><Spinner /></div> : null)}
         </div>
@@ -240,15 +297,16 @@ function Usage({ instanceId }: { instanceId: string }) {
   );
 }
 
-function AssignmentPane({ instanceId, a, spec, session, active, fsTick, onSubmitted }: {
-  instanceId: string; a: OpenedAsg; spec: Spec; session: LiveSession; active: boolean; fsTick: number; onSubmitted: () => void;
+function AssignmentPane({ instanceId, a, spec, session, active, fsTick, submission, onSubmitted }: {
+  instanceId: string; a: OpenedAsg; spec: Spec; session: LiveSession; active: boolean; fsTick: number;
+  submission: Submission | null; onSubmitted: (sub?: Submission | null) => void;
 }) {
   const sb = desktop!.sandbox;
   const [files, setFiles] = useState<string[]>([]);
   const [cur, setCur] = useState(a.open[0] ?? spec.open[0] ?? "");
   const [content, setContent] = useState<string | null>(null);
   const [saved, setSaved] = useState(true);
-  const [panel, setPanel] = useState<"statement" | "output" | "tests">("statement");
+  const [panel, setPanel] = useState<"statement" | "output" | "tests" | "grade">("statement");
   const [stdin, setStdin] = useState(spec.tests.visible?.[0]?.stdin ?? "");
   const [out, setOut] = useState<RunResult | null>(null);
   const [tests, setTests] = useState<TestResult[] | null>(null);
@@ -340,12 +398,22 @@ function AssignmentPane({ instanceId, a, spec, session, active, fsTick, onSubmit
     setBusy("submit");
     try {
       await flush();
-      await sb.submit(instanceId, a.id);
-      onSubmitted();
-      setNote("Submitted. Your teacher gets this copy of your files; you can keep working and submit again until the lab closes.");
+      const r = await sb.submit(instanceId, a.id) as { sha256: string; submission?: Submission };
+      onSubmitted(r.submission);
+      setPanel("grade");
+      setNote("Submitted. This copy of your files goes to your teacher; you can keep working and submit again until the lab closes.");
     } catch (e) { setNote(desktopError(e).message); }
     finally { setBusy(""); }
   };
+
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !busy && spec.run) { e.preventDefault(); void act("run"); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const visible = spec.tests.visible ?? [];
   const passed = tests?.filter((t) => t.passed).length ?? 0;
@@ -378,7 +446,7 @@ function AssignmentPane({ instanceId, a, spec, session, active, fsTick, onSubmit
             <span className="truncate font-mono text-xs text-text">{cur || "no file"}</span>
             <span className="text-[11px] text-faint">{saved ? "saved" : "saving…"}</span>
             <span className="flex-1" />
-            <Button size="sm" variant="primary" disabled={!!busy || !spec.run} onClick={() => act("run")} title={spec.run || "this assignment has no Run command"}>
+            <Button size="sm" variant="primary" disabled={!!busy || !spec.run} onClick={() => act("run")} title={spec.run ? `${spec.run} (Ctrl+Enter)` : "this assignment has no Run command"}>
               {busy === "run" ? <Spinner /> : <Play className="size-3.5 fill-current" />} Run
             </Button>
             {visible.length > 0 && (
@@ -405,15 +473,17 @@ function AssignmentPane({ instanceId, a, spec, session, active, fsTick, onSubmit
 
         <Card className="col-span-2 hidden min-h-0 flex-col overflow-hidden lg:col-span-1 lg:flex">
           <div className="flex gap-1 border-b border-border p-1.5 text-[13px]">
-            {(["statement", "output", "tests"] as const).map((t) => (
+            {(["statement", "output", "tests", ...(submission ? ["grade" as const] : [])] as const).map((t) => (
               <button key={t} onClick={() => setPanel(t)} className={cn("rounded-md px-2.5 py-1 font-medium capitalize", panel === t ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
                 {t}{t === "tests" && tests ? ` ${passed}/${tests.length}` : ""}
               </button>
             ))}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {panel === "grade" && submission && <Grade s={submission} />}
             {panel === "statement" && (
               <>
+                <Tips />
                 <h2 className="mb-2 text-[15px] font-semibold text-text">{spec.title}</h2>
                 <LessonText markdown={spec.statement || "*No statement.*"} language="" />
                 {spec.run && <p className="mt-3 text-xs text-muted">Run does <code className="font-mono text-text">{spec.run}</code> in this folder.</p>}
@@ -523,6 +593,52 @@ function DesktopTerminal({ instanceId, assignmentId, session, visible }: { insta
         <button onClick={() => { setExited(false); setGen((g) => g + 1); }}
           className="absolute bottom-3 right-3 rounded-md bg-surface px-2.5 py-1 text-xs font-medium text-text shadow">New shell</button>
       )}
+    </div>
+  );
+}
+
+/** The server's grade for the latest submission: every test, hidden ones by name only. */
+function Grade({ s }: { s: Submission }) {
+  if (GRADING.has(s.status)) return <p className="flex items-center gap-2 text-sm text-muted"><Spinner /> Grading on the server…</p>;
+  if (s.status === "failed") return <p className="text-sm text-danger">Grading failed: {s.error ?? "unknown error"}. Your submission is kept; your teacher can grade it again.</p>;
+  if (s.status === "no_tests") return <p className="text-sm text-muted">Submitted {new Date(s.submitted_at * 1000).toLocaleString()}. This assignment is marked by your teacher.</p>;
+  const all = s.total != null && s.passed === s.total;
+  return (
+    <div className="grid gap-1.5">
+      <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className={cn("flex items-center gap-1.5 text-sm font-semibold", all ? "text-success" : "text-text")}>
+        {all && <Check className="size-4" />}{s.passed} of {s.total} tests pass{s.late ? " · late" : ""}
+      </motion.p>
+      <p className="text-[11px] text-faint">Graded {s.graded_at ? new Date(s.graded_at * 1000).toLocaleString() : ""} on the server, hidden tests included.</p>
+      {s.results?.map((r, i) => (
+        <motion.div key={r.name + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+          className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40 bg-success-soft" : "border-danger/40 bg-danger-soft")}>
+          <p className="flex items-center gap-1 font-medium text-text">{r.passed ? <Check className="size-3.5 text-success" /> : <X className="size-3.5 text-danger" />}{r.name}
+            {r.hidden && <Badge className="ml-1">hidden</Badge>}{r.timed_out && <Badge tone="warn" className="ml-1">timed out</Badge>}</p>
+          {!r.passed && !r.hidden && r.expected !== undefined && <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-muted">expected {JSON.stringify(r.expected)}{"\n"}got      {JSON.stringify(r.got)}</pre>}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/** First-visit orientation, like the run/evaluate actions VPL and CodeGrade put up front; dismissed once for every lab. */
+function Tips() {
+  const KEY = "studentide.sandbox.tips";
+  const [show, setShow] = useState(() => { try { return !localStorage.getItem(KEY); } catch { return true; } });
+  if (!show) return null;
+  const close = () => { setShow(false); try { localStorage.setItem(KEY, "1"); } catch { /* private mode */ } };
+  return (
+    <div className="mb-3 rounded-lg border border-accent/30 bg-accent-soft p-2.5 text-[12px] text-text">
+      <div className="flex items-start justify-between gap-2">
+        <strong className="font-semibold">How this lab works</strong>
+        <button onClick={close} aria-label="Hide tips"><X className="size-3.5 text-muted" /></button>
+      </div>
+      <ol className="mt-1 grid list-decimal gap-0.5 pl-4 text-muted">
+        <li>Edit the files on the left; they save by themselves.</li>
+        <li><strong className="text-text">Run</strong> (Ctrl+Enter) runs the assignment; <strong className="text-text">Check</strong> tries the tests you can see.</li>
+        <li>The terminal below is a full Linux shell: install packages, use git, vim, gdb…</li>
+        <li><strong className="text-text">Submit</strong> sends your files to be graded. Your work also follows you to any other computer.</li>
+      </ol>
     </div>
   );
 }
