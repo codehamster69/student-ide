@@ -50,7 +50,7 @@ export const USER = "student";
 export const HOME = "/home/student";
 export const PROXY_IMAGE = "ghcr.io/codehamster69/studentide-sidproxy:1";
 export const PROXY_PORT = 8888;
-const LABEL = "studentide.instance";
+export const LABEL = "studentide.instance";
 
 // Docker's default set minus MKNOD and NET_RAW, plus ptrace for debuggers.
 const BASE_CAPS = ["CHOWN", "DAC_OVERRIDE", "FOWNER", "FSETID", "KILL", "SETGID", "SETUID", "SETPCAP", "NET_BIND_SERVICE", "SYS_CHROOT", "AUDIT_WRITE"];

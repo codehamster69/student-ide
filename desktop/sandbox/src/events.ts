@@ -1,5 +1,5 @@
 /**
- * Builders for the event schema v2 payloads the sandbox emits.
+ * Builders for the event schema v2/v3 payloads the sandbox emits.
  *
  * The runtime only builds `{type, data}`; the renderer's recorder adds seq
  * and t, so sandbox events share one ordered stream with editor events.
@@ -15,7 +15,7 @@ export const MAX_PASTE = 20_000; // same cap as editor pastes (recorder MAX_CLIP
 export type Surface = "editor" | "terminal" | "terminal-editor";
 
 export interface SandboxEvent {
-  type: "term_cmd" | "term_output" | "term_paste" | "run" | "pkg_install" | "net_conn";
+  type: "term_cmd" | "term_output" | "term_paste" | "run" | "pkg_install" | "net_conn" | "fs_change" | "port_open";
   data: Record<string, unknown>;
 }
 

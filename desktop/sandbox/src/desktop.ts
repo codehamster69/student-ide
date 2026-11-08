@@ -16,6 +16,7 @@ import { termPaste } from "./events.ts";
 import { replayRecipe, type FetchLike, type WorkspaceSync, type Assignment } from "./workspace.ts";
 import type { Terminal } from "./terminal.ts";
 import { watchProxy } from "./netlog.ts";
+import { FsWatch, readViaWatcher, startWatcher } from "./watcher.ts";
 import type { OpenedLab, SandboxApi, TerminalApi } from "./api.ts";
 import type { TestSpec } from "./run.ts";
 
@@ -54,6 +55,9 @@ interface OpenLabState {
   /** session key of the assignment used last; instance-wide events (net_conn) go there */
   active: string;
   stopNet?: () => void;
+  /** the sidecar watcher (fs_change, port_open); undefined while it is not running */
+  watch?: FsWatch;
+  stopWatch?: () => void;
 }
 
 export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shutdown(): Promise<void> } {
@@ -103,6 +107,32 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     return (await r.json()) as T;
   }
 
+  /** The sidecar file and port watcher, started after the instance (it joins its PID namespace). */
+  async function watch(l: OpenLabState): Promise<boolean> {
+    l.stopWatch?.();
+    const w = new FsWatch({
+      sessionKey: (path) => { const a = owner(l, path); return a ? keyOf2(l.def.id, a.id) : null; },
+      foreground: () => {
+        for (const t of terms.values()) {
+          if (t.instance !== l.instance) continue;
+          const fg = t.foreground();
+          if (fg) { const s = t.surface(); return { command: fg.command, editorFile: s.surface === "terminal-editor" ? (s.path ?? "") : null }; }
+        }
+        return null;
+      },
+      read: (path) => readViaWatcher(l.instance, path),
+    }, (sessionKey, ev) => ctx.emit("sandbox.event", { sessionKey, ...ev }), (_k, ev) => ctx.emit("sandbox.event", { sessionKey: l.active, ...ev }));
+    try {
+      l.stopWatch = await startWatcher(l.instance, w, () => { l.watch = undefined; });
+      l.watch = w;
+      return true;
+    } catch (e) {
+      // best effort: the lab still runs; the review shows that terminal file changes were not watched
+      ctx.emit("sandbox.progress", { instanceId: l.instance.name, message: `File watcher unavailable: ${String((e as Error)?.message ?? e)}` });
+      return false;
+    }
+  }
+
   async function replay(l: OpenLabState, instanceId: string): Promise<OpenedLab["setup"]> {
     if (!l.recipe.steps.length) return null;
     ctx.emit("sandbox.progress", { instanceId, message: `Restoring your setup: ${l.recipe.steps.length} package command(s)…` });
@@ -148,13 +178,15 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
         const files = await sync.open(ref(l, a), a.files ?? []);
         assignments.push({ id: a.id, title: a.title, workdir: a.workdir, sessionKey: keyOf2(def.id, a.id), files, open: a.open ?? [] });
       }
+      const watching = await watch(l);
       ctx.emit("sandbox.progress", { instanceId: id, message: "Ready", percent: 100 });
-      return { instanceId: id, labId: def.id, subjectId: def.subject.id, limitsEnforced: instance.limitsEnforced, network: def.network, setup, assignments };
+      return { instanceId: id, watching, labId: def.id, subjectId: def.subject.id, limitsEnforced: instance.limitsEnforced, network: def.network, setup, assignments };
     },
 
     async stop(instanceId) {
       const l = lab(instanceId);
       l.stopNet?.();
+      l.stopWatch?.();
       await l.sync.flushAll();
       for (const [tid, t] of terms) if (t.instance === l.instance) { t.close(); terms.delete(tid); }
       await l.instance.stop();
@@ -163,8 +195,11 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     async reset(instanceId) {
       const l = lab(instanceId);
       await l.sync.flushAll();
+      l.stopWatch?.();
       await l.instance.reset();
-      return replay(l, instanceId);
+      const r = await replay(l, instanceId);
+      await watch(l);
+      return r;
     },
 
     async stats(instanceId) {
@@ -178,6 +213,7 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
 
     async writeFile(instanceId, path, content) {
       const l = lab(instanceId);
+      l.watch?.expect(homePath(path), content); // the editor logged this save as edits already
       await l.instance.writeFile(path, content);
       const a = owner(l, path);
       if (a) l.sync.changed(ref(l, a));
@@ -270,6 +306,7 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     async shutdown() {
       for (const l of labs.values()) {
         l.stopNet?.();
+        l.stopWatch?.();
         await l.sync.flushAll().catch(() => {});
       }
       for (const t of terms.values()) t.close();

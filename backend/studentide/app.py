@@ -52,6 +52,8 @@ Learning lab (always open, never reviewed; see learn.py):
     GET  /api/learn[?student_id=]                  tracks and lessons, with the student's progress
     GET  /api/learn/lessons/{track}/{slug}
 
+Desktop event signing (batches.py): POST /api/devices?student_id= {public_key, app_version, platform};
+    POST /api/sessions/{id}/events also takes {schema_version, signed: {device_id, payload, sig}}
 Sandbox Labs workspaces (desktop app; snapshots + setup recipe, see workspaces.py):
     GET/PUT /api/workspaces/{lab_id}/{assignment_id}[/meta]?student_id=
     GET/PUT /api/workspaces/recipes/{subject_id}?student_id=
@@ -81,7 +83,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import (attendance, compete, desktop, grading, learn, live as live_mod, previews, retention, runner, sandbox,
+from . import (attendance, batches, compete, desktop, grading, learn, live as live_mod, previews, retention, runner, sandbox,
                teach, workspaces)
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
@@ -161,6 +163,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     """`auth_config` / `verify_google` replace the environment and Google's token check in tests,
     `attendance_transport` the HTTP calls to Roll Call (see attendance.Transport)."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
+    batches.init(db)
     cfg = auth_config or Config.from_env(admin_token)
     auth = Auth(db, cfg, verify_google)
     app = FastAPI(title="Student IDE", version="0.2.0")
@@ -332,9 +335,13 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     @app.post("/api/sessions/{session_id}/events")
     async def ingest(session_id: str, request: Request) -> dict:
         # Parsed by hand so navigator.sendBeacon (text/plain body) works on page close.
-        live_session(session_id, request)
+        row = live_session(session_id, request)
+        batch = None
         try:
             body = json.loads(await request.body())
+            if isinstance(body, dict) and isinstance(body.get("signed"), dict):
+                # desktop journal: signed, hash-chained envelope (batches.py)
+                body["events"], batch = batches.unwrap(db, row, body["signed"])
             raw_events = body["events"]
             if body.get("schema_version", SCHEMA_VERSION) not in SUPPORTED_VERSIONS or not isinstance(raw_events, list):
                 raise ValueError
@@ -353,10 +360,20 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
                 seq = raw.get("seq") if isinstance(raw, dict) else None
                 rejected.append({"seq": seq, "error": e.errors(include_url=False)[0]["msg"]})
         inserted = db.insert_events(session_id, good)
+        if batch is not None:
+            batches.record(db, batch)
         for ev in good:
             if ev["type"] == "session_end":
                 db.end_session(session_id, ev["data"].get("reason") or "end")
         return {"accepted": len(good), "inserted": inserted, "rejected": rejected, "max_seq": db.max_seq(session_id)}
+
+    @app.post("/api/devices")
+    def register_device(body: batches.DeviceIn, request: Request, student_id: str) -> dict:
+        """The desktop app's install key, so its event batches can be signed (batches.py)."""
+        sid = _student_id(student_id)
+        auth.own_student(request, sid)
+        db.get_or_create_student(sid)
+        return batches.register_device(db, sid, body)
 
     @app.get("/api/sessions/{session_id}/viewers")
     def viewers(session_id: str, request: Request) -> dict:
