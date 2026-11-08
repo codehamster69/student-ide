@@ -671,10 +671,12 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
             pr.startswith(("No hidden", "No reference")) for pr in a["problems"]) for a in out)}
 
     @ws_r.websocket("/{pid}/terminal")
-    async def terminal(ws: WebSocket, pid: str, assignment_id: str) -> None:
+    async def terminal(ws: WebSocket, pid: str, assignment_id: str, token: str = "") -> None:
+        # browsers can't set headers on a WebSocket: dev mode passes the admin token in the query
+        req = _Headers(ws, token) if token else ws
         try:
-            auth.require_teacher(ws)
-            p = running(pid, ws)
+            auth.require_teacher(req)
+            p = running(pid, req)
             _, a = lab_def(p, assignment_id)
         except HTTPException as e:
             await ws.close(code=4403 if e.status_code in (401, 403) else 4404, reason=str(e.detail)[:120])
@@ -692,6 +694,14 @@ def router(db: Database, require_teacher: Callable, auth, sandbox_router, driver
     r.previews = pv
     r.ws_router = ws_r
     return r
+
+
+class _Headers:
+    """A WebSocket seen as a request that sent the admin token header."""
+
+    def __init__(self, ws: WebSocket, token: str):
+        self.cookies = ws.cookies
+        self.headers = {**{k.lower(): v for k, v in ws.headers.items()}, "x-admin-token": token}
 
 
 async def pty_bridge(ws: WebSocket, argv: list[str], on_input: Callable[[], None]) -> None:

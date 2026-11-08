@@ -7,7 +7,7 @@ import "./ui/tokens.css";
 // on demand so the student editor bundle stays as small as before.
 const ReviewApp = lazy(() => import("./review/ReviewApp").then((m) => ({ default: m.ReviewApp })));
 
-const isTeacher = () => /^#\/(review|teach|live)/.test(location.hash);
+const isTeacher = () => /^#\/(review|teach|live|sandbox)/.test(location.hash);
 // "View as student" (#/student) is decided when the student app starts, so entering it remounts that app
 const isPreview = () => location.hash.startsWith("#/student");
 
