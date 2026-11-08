@@ -15,6 +15,7 @@ ever leads to a conversation, never a penalty.
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
+| Desktop app (Sandbox Labs) | shell in progress: Electron window on the site, browser sign-in, bridge for local labs, see [docs/desktop.md](docs/desktop.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
 
 ## Stack

@@ -20,6 +20,9 @@ every student endpoint acts only for the signed-in student:
     POST /api/auth/google               {credential}            -> account, sets the session cookie
     GET  /api/me                                   the signed-in account (401 if none)
     POST /api/auth/logout
+    GET  /api/desktop/config                       desktop app: min version, download link (desktop.py)
+    POST /api/auth/desktop/grant        {challenge}             browser -> one-time code for the desktop app
+    POST /api/auth/desktop/exchange     {code, verifier}        desktop app -> session cookie value
     GET  /api/admin/users                          admins only
     PUT  /api/admin/users/{email}       {role}     admin override (TAs, odd addresses)
     DELETE /api/admin/users/{email}/role           drop the override
@@ -76,7 +79,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import attendance, compete, grading, learn, live as live_mod, retention, runner, teach, workspaces
+from . import attendance, compete, desktop, grading, learn, live as live_mod, retention, runner, teach, workspaces
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .providers import PROVIDERS, ProviderError
@@ -506,6 +509,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
 
     app.include_router(learn.router(db, auth, _student_id))
     app.include_router(workspaces.router(db, auth, _student_id))
+    app.include_router(desktop.router(db, auth, me_json))
     attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
     app.include_router(attendance_router)
     app.include_router(attendance_router.student_router)

@@ -57,3 +57,15 @@ process channel. Version~1 recordings produce exactly the same features.
   to the college server, where the detector and review are unchanged.}
   \label{fig:desktop-client}
 \end{figure}
+
+The first piece, the desktop shell, is built (PR~\#37). Rather than bundle a
+copy of the web app, its window loads the server's own pages, so every
+existing feature works in the app unchanged and the very same recorder
+timestamps keys in the same Chromium; the shell adds a small bridge to local
+features, refuses camera, microphone and screen permissions, and keeps
+navigation on the college server. Google does not allow sign-in inside
+embedded browsers, so the app signs in through the system browser with a
+one-time code bound to a secret only the app holds (the loopback flow of
+RFC~8252), ending with the same session as on the web. Each session records
+whether it came from the browser or the app and a hashed per-install device
+id, so device effects can be analysed separately (RQ3).

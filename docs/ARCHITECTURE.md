@@ -20,6 +20,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `review.py` | Turns a recorded session into timeline evidence by running the frozen detector. |
 | `learn.py` + `learn/<lang>/` | Always-open learning lab; lessons are Markdown files. |
 | `attendance.py` | Roll Call integration: per-teacher keys, class groups, effective-participation rule, sends marks when a sitting/lab closes. |
+| `desktop.py` | Desktop app support: minimum app version, browser sign-in handoff (one-time code + PKCE). |
 | `runner.py`, `runner_service.py` | Compile/run student code (Python, C, C++, Java, JS) with limits; the service form runs in its own container. |
 | `providers/` | Question sources (bundled CodeContests/Codeforces/LeetCode/original sets, live MBPP/Exercism, link-only platforms); `polyglot.py` adapts function-style questions to every language. |
 | `workspaces.py` | Sandbox Labs: workspace snapshots (checked gzip tars) and setup recipes, so desktop work follows the student between machines. |
@@ -35,9 +36,13 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 - `teach/`, `live/`, `review/`, `compete/`, `learn/`: staff and student areas, each with its own `api.ts`.
 - `routes.ts`: every teacher-area hash route; `ui/`: design system (tokens, primitives, motion).
 
-### Desktop (`desktop/`)
-- `sandbox/` (`@studentide/sandbox`): local sandbox runtime, one Linux instance per (student, subject) through the
-  docker/podman CLI; terminal, runs, workspace sync, setup check, schema v2 events. See `docs/sandbox-runtime.md`.
+### Desktop app (`desktop/`)
+- `desktop/app/`: Electron shell that loads the server's web app in a locked-down window and exposes
+  `window.studentDesktop` (contract in `src/shared/`, one module per namespace in `src/main/modules/`).
+  `desktop/installer/` (engine setup) and `desktop/sandbox/` (local lab instances, terminals) plug into it.
+  See `docs/desktop.md`.
+- `desktop/sandbox/` (`@studentide/sandbox`): one Linux instance per (student, subject) through the docker/podman
+  CLI; terminal, runs, workspace sync, setup check, schema v2 events. See `docs/sandbox-runtime.md`.
 
 ## Main data paths
 

@@ -23,6 +23,7 @@ BASE=http://127.0.0.1:8000 TOKEN=change-me node frontend/e2e/record.mjs   # e2e,
 node frontend/e2e/screenshots.mjs out/ light          # thesis screenshots (or dark)
 python -m studentide.seed --db data/demo.sqlite3      # demo data for the review timeline
 cd backend && python -m studentide.harness dev --thesis ../thesis/latex   # test = held-out, run once, logged
+cd desktop/app && npm install && npm run build      # desktop shell; smoke: BASE=… GBASE=… xvfb-run -a node e2e/smoke.mjs
 cd thesis/latex && latexmk -pdf main.tex              # thesis PDF into build/
 ```
 No linter is configured; `tsc --noEmit` (part of `npm run build`) is the frontend check.
@@ -40,6 +41,8 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `desktop/sandbox/` Sandbox Labs runtime (Node+TS, no Electron): `npm test`; `SANDBOX_IT=1 npm run test:engine` needs Docker
 - `frontend/e2e/*.mjs` Playwright scripts, one per feature, run against a live server
 - `docs/` one doc per feature (detector, review, teaching, deploy, attendance…)
+- `desktop/app/` Electron shell (`src/shared/contract.ts` = bridge contract, `src/main/modules/<ns>.ts` per namespace);
+  `desktop/installer/`, `desktop/sandbox/` its engine and lab packages. See docs/desktop.md
 - `deploy/` Compose, Caddyfile, GCP startup script
 - `thesis/` brain log, LaTeX, evaluation ledger, progress diagram, plans
 
