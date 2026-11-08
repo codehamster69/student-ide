@@ -101,7 +101,14 @@ async function unpackStatic(host: Host): Promise<{ cli: string[]; env: Record<st
     host.writeFile(userPolicy, JSON.stringify({ default: [{ type: 'insecureAcceptAnything' }] }));
   }
   host.writeFile(path.join(conf, 'registries.conf'), 'unqualified-search-registries = ["ghcr.io", "docker.io"]\n');
-  return { cli: [path.join(bin, 'bin', 'podman')], env: { XDG_CONFIG_HOME: xdg } };
+  const env: Record<string, string> = { XDG_CONFIG_HOME: xdg };
+  // Podman needs a private runtime dir; without a login session (su, sudo -u, some kiosks) there is none.
+  const runtime = host.env.XDG_RUNTIME_DIR;
+  if (!runtime || !host.exists(runtime)) {
+    env.XDG_RUNTIME_DIR = path.join(root, 'run');
+    await host.run('mkdir', ['-p', '-m', '700', env.XDG_RUNTIME_DIR]);
+  }
+  return { cli: [path.join(bin, 'bin', 'podman')], env };
 }
 
 export async function setupLinux(host: Host, silent: boolean, say: (pct: number, msg: string) => void): Promise<EngineInfo> {

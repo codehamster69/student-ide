@@ -204,6 +204,7 @@ test('linux: password prompt dismissed -> static rootless podman in the home fol
   const res = await runSetup(opts(host));
   assert.equal(res.engine.cli[0], path.join('/data', 'engine', 'podman', 'podman-linux-amd64', 'usr', 'local', 'bin', 'podman'));
   assert.equal(res.engine.env!.XDG_CONFIG_HOME, path.join('/data', 'engine', 'podman', 'config'));
+  assert.equal(res.engine.env!.XDG_RUNTIME_DIR, path.join('/data', 'engine', 'podman', 'run')); // no login session in the fake
   assert.match(files[path.join('/data', 'engine', 'podman', 'config', 'containers', 'storage.conf')], /ignore_chown_errors/);
 });
 
