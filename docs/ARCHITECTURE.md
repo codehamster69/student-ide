@@ -21,10 +21,12 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `learn.py` + `learn/<lang>/` | Always-open learning lab; lessons are Markdown files. |
 | `sandbox.py` | Sandbox Labs catalogue: subjects (people, roster), environments (recipes → Dockerfiles, build callbacks), labs of assignments, library, the `studentide.sandbox-lab/1` definition for the desktop app. |
 | `previews.py`, `preview_service.py` | Capped cloud instances for teachers' "Try as a student" (seats, idle stop, Run/Check/verify, terminal WebSocket); the service is the only holder of the Docker socket. |
-| `registry_proxy.py`, `sandbox_build.py` | Registries-only forward proxy for previews (Compose `preview-proxy`); the image build script run by `.github/workflows/sandbox-images.yml` (buildx → GHCR → digest callback). |
+| `registry_proxy.py`, `sandbox_build.py` | Registries-only forward proxy for previews (Compose `preview-proxy`); the image build script run by `.github/workflows/sandbox-env-images.yml` (buildx → GHCR → digest callback). |
 | `attendance.py` | Roll Call integration: per-teacher keys, class groups, effective-participation rule, sends marks when a sitting/lab closes. |
+| `desktop.py` | Desktop app support: minimum app version, browser sign-in handoff (one-time code + PKCE). |
 | `runner.py`, `runner_service.py` | Compile/run student code (Python, C, C++, Java, JS) with limits; the service form runs in its own container. |
 | `providers/` | Question sources (bundled CodeContests/Codeforces/LeetCode/original sets, live MBPP/Exercism, link-only platforms); `polyglot.py` adapts function-style questions to every language. |
+| `workspaces.py` | Sandbox Labs: workspace snapshots (checked gzip tars) and setup recipes, so desktop work follows the student between machines. |
 | `retention.py`, `backup.py` | Purge raw key timings after N days (consent promise); gzipped SQLite backups. |
 | `replay.py`, `export.py` | Rebuild documents from edit events; load sessions for analysis. |
 | `detector/` | Phase 2: habit features per 30 s window, per-student baseline, two-channel (identity/process) CUSUM, synthetic typists, synthetic evaluation. |
@@ -36,6 +38,14 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 - `screens/`: student app (sign-in, consent, tasks, workspace, My attendance).
 - `teach/`, `live/`, `review/`, `compete/`, `learn/`, `sandbox/`: staff and student areas, each with its own `api.ts`.
 - `routes.ts`: every teacher-area hash route; `ui/`: design system (tokens, primitives, motion).
+
+### Desktop app (`desktop/`)
+- `desktop/app/`: Electron shell that loads the server's web app in a locked-down window and exposes
+  `window.studentDesktop` (contract in `src/shared/`, one module per namespace in `src/main/modules/`).
+  `desktop/installer/` (engine setup) and `desktop/sandbox/` (local lab instances, terminals) plug into it.
+  See `docs/desktop.md`.
+- `desktop/sandbox/` (`@studentide/sandbox`): one Linux instance per (student, subject) through the docker/podman
+  CLI; terminal, runs, workspace sync, setup check, schema v2 events. See `docs/sandbox-runtime.md`.
 
 ## Main data paths
 

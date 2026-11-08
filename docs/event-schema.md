@@ -1,4 +1,4 @@
-# Event schema (v1)
+# Event schema (v2)
 
 The editor records one stream of events per **session** (one student working
 on one task in one sitting). Everything later in the pipeline (30-second
@@ -14,7 +14,7 @@ SQLite, one file (`data/studentide.sqlite3` by default, `STUDENTIDE_DB` to chang
 | table      | one row per | key columns |
 |------------|-------------|-------------|
 | `students` | student     | `id` (roll number or pseudonym), `consented_at` |
-| `sessions` | sitting     | `id`, `student_id`, `task_id`, `started_at`, `ended_at`, `end_reason`, `schema_version`, `client_meta` (browser, screen, timezone), `lab_id`, `question_id`, `question_json` (the question as the student saw it; all three NULL for practice tasks) |
+| `sessions` | sitting     | `id`, `student_id`, `task_id`, `started_at`, `ended_at`, `end_reason`, `schema_version`, `client_meta` (browser, screen, timezone; `client`: `{kind: "web"}` or `{kind: "desktop", app_version, platform, arch, chrome, device, portable}` from the desktop app, see desktop.md), `lab_id`, `question_id`, `question_json` (the question as the student saw it; all three NULL for practice tasks) |
 | `labs`, `questions`, `lab_students` | teacher authoring | a lab (title, instructions, status draft/open/closed, `everyone`), its ordered questions (title, prompt, starter code, sample input) and its roster of roll numbers. See [docs/teaching.md](teaching.md). |
 | `events`   | event       | `(session_id, seq)` primary key, `t`, `type`, `data` (JSON), `received_at` |
 | `runs`     | Run click   | full `code`, `stdin`, `stdout`, `stderr`, `exit_code`, `duration_ms`, `error_type` |
@@ -70,6 +70,34 @@ Long "out" gaps followed by a burst of fluent typing are the classic transcripti
 
 **`session_start` / `session_end`** — `wall_clock_ms` anchors `t` to real time;
 `session_end.reason` is `submit` (Finish button) or `pagehide` (tab closed).
+
+### Version 2 (Sandbox Labs, desktop app)
+
+Additive: every v1 batch is a valid v2 batch and the server accepts both
+(`SUPPORTED_VERSIONS`). Built by `desktop/sandbox` (see
+[sandbox-runtime.md](sandbox-runtime.md)) and logged by the same recorder.
+
+- **`key.surface`** `editor` (default) / `terminal` (shell prompt) /
+  `terminal-editor` (vim, nano… in the terminal, with **`key.path`** = the file).
+  Only `editor` keys feed the detector's identity channel until terminal typing
+  is tested on the dev split.
+- **`edit.path`**, **`snapshot.path`**: the file in a multi-file workspace (null =
+  the one document of a web session). The detector replays each file separately;
+  `replay()` follows the main file (the first one seen) unless given a path.
+- **`run.source`** `button` / `test` / `terminal` and **`run.command`**. A compile
+  or run command typed in the terminal (`gcc`, `make`, `./main`, `python3 x.py`…)
+  is logged as a `run` with `run_id` `t-…` (no row in `runs`), so the process
+  channel counts it.
+- **`term_cmd`** — a command line from the terminal's shell hooks: `term_id`,
+  `phase` (`start` / `end`), `command`, `cwd`, and at `end` `exit_code` and
+  `duration_ms`. Best effort: the student has sudo and can remove the hooks.
+- **`term_output`** — per command: `bytes` written and an escape-free `tail` (2 KB).
+- **`term_paste`** — a paste into the terminal: `length`, `lines`, `text` (20 000
+  characters), `truncated`, `sha256`.
+- **`pkg_install`** — a package command that succeeded: `manager` (apt, pip,
+  npm, cargo, go, conda, gem), `action`, `packages`, `command`. Feeds the setup recipe.
+- **`net_conn`** — the instance reached a new host through the registries-only
+  proxy: `host`, `port`, `allowed`. Host names only, never contents.
 
 ## Reading the data
 

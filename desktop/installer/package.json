@@ -1,0 +1,30 @@
+{
+  "name": "@studentide/installer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sets up the Student IDE sandbox engine on the student's own PC: WSL2 + Podman distro on Windows, Lima VM on macOS, rootless Podman on Linux.",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "studentide-setup": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.json && node --test dist/test/*.test.js",
+    "package": "npm run build && npm --prefix ../app run build && electron-builder --projectDir ../app --config ../installer/packaging/electron-builder.yml"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron-builder": "^26.0.12",
+    "typescript": "~5.9.2"
+  }
+}

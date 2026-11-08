@@ -1,7 +1,7 @@
 """The Sandbox Labs build service: turns queued environment recipes into images.
 
 Runs outside the student-facing VM (a GitHub Actions job, see
-.github/workflows/sandbox-images.yml, or any machine with Docker buildx). It
+.github/workflows/sandbox-env-images.yml, or any machine with Docker buildx). It
 asks the server what to build, builds and pushes each image, smoke-tests it,
 and reports the digest back (sandbox.py, /api/sandbox/builds). Standard library
 only, so CI needs no install.

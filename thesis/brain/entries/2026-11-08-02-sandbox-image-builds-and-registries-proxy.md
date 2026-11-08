@@ -9,7 +9,7 @@ thesis-chapter: 12-conclusion (sec:desktop-client), 04-system-design
 
 Follow-up to 2026-11-08-01, on the same PR (codehamster69/student-ide#40), after Rohan's "do it":
 
-- `backend/studentide/sandbox_build.py` + `.github/workflows/sandbox-images.yml`: every 10 minutes a
+- `backend/studentide/sandbox_build.py` + `.github/workflows/sandbox-env-images.yml`: every 10 minutes a
   GitHub Actions job asks the server for queued environment versions, builds each recipe's Dockerfile for
   amd64 + arm64 with buildx, pushes it to GHCR, smoke-tests it (student user, sudo, bash, tar, script,
   editors, git, curl) and reports the digest or the failure log. A version stuck in `building` for 2 h is

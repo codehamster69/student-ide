@@ -1,0 +1,40 @@
+# Student IDE engine VM for macOS (Lima, Apple Virtualization framework).
+# Adapted from Lima v1.0.7 templates/podman.yaml (Apache-2.0). Differences:
+# no host folders are mounted (the sandbox must not see the student's home),
+# fixed small size, vz only. Fedora images are pinned by digest.
+vmType: vz
+cpus: 2
+memory: 2GiB
+disk: 20GiB
+images:
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:6205ae0c524b4d1816dbd3573ce29b5c44ed26c9fbc874fbe48c41c89dd0bac2"
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-41-1.4.aarch64.qcow2"
+  arch: "aarch64"
+  digest: "sha256:085883b42c7e3b980e366a1fe006cd0ff15877f7e6e984426f3c6c67c7cc2faa"
+mounts: []
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    set -eux -o pipefail
+    command -v podman >/dev/null 2>&1 && test -e /etc/lima-podman && exit 0
+    dnf -y install --best podman && touch /etc/lima-podman
+- mode: user
+  script: |
+    set -eux -o pipefail
+    systemctl --user enable --now podman.socket
+probes:
+- script: |
+    set -eux -o pipefail
+    if ! timeout 300s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "podman is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+portForwards:
+- guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
+  hostSocket: "{{.Dir}}/sock/podman.sock"

@@ -1,13 +1,15 @@
 // Buffers events and uploads them in batches. Field meanings are documented
 // in backend/studentide/schema.py and docs/event-schema.md.
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2; // v2 is additive (Sandbox Labs); the server accepts 1 and 2
 const FLUSH_MS = 2000;
 const MAX_BATCH = 500;
 
 export type EventType =
   | "key" | "edit" | "clipboard" | "cursor" | "run"
-  | "snapshot" | "focus" | "session_start" | "session_end";
+  | "snapshot" | "focus" | "session_start" | "session_end"
+  // v2, desktop Sandbox Labs (built by desktop/sandbox, logged here by the renderer)
+  | "term_cmd" | "term_output" | "term_paste" | "pkg_install" | "net_conn";
 
 export interface RecordedEvent {
   seq: number;

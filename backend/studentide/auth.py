@@ -252,16 +252,21 @@ class Auth:
 
     # -- cookie sessions
 
-    def sign_in(self, response: Response, email: str) -> None:
+    def new_session(self, email: str) -> tuple[str, float]:
+        """A fresh session token and its expiry (unix seconds); only its hash is stored."""
         token = secrets.token_urlsafe(32)
         now = time.time()
-        ttl = self.cfg.session_days * 86400
+        expires = now + self.cfg.session_days * 86400
         with self.db.connect() as conn:
             conn.execute("DELETE FROM auth_sessions WHERE expires_at < ?", (now,))
             conn.execute("INSERT INTO auth_sessions(token_sha256, email, created_at, expires_at) VALUES (?,?,?,?)",
-                         (_sha(token), email, now, now + ttl))
-        response.set_cookie(COOKIE, token, max_age=int(ttl), httponly=True, secure=self.cfg.secure_cookie,
-                            samesite="lax", path="/")
+                         (_sha(token), email, now, expires))
+        return token, expires
+
+    def sign_in(self, response: Response, email: str) -> None:
+        token, expires = self.new_session(email)
+        response.set_cookie(COOKIE, token, max_age=int(expires - time.time()), httponly=True,
+                            secure=self.cfg.secure_cookie, samesite="lax", path="/")
 
     def sign_out(self, request: Request, response: Response) -> None:
         token = request.cookies.get(COOKIE)

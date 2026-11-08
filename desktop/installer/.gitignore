@@ -1,0 +1,7 @@
+node_modules/
+dist/
+out/
+assets/lima/arm64/
+assets/lima/x64/
+assets/podman-static/
+assets/wsl/*.tar*

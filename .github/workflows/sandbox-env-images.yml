@@ -1,0 +1,53 @@
+# Sandbox Labs build service: builds the environment images teachers queue in the
+# web app and pushes them to GHCR, so the student-facing VM never builds anything.
+# See docs/sandbox-labs.md ("Building environment images").
+#
+# Set once in the repository settings:
+#   secrets.STUDENTIDE_BUILD_TOKEN  same value as the server's STUDENTIDE_BUILD_TOKEN
+#   vars.STUDENTIDE_URL             the server, e.g. https://studentide.hokora.xyz
+# After the first build, make the ghcr.io/<owner>/studentide-env package public
+# (Package settings → Change visibility) so the desktop app can pull without a login.
+name: Sandbox environment images
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # pick up queued environments every 10 minutes
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: sandbox-images
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: vars.STUDENTIDE_URL != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anything queued?
+        id: queue
+        env:
+          STUDENTIDE_BUILD_TOKEN: ${{ secrets.STUDENTIDE_BUILD_TOKEN }}
+        run: |
+          n=$(curl -fsS -H "x-build-token: $STUDENTIDE_BUILD_TOKEN" "${{ vars.STUDENTIDE_URL }}/api/sandbox/builds" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+        if: steps.queue.outputs.count != '0'
+      - uses: docker/setup-buildx-action@v3
+        if: steps.queue.outputs.count != '0'
+      - uses: docker/login-action@v3
+        if: steps.queue.outputs.count != '0'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, push and report
+        if: steps.queue.outputs.count != '0'
+        env:
+          STUDENTIDE_BUILD_TOKEN: ${{ secrets.STUDENTIDE_BUILD_TOKEN }}
+        run: python3 backend/studentide/sandbox_build.py --server "${{ vars.STUDENTIDE_URL }}"

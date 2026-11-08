@@ -173,6 +173,10 @@ def _new_lines(before: str, after: str, frm: int, text: str) -> tuple[int, bool]
 def streams(events: list[dict]) -> Streams:
     doc: str | None = None
     caret = 0
+    # schema v2: a desktop workspace has several files; each edit/snapshot names its path
+    # (None = the single document of a web session). `doc` is always the current file's text.
+    docs: dict[str | None, str | None] = {}
+    cur: str | None = None
     k_t, k_code, k_cls, k_shift, k_hold, k_comment, k_hand = [], [], [], [], [], [], []
     open_down: dict[str, int] = {}
     e_t, e_app, e_line, e_ins, e_paste = [], [], [], [], []
@@ -182,10 +186,18 @@ def streams(events: list[dict]) -> Streams:
     for ev in events:
         typ, d, t = ev["type"], ev["data"], ev["t"]
         end = max(end, t)
+        if typ in ("snapshot", "edit") and d.get("path") != cur:
+            docs[cur] = doc
+            cur = d.get("path")
+            doc = docs.get(cur)
         if typ == "snapshot":
             if doc is None:
                 doc = d["text"]
         elif typ == "key":
+            # terminal keys (shell prompt, vim/nano in the desktop terminal) are recorded but kept
+            # out of the identity channel until tested on the dev split (plan 4.2)
+            if d.get("surface", "editor") != "editor":
+                continue
             if d["cls"] in ("modifier", "nav") or d.get("ctrl") or d.get("meta"):
                 continue
             if d["action"] == "down":

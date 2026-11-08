@@ -1,0 +1,23 @@
+{
+  "name": "@studentide/desktop",
+  "productName": "Student IDE",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Student IDE desktop app: the Student IDE web app in a locked-down window, plus local Sandbox Labs.",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "npm --prefix ../sandbox run build && tsc -p .",
+    "typecheck": "tsc -p . --noEmit",
+    "start": "npm run build && electron .",
+    "smoke": "npm run build && node e2e/smoke.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^45.2.3",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@studentide/installer": "file:../installer",
+    "@studentide/sandbox": "file:../sandbox"
+  }
+}

@@ -204,7 +204,7 @@ the proxy variables, so `sudo apt install` works too.
 
 Images are built off the student-facing VM, by
 `backend/studentide/sandbox_build.py` (standard library only), run every 10
-minutes by the GitHub Actions workflow `.github/workflows/sandbox-images.yml`.
+minutes by the GitHub Actions workflow `.github/workflows/sandbox-env-images.yml`.
 It polls `GET /api/sandbox/builds` with `X-Build-Token: $STUDENTIDE_BUILD_TOKEN`,
 marks each job `building`, builds and pushes `{image, dockerfile}` for amd64 +
 arm64 with buildx, smoke-tests the result (student user, passwordless sudo,

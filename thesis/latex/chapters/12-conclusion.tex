@@ -20,7 +20,11 @@ inside the instance, file, process and network capture runs in a sidecar
 container they cannot stop, while key timing is captured in the app itself.
 The client is an Electron app whose installer also sets up its own container
 engine (rootless Podman in a small WSL2 distribution on Windows or a
-lightweight VM on macOS), so students need no Docker installation; the
+lightweight VM on macOS, and rootless Podman on Linux, unpacked into the
+student's home folder when they have no admin rights), so students need no
+Docker installation; the only step that can need an administrator is
+switching on WSL2 once, and virtualization switched off in the firmware is
+detected and explained rather than worked around; the
 student's files are snapshotted to the server so work follows them to another
 machine, including from a lab PC that cannot run the sandbox to one that can;
 cloud instances exist only for teachers to preview a lab. Electron uses the same Chromium engine as the web editor, so
@@ -34,6 +38,21 @@ their own machine, the client cannot be made tamper-proof; instead batches are
 signed and hash-chained, submissions are graded on the server, and at
 submission the server checks every file against the typing evidence behind it.
 
+The local runtime is now built (\texttt{desktop/sandbox}, documented in
+\texttt{docs/sandbox-runtime.md}). It drives Docker or Podman only through
+their shared command line, so the same code serves the installer's private
+engine on Windows, macOS and Linux. Each instance is isolated from the host
+but open inside (sudo, no privileged mode, a short list of capabilities, CPU,
+memory and process limits), and a lab is offline, limited to package
+registries through a proxy container that is its only route out, or open.
+Terminal commands are captured by shell hooks that the runtime installs on
+every start; because the student is root inside, these are best effort, while
+key timing stays in the app. The event schema moved to version~2, additively:
+keys carry the surface they were typed on, and only editor keys feed the
+identity channel until terminal typing has been tested on the development
+split; compile and run commands typed in the terminal count as runs for the
+process channel. Version~1 recordings produce exactly the same features.
+
 \begin{figure}[ht]
   \centering
   \resizebox{0.9\linewidth}{!}{\tikzfig{desktop-client}}
@@ -42,6 +61,19 @@ submission the server checks every file against the typing evidence behind it.
   to the college server, where the detector and review are unchanged.}
   \label{fig:desktop-client}
 \end{figure}
+
+The first piece, the desktop shell, is built (PR~\#37). Rather than bundle a
+copy of the web app, its window loads the server's own pages, so every
+existing feature works in the app unchanged and the very same recorder
+timestamps keys in the same Chromium; the shell adds a small bridge to local
+features, refuses camera, microphone and screen permissions, and keeps
+navigation on the college server. Google does not allow sign-in inside
+embedded browsers, so the app signs in through the system browser with a
+one-time code bound to a secret only the app holds (the loopback flow of
+RFC~8252), ending with the same session as on the web. Each session records
+whether it came from the browser or the app and a hashed per-install device
+id, so device effects can be analysed separately (RQ3).
+
 
 The teacher side of Sandbox Labs is built (Figure~\ref{fig:sandbox-teacher}).
 Teachers create subjects without approval and give each an environment chosen
