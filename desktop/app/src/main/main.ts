@@ -26,7 +26,8 @@ const portable = setupPaths();
 const devtools = !app.isPackaged || process.env.STUDENTIDE_DEVTOOLS === "1";
 const STATIC = join(__dirname, "..", "..", "static");
 
-app.enableSandbox();
+// --no-sandbox only for CI running as root (e2e/smoke.mjs); windows still get sandbox: true
+if (!process.argv.includes("--no-sandbox")) app.enableSandbox();
 if (!app.requestSingleInstanceLock()) app.quit();
 
 let win: BrowserWindow | null = null;
