@@ -521,6 +521,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     sandbox_router = sandbox.router(db, require_admin, auth)
     app.include_router(sandbox_router)
     app.include_router(sandbox_router.student_router)
+    app.state.sandbox = sandbox_router  # on_tests_changed: grading hooks its regrade in here
     preview_router = previews.router(db, require_admin, auth, sandbox_router,
                                      preview_driver if preview_driver is not None else previews.driver_from_env(),
                                      preview_limits)

@@ -84,7 +84,33 @@ export interface LabRow {
   shared: boolean;
   update_available?: boolean;
   updated_at: number;
+  grading_mode: GradingMode;
+  late: LatePolicy;
+  late_summary: string;
+  n_changes: number;
 }
+
+export type GradingMode = "tests" | "tests_manual" | "manual";
+export interface LatePolicy { mode: "closed" | "accept" | "penalty"; per_day_pct: number; max_days: number }
+export const GRADING: Record<GradingMode, { label: string; hint: string }> = {
+  tests: { label: "Tests only", hint: "The score is the share of tests passed. Nothing for you to do." },
+  tests_manual: { label: "Tests, then your review", hint: "Tests give a score; you can read the work and change it." },
+  manual: { label: "You grade by hand", hint: "Tests are only a guide for you and the student." },
+};
+export interface LabChange {
+  id: number;
+  lab_version: number;
+  assignment_id: string | null;
+  assignment_title: string | null;
+  by: string | null;
+  at: number;
+  summary: string;
+  fields: string[];
+  regraded: number | null;
+  can_undo: boolean;
+}
+export interface CopyCandidate { lab_id: string; lab_title: string; subject_title: string; assignments: { id: string; title: string }[] }
+export interface SetupLog { environment_id: string; script: string; kept: string[]; dropped: string[] }
 
 export interface SandboxFile { path: string; content: string; executable?: boolean }
 export interface TestCase { name: string; stdin: string; expected: string; hidden: boolean; compare: "text" | "json" | "tokens" }
@@ -142,6 +168,8 @@ export interface LibraryEntry {
 export interface Seats { total: number; used: number; free: number; next_free_at: number | null; idle_minutes: number; max_minutes: number }
 export interface Preview {
   id: string;
+  kind?: "lab" | "setup";
+  environment_id?: string | null;
   teacher_email: string;
   lab_id: string;
   lab_title: string;
