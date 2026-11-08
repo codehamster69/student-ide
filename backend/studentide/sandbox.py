@@ -1263,7 +1263,23 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
             raise HTTPException(404, "this lab is not open for you")
         return definition(store, store.one("SELECT * FROM sbx_labs WHERE id = ?", (lab_id,)), student=True)
 
+    LANG_BY_EXT = {"py": "python", "c": "c", "h": "c", "cpp": "cpp", "cc": "cpp", "java": "java", "js": "javascript"}
+
+    def session_question(student_id: str, lab_id: str, assignment_id: str) -> dict:
+        """POST /api/sessions for one assignment of a Sandbox lab (desktop app): the
+        question snapshot the session keeps. 403 unless the lab is open for this student."""
+        lab = next((l for l in visible_labs(student_id) if l["id"] == lab_id), None)
+        a = lab and store.one("SELECT * FROM sbx_assignments WHERE id = ? AND lab_id = ?", (assignment_id, lab_id))
+        if not a:
+            raise HTTPException(403, "this lab is not open for you")
+        subj = store.one("SELECT title, code FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
+        main = (json.loads(a["open_json"]) or [f["path"] for f in json.loads(a["files_json"])] or [""])[0]
+        return {"kind": "sandbox", "id": a["id"], "lab_id": lab_id, "lab_version": lab["version"], "title": a["title"],
+                "prompt": a["statement"], "run": a["run"], "main_file": main, "subject": subj["title"],
+                "subject_code": subj["code"], "language": LANG_BY_EXT.get(main.rsplit(".", 1)[-1].lower()) if "." in main else None}
+
     r.store = store  # previews.py reads lab definitions through it
+    r.session_question = session_question
     r.lab_access = lab_access
     r.student_router = open_r
     return r
