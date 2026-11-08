@@ -15,6 +15,7 @@ ever leads to a conversation, never a penalty.
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
+| Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
 
 ## Stack
 
@@ -99,6 +100,8 @@ STUDENTIDE_DB=data/demo.sqlite3 STUDENTIDE_ADMIN_TOKEN=change-me uvicorn student
 ```
 
 Students also have an always-open learning lab (concept lessons with runnable examples and small exercises), see [docs/learning-lab.md](docs/learning-lab.md).
+
+Sandbox Labs (`#/sandbox`): teachers create subjects with a Linux environment built from a tool checklist, labs of assignments with tests and a reference solution, share labs to a library, and try any lab in a short cloud preview. Students run them in the desktop app. See [docs/sandbox-labs.md](docs/sandbox-labs.md).
 
 Labs can mark attendance in Roll Call (the attendance site): attach class groups to a lab, and students who effectively took part are marked present in their own group when the lab closes. See [docs/attendance.md](docs/attendance.md).
 

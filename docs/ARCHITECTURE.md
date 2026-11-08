@@ -19,6 +19,8 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `live.py` | Live classroom view; students poll every 5 s, which doubles as presence. |
 | `review.py` | Turns a recorded session into timeline evidence by running the frozen detector. |
 | `learn.py` + `learn/<lang>/` | Always-open learning lab; lessons are Markdown files. |
+| `sandbox.py` | Sandbox Labs catalogue: subjects (people, roster), environments (recipes → Dockerfiles, build callbacks), labs of assignments, library, the `studentide.sandbox-lab/1` definition for the desktop app. |
+| `previews.py`, `preview_service.py` | Capped cloud instances for teachers' "Try as a student" (seats, idle stop, Run/Check/verify, terminal WebSocket); the service is the only holder of the Docker socket. |
 | `attendance.py` | Roll Call integration: per-teacher keys, class groups, effective-participation rule, sends marks when a sitting/lab closes. |
 | `runner.py`, `runner_service.py` | Compile/run student code (Python, C, C++, Java, JS) with limits; the service form runs in its own container. |
 | `providers/` | Question sources (bundled CodeContests/Codeforces/LeetCode/original sets, live MBPP/Exercism, link-only platforms); `polyglot.py` adapts function-style questions to every language. |
@@ -31,7 +33,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 - `recorder.ts` + `capture.ts`: framework-free capture; buffers events and uploads batches.
 - `editor/`: CodeMirror session, theme, resizable panes.
 - `screens/`: student app (sign-in, consent, tasks, workspace, My attendance).
-- `teach/`, `live/`, `review/`, `compete/`, `learn/`: staff and student areas, each with its own `api.ts`.
+- `teach/`, `live/`, `review/`, `compete/`, `learn/`, `sandbox/`: staff and student areas, each with its own `api.ts`.
 - `routes.ts`: every teacher-area hash route; `ui/`: design system (tokens, primitives, motion).
 
 ## Main data paths

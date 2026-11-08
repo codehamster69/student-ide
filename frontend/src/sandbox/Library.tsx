@@ -1,6 +1,7 @@
 // #/sandbox/library: labs teachers chose to share (no presets; plan §5.4).
 // Search, a preview drawer, and "Use this lab" into one of my subjects.
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, Library as LibraryIcon, Search, X } from "lucide-react";
 import { Badge, Button, Card, Input, Spinner, cn, item, stagger } from "../ui";
@@ -71,7 +72,8 @@ export function SandboxLibrary({ onAuthLost }: { onAuthLost: () => void }) {
           })}
         </motion.div>
       )}
-      <AnimatePresence>{open && <Drawer id={open} subjects={subjects ?? []} onClose={() => setOpen(null)} />}</AnimatePresence>
+      {/* portal: the page wrapper is transformed by its enter animation, which would trap position: fixed */}
+      {createPortal(<AnimatePresence>{open && <Drawer id={open} subjects={subjects ?? []} onClose={() => setOpen(null)} />}</AnimatePresence>, document.body)}
     </motion.div>
   );
 }

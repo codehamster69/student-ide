@@ -13,7 +13,7 @@ holds the Docker socket), UI in `frontend/src/sandbox/`.
 
 ## Lab definition format `studentide.sandbox-lab/1`
 
-This is the contract with the desktop app (`desktop/`) and the local sandbox
+This is the contract with the desktop app (`desktop/`, see `docs/desktop.md` from PR #37) and the local sandbox
 runtime. The server sends it; clients never construct one. It is additive: a
 client ignores fields it does not know, and a breaking change gets a new
 `format` value.
@@ -41,6 +41,7 @@ client ignores fields it does not know, and a breaking change gets a new
   "network": "registries",             // "open" | "registries" | "off"; assessed labs are never "open"
   "assessed": true,
   "status": "published",               // "draft" only in teacher previews
+  "min_desktop_version": null,         // e.g. "0.3.0": older apps say "Update the app to open this lab"
   "opens_at": null, "due_at": null,    // unix seconds or null
   "assignments": [
     {
@@ -59,7 +60,7 @@ client ignores fields it does not know, and a breaking change gets a new
         "kind": "io",                  // "io": stdin/expected pairs fed to `run`; "command": exit code decides
         "command": "",                 // kind "command": e.g. "make test" or "pytest -q"
         "timeout_s": 10,
-        "visible": [ { "name": "empty list", "stdin": "0\n", "expected": "\n", "compare": "trim" } ],
+        "visible": [ { "name": "empty list", "stdin": "0\n", "expected": "\n", "compare": "text" } ],
         "n_hidden": 3                  // hidden tests never leave the server
       }
     }
@@ -73,11 +74,14 @@ Rules that follow from the plan:
 - `workdir` is always `/home/student/labs/<lab id>/<assignment id>`; files are
   written only when the folder does not exist yet (a student's work is never
   overwritten by a newer starter).
-- `compare` is the same as web labs (`grading.py`): `exact`, `trim` (default), `tokens`.
+- `compare` is the same as web labs (`grading.py`): `text` (default: trailing spaces and newlines
+  ignored), `json`, `tokens` (numbers within 1e-6). `checker` is web-only.
 - The reference solution, hidden tests and the recipe's admin-only parts are
   never in a student's copy.
 - Image name: `${STUDENTIDE_SANDBOX_REGISTRY}/studentide-env-<env id>:<version>`
   (default registry `ghcr.io/codehamster69`).
+- Previews and the desktop runtime start the image with `sleep infinity`; the image's
+  `CMD` is the same, and it keeps `bash`, `tar` and `script` for the runtime.
 
 ## Recipes
 
@@ -154,3 +158,52 @@ belongs to its subject's people. Environments belong to their author; a
 **shared** environment can be used by every teacher but edited only by its
 author. Library entries are snapshots: using one makes an independent copy
 with a `based_on` link.
+
+## Teacher previews ("Try as a student")
+
+`previews.py` runs a lab in a short-lived instance on the VM, for teachers only
+(students never get a cloud instance). Caps, all from the environment:
+
+| variable | default | meaning |
+|---|---|---|
+| `STUDENTIDE_PREVIEW_URL` + `STUDENTIDE_PREVIEW_TOKEN` | unset | the preview service (Compose profile `previews`); unset = previews off |
+| `STUDENTIDE_PREVIEW_DOCKER=1` | unset | dev: use the docker CLI on this machine instead of the service |
+| `STUDENTIDE_PREVIEW_BUILD_LOCAL=1` | unset | dev: build a missing environment image from its Dockerfile |
+| `STUDENTIDE_PREVIEW_SEATS` | 3 | previews running at once, all teachers together; one per teacher |
+| `STUDENTIDE_PREVIEW_IDLE_MIN` / `_MAX_MIN` | 15 / 60 | idle stop and hard limit |
+| `STUDENTIDE_PREVIEW_CPUS` / `_MEMORY_MB` | 1 / 1024 | per preview, at most |
+| `STUDENTIDE_PREVIEW_NETWORK` + `STUDENTIDE_PREVIEW_PROXY` | unset | registries-only network (internal Docker network + allowlist proxy); without them previews have no network |
+
+A preview never gets the open internet, even for an open-network lab. Its
+container uses the same `docker run` flags as the desktop runtime (`--init`,
+`--user student`, capabilities listed one per `--cap-add`, never
+`--privileged`, no host mounts) plus the limits above. The app never holds the
+Docker socket: `preview_service.py` does, in its own container on the internal
+network, and accepts only containers named `sbxp-prv_…` and paths under
+`/home/student` or `/tmp`. The browser terminal is a WebSocket (JSON
+`{type: input|resize}` in, text out), proxied by the app to the service.
+
+The lab wizard's **Check** step uses a preview: per assignment, the reference
+solution laid over the starter must pass every test and the starter alone
+should fail at least one.
+
+## Building environment images
+
+Images are built off the student-facing VM. A build service (any CI job) polls
+`GET /api/sandbox/builds` with `X-Build-Token: $STUDENTIDE_BUILD_TOKEN`, builds
+and pushes each `{image, dockerfile}` (amd64 + arm64), then posts
+`{status: "ready", digest}` (or `"failed"` with a log) to
+`/api/sandbox/builds/{env}/{version}`. A raw Dockerfile waits for an admin's
+approval first. Until a version is ready the lab definition carries
+`digest: null` and the recipe, so a client can build it locally.
+
+## Checks
+
+- `backend/tests/test_sandbox.py`: subjects, people and TAs, rosters with
+  ranges and sections, recipes and Dockerfiles, build callbacks, publish rules,
+  the student definition (no hidden tests or solutions), library share/use/update.
+- `backend/tests/test_previews.py`: seats, one per teacher, idle stop, time
+  limit, files, run/check/verify; one test runs real Docker when
+  `ubuntu:24.04` is present.
+- `frontend/e2e/sandbox.mjs`: the whole teacher flow in a browser against a
+  server with previews on, writing screenshots to `thesis/latex/snapshots/sandbox/`.
