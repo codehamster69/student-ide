@@ -52,6 +52,8 @@ Learning lab (always open, never reviewed; see learn.py):
 Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
 POST /api/sessions/{id}/submit, see compete.py.
+Sandbox Labs (subjects, environments, library, teacher previews): /api/sandbox/*,
+see sandbox.py, previews.py and docs/sandbox-labs.md.
 
 Run with:  uvicorn studentide.app:create_app --factory
 (env STUDENTIDE_DB picks the database file)
@@ -72,7 +74,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
-from . import attendance, compete, grading, learn, live as live_mod, retention, runner, teach
+from . import attendance, compete, grading, learn, live as live_mod, previews, retention, runner, sandbox, teach
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, Database, has_consent
 from .providers import PROVIDERS, ProviderError
@@ -147,7 +149,7 @@ def latest_code(db: Database, student_id: str, question_id: str, language: str |
 
 def create_app(db_path: str | Path | None = None, admin_token: str | None = None, serve_frontend: bool = True,
                auth_config: Config | None = None, verify_google=None, live_mode: str | None = None,
-               attendance_transport=None) -> FastAPI:
+               attendance_transport=None, preview_driver=None, preview_limits=None) -> FastAPI:
     """`auth_config` / `verify_google` replace the environment and Google's token check in tests,
     `attendance_transport` the HTTP calls to Roll Call (see attendance.Transport)."""
     db = Database(db_path or os.environ.get("STUDENTIDE_DB", "data/studentide.sqlite3"))
@@ -506,6 +508,18 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     app.include_router(attendance_router.student_router)
     app.include_router(teach.router(db, require_admin, auth, attendance_router.on_lab_closed, attendance_router.sittings))
     app.include_router(compete.router(db, require_admin, auth))
+    sandbox_router = sandbox.router(db, require_admin, auth)
+    app.include_router(sandbox_router)
+    app.include_router(sandbox_router.student_router)
+    preview_router = previews.router(db, require_admin, auth, sandbox_router,
+                                     preview_driver if preview_driver is not None else previews.driver_from_env(),
+                                     preview_limits)
+    app.include_router(preview_router)
+    app.include_router(preview_router.ws_router)
+    app.state.previews = preview_router.previews
+    if preview_router.previews.enabled and preview_driver is None:  # a real driver: clear leftovers, stop idle ones
+        preview_router.previews.on_restart()
+        previews.start_reaper(preview_router.previews)
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))
 
     if serve_frontend and FRONTEND_DIST.is_dir():
