@@ -19,8 +19,17 @@ Effective participation (per student, per lab day; thresholds per lab):
     active minutes  >= min_active_minutes (default 10)
                        distinct wall-clock minutes with an edit, a Run or a Check
     typed chars     >= min_typed_chars (default 40)
-                       characters typed into the editor; pastes, drops and Reset don't count
+                       characters typed into the editor; pastes, drops and Reset don't count.
+                       In a Sandbox Lab, characters typed in the lab's terminal (the prompt,
+                       vim, nano) count too (Rohan, 2026-11-08): printable key presses there,
+                       since terminal input has no edit events
     runs + checks   >= 1, only when require_run is set (default off)
+
+Sandbox Labs (desktop app, sandbox.py) use the same rule and Roll Call class groups; their
+sessions carry the sandbox lab id in sessions.lab_id. Active minutes there also count terminal
+commands, terminal typing and the app's Run/Check presses (their `run` events: the desktop
+runs locally, so there are no runs/checks rows). Terminal typing is read from key events, so
+a sandbox lab day should be sent before retention.py purges raw keys (closing the lab sends it).
 
 Only the lab's own sessions count: learning-lab practice (context 'learn') and
 staff "View as student" previews (context 'preview') never do. Only edit, run
@@ -71,6 +80,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import sqlite3
 import os
 import secrets
 import threading
@@ -116,15 +127,17 @@ CREATE TABLE IF NOT EXISTS student_keys (
 
 -- lab_classes and lab_runs live in db.py (labs_for_student reads them).
 
+-- lab_id is a web lab (labs) or a Sandbox Lab (sbx_labs), so these tables carry no
+-- foreign key; Database.delete_lab clears them (older databases are rebuilt once, below).
 CREATE TABLE IF NOT EXISTS lab_attendance (
-    lab_id        TEXT PRIMARY KEY REFERENCES labs(id) ON DELETE CASCADE,
+    lab_id        TEXT PRIMARY KEY,
     rule_json     TEXT NOT NULL,
     auto_send     INTEGER NOT NULL DEFAULT 1  -- send on closing the lab
 );
 
 -- One row per lab day and class group sent to Roll Call (the latest send).
 CREATE TABLE IF NOT EXISTS attendance_sent (
-    lab_id        TEXT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    lab_id        TEXT NOT NULL,
     day           TEXT NOT NULL,             -- yyyy-mm-dd in STUDENTIDE_TIMEZONE
     class_id      TEXT NOT NULL,
     rollcall_id   TEXT NOT NULL,             -- Roll Call session uuid
@@ -143,9 +156,53 @@ CREATE TABLE IF NOT EXISTS attendance_sent (
 DEFAULT_RULE = {"min_active_minutes": 10, "min_typed_chars": 40, "require_run": False}
 COUNTED_CONTEXT = None  # sessions.context: NULL = a real lab session (not 'learn', not 'preview')
 NOT_TYPED = ("input.paste", "input.drop")
+TYPED_KEY = ("letter", "digit", "space", "punct")  # a printable key press (terminal typing, Sandbox Labs)
+
+
+def sandbox_lab(db: Database, lab_id: str) -> dict | None:
+    """A Sandbox Lab as attendance needs it ({id, title, subject, subject_id}), or None."""
+    with db.connect() as conn:
+        try:
+            row = conn.execute("""SELECT l.id, l.title, l.subject_id, s.title AS subject_title, s.code AS subject_code
+                                  FROM sbx_labs l JOIN sbx_subjects s ON s.id = l.subject_id WHERE l.id = ?""", (lab_id,)).fetchone()
+        except Exception:  # sandbox tables not created (sandbox router not mounted)
+            return None
+    if row is None:
+        return None
+    subject = f"{row['subject_code']} {row['subject_title']}".strip() if row["subject_code"] else row["subject_title"]
+    return {"id": row["id"], "title": row["title"], "subject": subject, "subject_id": row["subject_id"], "kind": "sandbox"}
+
+
+def any_lab(db: Database, lab_id: str):
+    """A web lab (labs table) or a Sandbox Lab."""
+    return db.get_lab(lab_id) or sandbox_lab(db, lab_id)
+
+
+ANY_LAB_TABLES = ("lab_classes", "lab_attendance", "attendance_sent")
+
+
+def _drop_lab_fk(db: Database) -> None:
+    """Databases from before Sandbox Labs had attendance: rebuild the tables whose lab_id
+    referenced labs(id), without that foreign key (SQLite cannot drop one in place)."""
+    conn = sqlite3.connect(db.path, timeout=10)
+    try:
+        for table in ANY_LAB_TABLES:
+            row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone()
+            if row is None or "REFERENCES labs(id)" not in row[0]:
+                continue
+            new_sql = re.sub(r"\s*REFERENCES labs\(id\) ON DELETE CASCADE", "", row[0]).replace(f"CREATE TABLE {table}", f"CREATE TABLE {table}__new", 1)
+            conn.execute("PRAGMA foreign_keys=OFF")
+            with conn:
+                conn.execute(new_sql)
+                conn.execute(f"INSERT INTO {table}__new SELECT * FROM {table}")
+                conn.execute(f"DROP TABLE {table}")
+                conn.execute(f"ALTER TABLE {table}__new RENAME TO {table}")
+    finally:
+        conn.close()
 
 
 def ensure_schema(db: Database) -> None:
+    _drop_lab_fk(db)
     with db.connect() as conn:
         conn.executescript(SCHEMA)
         cols = {r[1] for r in conn.execute("PRAGMA table_info(attendance_links)")}
@@ -255,12 +312,13 @@ def describe(rule: dict) -> str:
 
 
 def _session_spans(db: Database, lab_id: str) -> list:
-    """Each counted session of the lab with the first and last moment of an edit
-    (server seconds), from the events index alone: no event bodies are read."""
+    """Each counted session of the lab with the first and last moment of an edit (or, in a
+    Sandbox Lab, a terminal command, Run or file change), in server seconds, from the events
+    index alone: no event bodies are read."""
     with db.connect() as conn:
         return conn.execute("""SELECT s.id, s.student_id, s.started_at,
                                       s.started_at + MIN(e.t) / 1000.0 AS first, s.started_at + MAX(e.t) / 1000.0 AS last
-                               FROM sessions s JOIN events e ON e.session_id = s.id AND e.type = 'edit'
+                               FROM sessions s JOIN events e ON e.session_id = s.id AND e.type IN ('edit', 'term_cmd', 'run', 'fs_change')
                                WHERE s.lab_id = ? AND s.context IS NULL GROUP BY s.id""", (lab_id,)).fetchall()
 
 
@@ -319,14 +377,34 @@ def lab_activity(db: Database, lab_id: str, day: str | None = None) -> dict[str,
                                WHERE s.lab_id = ? AND s.context IS NULL""", (lab_id, lab_id)).fetchall()
     by_id = {s["id"]: s for s in sessions}
     for s in reading:
-        for e in db.iter_events(s["id"], types=("edit",)):
+        for e in db.iter_events(s["id"], types=("edit", "key", "term_cmd", "run", "fs_change")):
             ts = s["started_at"] + e["t"] / 1000.0
+            d = e["data"]
+            if e["type"] == "key":
+                # Sandbox Labs: terminal typing (prompt, vim, nano) counts; editor keys are already counted as edits
+                if d.get("surface", "editor") == "editor" or d.get("action") != "down" or d.get("repeat") \
+                        or d.get("cls") not in TYPED_KEY or d.get("ctrl") or d.get("meta"):
+                    continue
+                x = ev(day_of(ts), s["student_id"])
+                x["sessions"].add(s["id"])
+                touch(x, ts)
+                x["typed"] += 1
+                continue
+            if e["type"] != "edit":
+                x = ev(day_of(ts), s["student_id"])
+                x["sessions"].add(s["id"])
+                touch(x, ts)
+                if e["type"] == "run" and d.get("source") in ("button", "terminal"):
+                    x["runs"] += 1  # desktop runs are local: no row in the runs table
+                elif e["type"] == "run" and d.get("source") == "test":
+                    x["checks"] += 1
+                continue
             x = ev(day_of(ts), s["student_id"])
             x["sessions"].add(s["id"])
             touch(x, ts)
-            origin = e["data"].get("origin", "")
+            origin = d.get("origin", "")
             n = sum(len(c[2]) for c in e["data"].get("changes", []))
-            if origin.startswith("input") and origin not in NOT_TYPED:
+            if origin.startswith("input") and origin not in NOT_TYPED:  # "reset"/"reload" are not input: never typed
                 x["typed"] += n
             elif origin in NOT_TYPED:
                 x["pasted"] += n
@@ -424,10 +502,26 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
 
     def lab_or_404(lab_id: str, request: Request):
         lab = db.get_lab(lab_id)
+        if lab is not None:
+            auth.check_lab(request, lab_id)
+            return lab
+        lab = sandbox_lab(db, lab_id)
         if lab is None:
             raise HTTPException(404, "unknown lab")
-        auth.check_lab(request, lab_id)
+        check_sandbox(request, lab)
         return lab
+
+    def check_sandbox(request: Request, lab: dict) -> None:
+        """Sandbox Labs belong to a subject: its owner, teachers and TAs (sandbox.py) may use its attendance."""
+        t = auth.teacher(request)
+        if t.admin:
+            return
+        with db.connect() as conn:
+            ok = conn.execute("""SELECT 1 FROM sbx_subjects WHERE id = ? AND owner_email = ? UNION
+                                 SELECT 1 FROM sbx_subject_people WHERE subject_id = ? AND email = ?""",
+                              (lab["subject_id"], t.email, lab["subject_id"], t.email)).fetchone()
+        if ok is None:
+            raise HTTPException(403, "this lab belongs to another teacher")
 
     # connection -----------------------------------------------------------
 
@@ -662,7 +756,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
 
     @r.put("/labs/{lab_id}/classes")
     def attach(lab_id: str, body: AttachIn, request: Request) -> dict:
-        lab_or_404(lab_id, request)
+        lab = lab_or_404(lab_id, request)
         email = me(request)
         want = list(dict.fromkeys(body.class_ids))
         have = {c["class_id"]: c for c in attached(lab_id)}
@@ -685,7 +779,8 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         with db.connect() as conn:
             conn.execute("DELETE FROM lab_classes WHERE lab_id = ?", (lab_id,))
             conn.executemany("INSERT INTO lab_classes VALUES (?,?,?,?,?,?)", rows)
-        if body.add_to_roster and rows:
+        # a Sandbox Lab's students come from its subject's sections (sandbox.py), not a lab roster
+        if body.add_to_roster and rows and not isinstance(lab, dict):
             students = {s for row in rows for s in json.loads(row[3])}
             db.set_roster(lab_id, sorted(set(db.lab_roster(lab_id)) | students))
         return overview(lab_id)
@@ -758,7 +853,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
     def end_run(run: dict, request: Request, send_it: bool = True) -> list[dict]:
         with db.connect() as conn:
             conn.execute("UPDATE lab_runs SET closed_at = ? WHERE id = ?", (time.time(), run["id"]))
-        lab = db.get_lab(run["lab_id"])
+        lab = any_lab(db, run["lab_id"])
         if not send_it or not settings(lab["id"])["auto_send"] or not attached(lab["id"]):
             return []
         day = local_day(run["opened_at"])
@@ -840,7 +935,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
                     "faculty": faculty,
                     "startTime": hhmm(min(firsts)) if firsts else "", "endTime": hhmm(max(lasts)) if lasts else "",
                     "marks": marks,
-                    "source": {"app": "student-ide", "title": lab["title"], "url": f"{base_url}#/teach/labs/{lab['id']}",
+                    "source": {"app": "student-ide", "title": lab["title"], "url": f"{base_url}#/{'sandbox' if isinstance(lab, dict) and lab.get('kind') == 'sandbox' else 'teach'}/labs/{lab['id']}",
                                "rule": p["describe"]}}
             error = None
             try:
@@ -876,7 +971,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         if not st["auto_send"] or not attached(lab_id):
             return []
         done = {s["day"] for s in sent(lab_id) if not s["error"]}
-        lab = db.get_lab(lab_id)
+        lab = any_lab(db, lab_id)
         return [send(lab, d, None, me(request), "lab closed", base(request))
                 for d in sorted(lab_days(db, lab_id)) if d not in done]
 

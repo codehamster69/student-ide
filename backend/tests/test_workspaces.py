@@ -147,7 +147,7 @@ def test_v1_and_v2_batches_are_accepted(client):
     r = client.post(f"/api/sessions/{sid}/events", json=v2)
     assert r.status_code == 200, r.text
     assert r.json()["rejected"] == [] and r.json()["accepted"] == 9
-    assert client.post(f"/api/sessions/{sid}/events", json={"schema_version": 3, "events": []}).status_code == 400
+    assert client.post(f"/api/sessions/{sid}/events", json={"schema_version": 4, "events": []}).status_code == 400
 
 
 def test_detector_ignores_terminal_keys_and_follows_files():

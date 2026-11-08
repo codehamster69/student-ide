@@ -57,6 +57,7 @@ Desktop event signing (batches.py): POST /api/devices?student_id= {public_key, a
 Sandbox Labs workspaces (desktop app; snapshots + setup recipe, see workspaces.py):
     GET/PUT /api/workspaces/{lab_id}/{assignment_id}[/meta]?student_id=
     GET/PUT /api/workspaces/recipes/{subject_id}?student_id=
+    GET  /api/review/sessions/{id}/sandbox          Sandbox Lab lanes (sandbox_review.py), staff
 
 Teacher authoring (same access): /api/teach/*, see teach.py.
 Class competitions: /api/teach/competitions/*, /api/competitions/*,
@@ -84,9 +85,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
 from . import (attendance, batches, compete, desktop, grading, learn, live as live_mod, previews, retention, runner, sandbox,
-               teach, workspaces)
+               sandbox_review, teach, workspaces)
 from .auth import Auth, Config
-from .db import CONSENT_VERSION, Database, has_consent
+from .db import CONSENT_VERSION, SANDBOX_CONSENT_VERSION, Database, has_consent, has_sandbox_consent
 from .providers import PROVIDERS, ProviderError
 from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
 from .replay import ReplayError, final_text
@@ -101,6 +102,10 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 class LoginIn(BaseModel):
     student_id: str
+
+
+class ConsentIn(LoginIn):
+    scope: str = Field(default="web", pattern="^(web|sandbox)$")  # "sandbox" = consent v3 (Sandbox Labs)
 
 
 class GoogleIn(BaseModel):
@@ -214,7 +219,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def me_json(user: dict) -> dict:
         st = db.get_or_create_student(user["student_id"])
         return {k: user[k] for k in ("email", "name", "role", "student_id", "program", "year", "branch", "roll")} | {
-            "consented": has_consent(st)}
+            "consented": has_consent(st), "sandbox_consented": has_sandbox_consent(st)}
 
     @app.get("/api/auth/config")
     def auth_config_json() -> dict:
@@ -264,15 +269,15 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         if cfg.google:
             raise HTTPException(410, "sign in with your college Google account")
         row = db.get_or_create_student(_student_id(body.student_id))
-        return {"student_id": row["id"], "consented": has_consent(row)}
+        return {"student_id": row["id"], "consented": has_consent(row), "sandbox_consented": has_sandbox_consent(row)}
 
     @app.post("/api/consent")
-    def consent(body: LoginIn, request: Request) -> dict:
+    def consent(body: ConsentIn, request: Request) -> dict:
         sid = _student_id(body.student_id)
         auth.own_student(request, sid)
         db.get_or_create_student(sid)
-        db.record_consent(sid)
-        return {"student_id": sid, "consented": True}
+        db.record_consent(sid, SANDBOX_CONSENT_VERSION if body.scope == "sandbox" else CONSENT_VERSION)
+        return {"student_id": sid, "consented": True, "sandbox_consented": body.scope == "sandbox" or has_sandbox_consent(db.get_or_create_student(sid))}
 
     @app.post("/api/sessions")
     def start_session(body: SessionIn, request: Request) -> dict:
@@ -527,6 +532,11 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         teacher_session(session_id, request)
         return replay_data(db, session_id)
 
+    @app.get("/api/review/sessions/{session_id}/sandbox", dependencies=[Depends(require_admin)])
+    def review_sandbox(session_id: str, request: Request) -> dict:
+        """Sandbox Lab lanes: terminal, saves, ports, offline, chain breaks, unseen content (sandbox_review.py)."""
+        return sandbox_review.lanes(db, teacher_session(session_id, request))
+
     app.include_router(learn.router(db, auth, _student_id))
     app.include_router(workspaces.router(db, auth, _student_id))
     app.include_router(desktop.router(db, auth, me_json))
@@ -535,7 +545,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     app.include_router(attendance_router.student_router)
     app.include_router(teach.router(db, require_admin, auth, attendance_router.on_lab_closed, attendance_router.sittings))
     app.include_router(compete.router(db, require_admin, auth))
-    sandbox_router = sandbox.router(db, require_admin, auth)
+    sandbox_router = sandbox.router(db, require_admin, auth, attendance_router.on_lab_closed)
     app.include_router(sandbox_router)
     app.include_router(sandbox_router.student_router)
     preview_router = previews.router(db, require_admin, auth, sandbox_router,

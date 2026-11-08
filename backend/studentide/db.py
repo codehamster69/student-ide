@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS lab_students (
 
 -- Roll Call class groups attached to a lab, with a copy of their student ids.
 CREATE TABLE IF NOT EXISTS lab_classes (
-    lab_id        TEXT NOT NULL REFERENCES labs(id) ON DELETE CASCADE,
+    lab_id        TEXT NOT NULL,             -- a web lab or a Sandbox Lab (no foreign key: delete_lab clears it)
     class_id      TEXT NOT NULL,             -- Roll Call class uuid
     label         TEXT NOT NULL,             -- "CSE · A · G1"
     students_json TEXT NOT NULL,             -- registration numbers on its roster, upper-case
@@ -169,11 +169,20 @@ MIGRATIONS = {
 # Bumped whenever the consent screen promises something new, so every student
 # reads and agrees again. 2: teachers can watch a lab live (live.py).
 CONSENT_VERSION = 2
+# 3: Sandbox Labs (desktop app): terminal keys and commands, files changed outside the editor,
+# workspace copies, packages and hosts, the terminal in the live view. Asked only before a
+# student's first Sandbox Lab, so web-only students are not asked again; agreeing to 3 covers 2.
+SANDBOX_CONSENT_VERSION = 3
 
 
 def has_consent(row) -> bool:
     """Agreed to the current consent text (a NULL version is the original text, 1)."""
     return row["consented_at"] is not None and (row["consent_version"] or 1) >= CONSENT_VERSION
+
+
+def has_sandbox_consent(row) -> bool:
+    """Agreed to the Sandbox Labs text too: needed before recording any Sandbox Lab session."""
+    return row["consented_at"] is not None and (row["consent_version"] or 1) >= SANDBOX_CONSENT_VERSION
 
 
 QUESTION_FIELDS = ("title", "prompt", "starter_code", "sample_input", "tests_json", "harness", "source_json", "checker",
@@ -216,14 +225,15 @@ class Database:
             )
             return conn.execute("SELECT * FROM students WHERE id = ?", (student_id,)).fetchone()
 
-    def record_consent(self, student_id: str) -> None:
+    def record_consent(self, student_id: str, version: int = CONSENT_VERSION) -> None:
         with self.connect() as conn:
             # Agreeing to a newer text restarts the clock: consented_at is when they agreed to what applies now.
+            # A version never goes down (a v3 student who signs the web text again stays v3).
             conn.execute(
                 """UPDATE students SET consented_at = CASE WHEN COALESCE(consent_version, 1) >= ? AND consented_at IS NOT NULL
                                                            THEN consented_at ELSE ? END,
-                                       consent_version = ? WHERE id = ?""",
-                (CONSENT_VERSION, time.time(), CONSENT_VERSION, student_id),
+                                       consent_version = MAX(COALESCE(consent_version, 1), ?) WHERE id = ?""",
+                (version, time.time(), version, student_id),
             )
 
     # sessions ---------------------------------------------------------------
@@ -393,6 +403,10 @@ class Database:
     def delete_lab(self, lab_id: str) -> None:
         with self.connect() as conn:
             conn.execute("DELETE FROM labs WHERE id = ?", (lab_id,))
+            # attendance tables also hold Sandbox Lab ids, so they have no foreign key to cascade
+            for table in ("lab_classes", "lab_attendance", "attendance_sent"):
+                if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone():
+                    conn.execute(f"DELETE FROM {table} WHERE lab_id = ?", (lab_id,))
 
     def lab_questions(self, lab_id: str) -> list[sqlite3.Row]:
         with self.connect() as conn:
