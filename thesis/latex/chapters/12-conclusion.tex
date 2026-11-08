@@ -20,7 +20,11 @@ inside the instance, file, process and network capture runs in a sidecar
 container they cannot stop, while key timing is captured in the app itself.
 The client is an Electron app whose installer also sets up its own container
 engine (rootless Podman in a small WSL2 distribution on Windows or a
-lightweight VM on macOS), so students need no Docker installation; the
+lightweight VM on macOS, and rootless Podman on Linux, unpacked into the
+student's home folder when they have no admin rights), so students need no
+Docker installation; the only step that can need an administrator is
+switching on WSL2 once, and virtualization switched off in the firmware is
+detected and explained rather than worked around; the
 student's files are snapshotted to the server so work follows them to another
 machine, including from a lab PC that cannot run the sandbox to one that can;
 cloud instances exist only for teachers to preview a lab. Electron uses the same Chromium engine as the web editor, so

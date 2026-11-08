@@ -1,0 +1,14 @@
+# Root filesystem of the "StudentIDE" WSL2 distro: Alpine + rootless Podman.
+# Built in CI (scripts/build-wsl-rootfs.sh) and exported as a tarball that
+# setup imports with `wsl --import`. Kept small: no systemd, no desktop tools.
+FROM alpine:3.20
+RUN apk add --no-cache podman crun fuse-overlayfs slirp4netns shadow-subids ca-certificates tzdata \
+ && adduser -D -u 1000 -s /bin/sh student \
+ && echo "student:100000:65536" > /etc/subuid \
+ && echo "student:100000:65536" > /etc/subgid \
+ && mkdir -p /etc/containers \
+ && printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\n' > /etc/containers/containers.conf \
+ && printf 'unqualified-search-registries = ["ghcr.io", "docker.io"]\n' > /etc/containers/registries.conf
+COPY wsl.conf /etc/wsl.conf
+COPY sid-podman /usr/local/bin/sid-podman
+RUN chmod 755 /usr/local/bin/sid-podman

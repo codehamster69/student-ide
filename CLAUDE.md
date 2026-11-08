@@ -25,6 +25,7 @@ python -m studentide.seed --db data/demo.sqlite3      # demo data for the review
 cd backend && python -m studentide.harness dev --thesis ../thesis/latex   # test = held-out, run once, logged
 cd desktop/app && npm install && npm run build      # desktop shell; smoke: BASE=… GBASE=… xvfb-run -a node e2e/smoke.mjs
 cd thesis/latex && latexmk -pdf main.tex              # thesis PDF into build/
+cd desktop/installer && npm test                     # installer tests; npm run package -- --linux packages the app
 ```
 No linter is configured; `tsc --noEmit` (part of `npm run build`) is the frontend check.
 
@@ -42,6 +43,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `docs/` one doc per feature (detector, review, teaching, deploy, attendance…)
 - `desktop/app/` Electron shell (`src/shared/contract.ts` = bridge contract, `src/main/modules/<ns>.ts` per namespace);
   `desktop/installer/`, `desktop/sandbox/` its engine and lab packages. See docs/desktop.md
+- `desktop/installer/` one-click engine setup (WSL2 distro / Lima / Podman) + electron-builder packaging; see docs/desktop-installer.md
 - `deploy/` Compose, Caddyfile, GCP startup script
 - `thesis/` brain log, LaTeX, evaluation ledger, progress diagram, plans
 
