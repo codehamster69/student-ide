@@ -1,5 +1,5 @@
-# Student IDE: one image for the web app, the code runner and the backup job
-# (deploy/docker-compose.yml runs it three ways). Build from the repo root:
+# Student IDE: one image for the web app, the code runner, the backup job and the
+# optional teacher preview service (deploy/docker-compose.yml runs it each way). Build from the repo root:
 #   docker build -t studentide .
 
 FROM node:22-bookworm-slim AS web
@@ -23,6 +23,8 @@ COPY backend/studentide backend/studentide
 RUN pip install --no-cache-dir -e ./backend
 COPY thesis/evaluation/frozen-config.json thesis/evaluation/frozen-config.json
 COPY --from=web /web/dist frontend/dist
+# docker CLI for the optional preview service (Sandbox Labs "Try as a student"); unused elsewhere.
+COPY --from=docker:27.5.1-cli /usr/local/bin/docker /usr/local/bin/docker
 ENV STUDENTIDE_DB=/data/studentide.sqlite3 PYTHONUNBUFFERED=1
 USER app
 EXPOSE 8000

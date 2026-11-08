@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
-import { Activity, BookOpen, ListChecks, Eye, LogOut, MessagesSquare, Radio, Sparkles, UsersRound } from "lucide-react";
+import { Activity, BookOpen, Boxes, ListChecks, Eye, LogOut, MessagesSquare, Radio, Sparkles, UsersRound } from "lucide-react";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig, type Me } from "../auth";
 import { Button, Logo, cn, page, spring } from "../ui";
 import { Labs } from "../teach/Labs";
@@ -13,6 +13,10 @@ import { LiveBoard } from "../compete/LiveBoard";
 import { Similar } from "../compete/Similar";
 import { LiveClass, LiveLabs } from "../live/LiveClass";
 import { LiveEditor } from "../live/LiveEditor";
+import { SandboxHome, SandboxSubject } from "../sandbox/Subjects";
+import { SandboxLabEditor } from "../sandbox/LabEditor";
+import { SandboxLibrary } from "../sandbox/Library";
+import { SandboxPreview } from "../sandbox/Preview";
 import { token } from "./api";
 import { Gate } from "./Gate";
 import { LabSessions } from "./LabSessions";
@@ -24,6 +28,7 @@ import { areaOf, canonicalize, href, parseRoute, routeHash, type Route } from ".
 const TABS = [
   { href: href.labs, label: "Labs", icon: ListChecks, match: (r: Route) => areaOf(r) === "teach" && !["subjects", "subject", "setup", "people"].includes(r.name) },
   { href: href.subjects, label: "Subjects", icon: BookOpen, match: (r: Route) => r.name === "subjects" || r.name === "subject" },
+  { href: href.sandbox, label: "Sandbox", icon: Boxes, match: (r: Route) => areaOf(r) === "sandbox" },
   { href: href.live, label: "Live", icon: Radio, match: (r: Route) => areaOf(r) === "live" },
   { href: href.review, label: "Review", icon: Activity, match: (r: Route) => areaOf(r) === "review" },
   // Roll Call, class groups, keys (and for admins every teacher's register)
@@ -76,7 +81,7 @@ export function ReviewApp() {
           {/* phones: logo and actions on one row, the tabs on a scrollable row below */}
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 md:h-14 md:flex-nowrap md:px-5 md:py-0">
             <div className="contents md:flex md:items-center md:gap-5">
-              <a href={teaching ? href.labs : href.review} className="rounded-lg"><Logo subtitle={watching ? "Live class view" : teaching ? "Labs and questions" : "Review timeline"} /></a>
+              <a href={teaching ? href.labs : href.review} className="rounded-lg"><Logo subtitle={watching ? "Live class view" : areaOf(r) === "sandbox" ? "Sandbox Labs" : teaching ? "Labs and questions" : "Review timeline"} /></a>
               {authed && (
                 <LayoutGroup id="teacher-nav">
                   <nav className="order-last -mx-1 flex w-[calc(100%+0.5rem)] overflow-x-auto rounded-lg border border-border bg-surface p-0.5 shadow-sm [scrollbar-width:none] md:order-none md:mx-0 md:w-auto">
@@ -120,6 +125,16 @@ export function ReviewApp() {
                 <Gate cfg={cfg} signedInStudent={student} onDone={(u) => { setMe(u); setAuthed(true); }} />
               ) : r.name === "people" && me?.role === "admin" ? (
                 <Users me={me.email} onAuthLost={signOut} />
+              ) : r.name === "sbx-subjects" ? (
+                <SandboxHome onAuthLost={signOut} />
+              ) : r.name === "sbx-subject" ? (
+                <SandboxSubject id={r.id} onAuthLost={signOut} />
+              ) : r.name === "sbx-lab" ? (
+                <SandboxLabEditor id={r.id} onAuthLost={signOut} />
+              ) : r.name === "sbx-library" ? (
+                <SandboxLibrary onAuthLost={signOut} />
+              ) : r.name === "sbx-preview" ? (
+                <SandboxPreview id={r.id} onAuthLost={signOut} />
               ) : r.name === "live" ? (
                 <LiveLabs onAuthLost={signOut} />
               ) : r.name === "live-lab" ? (

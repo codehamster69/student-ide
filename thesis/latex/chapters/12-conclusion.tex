@@ -73,3 +73,30 @@ one-time code bound to a secret only the app holds (the loopback flow of
 RFC~8252), ending with the same session as on the web. Each session records
 whether it came from the browser or the app and a hashed per-install device
 id, so device effects can be analysed separately (RQ3).
+
+
+The teacher side of Sandbox Labs is built (Figure~\ref{fig:sandbox-teacher}).
+Teachers create subjects without approval and give each an environment chosen
+from a base and a checklist of tools; the server renders it to a Dockerfile
+that a build service outside the college VM turns into an image. A lab is a
+list of assignments, each with a statement, starter files, a run command, tests
+(input/output pairs or a test command, some hidden) and a private reference
+solution. Before publishing, a Check step runs the tests in the lab's real
+environment: the reference solution must pass and the starter should fail.
+Labs can be shared to a library as snapshots that colleagues copy into their
+own subjects. A teacher can try any lab as a student in a short-lived cloud
+instance with a terminal; these previews are capped (three seats, one per
+teacher, an idle stop and an hour at most, never the open internet) so that
+the VM cost the design moved to students' machines does not come back. Only a
+separate service holds the Docker socket, and previews never create study
+sessions.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-05-check}\hfill
+  \includegraphics[width=0.49\linewidth]{sandbox/sandbox-light-06-try-as-student}
+  \caption{Sandbox Labs, teacher side: the lab wizard's Check step (reference
+  solution 3/3, starter 1/3) and ``Try as a student'' in a capped cloud
+  preview with editor, terminal and the full test results.}
+  \label{fig:sandbox-teacher}
+\end{figure}

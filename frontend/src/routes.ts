@@ -16,6 +16,9 @@
  *   #/review                         lab sessions         #/review/labs/<id>[/<day>]     one lab session
  *   #/review/sessions                every session        #/review/sessions/<id>         one session's timeline
  *   #/student                        View as student (the student app, under a staff account)
+ *   #/sandbox                        Sandbox Labs: my subjects    #/sandbox/subjects/<id>     one subject
+ *   #/sandbox/labs/<id>              one sandbox lab              #/sandbox/library           shared labs
+ *   #/sandbox/previews/<id>          Try as a student (a cloud preview instance)
  *
  * Older links (#/teach/l/<id>, #/teach/c/<id>, #/teach/similar/<id>, #/live/l/<id>,
  * #/live/s/<id>, #/review/l/<id>, #/review/s/<id>, #/review/all) still open the
@@ -26,9 +29,11 @@ export type Route =
   | { name: "labs" } | { name: "lab"; id: string; view?: "attendance" } | { name: "board"; id: string } | { name: "similar"; id: string }
   | { name: "subjects" } | { name: "subject"; slug: string } | { name: "setup" } | { name: "people" }
   | { name: "live" } | { name: "live-lab"; id: string } | { name: "live-session"; id: string }
-  | { name: "overview" } | { name: "review-lab"; id: string; day?: string } | { name: "review-all" } | { name: "session"; id: string };
+  | { name: "overview" } | { name: "review-lab"; id: string; day?: string } | { name: "review-all" } | { name: "session"; id: string }
+  | { name: "sbx-subjects" } | { name: "sbx-subject"; id: string } | { name: "sbx-lab"; id: string } | { name: "sbx-library" }
+  | { name: "sbx-preview"; id: string };
 
-export type Area = "teach" | "live" | "review";
+export type Area = "teach" | "live" | "review" | "sandbox";
 
 const ID = "([A-Za-z0-9_-]+)";
 const DAY = "(\\d{4}-\\d{2}-\\d{2})";
@@ -49,6 +54,11 @@ const TABLE: [RegExp, (m: RegExpMatchArray) => Route][] = [
   [re(`review/labs/${ID}(?:/${DAY})?`), (m) => ({ name: "review-lab", id: m[1], day: m[2] })],
   [re(`review/sessions/${ID}`), (m) => ({ name: "session", id: m[1] })],
   [re("review/sessions"), () => ({ name: "review-all" })],
+  [re(`sandbox/subjects/${ID}`), (m) => ({ name: "sbx-subject", id: m[1] })],
+  [re(`sandbox/labs/${ID}`), (m) => ({ name: "sbx-lab", id: m[1] })],
+  [re(`sandbox/previews/${ID}`), (m) => ({ name: "sbx-preview", id: m[1] })],
+  [re("sandbox/library"), () => ({ name: "sbx-library" })],
+  [re("sandbox(?:/subjects)?"), () => ({ name: "sbx-subjects" })],
   // older links
   [re(`teach/l/${ID}`), (m) => ({ name: "lab", id: m[1] })],
   [re(`teach/c/${ID}`), (m) => ({ name: "board", id: m[1] })],
@@ -92,17 +102,23 @@ export function routeHash(r: Route): string {
     case "review-lab": return href.reviewLab(r.id, r.day);
     case "review-all": return href.reviewAll;
     case "session": return href.session(r.id);
+    case "sbx-subjects": return href.sandbox;
+    case "sbx-subject": return href.sbxSubject(r.id);
+    case "sbx-lab": return href.sbxLab(r.id);
+    case "sbx-library": return href.sbxLibrary;
+    case "sbx-preview": return href.sbxPreview(r.id);
   }
 }
 
 /** Rewrites an older link in the address bar to the current scheme, without a new history entry. */
 export function canonicalize(): void {
-  if (!/^#\/(teach|live|review)/.test(location.hash)) return;
+  if (!/^#\/(teach|live|review|sandbox)/.test(location.hash)) return;
   const want = routeHash(parseRoute());
   if (want !== location.hash.replace(/\/$/, "")) history.replaceState(null, "", want);
 }
 
 export function areaOf(r: Route): Area {
+  if (r.name.startsWith("sbx-")) return "sandbox";
   if (r.name.startsWith("live")) return "live";
   if (r.name === "overview" || r.name.startsWith("review") || r.name === "session") return "review";
   return "teach";
@@ -131,6 +147,11 @@ export const href = {
   reviewAll: "#/review/sessions",
   session: (id: string | null) => `#/review/sessions/${id}`,
   student: "#/student",
+  sandbox: "#/sandbox",
+  sbxSubject: (id: string) => `#/sandbox/subjects/${id}`,
+  sbxLab: (id: string) => `#/sandbox/labs/${id}`,
+  sbxLibrary: "#/sandbox/library",
+  sbxPreview: (id: string) => `#/sandbox/previews/${id}`,
 } as const;
 
 export const go = (hash: string) => { location.hash = hash; };

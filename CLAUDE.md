@@ -38,7 +38,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `backend/scripts/` one-off builders for bundled question data (`build_*.py`)
 - `backend/tests/` pytest, one file per feature
 - `frontend/src/` `recorder.ts` + `capture.ts` (framework-free event capture), `screens/` (student app),
-  `teach/`, `live/`, `review/`, `compete/`, `learn/` (staff areas), `ui/` (design system, see its README)
+  `teach/`, `live/`, `review/`, `compete/`, `learn/`, `sandbox/` (staff areas), `ui/` (design system, see its README)
 - `desktop/sandbox/` Sandbox Labs runtime (Node+TS, no Electron): `npm test`; `SANDBOX_IT=1 npm run test:engine` needs Docker
 - `frontend/e2e/*.mjs` Playwright scripts, one per feature, run against a live server
 - `docs/` one doc per feature (detector, review, teaching, deploy, attendance…)
@@ -68,7 +68,10 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - Env: `STUDENTIDE_ADMIN_TOKEN` (research API; unset = disabled), `STUDENTIDE_DB` (default
   `data/studentide.sqlite3`), `STUDENTIDE_GOOGLE_CLIENT_ID` (set = Google mode, roll-number login off),
   `STUDENTIDE_ADMINS`, `STUDENTIDE_RUNNER_URL` (remote runner), `STUDENTIDE_LIVE` (editor|class|off),
-  `STUDENTIDE_ROLLCALL_LINK_SECRET` + `STUDENTIDE_ATTENDANCE_URL` (Roll Call). Full list in docs/deploy.md.
+  `STUDENTIDE_ROLLCALL_LINK_SECRET` + `STUDENTIDE_ATTENDANCE_URL` (Roll Call), `STUDENTIDE_PREVIEW_*` (Sandbox Labs
+  previews; `STUDENTIDE_PREVIEW_DOCKER=1 STUDENTIDE_PREVIEW_BUILD_LOCAL=1` in dev). Full list in docs/deploy.md.
+- Sandbox Labs: the lab definition `studentide.sandbox-lab/1` (docs/sandbox-labs.md) is a contract with `desktop/`;
+  keep it additive. Previews are teachers only and never study data; students run labs locally.
 - `harness/report.py` outputs under `thesis/latex/` (tables, graphs, ablations) are generated: rerun, don't edit.
 - `harness test` is a once-only held-out run recorded in `thesis/evaluation/test-ledger.jsonl`; don't rerun casually.
 - `thesis/evaluation/frozen-config.json` is the frozen detector config and is copied into the Docker image.
