@@ -32,6 +32,9 @@ electronFuses:
   enableEmbeddedAsarIntegrityValidation: true
   onlyLoadAppFromAsar: true
   enableCookieEncryption: true
+  # Flipping fuses rewrites the Electron Framework binary; without a fresh ad-hoc signature
+  # macOS kills the unsigned build at launch (SIGKILL, Code Signature Invalid).
+  resetAdHocDarwinSignature: true
 
 # Shared by every OS: images every machine pulls (desktop/sandbox owns the list; optional until it exists).
 extraResources:
