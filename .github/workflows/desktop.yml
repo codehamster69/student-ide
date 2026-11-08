@@ -58,8 +58,9 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           sudo cp -r dist assets /home/student-ci/ && sudo chown -R student-ci /home/student-ci
           echo '{"images":[{"ref":"docker.io/library/alpine:3.20","subject":"CI"}]}' | sudo -u student-ci tee /home/student-ci/images.json
+          NODE="$(command -v node)"; sudo chmod o+rx "$(dirname "$NODE")" || true
           cd /home/student-ci && sudo -u student-ci env HOME=/home/student-ci USER=student-ci PATH=/usr/bin:/bin \
-            node dist/cli.js --data-dir /home/student-ci/sid --assets /home/student-ci/assets --images /home/student-ci/images.json
+            "$NODE" dist/cli.js --data-dir /home/student-ci/sid --assets /home/student-ci/assets --images /home/student-ci/images.json
 
   package:
     needs: [test, wsl-rootfs]
