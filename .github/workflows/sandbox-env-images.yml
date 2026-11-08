@@ -19,7 +19,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: sandbox-images
+  group: sandbox-env-images
   cancel-in-progress: false
 
 jobs:
