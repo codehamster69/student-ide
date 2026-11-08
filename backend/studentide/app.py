@@ -98,6 +98,19 @@ TASK_IDS = {t["id"] for t in TASKS}
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 
+class FrontendFiles(StaticFiles):
+    """The built web app. Hashed files under assets/ never change, so they are cached for a
+    year; everything else (index.html) is revalidated on every load. Without this,
+    browsers and the desktop app keep an old index.html after a deploy (heuristic caching)."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        if resp.status_code < 400:
+            hashed = path.replace("\\", "/").startswith("assets/")
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable" if hashed else "no-cache"
+        return resp
+
+
 class LoginIn(BaseModel):
     student_id: str
 
@@ -549,7 +562,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     app.include_router(live_mod.router(db, require_admin, auth, reviewer, live))
 
     if serve_frontend and FRONTEND_DIST.is_dir():
-        app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+        app.mount("/", FrontendFiles(directory=FRONTEND_DIST, html=True), name="frontend")
 
     return app
 
