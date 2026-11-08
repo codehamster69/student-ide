@@ -25,8 +25,8 @@ jobs:
         with: { node-version: 22 }
       - run: npm ci
       - run: npm test
-      - name: App typechecks against the installer
-        run: npm run build && npm --prefix ../app ci && npm --prefix ../app run typecheck
+      - name: App typechecks against the installer and the sandbox runtime
+        run: npm run build && npm --prefix ../sandbox ci && npm --prefix ../sandbox run build && npm --prefix ../app ci && npm --prefix ../app run typecheck
         env: { ELECTRON_SKIP_BINARY_DOWNLOAD: '1' }
 
   wsl-rootfs:
@@ -84,7 +84,7 @@ jobs:
         run: scripts/fetch-assets.sh mac
       - if: matrix.target == '--linux'
         run: scripts/fetch-assets.sh linux
-      - run: npm ci && npm --prefix ../app ci
+      - run: npm ci && npm --prefix ../sandbox ci && npm --prefix ../app ci
       # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo secrets.
       - run: npm run package -- ${{ matrix.target }}
         env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }

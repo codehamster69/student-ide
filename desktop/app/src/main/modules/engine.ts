@@ -9,6 +9,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { detectEngine, engineAlive, loadImageList, runSetup, SetupError, type ImageRef } from "@studentide/installer";
+import { setupCheck } from "@studentide/sandbox";
 import { fail, type DesktopModule } from "../ipc";
 
 /** Images every machine needs (e.g. the sandbox proxy), shipped next to the app by electron-builder. */
@@ -35,6 +36,8 @@ export const engineModule = (): DesktopModule => ({
         dataDir: ctx.userData,
         images,
         silent: !!opts?.silent,
+        // the full Lab doctor (desktop/sandbox), tried with the first image to pull
+        check: (engine, imgs) => setupCheck(engine, { dataDir: ctx.userData, image: imgs[0]?.ref }),
         onProgress: (p) => ctx.emit("engine.progress", p),
       })
         .then((res) => res.engine)
