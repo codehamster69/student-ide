@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Student IDE: can't reach the server</title>
+<style>
+  :root { --bg:#f7f7f8; --surface:#fff; --text:#18181b; --muted:#6b6b76; --border:#e4e4e7; --accent:#4f46e5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111113; --surface:#1a1a1e; --text:#ececef; --muted:#9c9ca8; --border:#2a2a30; --accent:#8b8cf8; } }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font:15px/1.55 system-ui, sans-serif; }
+  main { max-width:28rem; margin:16px; padding:2rem; background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+  h1 { font-size:1.2rem; margin:0 0 .4rem; } p { margin:.4rem 0; color:var(--muted); }
+  code { font-size:.85em; } .row { display:flex; gap:.75rem; align-items:center; margin-top:1.25rem; }
+  button { font:inherit; padding:.55rem 1.1rem; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; }
+  .dot { width:.55rem; height:.55rem; border-radius:50%; background:var(--accent); animation:p 1.4s ease-in-out infinite; }
+  @keyframes p { 50% { opacity:.25; } } @media (prefers-reduced-motion: reduce) { .dot { animation:none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Can't reach Student IDE</h1>
+  <p>The app needs the college network or the internet. Your work is saved on the server, so nothing is lost.</p>
+  <p><code id="server"></code> <span id="reason"></span></p>
+  <div class="row"><button id="retry">Try again</button><span class="dot" aria-hidden="true"></span><span id="status">Retrying every 5 seconds</span></div>
+</main>
+<script>
+  const q = new URLSearchParams(location.search);
+  const server = q.get("server") || "";
+  document.getElementById("server").textContent = server;
+  document.getElementById("reason").textContent = q.get("reason") ? "(" + q.get("reason") + ")" : "";
+  const go = () => { location.href = server; };
+  document.getElementById("retry").onclick = go;
+  setInterval(() => { if (navigator.onLine) go(); }, 5000);
+</script>
+</body>
+</html>
