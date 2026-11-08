@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck && npm test
       - run: docker build -q -t studentide-dev-base:test images/dev-base && docker build -q -t ghcr.io/codehamster69/studentide-sidproxy:1 images/sidproxy
       - run: SANDBOX_IT=1 SANDBOX_IT_NET=1 npm run test:engine
