@@ -1411,36 +1411,81 @@ def router(db: Database, require_teacher: Callable, auth) -> APIRouter:
             raise HTTPException(400, "student_id is required in dev mode")
         return student_id
 
-    def visible_labs(student_id: str) -> list:
+    def visible_labs(student_id: str, include_closed: bool = False) -> list:
+        """Labs this student may open: on the subject's roster (and section), published and
+        past opens_at. `include_closed`: closed labs too, read-only (work and grades stay viewable)."""
         now = _now()
-        rows = store.q("""SELECT l.*, s.section FROM sbx_labs l JOIN sbx_subject_students s ON s.subject_id = l.subject_id
-                          WHERE s.student_id = ? AND l.status = 'published' AND (l.opens_at IS NULL OR l.opens_at <= ?)
-                          ORDER BY l.created_at""", (student_id, now))
+        statuses = "('published', 'closed')" if include_closed else "('published')"
+        rows = store.q(f"""SELECT l.*, s.section FROM sbx_labs l JOIN sbx_subject_students s ON s.subject_id = l.subject_id
+                           WHERE s.student_id = ? AND l.status IN {statuses} AND (l.opens_at IS NULL OR l.opens_at <= ?)
+                           ORDER BY l.created_at""", (student_id, now))
         return [l for l in rows if not json.loads(l["sections_json"]) or l["section"] in json.loads(l["sections_json"])]
+
+    def is_closed(lab) -> bool:
+        """No more submits: the teacher closed it, or the lab's late policy takes nothing now."""
+        return not late_policy(lab, _now())["accepted"]
+
+    def upload_gate(student_id: str, lab_id: str, assignment_id: str, reason: str):
+        """workspaces.py, before keeping an upload: the lab must be open for this student and
+        the assignment part of it; a Submit must come before the due time. Returns the lab row."""
+        lab = next((l for l in visible_labs(student_id, include_closed=True) if l["id"] == lab_id), None)
+        if lab is None:
+            raise HTTPException(403, "This lab is not open for you.")
+        if not store.one("SELECT 1 FROM sbx_assignments WHERE id = ? AND lab_id = ?", (assignment_id, lab_id)):
+            raise HTTPException(404, "This assignment is not part of the lab any more.")
+        late = late_policy(lab, _now()) if reason == "submit" else None
+        if late and not late["accepted"]:
+            when = "" if lab["status"] == "closed" or lab["due_at"] is None else (
+                " at " + time.strftime("%d %b, %H:%M", time.localtime(lab["due_at"])))
+            why = "" if lab["status"] == "closed" else f" ({late['reason']})"
+            raise HTTPException(409, f"This lab closed{when}{why}. Your work is saved, but it can no longer be submitted.")
+        return lab
 
     @open_r.get("/my/labs")
     def my_labs(request: Request, student_id: str | None = None) -> list[dict]:
         sid = student_of(request, student_id)
         by: dict[str, dict] = {}
-        for lab in visible_labs(sid):
+        for lab in visible_labs(sid, include_closed=True):
             subj = store.one("SELECT * FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
             g = by.setdefault(subj["id"], {"id": subj["id"], "title": subj["title"], "code": subj["code"],
                                            "semester": subj["semester"], "color": subj["color"], "labs": []})
             g["labs"].append({"id": lab["id"], "version": lab["version"], "title": lab["title"],
                               "description": lab["description"], "due_at": lab["due_at"], "assessed": bool(lab["assessed"]),
                               "network": lab["network"], "min_desktop_version": lab["min_desktop_version"],
-                              "n_assignments": len(store.assignments(lab["id"]))})
+                              "n_assignments": len(store.assignments(lab["id"])), "closed": is_closed(lab)}
+                             | (r.lab_progress(sid, lab["id"]) if r.lab_progress else {}))
         return list(by.values())
 
     @open_r.get("/my/labs/{lab_id}")
     def my_lab(lab_id: str, request: Request, student_id: str | None = None) -> dict:
         sid = student_of(request, student_id)
-        lab = next((l for l in visible_labs(sid) if l["id"] == lab_id), None)
+        lab = next((l for l in visible_labs(sid, include_closed=True) if l["id"] == lab_id), None)
         if lab is None:
             raise HTTPException(404, "this lab is not open for you")
-        return definition(store, store.one("SELECT * FROM sbx_labs WHERE id = ?", (lab_id,)), student=True)
+        return definition(store, store.one("SELECT * FROM sbx_labs WHERE id = ?", (lab_id,)), student=True) | {
+            "closed": is_closed(lab)}
 
-    r.store = store  # previews.py reads lab definitions through it
+    LANG_BY_EXT = {"py": "python", "c": "c", "h": "c", "cpp": "cpp", "cc": "cpp", "java": "java", "js": "javascript"}
+
+    def session_question(student_id: str, lab_id: str, assignment_id: str) -> dict:
+        """POST /api/sessions for one assignment of a Sandbox lab (desktop app): the
+        question snapshot the session keeps. 403 unless the lab is open for this student."""
+        lab = next((l for l in visible_labs(student_id) if l["id"] == lab_id), None)
+        a = lab and store.one("SELECT * FROM sbx_assignments WHERE id = ? AND lab_id = ?", (assignment_id, lab_id))
+        if not a:
+            raise HTTPException(403, "this lab is not open for you")
+        subj = store.one("SELECT title, code FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
+        main = (json.loads(a["open_json"]) or [f["path"] for f in json.loads(a["files_json"])] or [""])[0]
+        return {"kind": "sandbox", "id": a["id"], "lab_id": lab_id, "lab_version": lab["version"], "title": a["title"],
+                "prompt": a["statement"], "run": a["run"], "main_file": main, "subject": subj["title"],
+                "subject_code": subj["code"], "language": LANG_BY_EXT.get(main.rsplit(".", 1)[-1].lower()) if "." in main else None}
+
+    r.store = store  # previews.py and submissions.py read lab definitions through it
+    r.visible_labs = visible_labs
+    r.student_of = student_of
+    r.upload_gate = upload_gate
+    r.lab_progress = None  # set by submissions.router: {submitted, passed_all} for a student's lab card
+    r.session_question = session_question
     r.on_tests_changed = on_tests_changed
     r.env_access = env_access
     r.lab_access = lab_access

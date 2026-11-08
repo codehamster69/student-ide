@@ -190,6 +190,21 @@ export interface Preview {
 export interface RunResult { stdout: string; stderr: string; exit_code: number; timed_out: boolean; duration_ms: number }
 export interface TestResult { name: string; passed: boolean; hidden?: boolean; stdin?: string; expected?: string; got?: string; stderr?: string; timed_out?: boolean }
 export interface CheckResult { passed: number; total: number; results: TestResult[] }
+export type SubmissionStatus = "queued" | "grading" | "graded" | "failed" | "no_tests";
+/** A graded Submit (submissions.py). Students get hidden tests as name + pass only. */
+export interface Submission {
+  id: string; lab_id: string; assignment_id: string; status: SubmissionStatus;
+  passed: number | null; total: number | null; submitted_at: number; graded_at: number | null;
+  error: string; regraded: boolean; attempts?: number; results: (TestResult & { stdout?: string; exit_code?: number })[];
+}
+export interface SubmissionCell extends Submission { student_id: string; session_id: string | null }
+export interface SubmissionsTable {
+  lab: { id: string; title: string; due_at: number | null; status: LabStatus };
+  assignments: { id: string; title: string }[];
+  students: { student_id: string; section: string; on_roster: boolean; assignments: Record<string, SubmissionCell | null> }[];
+  grader: { enabled: boolean; queued: number };
+  counts: { students: number; submitted: number; graded: number; passed_all: number };
+}
 export interface VerifyResult {
   ok: boolean;
   assignments: { assignment_id: string; title: string; problems: string[];

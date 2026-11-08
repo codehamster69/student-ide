@@ -1,6 +1,6 @@
 // #/sandbox/labs/<id>: the lab wizard (plan §5.3). Basics, Assignments, Check
 // (reference solution against the tests in a preview instance), Publish, and
-// sharing to the library.
+// sharing to the library; once published, Submissions (grades, Submissions.tsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
@@ -11,17 +11,18 @@ import { LessonText } from "../learn/LessonText";
 import { go, href } from "../routes";
 import { useLoad } from "./Subjects";
 import { FileEditor, NetworkBadge } from "./bits";
+import { Submissions } from "./Submissions";
 import { SourcePicker } from "../teach/SourcePicker";
 import type { Language } from "../teach/api";
 import { GRADING, NETWORK, emptyTests, type Assignment, type CopyCandidate, type GradingMode, type LabChange, type LabDetail, type LatePolicy,
   type Network, type Preview, type SandboxFile, type TestCase, type Tests, type VerifyResult } from "./api";
 
-const STEPS = ["Basics", "Assignments", "Check", "Publish", "History"] as const;
+const STEPS = ["Basics", "Assignments", "Check", "Publish", "History", "Submissions"] as const;
 type Step = (typeof STEPS)[number];
 
 export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: () => void }) {
   const [lab, error, , setLab] = useLoad<LabDetail>(`/api/sandbox/labs/${id}`, onAuthLost);
-  const [step, setStep] = useState<Step>("Basics");
+  const [step, setStep] = useState<Step | null>(null);
   const [msg, setMsg] = useState("");
   const [note, setNote] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -43,6 +44,10 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
   if (error) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
   if (!lab) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Skeleton className="h-60 rounded-2xl" /></div>;
   const readOnly = lab.access === "ta";
+  const live = lab.status !== "draft";
+  const steps = STEPS.filter((s) => (s !== "Submissions" || live) && (s !== "History" || live || lab.n_changes > 0));
+  // a published lab opens on its grades; a draft on its first step
+  const current: Step = step ?? (live ? "Submissions" : "Basics");
 
   return (
     <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1200px] px-5 pb-24 pt-6">
@@ -78,11 +83,11 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
       <div className="grid gap-6 md:grid-cols-[180px_1fr]">
         <LayoutGroup id="wizard">
           <nav className="flex gap-1 overflow-x-auto md:sticky md:top-20 md:grid md:content-start">
-            {STEPS.filter((s) => s !== "History" || lab.status !== "draft" || lab.n_changes > 0).map((s, i) => (
+            {steps.map((s, i) => (
               <button key={s} onClick={() => setStep(s)} className={cn("relative flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium",
-                step === s ? "text-text" : "text-muted hover:text-text")}>
-                {step === s && <motion.span layoutId="wizard-step" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
-                <span className={cn("relative grid size-5 place-items-center rounded-full border text-[11px]", step === s ? "border-accent bg-accent text-accent-fg" : "border-border")}>{i + 1}</span>
+                current === s ? "text-text" : "text-muted hover:text-text")}>
+                {current === s && <motion.span layoutId="wizard-step" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
+                <span className={cn("relative grid size-5 place-items-center rounded-full border text-[11px]", current === s ? "border-accent bg-accent text-accent-fg" : "border-border")}>{s === "Submissions" ? "✓" : i + 1}</span>
                 <span className="relative">{s}</span>
                 {s === "History" && lab.n_changes > 0 && <span className="relative ml-auto font-mono text-[11px] text-faint">{lab.n_changes}</span>}
               </button>
@@ -90,12 +95,13 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
           </nav>
         </LayoutGroup>
         <AnimatePresence mode="wait">
-          <motion.div key={step} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
-            {step === "Basics" && <Basics lab={lab} readOnly={readOnly} saving={saving} save={save} />}
-            {step === "Assignments" && <Assignments lab={lab} readOnly={readOnly} save={save} onAuthLost={onAuthLost} />}
-            {step === "Check" && <CheckStep lab={lab} />}
-            {step === "Publish" && <Publish lab={lab} readOnly={readOnly} saving={saving} save={save} />}
-            {step === "History" && <HistoryStep lab={lab} readOnly={readOnly} save={save} />}
+          <motion.div key={current} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
+            {current === "Basics" && <Basics lab={lab} readOnly={readOnly} saving={saving} save={save} />}
+            {current === "Assignments" && <Assignments lab={lab} readOnly={readOnly} save={save} onAuthLost={onAuthLost} />}
+            {current === "Check" && <CheckStep lab={lab} />}
+            {current === "Publish" && <Publish lab={lab} readOnly={readOnly} saving={saving} save={save} />}
+            {current === "History" && <HistoryStep lab={lab} readOnly={readOnly} save={save} />}
+            {current === "Submissions" && <Submissions lab={lab} />}
           </motion.div>
         </AnimatePresence>
       </div>

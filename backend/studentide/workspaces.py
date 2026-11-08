@@ -20,8 +20,13 @@ in Google mode a student can only act as themselves):
     GET  /api/workspaces/recipes/{subject_id}            the setup recipe {version, steps}
     PUT  /api/workspaces/recipes/{subject_id}
 
-Ids are the catalogue's opaque strings (sandbox lab, assignment, subject); this
-module does not join with the catalogue tables, so it works on its own.
+Ids are the catalogue's opaque strings (sandbox lab, assignment, subject). An
+upload goes through the catalogue's `gate` (sandbox.py upload_gate): the lab
+must be open for the student (published or closed, on the roster and section,
+past opens_at) and hold the assignment, and a Submit must come before the due
+time; backups after it are still kept so no work is lost. A kept Submit goes to
+`on_submit` (submissions.py), which queues it for grading; the reply carries
+that submission.
 Every upload is checked before it is kept: a real gzip tar, relative paths
 only, no links out of the folder or device files, bounded size and count. The
 last KEEP snapshots of an assignment are kept, plus every Submit.
@@ -130,7 +135,9 @@ def check_tarball(data: bytes) -> int:
     return files
 
 
-def router(db: Database, auth, student_id_check: Callable[[str], str]) -> APIRouter:
+def router(db: Database, auth, student_id_check: Callable[[str], str],
+           gate: Callable[[str, str, str, str], object] | None = None,
+           on_submit: Callable[[str, str, str, int, str], dict] | None = None) -> APIRouter:
     with db.connect() as conn:
         conn.executescript(SCHEMA)
     r = APIRouter(prefix="/api/workspaces")
@@ -206,6 +213,8 @@ def router(db: Database, auth, student_id_check: Callable[[str], str]) -> APIRou
         reason = request.headers.get("x-workspace-reason", "change")
         if reason not in REASONS:
             raise HTTPException(400, f"X-Workspace-Reason must be one of {', '.join(REASONS)}")
+        if gate is not None:
+            gate(sid, lab_id, assignment_id, reason)
         body = bytearray()
         async for chunk in request.stream():
             body += chunk
@@ -220,15 +229,18 @@ def router(db: Database, auth, student_id_check: Callable[[str], str]) -> APIRou
                                    ORDER BY id DESC LIMIT 1""", (sid, lab_id, assignment_id)).fetchone()
             if prev is not None and prev["sha256"] == sha and reason != "submit":
                 return {"sha256": sha, "size": len(data), "files": files, "created_at": now, "unchanged": True}
-            conn.execute("""INSERT INTO workspace_snapshots (student_id, lab_id, assignment_id, sha256, parent, reason, size,
-                            files, created_at, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                         (sid, lab_id, assignment_id, sha, parent, reason, len(data), files, now, data))
+            snap_id = conn.execute("""INSERT INTO workspace_snapshots (student_id, lab_id, assignment_id, sha256, parent, reason,
+                            size, files, created_at, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                   (sid, lab_id, assignment_id, sha, parent, reason, len(data), files, now, data)).lastrowid
             # keep the newest KEEP plus every submit
             conn.execute("""DELETE FROM workspace_snapshots WHERE student_id = ? AND lab_id = ? AND assignment_id = ?
                             AND reason != 'submit' AND id NOT IN (SELECT id FROM workspace_snapshots WHERE student_id = ?
                             AND lab_id = ? AND assignment_id = ? ORDER BY id DESC LIMIT ?)""",
                          (sid, lab_id, assignment_id, sid, lab_id, assignment_id, KEEP))
-        return {"sha256": sha, "size": len(data), "files": files, "created_at": now,
-                "conflict": prev is not None and parent is not None and prev["sha256"] != parent}
+        out = {"sha256": sha, "size": len(data), "files": files, "created_at": now,
+               "conflict": prev is not None and parent is not None and prev["sha256"] != parent}
+        if reason == "submit" and on_submit is not None:
+            out["submission"] = on_submit(sid, lab_id, assignment_id, snap_id, sha)
+        return out
 
     return r

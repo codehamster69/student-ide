@@ -373,6 +373,23 @@ def starter_files(workdir: str, files: list[dict]) -> list[dict]:
             for f in files]
 
 
+def instance_spec(store: Store, container: str, lab, d: dict, limits: Limits, network: str | None = None) -> dict:
+    """What the driver starts: the lab's environment image, capped by `limits`.
+    Previews get "registries" at most (never the open internet); grading passes network="off"."""
+    env = d["environment"]
+    r = env["resources"]
+    subj = store.one("SELECT code, title FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
+    recipe_row = store.env_version(env["id"], env["version"])
+    return {
+        "container": container, "lab_id": lab["id"], "image": env["image"], "digest": env["digest"],
+        "dockerfile": dockerfile(env["id"], env["version"], json.loads(recipe_row["recipe_json"])),
+        "hostname": (subj["code"] or "preview").lower()[:30] or "preview",
+        "network": network or ("off" if d["network"] == "off" else "registries"),
+        "resources": {"cpus": min(r["cpus"], limits.cpus), "memory_mb": min(r["memory_mb"], limits.memory_mb),
+                      "pids": min(r["pids"], limits.pids)},
+    }
+
+
 # -- manager + routes
 
 
@@ -463,18 +480,7 @@ class Previews:
                 "idle_minutes": self.limits.idle_s / 60, "max_minutes": self.limits.max_s / 60}
 
     def spec(self, pid: str, lab, d: dict) -> dict:
-        env = d["environment"]
-        r = env["resources"]
-        subj = self.store.one("SELECT code, title FROM sbx_subjects WHERE id = ?", (lab["subject_id"],))
-        recipe_row = self.store.env_version(env["id"], env["version"])
-        return {
-            "container": f"sbxp-{pid}", "lab_id": lab["id"], "image": env["image"], "digest": env["digest"],
-            "dockerfile": dockerfile(env["id"], env["version"], json.loads(recipe_row["recipe_json"])),
-            "hostname": (subj["code"] or "preview").lower()[:30] or "preview",
-            "network": "off" if d["network"] == "off" else "registries",  # previews never get the open internet
-            "resources": {"cpus": min(r["cpus"], self.limits.cpus), "memory_mb": min(r["memory_mb"], self.limits.memory_mb),
-                          "pids": min(r["pids"], self.limits.pids)},
-        }
+        return instance_spec(self.store, f"sbxp-{pid}", lab, d, self.limits)
 
     def start(self, lab, email: str) -> str:
         if not self.enabled:

@@ -17,7 +17,8 @@ ever leads to a conversation, never a penalty.
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
 | Desktop app (Sandbox Labs) | Electron window on the site, browser sign-in, bridge for local labs, auto-update from GitHub Releases through the server (unsigned builds for now), see [docs/desktop.md](docs/desktop.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
-| Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
+| Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, server grading of submissions (hidden tests, gradebook, regrade), see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
+| Sandbox Labs (student side) | home shelf per subject; in the desktop app a lab workspace with files, editor, terminal, Run/Check/Submit and grade; website lists them with "Open in the Student IDE app"; see [docs/sandbox-student.md](docs/sandbox-student.md) |
 
 ## Stack
 

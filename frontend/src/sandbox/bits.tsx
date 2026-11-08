@@ -2,7 +2,7 @@
 // preview terminal (xterm.js over a WebSocket), base icons and badges.
 import { useEffect, useRef } from "react";
 import { basicSetup } from "codemirror";
-import { EditorState } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { applyVim, newVimCompartment, useVimMode, vimExtension, vimOn } from "../editor/vim";
 import { indentUnit } from "@codemirror/language";
@@ -41,8 +41,10 @@ function languageFor(path: string) {
 }
 
 /** One file in CodeMirror. Remounts per `path` (key it by path); edits go to onChange. */
-export function FileEditor({ path, value, onChange, readOnly = false }: {
+export function FileEditor({ path, value, onChange, readOnly = false, extensions = [] }: {
   path: string; value: string; onChange?: (v: string) => void; readOnly?: boolean;
+  /** e.g. the recorder's captureExtension (student Sandbox labs in the desktop app) */
+  extensions?: Extension[];
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -58,7 +60,7 @@ export function FileEditor({ path, value, onChange, readOnly = false }: {
         doc: value,
         extensions: [vimSlot.current.of(vimExtension(vimOn() && !readOnly)), basicSetup, languageFor(path), editorTheme, indentUnit.of("    "),
           EditorState.readOnly.of(readOnly), EditorView.theme({ "&": { fontSize: "13px", height: "100%" } }),
-          EditorView.updateListener.of((u) => { if (u.docChanged) cb.current?.(u.state.doc.toString()); })],
+          EditorView.updateListener.of((u) => { if (u.docChanged) cb.current?.(u.state.doc.toString()); }), ...extensions],
       }),
     });
     return () => view.current?.destroy();
@@ -70,7 +72,8 @@ export function FileEditor({ path, value, onChange, readOnly = false }: {
 
   useEffect(() => {  // a value from outside (e.g. reloaded from the instance)
     const v = view.current;
-    if (v && v.state.doc.toString() !== value) v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value } });
+    // origin "reload": the file changed on disk (terminal, vim, a compiler); the detector skips it like "reset"
+    if (v && v.state.doc.toString() !== value) v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value }, userEvent: "reload" });
   }, [value]);
 
   return <div ref={host} className="h-full min-h-0 overflow-hidden [&_.cm-editor]:h-full [&_.cm-scroller]:font-mono" />;
