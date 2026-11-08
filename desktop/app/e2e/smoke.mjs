@@ -40,7 +40,7 @@ const shot = async (page, name) => SHOTS && (await page.waitForTimeout(700), pag
     contract: window.studentDesktop?.contract,
     namespaces: Object.keys(window.studentDesktop ?? {}).filter((k) => typeof window.studentDesktop[k] === "object").sort(),
   }));
-  assert.equal(bridge.contract, 1);
+  assert.equal(bridge.contract, 2);
   assert.deepEqual(bridge.namespaces, ["app", "auth", "engine", "sandbox", "terminal"]);
 
   const info = await page.evaluate(() => window.studentDesktop.app.info());
@@ -49,7 +49,7 @@ const shot = async (page, name) => SHOTS && (await page.waitForTimeout(700), pag
   assert.ok(info.chrome);
   assert.deepEqual(await page.evaluate(() => window.studentDesktop.engine.status()), { state: "missing", engine: null });
   const err = await page.evaluate(() => window.studentDesktop.sandbox.openLab("x").then(() => null, (e) => e));
-  assert.equal(err.code, "not_implemented");
+  assert.equal(err.code, "no_engine");
   assert.ok(err.title && err.message);
 
   // no camera, microphone or screen

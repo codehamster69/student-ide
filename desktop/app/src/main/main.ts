@@ -140,7 +140,7 @@ app.whenReady().then(() => {
   const mods = modules(shellApi);
   for (const m of mods) m.register(ctx as never);
   let disposed = false;
-  app.on("will-quit", (e) => {
+  app.on("before-quit", (e) => {
     if (disposed) return;
     e.preventDefault(); // let modules stop lab instances and flush uploads first (at most 10 s)
     disposed = true;
