@@ -400,6 +400,19 @@ class Database:
             return {r[0] for r in conn.execute(
                 "SELECT id FROM labs WHERE owner_email = ? UNION SELECT lab_id FROM lab_teachers WHERE email = ?", (email, email))}
 
+    def sandbox_labs(self, email: str | None = None) -> list[sqlite3.Row]:
+        """Sandbox Labs (sandbox.py) with their subject title: all of them, or (`email`) those whose
+        subject this teacher owns or was added to (teacher or TA). Review lists these next to web labs."""
+        where = "" if email is None else """WHERE s.owner_email = ? OR EXISTS (SELECT 1 FROM sbx_subject_people p
+                                                WHERE p.subject_id = s.id AND p.email = ?)"""
+        with self.connect() as conn:
+            try:
+                return conn.execute(f"""SELECT l.id, l.title, l.status, s.title AS subject FROM sbx_labs l
+                                        JOIN sbx_subjects s ON s.id = l.subject_id {where}""",
+                                    () if email is None else (email, email)).fetchall()
+            except sqlite3.OperationalError:  # sandbox tables not created
+                return []
+
     def sandbox_lab_teacher(self, lab_id: str, email: str | None) -> bool:
         """A Sandbox Lab (sandbox.py) whose subject this teacher owns or was added to (teacher or TA)."""
         if not email:

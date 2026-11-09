@@ -315,9 +315,11 @@ class Auth:
         return Teacher(user["email"], user["role"] == "admin")
 
     def lab_ids(self, request: Request) -> set[str] | None:
-        """Labs this teacher may see; None = all (admins)."""
+        """Labs this teacher may see, web labs and Sandbox Labs; None = all (admins)."""
         t = self.teacher(request)
-        return None if t.admin else self.db.teacher_lab_ids(t.email)
+        if t.admin:
+            return None
+        return self.db.teacher_lab_ids(t.email) | {r["id"] for r in self.db.sandbox_labs(t.email)}
 
     def check_lab(self, request: Request, lab_id: str | None) -> Teacher:
         """403 unless the lab is the teacher's own or shared with them (a Sandbox Lab: its

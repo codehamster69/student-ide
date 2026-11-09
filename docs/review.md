@@ -69,6 +69,9 @@ Screenshots for the thesis: `BASE=http://127.0.0.1:8000 TOKEN=change-me node fro
 
 ## Sandbox Lab sessions
 
+Sandbox Labs appear in the Review tab's lab list (a box icon) for their subject's owner, teachers and
+TAs, and for admins, the same as web labs for their owners (`auth.lab_ids` adds `db.sandbox_labs(email)`).
+
 Sessions from the desktop app replay one file at a time (file tabs over the
 editor) and add a collapsible **Terminal and files** section under the
 timeline (`GET /api/review/sessions/{id}/sandbox`, `sandbox_review.py`):

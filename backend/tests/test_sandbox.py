@@ -328,3 +328,32 @@ def test_session_per_sandbox_assignment(app, priya):
     assert (row["lab_id"], row["question_id"], row["sitting_id"], row["context"]) == (lab["id"], a1, "sitting_1234", None)
     q = json.loads(row["question_json"])
     assert q["kind"] == "sandbox" and q["main_file"] == "main.c" and q["language"] == "c" and q["subject_code"] == "CS201"
+
+
+def test_subject_teachers_review_their_sandbox_sessions(app, priya):
+    """A non-admin subject teacher finds their Sandbox Lab's sessions in Review (lab list, sessions,
+    students); a teacher of another subject does not; admins see them too."""
+    s = make_subject(priya)
+    lab = make_lab(priya, s["id"])
+    priya.put(f"/api/sandbox/subjects/{s['id']}/roster", json={"text": "PG25CS07"})
+    priya.patch(f"/api/sandbox/labs/{lab['id']}", json={"status": "published"})
+    a1 = priya.get(f"/api/sandbox/labs/{lab['id']}").json()["definition"]["assignments"][0]["id"]
+    student = sign_in(app, "pg25cs07@" + DOMAIN)
+    student.post("/api/consent", json={"student_id": "PG25CS07"})
+    student.post("/api/consent", json={"student_id": "PG25CS07", "scope": "sandbox"})
+    sid = student.post("/api/sessions", json={"student_id": "PG25CS07", "sandbox_lab_id": lab["id"],
+                                              "assignment_id": a1, "client_meta": {}}).json()["session_id"]
+
+    for who in (priya, sign_in(app, ADMIN)):
+        labs = {l["id"]: l for l in who.get("/api/review/labs").json()}
+        assert lab["id"] in labs, labs
+        row = labs[lab["id"]]
+        assert (row["title"], row["kind"], row["subject"], row["n_sessions"]) == ("Linked lists", "sandbox", "Data Structures", 1)
+        assert [x["id"] for x in who.get("/api/sessions", params={"lab_id": lab["id"]}).json()] == [sid]
+        assert "PG25CS07" in {x["student_id"] for x in who.get("/api/review/students").json()}
+        assert who.get(f"/api/sessions/{sid}/events").status_code == 200
+
+    meera = sign_in(app, MEERA)
+    assert lab["id"] not in {l["id"] for l in meera.get("/api/review/labs").json()}
+    assert meera.get("/api/sessions").json() == []
+    assert meera.get(f"/api/sessions/{sid}/events").status_code == 403

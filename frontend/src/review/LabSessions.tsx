@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { CalendarClock, ChevronRight, MessageCircleQuestion, NotebookPen, Trophy, Users } from "lucide-react";
+import { Boxes, CalendarClock, ChevronRight, MessageCircleQuestion, NotebookPen, Trophy, Users } from "lucide-react";
 import { Badge, Card, item, stagger } from "../ui";
 import { AuthError, get, type LabSessionRow, type SessionSummary } from "./api";
 import { Skeleton } from "./bits";
@@ -87,6 +87,7 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">
                     {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
+                    {l.kind === "sandbox" && <Boxes className="size-4 shrink-0 text-accent" aria-label="Sandbox Lab" />}
                     <strong className="truncate text-[15px] font-semibold text-text">{l.title}</strong>
                     {l.kind === "practice" && <Badge className="h-5 px-2 text-[11px]">outside any lab</Badge>}
                   </span>
