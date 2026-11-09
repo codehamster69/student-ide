@@ -69,3 +69,15 @@ def test_updates_off(tmp_path, monkeypatch):
     c = client(tmp_path, None)
     assert c.get("/api/desktop/config").json()["updates"] is False
     assert c.get("/api/desktop/updates/latest.yml").status_code == 404
+
+
+def test_release_lists_installers_for_the_download_page(tmp_path):
+    c = client(tmp_path, Releases("owner/repo", "secret", http=FakeGitHub()))
+    info = c.get("/api/desktop/release").json()
+    assert info["version"] == "0.2.0"
+    assert [(i["os"], i["arch"], i["kind"]) for i in info["installers"]] == [
+        ("windows", "x64", "installer"), ("mac", "arm64", "installer"), ("linux", "x64", "installer")]
+    win = info["installers"][0]
+    assert win["href"] == "/api/desktop/updates/StudentIDE-0.2.0-win-x64.exe"  # not the .blockmap
+    assert c.get(win["href"]).status_code == 302
+    assert client(tmp_path, None).get("/api/desktop/release").status_code == 404

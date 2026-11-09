@@ -9,6 +9,7 @@ it is locked to:
     GET /api/desktop/updates/latest.yml          Windows feed   (latest-mac.yml, latest-linux.yml)
     GET /api/desktop/updates/<file>              302 to a short-lived signed GitHub download URL
     GET /api/desktop/download?os=windows|mac|linux&arch=x64|arm64   the installer, for the update page
+    GET /api/desktop/release                     version + installers, for the public #/download page
 
 The feeds are small and copied through; installers never pass through the VM:
 the server only asks GitHub for a signed URL (with $STUDENTIDE_UPDATES_TOKEN, a
@@ -121,6 +122,31 @@ class Releases:
         raise HTTPException(404, f"the latest desktop release has no {os_name} installer")
 
 
+# What the download page offers, in order: (os, arch, kind, file-name pattern, label, note)
+INSTALLERS = [
+    ("windows", "x64", "installer", r"-win-x64\.exe$", "Windows", "Installer for Windows 10 and 11 (64-bit)"),
+    ("windows", "x64", "portable", r"-portable\.exe$", "Windows, portable", "Runs without installing, for lab PCs; does not update itself"),
+    ("mac", "arm64", "installer", r"-mac-arm64\.dmg$", "Mac with Apple silicon", "M1 and newer"),
+    ("mac", "x64", "installer", r"-mac-x64\.dmg$", "Mac with Intel", "Older Macs (2020 and before)"),
+    ("linux", "x64", "installer", r"-linux-x86_64\.AppImage$", "Linux (AppImage)", "Any 64-bit distribution"),
+    ("linux", "x64", "deb", r"\.deb$", "Linux (.deb)", "Ubuntu and Debian"),
+]
+
+
+def release_info(rel: Releases) -> dict:
+    """The newest release as the download page shows it; each href is a server link (302 to GitHub)."""
+    latest = rel.latest()
+    assets = latest.get("assets", [])
+    out = []
+    for os_name, arch, kind, pattern, label, note in INSTALLERS:
+        a = next((a for a in assets if re.search(pattern, a["name"])), None)
+        if a:
+            out.append({"os": os_name, "arch": arch, "kind": kind, "label": label, "note": note, "file": a["name"],
+                        "size": a.get("size"), "href": f"/api/desktop/updates/{a['name']}"})
+    return {"version": latest.get("tag_name", "")[len(TAG_PREFIX):], "published_at": latest.get("published_at"),
+            "installers": out}
+
+
 def releases_from_env() -> Releases | None:
     repo = os.environ.get("STUDENTIDE_UPDATES_REPO", "").strip()
     return Releases(repo, os.environ.get("STUDENTIDE_UPDATES_TOKEN", "").strip()) if repo else None
@@ -142,6 +168,10 @@ def router(releases: Releases | None) -> APIRouter:
         if name.endswith(".yml"):
             return PlainTextResponse(rel.text(name), media_type="text/yaml", headers={"Cache-Control": "no-store"})
         return RedirectResponse(rel.signed_url(name), status_code=302)
+
+    @r.get("/release")
+    def release():
+        return release_info(on())
 
     @r.get("/download")
     def download(os: str = Query("windows", pattern="^(windows|mac|linux)$"), arch: str = Query("x64", pattern="^(x64|arm64)$")):
