@@ -112,13 +112,28 @@ jobs:
             ~/Library/Caches/electron
             ~/AppData/Local/electron/Cache
           key: electron-${{ runner.os }}-${{ hashFiles('desktop/app/package-lock.json') }}
+      # electron-builder's own tools (winCodeSign, nsis, nsis-resources, appimage) come from GitHub
+      # releases that answer 504 for minutes at a time; keep them so a release build rarely downloads.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron-builder/Cache
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('desktop/installer/package-lock.json') }}
       - run: npm ci && npm --prefix ../sandbox ci && npm --prefix ../app ci
       - name: Version from the release tag
         if: startsWith(github.ref, 'refs/tags/desktop-v')
         run: npm --prefix ../app version "${GITHUB_REF_NAME#desktop-v}" --no-git-tag-version --allow-same-version
       # Unsigned for now: signing (Windows) and notarization (macOS) need certificates as repo
       # secrets; docs/desktop-installer.md (Signing) lists what each needs.
-      - run: npm run package -- ${{ matrix.target }}
+      # Retried: a 504 from those tool downloads is GitHub's, not ours (3 tries, 1 then 3 min apart).
+      - run: |
+          for wait in 60 180 0; do
+            npm run package -- ${{ matrix.target }} && exit 0
+            [ "$wait" = 0 ] && exit 1
+            echo "::warning::packaging failed, retrying in ${wait}s"; sleep "$wait"
+          done
         env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
       # The packaged Mac app must start (a bad signature is a SIGKILL at launch) and its
       # bundled Lima must accept our VM template.

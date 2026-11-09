@@ -524,7 +524,9 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         by_lab: dict[str | None, list] = {}
         for r in visible_sessions(request):
             by_lab.setdefault(r["lab_id"], []).append(r)
-        labs = {l["id"]: l for l in db.list_labs(auth.lab_ids(request))}
+        ids = auth.lab_ids(request)
+        labs = {l["id"]: dict(l) for l in db.list_labs(ids)}
+        labs |= {l["id"]: dict(l) | {"kind": "sandbox"} for l in db.sandbox_labs() if ids is None or l["id"] in ids}
         out = []
         for lab_id, ss in by_lab.items():
             if lab_id is not None and lab_id not in labs:

@@ -126,7 +126,7 @@ export interface LabSessionRow {
   /** "practice" for sessions outside any lab (admins only) */
   id: string;
   title: string;
-  kind: "lab" | "competition" | "practice";
+  kind: "lab" | "competition" | "practice" | "sandbox";
   subject: string;
   status: "draft" | "open" | "closed" | null;
   started_at: number;
