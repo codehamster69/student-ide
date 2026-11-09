@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, CameraOff, Keyboard, MessagesSquare } from "lucide-react";
+import { ArrowRight, CameraOff, Download, Keyboard, MessagesSquare } from "lucide-react";
+import { desktop } from "../desktop";
+import { DOWNLOAD_PAGE } from "../download";
 import { api } from "../api";
 import type { AuthConfig, Me } from "../auth";
 import { Button, Card, Field, Input, Spinner, TypingDemo, item, stagger } from "../ui";
@@ -105,6 +107,11 @@ export function Login({ cfg, onDone, onTeacher }: {
             </li>
           ))}
         </ul>
+        {!desktop && (
+          <a href={DOWNLOAD_PAGE} className="mt-5 flex items-center gap-2 text-[13px] font-medium text-accent hover:underline">
+            <Download className="size-3.5" /> Get the desktop app for Sandbox Labs
+          </a>
+        )}
       </Card>
     </motion.div>
   );

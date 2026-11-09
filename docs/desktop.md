@@ -134,6 +134,18 @@ The one exception is the version gate: the app can't be used then, so it restart
 download is done. Server setting: `STUDENTIDE_UPDATES_REPO` (+ `STUDENTIDE_UPDATES_TOKEN`, a read-only
 fine-grained token for that repository); unset = updates off and the app says so quietly.
 
+### Where students download it
+
+Share **`<server>/#/download`** (studentide.hokora.xyz/#/download). The page needs no sign-in and
+lists the newest release from `GET /api/desktop/release` (version, date, one entry per installer with
+size and a server link that 302s to GitHub). It offers the installer for the visitor's computer first
+(OS from the browser; Mac CPU from `userAgentData` where the browser gives it, otherwise Apple silicon),
+the other systems below, and the one first-launch step an unsigned build needs (SmartScreen
+"Run anyway", right-click Open on a Mac, `chmod +x` for an AppImage). On a phone it shows the list only.
+Students also reach it from the login page ("Get the desktop app") and from the Sandbox Labs banner on
+their web home, whose button downloads the right installer directly with "Other systems" next to it.
+Before the first release is published the page says the app isn't available yet.
+
 To release: bump nothing by hand, push a tag: `git tag desktop-v0.2.0 && git push origin desktop-v0.2.0`.
 
 ## Run it

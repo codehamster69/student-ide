@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowUpRight, Boxes, CalendarClock, Download, Laptop, ShieldCheck } from "lucide-react";
 import { api } from "../api";
+import { bestInstaller, detectPlatform, DOWNLOAD_PAGE, latestRelease, type Installer } from "../download";
 import { desktop } from "../desktop";
 import { Badge, Spinner, cn, item, spring, stagger } from "../ui";
 import { COLOR_VAR, tint, type Network } from "../sandbox/api";
@@ -49,14 +50,15 @@ export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
 }) {
   const [subjects, setSubjects] = useState<MySubject[] | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
-  const [download, setDownload] = useState<string | null>(null);
+  // the installer for this computer (or the download page when none fits or no release is out)
+  const [download, setDownload] = useState<Installer | null>(null);
   const last = (() => { try { return localStorage.getItem("studentide.sandbox.last"); } catch { return null; } })();
 
   useEffect(() => {
     // dev mode needs ?student_id=; with Google sign-in the server uses the cookie and ignores it
     api<MySubject[]>(`/api/sandbox/my/labs?student_id=${encodeURIComponent(studentId)}`).then(setSubjects, () => setSubjects([]));
     if (desktop) desktop.app.info().then((i) => setAppVersion(i.version), () => {});
-    else api<{ download_url: string | null }>("/api/desktop/config").then((c) => setDownload(c.download_url), () => {});
+    else void Promise.all([latestRelease(), detectPlatform()]).then(([rel, p]) => setDownload(rel && bestInstaller(rel, p)));
   }, [studentId]);
 
   if (subjects === null) return <div className="mt-8 flex justify-center text-muted"><Spinner /></div>;
@@ -80,12 +82,13 @@ export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
             <strong className="font-semibold">Open these in the Student IDE app.</strong>{" "}
             <span className="text-muted">Sandbox labs run on your computer, so they need the desktop app; the website only lists them.</span>
           </p>
-          {download && (
-            <a href={download} target="_blank" rel="noreferrer"
+          <span className="flex flex-wrap items-center gap-3">
+            <a href={download?.href ?? DOWNLOAD_PAGE} target={download ? undefined : "_blank"} rel="noreferrer"
               className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-accent-fg hover:bg-accent-hover">
-              <Download className="size-3.5" /> Get the app
+              <Download className="size-3.5" /> {download ? `Get the app for ${download.os === "mac" ? "Mac" : download.os === "windows" ? "Windows" : "Linux"}` : "Get the app"}
             </a>
-          )}
+            {download && <a href={DOWNLOAD_PAGE} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-accent hover:underline">Other systems</a>}
+          </span>
         </motion.div>
       )}
 

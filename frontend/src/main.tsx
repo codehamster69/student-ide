@@ -2,11 +2,14 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { DESKTOP_SIGNIN } from "./desktop";
+import { DOWNLOAD_PAGE } from "./download";
 import "./ui/tokens.css";
 
 // The teacher area (#/teach labs, #/live class view, #/review timeline) is for teachers and researchers. It is loaded
 // on demand so the student editor bundle stays as small as before.
 const DesktopSignIn = lazy(() => import("./screens/DesktopSignIn").then((m) => ({ default: m.DesktopSignIn })));
+
+const DownloadPage = lazy(() => import("./screens/Download").then((m) => ({ default: m.DownloadPage })));
 
 const ReviewApp = lazy(() => import("./review/ReviewApp").then((m) => ({ default: m.ReviewApp })));
 
@@ -15,15 +18,19 @@ const isTeacher = () => /^#\/(review|teach|live|sandbox)/.test(location.hash);
 const isPreview = () => location.hash.startsWith("#/student");
 // the desktop app's sign-in page, opened in the system browser (docs/desktop.md)
 const isDesktopSignIn = () => location.hash.startsWith(DESKTOP_SIGNIN);
+// the public desktop download page, shareable before any lab exists
+const isDownload = () => location.hash.startsWith(DOWNLOAD_PAGE);
 
 function Root() {
   const [review, setReview] = useState(() => isTeacher());
   const [preview, setPreview] = useState(() => isPreview());
+  const [download, setDownload] = useState(() => isDownload());
   useEffect(() => {
-    const on = () => { setReview(isTeacher()); setPreview(isPreview()); };
+    const on = () => { setReview(isTeacher()); setPreview(isPreview()); setDownload(isDownload()); };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
+  if (download) return <Suspense fallback={null}><DownloadPage /></Suspense>;
   if (isDesktopSignIn()) return <Suspense fallback={null}><DesktopSignIn /></Suspense>;
   return review ? <Suspense fallback={null}><ReviewApp /></Suspense> : <App key={preview ? "preview" : "student"} />;
 }

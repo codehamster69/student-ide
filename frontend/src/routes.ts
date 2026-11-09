@@ -152,6 +152,7 @@ export const href = {
   sbxLab: (id: string) => `#/sandbox/labs/${id}`,
   sbxLibrary: "#/sandbox/library",
   sbxPreview: (id: string) => `#/sandbox/previews/${id}`,
+  download: "#/download",           // public desktop download page (screens/Download.tsx)
 } as const;
 
 export const go = (hash: string) => { location.hash = hash; };
