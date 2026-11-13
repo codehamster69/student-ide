@@ -1,12 +1,35 @@
 # Student IDE
 
-The lab code editor for the M.Tech thesis *"Who is at the keyboard? Process-aware
-authorship continuity in programming assessment"* (IIIT Surat).
+A free, open-source, self-hostable coding environment for college programming
+labs. Students write, run and submit code in the browser or in a desktop app.
+Teachers set labs, grade automatically and see how each submission was written.
+It has been used by 271 students at IIIT Surat.
 
-It records how code gets written (key timing, edits, pastes, runs, focus changes),
-never the webcam or screen, so that later stages can learn each student's own
-habits and spot a likely change of author partway through a session. A flag only
-ever leads to a conversation, never a penalty.
+**What you get**
+
+- **Browser editor** (CodeMirror 6) with runnable tasks, an always-open learning lab and
+  timed contests, plus a large question bank: Codeforces, CodeChef and LeetCode-style
+  problems with hidden tests, see [docs/question-sources.md](docs/question-sources.md).
+- **Sandbox Labs**: each subject gets its own Linux environment, run locally in Docker or
+  Podman by a desktop app that installs its own container engine. Students get files, a
+  terminal and Run/Check/Submit.
+- **Teacher tools**: labs, hidden-test auto-grading, gradebook, regrades, a live classroom
+  view and lab attendance.
+- **Authorship checks without proctoring**: it records how code is typed (key timing,
+  edits, pastes, focus), never the webcam or screen. It flags a likely change of author
+  partway through a session, and a flag only ever leads to a conversation, never a
+  penalty. Raw keystrokes are deleted on a schedule.
+- **One Docker image** behind Caddy with HTTPS, Google sign-in restricted to your college
+  domain, an isolated code runner and backups, see [docs/deploy.md](docs/deploy.md).
+
+**Use it at your college:** follow [docs/deploy.md](docs/deploy.md), or [Run it](#run-it)
+below to try it locally. Issues and pull requests are welcome. MIT licensed.
+
+## Research background
+
+Student IDE began as the lab editor for the M.Tech thesis *"Who is at the keyboard?
+Process-aware authorship continuity in programming assessment"* (IIIT Surat). The
+detector, evaluation harness and thesis sources live in this repository too.
 
 | phase | status |
 |-------|--------|
