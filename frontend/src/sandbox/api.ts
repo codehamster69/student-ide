@@ -40,6 +40,8 @@ export interface Environment {
   owner_email: string | null;
   shared: boolean;
   mine: boolean;
+  /** The server can start the build workflow right away (Build now); otherwise builds wait for its schedule. */
+  builds_on_demand: boolean;
   versions: EnvVersion[];
   updated_at: number;
 }

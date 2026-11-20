@@ -326,6 +326,18 @@ once and every image after that is pullable without a login. Setup, once:
    (`https://studentide.hokora.xyz`). Without the variable the job does nothing.
 2. After the first build, set the `studentide-env` package's visibility to public.
 
+GitHub treats the 10-minute schedule as best effort: on this repository it ran
+every 6 to 8 hours, so a new version could sit at "Queued to build" for half a
+day. Set `STUDENTIDE_BUILD_DISPATCH_TOKEN` on the server (a fine-grained token
+with Actions read and write on the repository) and saving or approving a
+version starts the workflow at once through `workflow_dispatch`
+(`backend/studentide/build_kick.py`). The environment panel then shows **Build
+now** on a queued version and **Try again** on a failed one
+(`POST /api/sandbox/environments/{env}/versions/{v}/build`, which re-queues a
+failed version), and follows the build until it ends. Without the token only
+Try again shows (it re-queues), and the workflow's **Run workflow** button on
+GitHub starts a build by hand.
+
 Locally: `STUDENTIDE_BUILD_TOKEN=… python backend/studentide/sandbox_build.py
 --server http://127.0.0.1:8000 --no-push` builds for this machine only.
 

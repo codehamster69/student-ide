@@ -27,6 +27,7 @@ from typing import Callable, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
+from . import build_kick
 from .auth import not_yours, roster_id
 from .db import Database
 from .grading import MAX_TESTS
@@ -629,6 +630,8 @@ class Store:
         status = "needs_approval" if recipe.get("dockerfile") and not approved_by else "queued"
         self.x("INSERT INTO sbx_env_versions VALUES (?,?,?,?,?,?,?,?,?)",
                (env_id, v, json.dumps(recipe), status, None, "", approved_by, now, now))
+        if status == "queued":
+            build_kick.kick()
         return v
 
     def env_versions(self, env_id: str) -> list:
@@ -707,6 +710,7 @@ def env_json(store: Store, env, me_email: str | None = None) -> dict:
     d["shared"] = bool(d["shared"])
     d["versions"] = [version_json(env["id"], v) for v in store.env_versions(env["id"])]
     d["mine"] = me_email is None or env["owner_email"] == me_email
+    d["builds_on_demand"] = build_kick.enabled()  # False: only the workflow's schedule picks builds up
     return d
 
 
@@ -967,6 +971,22 @@ def router(db: Database, require_teacher: Callable, auth, on_lab_closed: Callabl
             raise HTTPException(409, "this version is not waiting for approval")
         store.x("UPDATE sbx_env_versions SET status = 'queued', approved_by = ?, updated_at = ? "
                 "WHERE environment_id = ? AND version = ?", (t.email or "admin", _now(), env_id, v))
+        build_kick.kick()
+        return get_environment(env_id, request)
+
+    @r.post("/environments/{env_id}/versions/{v}/build")
+    def build_now(env_id: str, v: int, request: Request) -> dict:
+        """Build now (queued) or Try again (failed): start the build workflow without waiting for its schedule."""
+        env_access(request, env_id, write=True)
+        ver = store.env_version(env_id, v)
+        if ver is None:
+            raise HTTPException(404, "unknown version")
+        if ver["status"] not in ("queued", "failed"):
+            raise HTTPException(409, f"this version is {ver['status'].replace('_', ' ')}, not waiting to build")
+        if ver["status"] == "failed":
+            store.x("UPDATE sbx_env_versions SET status = 'queued', updated_at = ? WHERE environment_id = ? AND version = ?",
+                    (_now(), env_id, v))
+        build_kick.kick(force=True)
         return get_environment(env_id, request)
 
     # subjects
