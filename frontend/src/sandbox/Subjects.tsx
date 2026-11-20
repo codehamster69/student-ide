@@ -2,7 +2,7 @@
 // with its labs, environment, people and roster (plan §5.1, §6.3).
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Boxes, ChevronRight, Copy, FileCode2, Library, Plus, Share2, Terminal, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, Boxes, ChevronRight, Copy, FileCode2, Hammer, Library, Plus, Share2, Terminal, Trash2, Users, X } from "lucide-react";
 import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
@@ -266,6 +266,12 @@ function EnvironmentPanel({ s, canEdit, onChanged, onAuthLost }: { s: SubjectDet
   const [dockerfile, setDockerfile] = useState("");
   const [msg, setMsg] = useState("");
   const latest = env?.versions[env.versions.length - 1];
+  const waiting = latest?.status === "queued" || latest?.status === "building";
+  useEffect(() => {  // follow a build to its end without a manual refresh
+    if (!waiting) return;
+    const t = window.setInterval(reload, 20_000);
+    return () => window.clearInterval(t);
+  }, [waiting, reload]);
 
   if (!s.environment) {
     return <Panel title="Environment"><p className="text-sm text-muted">No environment. Labs can't be published until the subject has one.</p></Panel>;
@@ -278,11 +284,23 @@ function EnvironmentPanel({ s, canEdit, onChanged, onAuthLost }: { s: SubjectDet
       <div className="flex items-center gap-2 text-sm text-text"><Icon className="size-4 text-accent" /> {env.title} <span className="font-mono text-xs text-faint">v{latest.version}</span></div>
       <p className="mt-1 text-xs text-muted">{latest.recipe.dockerfile ? "Raw Dockerfile" : [bases.find((b) => b.id === latest.recipe.base)?.label, ...latest.recipe.tools].filter(Boolean).join(", ")} · about {mb(latest.size_mb)}</p>
       <p className="mt-1 truncate font-mono text-[11px] text-faint" title={latest.image}>{latest.image}</p>
+      {latest.status === "queued" && (
+        <p className="mt-2 text-xs text-muted">{env.builds_on_demand
+          ? "The build starts within a minute or two and takes about 5 to 15 minutes."
+          : "Builds are picked up by a scheduled job, which can take a few hours."}</p>
+      )}
       {latest.status === "failed" && latest.log && <pre className="mt-2 max-h-32 overflow-auto rounded-lg bg-console p-2 font-mono text-[11px] text-console-text">{latest.log}</pre>}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button size="sm" onClick={async () => setDockerfile(dockerfile ? "" : (await get<{ dockerfile: string }>(`/api/sandbox/environments/${env.id}/versions/${latest.version}/dockerfile`)).dockerfile)}>
           {dockerfile ? "Hide" : "Show"} Dockerfile
         </Button>
+        {canEdit && env.mine && (latest.status === "failed" || (latest.status === "queued" && env.builds_on_demand)) && (
+          <Button size="sm" variant="primary" onClick={async () => {
+            setMsg("");
+            try { await send("POST", `/api/sandbox/environments/${env.id}/versions/${latest.version}/build`); reload(); onChanged(); }
+            catch (e) { setMsg((e as Error).message); }
+          }}><Hammer className="size-3.5" /> {latest.status === "failed" ? "Try again" : "Build now"}</Button>
+        )}
         {canEdit && env.mine && <Button size="sm" onClick={() => setEditing(editing ? null : latest.recipe)}>{editing ? "Cancel" : "Change tools"}</Button>}
         {canEdit && env.mine && !latest.recipe.dockerfile && (
           <Button size="sm" title="Open a fresh instance, install things in its terminal, and save the commands as the next version" onClick={async () => {

@@ -119,6 +119,7 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | `STUDENTIDE_PREVIEW_URL`, `STUDENTIDE_PREVIEW_TOKEN` | optional: Sandbox Labs teacher previews through the `previews` Compose profile (`docker compose --profile previews up -d`); caps in [sandbox-labs.md](sandbox-labs.md); the profile also starts `preview-proxy` (registries-only network) |
 | `STUDENTIDE_GRADING` | optional: `off` stops grading Sandbox Lab submissions (they are kept ungraded); grading uses the preview service, one run at a time, see [sandbox-labs.md](sandbox-labs.md#grading-submissions) |
 | `STUDENTIDE_BUILD_TOKEN`, `STUDENTIDE_SANDBOX_REGISTRY` | optional: the build service (GitHub Actions `sandbox-env-images.yml`, same token as a repo secret) that turns Sandbox Labs environment recipes into images |
+| `STUDENTIDE_BUILD_DISPATCH_TOKEN`, `STUDENTIDE_BUILD_REPO`, `STUDENTIDE_BUILD_REF` | optional: a fine-grained token with Actions read and write on the repository (default `codehamster69/student-ide`, branch `main`), so a queued environment version starts the build workflow at once and teachers get Build now. Unset = builds wait for the workflow's schedule, which GitHub can delay by hours |
 | `BACKUP_KEEP_DAYS` | how many days of nightly backups to keep (default 14) |
 
 ## Who is who

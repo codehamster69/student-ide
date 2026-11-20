@@ -118,6 +118,37 @@ def test_stale_building_is_handed_out_again(priya, monkeypatch):
     assert [b["version"] for b in anon.get("/api/sandbox/builds", headers=h).json()] == [1]
 
 
+def test_build_now_starts_the_workflow(priya, monkeypatch):
+    """A queued version asks GitHub to run the build workflow; Build now / Try again do it by hand."""
+    from fastapi.testclient import TestClient
+    from studentide import build_kick
+    posts = []
+    monkeypatch.setattr(build_kick, "_post", lambda repo, token, ref: posts.append((repo, token, ref)))
+    monkeypatch.setattr(build_kick.threading, "Thread",
+                        lambda target, args, daemon: type("T", (), {"start": lambda self: target(*args)})())
+    s = make_subject(priya)  # no dispatch token: nothing is sent, the schedule picks it up
+    env_id = s["environment"]["id"]
+    assert posts == [] and priya.get(f"/api/sandbox/environments/{env_id}").json()["builds_on_demand"] is False
+
+    monkeypatch.setenv("STUDENTIDE_BUILD_DISPATCH_TOKEN", "gh")
+    monkeypatch.setattr(build_kick, "_last", 0.0)
+    v2 = priya.post(f"/api/sandbox/environments/{env_id}/versions", json={"recipe": {"base": "python", "tools": ["pandas"]}})
+    assert v2.status_code == 200 and v2.json()["builds_on_demand"] is True
+    assert posts == [("codehamster69/student-ide", "gh", "main")]
+    assert priya.post(f"/api/sandbox/environments/{env_id}/versions/2/build").status_code == 200  # Build now
+    assert len(posts) == 2  # forced past the repeat gap
+
+    monkeypatch.setenv("STUDENTIDE_BUILD_TOKEN", "bt")
+    TestClient(priya.app).post(f"/api/sandbox/builds/{env_id}/2", json={"status": "failed", "log": "pip: boom"},
+                               headers={"x-build-token": "bt"})
+    r = priya.post(f"/api/sandbox/environments/{env_id}/versions/2/build")  # Try again
+    assert r.json()["versions"][1]["status"] == "queued" and len(posts) == 3
+    TestClient(priya.app).post(f"/api/sandbox/builds/{env_id}/2", json={"status": "ready", "digest": "sha256:" + "b" * 64},
+                               headers={"x-build-token": "bt"})
+    assert priya.post(f"/api/sandbox/environments/{env_id}/versions/2/build").status_code == 409  # nothing to build
+    assert priya.post(f"/api/sandbox/environments/{env_id}/versions/9/build").status_code == 404
+
+
 def test_build_script_reports_digest_and_failures(priya, monkeypatch):
     """sandbox_build.run_once against the real endpoints, with docker faked."""
     from fastapi.testclient import TestClient
