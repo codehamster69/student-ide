@@ -41,7 +41,19 @@ const shot = async (page, name) => SHOTS && (await page.waitForTimeout(700), pag
     namespaces: Object.keys(window.studentDesktop ?? {}).filter((k) => typeof window.studentDesktop[k] === "object").sort(),
   }));
   assert.equal(bridge.contract, 2);
-  assert.deepEqual(bridge.namespaces, ["app", "auth", "engine", "sandbox", "terminal"]);
+  assert.deepEqual(bridge.namespaces, ["app", "auth", "engine", "journal", "sandbox", "terminal", "updates"]);
+
+  // Help menu: the guide opens in its own window, the lab window stays where it is
+  const labels = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.role === "help")?.submenu.items.map((i) => i.label));
+  assert.ok(labels?.includes("Student guide") && labels.includes("Teacher guide"), `Help menu: ${labels}`);
+  const guide = app.waitForEvent("window");
+  await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.find((i) => i.role === "help").submenu.items.find((i) => i.label === "Student guide").click());
+  const gw = await guide;
+  await gw.waitForSelector("article h1");
+  assert.match(gw.url(), /#\/help\/student$/);
+  await shot(gw, "guide-window");
+  await gw.close();
+  assert.equal(new URL(page.url()).origin, new URL(BASE).origin);
 
   const info = await page.evaluate(() => window.studentDesktop.app.info());
   assert.equal(info.server, new URL(BASE).origin);
