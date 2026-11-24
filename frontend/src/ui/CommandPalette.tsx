@@ -75,7 +75,10 @@ export function CommandPalette({ open, onClose, commands, load }: {
     const hit = words.length
       ? all.filter((c) => { const hay = `${c.label} ${c.group} ${c.hint ?? ""} ${c.keywords ?? ""}`.toLowerCase(); return words.every((w) => hay.includes(w)); })
       : all;
-    return hit.slice(0, 60);
+    // labels that contain the whole query first, then the rest in their groups
+    const whole = q.trim().toLowerCase();
+    const ranked = whole ? [...hit.filter((c) => c.label.toLowerCase().includes(whole)), ...hit.filter((c) => !c.label.toLowerCase().includes(whole))] : hit;
+    return ranked.slice(0, 60);
   }, [q, commands, extra]);
 
   useEffect(() => { setSel(0); }, [q]);
