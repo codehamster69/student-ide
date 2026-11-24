@@ -38,6 +38,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 - `editor/`: CodeMirror session, theme, resizable panes.
 - `screens/`: student app (sign-in, consent, tasks, workspace, My attendance).
 - `teach/`, `live/`, `review/`, `compete/`, `learn/`, `sandbox/`: staff and student areas, each with its own `api.ts`.
+- `guide/`: student and teacher guides as Markdown, rendered in-app (`#/guide`, student Guide tab) and publicly at `#/help`.
 - `routes.ts`: every teacher-area hash route and its breadcrumb `trail()`; `ui/`: design system (tokens, primitives,
   motion, `AppShell` sidebar frame, `PageHeader`, Ctrl+K `CommandPalette`; page recipe in `ui/README.md`).
 

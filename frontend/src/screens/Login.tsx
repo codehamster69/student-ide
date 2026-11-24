@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, CameraOff, Download, Keyboard, MessagesSquare } from "lucide-react";
+import { ArrowRight, CameraOff, Download, Keyboard, LifeBuoy, MessagesSquare } from "lucide-react";
 import { desktop } from "../desktop";
 import { DOWNLOAD_PAGE } from "../download";
 import { api } from "../api";
@@ -106,11 +106,16 @@ export function Login({ cfg, onDone, onTeacher }: {
             </li>
           ))}
         </ul>
-        {!desktop && (
-          <a href={DOWNLOAD_PAGE} className="mt-5 flex items-center gap-2 text-[13px] font-medium text-accent hover:underline">
-            <Download className="size-3.5" /> Get the desktop app for Sandbox Labs
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <a href="#/help/student/getting-started" className="flex items-center gap-2 text-[13px] font-medium text-accent hover:underline">
+            <LifeBuoy className="size-3.5" /> How Student IDE works
           </a>
-        )}
+          {!desktop && (
+            <a href={DOWNLOAD_PAGE} className="flex items-center gap-2 text-[13px] font-medium text-accent hover:underline">
+              <Download className="size-3.5" /> Get the desktop app for Sandbox Labs
+            </a>
+          )}
+        </div>
       </Card>
     </motion.div>
   );
