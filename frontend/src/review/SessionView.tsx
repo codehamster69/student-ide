@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, RotateCcw, Eye, EyeOff, FlaskConical, HeartHandshake,
+  ChevronLeft, ChevronRight, ClipboardPaste, RotateCcw, Eye, EyeOff, FlaskConical, HeartHandshake,
   MessageCircleQuestion, Pause, Play, Play as RunIcon, ScanEye, SkipBack,
   Trophy,
 } from "lucide-react";
-import { Badge, Button, Card, RhythmBars, cn, item, pop, spring, stagger } from "../ui";
+import { Badge, Button, Card, Page, PageHeader, RhythmBars, cn, pop, spring } from "../ui";
 import { AuthError, CHANNELS, get, type Episode, type ReplayData, type Review, type SandboxLanes as Lanes } from "./api";
 import { SandboxLanes } from "./SandboxLanes";
 import { CH_CHANGED, CH_COLOR, ChannelTag, Skeleton } from "./bits";
 import { CodeReplay, type ReplayLanguage } from "./CodeReplay";
 import { Timeline } from "./Timeline";
 import { changedLines, Replayer } from "./replay";
-import { clock, CONDITION, dayKey, dayTime, TASKS, value } from "./format";
-import { href } from "../routes";
+import { clock, CONDITION, dayTime, TASKS, value } from "./format";
 
 const SPEEDS = [1, 5, 20, 60];
 const RECENT_S = 30;
@@ -100,7 +99,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
   }, [replay, n, n0]);
   const rhythm = replay ? replay.intervals(t * 1000) : [];
 
-  if (error) return <div className="mx-auto max-w-3xl px-5 pt-16"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
+  if (error) return <Page><Card className="p-6 text-sm text-danger">{error}</Card></Page>;
   if (!review || !replay) return <Loading />;
 
   const s = review.session;
@@ -110,44 +109,26 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
   const prevEp = [...eps].reverse().find((e) => e.switch_est - 15 < t - 1);
 
   return (
-    <motion.div variants={stagger(0.07)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.reviewLab(s.lab_id ?? "practice", dayKey(s.started_at))} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
-        <ArrowLeft className="size-4" /> {s.lab_id ? "Back to the lab session" : "Practice sessions"}
-      </motion.a>
-
-      {/* header */}
-      <motion.div variants={item} className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-accent to-[#8b5cf6] font-mono text-sm font-semibold text-white shadow-md">
-            {s.student_id.slice(-2)}
-          </span>
-          <div>
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-text">
-              <span className="font-mono">{s.student_id}</span>
-              <span className="text-faint">·</span>
-              <span>{s.task_title ?? TASKS[s.task_id] ?? s.task_id}</span>
-            </h1>
-            <p className="mt-0.5 text-sm text-muted">
-              {dayTime(s.started_at)} · {clock(s.duration_s)} long · compared with {review.baseline.n_sessions}{" "}
-              {s.context === "competition"
-                ? `session${review.baseline.n_sessions === 1 ? "" : "s"} from this student's other competitions`
-                : `baseline session${review.baseline.n_sessions === 1 ? "" : "s"}`}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <Page wide>
+      <PageHeader
+        title={<span className="flex flex-wrap items-baseline gap-x-2"><span className="font-mono">{s.student_id}</span><span className="text-faint">·</span><span>{s.task_title ?? TASKS[s.task_id] ?? s.task_id}</span></span>}
+        description={<span className="tabular-nums">
+          {dayTime(s.started_at)} · {clock(s.duration_s)} long · compared with {review.baseline.n_sessions}{" "}
+          {s.context === "competition"
+            ? `session${review.baseline.n_sessions === 1 ? "" : "s"} from this student's other competitions`
+            : `baseline session${review.baseline.n_sessions === 1 ? "" : "s"}`}
+        </span>}
+        meta={<>
           {s.context === "competition" && <Badge tone="warn"><Trophy className="size-3.5" /> Competition</Badge>}
           {s.phase === "baseline" ? <Badge>Baseline week</Badge> : <Badge tone="accent">Reviewed session</Badge>}
-          {syn && (
-            <>
-              <Badge tone="warn"><FlaskConical className="size-3.5" /> Simulated</Badge>
-              <Button size="sm" variant={truth ? "primary" : "secondary"} onClick={() => setTruth((v) => !v)} aria-pressed={truth}>
-                {truth ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />} Ground truth
-              </Button>
-            </>
-          )}
-        </div>
-      </motion.div>
+          {syn && <Badge tone="warn"><FlaskConical className="size-3.5" /> Simulated</Badge>}
+        </>}
+        actions={syn ? (
+          <Button size="sm" variant={truth ? "primary" : "secondary"} onClick={() => setTruth((v) => !v)} aria-pressed={truth}>
+            {truth ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />} Ground truth
+          </Button>
+        ) : undefined}
+      />
 
       <AnimatePresence>
         {truth && syn && (
@@ -164,10 +145,10 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
         )}
       </AnimatePresence>
 
-      <motion.div variants={item}><Verdict review={review} /></motion.div>
+      <Verdict review={review} />
 
       {/* timeline */}
-      <Card variants={item} className="mt-5 p-4 pb-3">
+      <Card className="mt-5 p-4 pb-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-1.5">
             <Button size="icon" variant="ghost" onClick={() => { setPlaying(false); setT(0); }} aria-label="Back to start"><SkipBack className="size-4" /></Button>
@@ -191,7 +172,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
           </div>
           <Legend />
         </div>
-        <div onPointerDown={() => { setPlaying(false); setDragging(true); }} onPointerUp={() => setDragging(false)}>
+        <div className="overflow-x-auto" onPointerDown={() => { setPlaying(false); setDragging(true); }} onPointerUp={() => setDragging(false)}>
           <Timeline review={review} t={t} onSeek={seek} instant={playing || dragging} showTruth={truth} focusEpisode={focusEp} onFocusEpisode={setFocusEp} />
         </div>
         {lanes && <SandboxLanes lanes={lanes} duration={review.session.duration_s} t={t} onSeek={(v) => { setPlaying(false); setT(v); }} />}
@@ -199,7 +180,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_1fr]">
         {/* replay */}
-        <Card variants={item} className="flex flex-col overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
             <p className="flex items-center gap-2 text-sm font-medium text-text"><ScanEye className="size-4 text-accent" /> Code at <span className="font-mono tabular-nums">{clock(t)}</span></p>
             <p className="flex items-center gap-2 text-xs text-muted">
@@ -230,16 +211,18 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
         </Card>
 
         {/* moments */}
-        <motion.div variants={stagger(0.08, 0.2)} initial="initial" animate="animate" className="grid content-start gap-4">
+        <div className="grid content-start gap-4">
+          <h2 className="text-[15px] font-semibold text-text">{eps.length ? "Moments to discuss" : "Moments"}</h2>
+          {eps.length === 0 && <p className="-mt-2 text-sm text-muted">No moment crossed the threshold in this session.</p>}
           {eps.map((ep, i) => (
             <MomentCard key={i} ep={ep} index={i} active={focusEp === i} onHover={setFocusEp}
               onJump={() => { setPlaying(false); setT(Math.max(0, ep.switch_est - 15)); }} />
           ))}
           {s.phase === "assessed" && review.baseline.status === "ready" && <Guide eps={eps} />}
           <ChannelsExplained review={review} />
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+    </Page>
   );
 }
 
@@ -273,7 +256,7 @@ function Verdict({ review }: { review: Review }) {
     body = "Part of this session looks different from how this student usually writes code. That is a reason to talk with them, never evidence of misconduct on its own: habits change with tiredness, a hard problem, a new keyboard or an injury.";
   }
   return (
-    <div className={cn("flex items-start gap-3 rounded-2xl border px-4 py-3.5", tone)}>
+    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3.5", tone)}>
       <motion.span variants={pop} initial="initial" animate="animate" className="mt-0.5">{icon}</motion.span>
       <div>
         <p className="text-[15px] font-semibold text-text">{title}</p>
@@ -297,11 +280,11 @@ function Legend() {
 
 function MomentCard({ ep, index, active, onHover, onJump }: { ep: Episode; index: number; active: boolean; onHover: (i: number | null) => void; onJump: () => void }) {
   return (
-    <Card variants={item} onPointerEnter={() => onHover(index)} onPointerLeave={() => onHover(null)}
-      className={cn("p-4 transition-[box-shadow,border-color] duration-200", active && "border-warn/60 shadow-lg")}>
+    <Card onPointerEnter={() => onHover(index)} onPointerLeave={() => onHover(null)}
+      className={cn("p-4 transition-[box-shadow,border-color] duration-200", active && "border-warn/60 ring-1 ring-warn/40")}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-faint">Moment {index + 1}</p>
+          <p className="text-xs font-medium text-faint">Moment {index + 1}</p>
           <p className="mt-1 text-[15px] font-semibold text-text">
             {CH_CHANGED[ep.channel]} from about {clock(ep.switch_est)}
           </p>
@@ -352,7 +335,7 @@ function Guide({ eps }: { eps: Episode[] }) {
     "Ask them to make a small change to that code while you watch.",
   ] : [];
   return (
-    <Card variants={item} className="overflow-hidden p-4">
+    <Card className="overflow-hidden p-4">
       <p className="flex items-center gap-2 text-[15px] font-semibold text-text"><HeartHandshake className="size-4 text-accent" /> {first ? "Starting the conversation" : "No conversation needed"}</p>
       {first ? (
         <ol className="mt-2.5 grid gap-2">
@@ -376,7 +359,7 @@ function ChannelsExplained({ review }: { review: Review }) {
   const chans = Object.entries(review.channels);
   if (!chans.length) return null;
   return (
-    <Card variants={item} className="p-4">
+    <Card className="p-4">
       <p className="mb-2 text-sm font-semibold text-text">How to read the lanes</p>
       <div className="grid gap-2.5">
         {chans.map(([ch, c]) => (
@@ -435,11 +418,11 @@ function Nearby({ review, t, onSeek }: { review: Review; t: number; onSeek: (t: 
 
 function Loading() {
   return (
-    <div className="mx-auto max-w-[1440px] px-5 pt-14">
+    <Page wide>
       <Skeleton className="mb-3 h-8 w-80" />
       <Skeleton className="mb-6 h-4 w-96" />
-      <Skeleton className="mb-5 h-16 w-full rounded-2xl" />
-      <Skeleton className="h-[380px] w-full rounded-2xl" />
-    </div>
+      <Skeleton className="mb-5 h-16 w-full rounded-xl" />
+      <Skeleton className="h-[380px] w-full rounded-xl" />
+    </Page>
   );
 }

@@ -2,8 +2,8 @@
 // with its labs, environment, people and roster (plan §5.1, §6.3).
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Boxes, ChevronRight, Copy, FileCode2, Hammer, Library, Plus, Share2, Terminal, Trash2, Users, X } from "lucide-react";
-import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
+import { Boxes, ChevronRight, Copy, FileCode2, Hammer, Library, Plus, Share2, Terminal, Trash2, Users, X } from "lucide-react";
+import { Badge, Button, Card, EmptyState, Field, Input, Page, PageHeader, Spinner, TextArea, cn, pop } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { go, href } from "../routes";
@@ -30,71 +30,62 @@ export function SandboxHome({ onAuthLost }: { onAuthLost: () => void }) {
   const [creating, setCreating] = useState(false);
 
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Sandbox Labs</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            Labs with a whole Linux machine, a terminal and an editor. Students open them in the desktop app on their own computer;
-            you can try any lab here in a short cloud preview.
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <Page>
+      <PageHeader title="Sandbox Labs"
+        description="Labs with a whole Linux machine, a terminal and an editor. Students open them in the desktop app on their own computer; you can try any lab here in a short cloud preview."
+        actions={<>
           <a href={href.sbxLibrary} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
             <Library className="size-4" /> Library
           </a>
           <Button variant="primary" onClick={() => setCreating(true)} disabled={creating}><Plus className="size-4" /> New subject</Button>
-        </div>
-      </motion.div>
+        </>} />
 
       <AnimatePresence>{creating && <NewSubject onClose={() => setCreating(false)} />}</AnimatePresence>
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
-      {!subjects && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>}
+      {!subjects && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>}
 
       {subjects && subjects.length === 0 && !creating && (
-        <Card variants={item} className="px-6 py-12 text-center">
-          <span className="mx-auto grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><Boxes className="size-5" /></span>
-          <h2 className="mt-3 text-base font-semibold text-text">No subjects yet</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">A subject is the home for a course's labs: its Linux environment, its students and its labs.</p>
-          <div className="mx-auto mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+        <EmptyState icon={Boxes} title="No subjects yet"
+          action={<div className="grid max-w-2xl gap-3 text-left sm:grid-cols-2">
             <EmptyChoice icon={Plus} title="Start blank" text="Name the subject and pick its tools." onClick={() => setCreating(true)} />
             <EmptyChoice icon={Library} title="Start from the library" text="Use a lab a colleague shared." onClick={() => go(href.sbxLibrary)} />
-          </div>
-        </Card>
+          </div>}>
+          A subject is the home for a course's labs: its Linux environment, its students and its labs.
+        </EmptyState>
       )}
 
       {subjects && subjects.length > 0 && (
-        <motion.div variants={stagger(0.05)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {subjects.map((s) => <SubjectCard key={s.id} s={s} />)}
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </Page>
   );
 }
 
 function EmptyChoice({ icon: Icon, title, text, onClick }: { icon: typeof Plus; title: string; text: string; onClick: () => void }) {
   return (
-    <motion.button whileHover={{ y: -3 }} onClick={onClick} className="grid gap-1 rounded-xl border border-border bg-surface p-4 text-left shadow-sm hover:border-border-strong">
+    <button onClick={onClick} className="grid gap-1 rounded-xl border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:border-border-strong">
       <Icon className="size-4 text-accent" />
       <span className="text-sm font-medium text-text">{title}</span>
       <span className="text-xs text-muted">{text}</span>
-    </motion.button>
+    </button>
   );
 }
 
 function SubjectCard({ s }: { s: SubjectRow }) {
   const Icon = s.environment ? BASE_ICON[s.environment.base] ?? Boxes : Boxes;
   return (
-    <motion.a variants={item} whileHover={{ y: -3 }} href={href.sbxSubject(s.id)}
-      className="group relative grid gap-3 overflow-hidden rounded-2xl border border-border bg-surface p-4 shadow-md hover:border-border-strong">
-      <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: COLOR_VAR[s.color] }} />
+    <a href={href.sbxSubject(s.id)}
+      className="group relative grid gap-3 overflow-hidden rounded-xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-border-strong">
+      <span className="absolute inset-x-0 top-0 h-0.5" style={{ backgroundColor: COLOR_VAR[s.color] }} />
       <div className="flex items-start gap-3">
         <span className="grid size-10 place-items-center rounded-xl" style={tint(s.color)}><Icon className="size-5" /></span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-text">{s.title}</p>
           <p className="text-xs text-muted">{[s.code, s.semester].filter(Boolean).join(" · ") || "No course code"}</p>
         </div>
-        <ChevronRight className="size-4 text-faint transition-transform group-hover:translate-x-0.5" />
+        <ChevronRight className="size-4 text-faint group-hover:text-text" />
       </div>
       <div className="flex flex-wrap gap-1.5 text-xs">
         <Badge>{s.n_labs} {s.n_labs === 1 ? "lab" : "labs"}{s.n_published ? `, ${s.n_published} published` : ""}</Badge>
@@ -102,7 +93,7 @@ function SubjectCard({ s }: { s: SubjectRow }) {
         {s.environment && <BuildBadge status={s.environment.status} />}
         {s.access !== "owner" && <Badge tone="accent">{s.access === "ta" ? "TA" : s.access === "co_teacher" ? "co-teacher" : "admin"}</Badge>}
       </div>
-    </motion.a>
+    </a>
   );
 }
 
@@ -174,35 +165,27 @@ export function SandboxSubject({ id, onAuthLost }: { id: string; onAuthLost: () 
     try { await fn(); } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
   };
 
-  if (error) return <div className="mx-auto max-w-[1100px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
-  if (!s) return <div className="mx-auto max-w-[1100px] px-5 pt-8"><Skeleton className="h-40 rounded-2xl" /></div>;
+  if (error) return <Page><Card className="p-6 text-sm text-danger">{error}</Card></Page>;
+  if (!s) return <Page><Skeleton className="h-40 rounded-xl" /></Page>;
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.sandbox} className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text"><ArrowLeft className="size-3.5" /> Subjects</motion.a>
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="grid size-12 place-items-center rounded-2xl" style={tint(s.color)}><Boxes className="size-6" /></span>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-text">{s.title}</h1>
-            <p className="text-sm text-muted">{[s.code, s.semester, s.owner_email].filter(Boolean).join(" · ")}</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={() => act(async () => {
-            const sem = prompt("Copy this subject with all its labs (as drafts) for which semester?", "");
-            if (sem === null) return;
-            const c = await send<SubjectDetail>("POST", `/api/sandbox/subjects/${s.id}/copy`, { semester: sem });
-            go(href.sbxSubject(c.id));
-          })}><Copy className="size-4" /> Copy for next semester</Button>
-        </div>
-      </motion.div>
+    <Page>
+      <PageHeader
+        title={<span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-lg" style={tint(s.color)}><Boxes className="size-5" /></span>{s.title}</span>}
+        description={[s.code, s.semester, s.owner_email].filter(Boolean).join(" · ") || undefined}
+        actions={<Button disabled={busy} onClick={() => act(async () => {
+          const sem = prompt("Copy this subject with all its labs (as drafts) for which semester?", "");
+          if (sem === null) return;
+          const c = await send<SubjectDetail>("POST", `/api/sandbox/subjects/${s.id}/copy`, { semester: sem });
+          go(href.sbxSubject(c.id));
+        })}><Copy className="size-4" /> Copy for next semester</Button>}
+      />
       {msg && <Card className="mb-4 p-4 text-sm text-danger">{msg}</Card>}
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-        <motion.section variants={item} className="grid content-start gap-3">
+        <section className="grid content-start gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text">Labs</h2>
+            <h2 className="text-[15px] font-semibold text-text">Labs</h2>
             <a href={href.sbxLibrary} className="text-[13px] text-accent hover:underline">From the library</a>
           </div>
           {canEdit && (
@@ -215,9 +198,10 @@ export function SandboxSubject({ id, onAuthLost }: { id: string; onAuthLost: () 
             </form>
           )}
           {s.labs.length === 0 && <Card className="p-6 text-center text-sm text-muted">No labs yet. Start one above, or use one from the library.</Card>}
+          {s.labs.length > 0 && <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           {s.labs.map((l) => (
-            <motion.a key={l.id} variants={item} whileHover={{ x: 2 }} href={href.sbxLab(l.id)}
-              className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3 shadow-sm hover:border-border-strong">
+            <li key={l.id}><a href={href.sbxLab(l.id)}
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2/60">
               <FileCode2 className="size-4 text-accent" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-text">{l.title}</span>
@@ -227,9 +211,10 @@ export function SandboxSubject({ id, onAuthLost }: { id: string; onAuthLost: () 
               {l.update_available && <Badge tone="warn">update in library</Badge>}
               <NetworkBadge network={l.network} />
               <Badge tone={LAB_TONE[l.status]}>{l.status}</Badge>
-            </motion.a>
+            </a></li>
           ))}
-        </motion.section>
+          </ul>}
+        </section>
 
         <div className="grid content-start gap-5">
           <EnvironmentPanel s={s} canEdit={!!canEdit} onChanged={reload} onAuthLost={onAuthLost} />
@@ -246,14 +231,14 @@ export function SandboxSubject({ id, onAuthLost }: { id: string; onAuthLost: () 
           ) : null}
         </div>
       </div>
-    </motion.div>
+    </Page>
   );
 }
 
 function Panel({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <Card variants={item} className="p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-semibold text-text">{title}</h2>{action}</div>
+    <Card className="p-4">
+      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-[15px] font-semibold text-text">{title}</h2>{action}</div>
       {children}
     </Card>
   );

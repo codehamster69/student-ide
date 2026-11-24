@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Check, CircleStop, FileText, FlaskConical, Play, RefreshCw, Timer, X } from "lucide-react";
-import { Badge, Button, Card, Spinner, TextArea, cn } from "../ui";
+import { Badge, Button, Card, Page, Spinner, TextArea, cn } from "../ui";
 import { get, send, token } from "../review/api";
 import { LessonText } from "../learn/LessonText";
 import { href } from "../routes";
@@ -27,7 +27,7 @@ export function SandboxPreview({ id, onAuthLost }: { id: string; onAuthLost: () 
     return () => clearInterval(t);
   }, [load, p?.status]);
 
-  if (error) return <div className="mx-auto max-w-[1100px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
+  if (error) return <Page><Card className="p-6 text-sm text-danger">{error}</Card></Page>;
   if (!p) return <div className="grid place-items-center pt-24"><Spinner /></div>;
   if (p.kind === "setup") return <SetupByHand p={p} onReload={() => void load()} onAuthLost={onAuthLost} />;
   const lab = p.lab;
@@ -198,7 +198,7 @@ function Workspace({ previewId, assignment: a, onTouched }: { previewId: string;
       <div className="grid min-h-0 grid-rows-[3fr_2fr] gap-3">
         <Card className="grid min-h-0 grid-cols-[160px_1fr] overflow-hidden">
           <div className="min-h-0 overflow-y-auto border-r border-border bg-surface-2 p-1.5">
-            <div className="mb-1 flex items-center justify-between px-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">Files
+            <div className="mb-1 flex items-center justify-between px-1.5 text-xs font-medium text-faint">Files
               <button onClick={() => void refresh()} aria-label="Refresh files"><RefreshCw className="size-3" /></button></div>
             {files.map((f) => (
               <button key={f.path} onClick={async () => { await flush(); setCur(f.path); }}

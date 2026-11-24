@@ -4,8 +4,8 @@
 // board and live grid (ClassBoard.tsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
-import { Badge, Button, Card, Checkbox, Field, Input, Spinner, TextArea, cn, item, spring, stagger } from "../ui";
+import { ArrowDown, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
+import { Badge, Button, Card, Checkbox, Field, Input, Page, PageHeader, Spinner, TextArea, cn, item, spring, stagger } from "../ui";
 import { get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LessonText } from "../learn/LessonText";
@@ -43,8 +43,8 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
     finally { setSaving(false); }
   };
 
-  if (error) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
-  if (!lab) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Skeleton className="h-60 rounded-2xl" /></div>;
+  if (error) return <Page><Card className="p-6 text-sm text-danger">{error}</Card></Page>;
+  if (!lab) return <Page><Skeleton className="h-60 rounded-xl" /></Page>;
   const readOnly = lab.access === "ta";
   const live = lab.status !== "draft";
   const steps = STEPS.filter((s) => (s !== "Submissions" && s !== "Class" || live) && (s !== "History" || live || lab.n_changes > 0));
@@ -52,23 +52,16 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
   const current: Step = step ?? (live ? "Submissions" : "Basics");
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1200px] px-5 pb-24 pt-6">
-      <motion.a variants={item} href={href.sbxSubject(lab.subject_id)} className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text">
-        <ArrowLeft className="size-3.5" /> {lab.definition.subject.title}
-      </motion.a>
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">{lab.title}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge tone={lab.status === "published" ? "success" : lab.status === "closed" ? "warn" : "neutral"}>{lab.status}</Badge>
-            <NetworkBadge network={lab.network} />
-            {lab.assessed && <Badge>assessed</Badge>}
-            {lab.shared && <Badge tone="accent"><Share2 className="size-3" /> in library</Badge>}
-            <span className="font-mono text-[11px] text-faint">v{lab.version}</span>
-          </div>
-        </div>
-        <TryButton labId={lab.id} />
-      </motion.div>
+    <Page>
+      <PageHeader title={lab.title}
+        meta={<>
+          <Badge tone={lab.status === "published" ? "success" : lab.status === "closed" ? "warn" : "neutral"}>{lab.status}</Badge>
+          <NetworkBadge network={lab.network} />
+          {lab.assessed && <Badge>assessed</Badge>}
+          {lab.shared && <Badge tone="accent"><Share2 className="size-3" /> in library</Badge>}
+          <span className="font-mono text-[11px] text-faint">v{lab.version}</span>
+        </>}
+        actions={<TryButton labId={lab.id} />} />
       {msg && <Card className="mb-4 flex items-start gap-2 p-4 text-sm text-danger"><CircleAlert className="mt-0.5 size-4 shrink-0" />{msg}</Card>}
       <AnimatePresence>
         {note.length > 0 && (
@@ -108,7 +101,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
           </motion.div>
         </AnimatePresence>
       </div>
-    </motion.div>
+    </Page>
   );
 }
 
@@ -253,7 +246,7 @@ function CopyPicker({ labId, onPick }: { labId: string; onPick: (assignmentId: s
         <div className="grid max-h-80 gap-3 overflow-y-auto">
           {shown.map((l) => (
             <div key={l.lab_id}>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-faint">{l.subject_title} · {l.lab_title}</p>
+              <p className="text-xs font-medium text-faint">{l.subject_title} · {l.lab_title}</p>
               <div className="mt-1 grid gap-1">
                 {l.assignments.map((a) => (
                   <button key={a.id} disabled={!!busy} onClick={async () => { setBusy(a.id); await onPick(a.id); setBusy(""); }}
@@ -604,7 +597,7 @@ function Summary({ lab, network, sections, opens, due, grading, late }: {
   ];
   return (
     <div className="rounded-xl border border-border bg-surface-2 p-4">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">What students will see</p>
+      <p className="mb-2 text-xs font-medium text-faint">What students will see</p>
       <dl className="grid gap-1.5 text-[13px] sm:grid-cols-[90px_1fr]">
         {rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-muted">{k}</dt><dd className="text-text">{v}</dd></div>)}
       </dl>

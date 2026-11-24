@@ -77,7 +77,7 @@ export function RecipeEditor({ recipe, onChange, bases, tools }: {
         <div className="max-h-72 overflow-y-auto rounded-xl border border-border bg-surface p-2">
           {groups.map(([group, ts]) => (
             <div key={group} className="mb-2">
-              <p className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-faint">{group}</p>
+              <p className="px-2 pb-1 pt-1 text-xs font-medium text-faint">{group}</p>
               <div className="grid gap-0.5 sm:grid-cols-2">
                 {ts.map((t) => {
                   const inBase = base?.tools.includes(t.id);

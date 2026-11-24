@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
-  Activity, ArrowLeft, ArrowUpDown, CheckCircle2, CircleAlert, ClipboardPaste, Eye, FlaskConical, Info, MessagesSquare,
+  Activity, ArrowUpDown, CheckCircle2, CircleAlert, ClipboardPaste, Eye, FlaskConical, Info, MessagesSquare,
   Play, Radio, Trophy, Users,
 } from "lucide-react";
-import { Badge, Button, Card, LiveDot, cn, item, spring, stagger } from "../ui";
+import { Badge, Button, Card, EmptyState, LiveDot, Page, PageHeader, cn } from "../ui";
 import { AuthError, get, token } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LanguageBadge } from "../teach/bits";
@@ -26,49 +26,45 @@ export function LiveLabs({ onAuthLost }: { onAuthLost: () => void }) {
   }, [onAuthLost]);
 
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">Live</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Follow an open lab while it runs: who is working on which question, their runs and test checks, and anything
-          the review timeline has picked up so far. Students always see a notice while you are watching.
-        </p>
-      </motion.div>
+    <Page>
+      <PageHeader title="Live"
+        description="Follow an open lab while it runs: who is working on which question, their runs and test checks, and anything the review timeline has picked up so far. Students always see a notice while you are watching." />
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
-      {!labs && !error && <div className="grid gap-3">{[0, 1].map((i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}</div>}
+      {!labs && !error && <Skeleton className="h-40 w-full rounded-xl" />}
       {labs && labs.length === 0 && (
-        <Card variants={item} className="grid place-items-center gap-3 px-6 py-14 text-center">
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><Radio className="size-5" /></span>
-          <p className="text-sm font-medium text-text">No lab is open right now</p>
-          <p className="max-w-sm text-sm text-muted">Open a lab from the Labs tab when the class starts, then follow it here.</p>
-          <Button className="mt-2" onClick={() => { location.hash = href.labs; }}>Go to labs</Button>
-        </Card>
+        <EmptyState icon={Radio} title="No lab is open right now"
+          action={<Button variant="primary" onClick={() => { location.hash = href.labs; }}>Go to labs</Button>}>
+          Open a lab from the Labs tab when the class starts, then follow it here.
+        </EmptyState>
       )}
-      <div className="grid gap-3">
-        {labs?.map((l) => (
-          <motion.a key={l.id} variants={item} href={href.liveLab(l.id)}
-            className="group flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-shadow hover:shadow-md">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[15px] font-semibold text-text">
-                {l.title} <LanguageBadge language={l.language} />
-                {l.kind === "competition" && <Badge tone="warn">Competition</Badge>}
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                {l.n_questions} question{l.n_questions === 1 ? "" : "s"} · {l.everyone ? "every student" : `${l.n_roster} on the roster`}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-2 text-sm text-text">
-                <LiveDot tone={l.n_online ? "success" : "neutral"} live={l.n_online > 0} />
-                <span className="tabular-nums font-medium">{l.n_online}</span>
-                <span className="text-muted">connected</span>
-              </span>
-              <Button size="sm" variant="primary" tabIndex={-1}><Eye className="size-3.5" /> Watch</Button>
-            </div>
-          </motion.a>
-        ))}
-      </div>
-    </motion.div>
+      {labs && labs.length > 0 && (
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+          {labs.map((l) => (
+            <li key={l.id}>
+              <a href={href.liveLab(l.id)} className="group flex flex-wrap items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2/60">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-[15px] font-semibold text-text">
+                    {l.title} <LanguageBadge language={l.language} />
+                    {l.kind === "competition" && <Badge tone="warn">Competition</Badge>}
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted">
+                    {l.n_questions} question{l.n_questions === 1 ? "" : "s"} · {l.everyone ? "every student" : `${l.n_roster} on the roster`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-2 text-sm text-text">
+                    <LiveDot tone={l.n_online ? "success" : "neutral"} live={l.n_online > 0} />
+                    <span className="font-medium tabular-nums">{l.n_online}</span>
+                    <span className="text-muted">connected</span>
+                  </span>
+                  <Button size="sm" variant="primary" tabIndex={-1}><Eye className="size-3.5" /> Watch</Button>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Page>
   );
 }
 
@@ -112,9 +108,9 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
 
   if (!data) {
     return (
-      <div className="mx-auto max-w-[1440px] px-5 pt-8">
-        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-64 w-full rounded-2xl" />}
-      </div>
+      <Page wide>
+        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-64 w-full rounded-xl" />}
+      </Page>
     );
   }
 
@@ -123,22 +119,11 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
   if (sort === "recent") rows = [...rows].sort((a, b) => (b.last_edit_at ?? 0) - (a.last_edit_at ?? 0));
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.live} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
-        <ArrowLeft className="size-4" /> All open labs
-      </motion.a>
-
-      <motion.div variants={item} className="mb-4 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-success">
-            <LiveDot tone="success" /> Live class view
-          </p>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-text">
-            {data.lab.title} <LanguageBadge language={data.lab.language} />
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-sm text-muted"><Users className="size-4" />{data.students.length}</span>
+    <Page wide>
+      <PageHeader
+        title={<span className="flex items-center gap-2">{data.lab.title} <LanguageBadge language={data.lab.language} /></span>}
+        description={<span className="inline-flex items-center gap-2"><LiveDot tone="success" live /> Live class view<span className="text-faint">·</span><Users className="size-4 text-faint" /><span className="tabular-nums">{data.students.length}</span> students</span>}
+        actions={<>
           <Button size="sm" variant="ghost" onClick={() => setSort((s) => (s === "roll" ? "recent" : "roll"))}>
             <ArrowUpDown className="size-3.5" /> {sort === "roll" ? "Roll number" : "Last edit"}
           </Button>
@@ -146,20 +131,20 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             <Button size="sm" onClick={() => { location.hash = href.board(id); }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
           )}
           <Button size="sm" onClick={() => { location.hash = href.lab(id); }}>Lab settings</Button>
-        </div>
-      </motion.div>
+        </>}
+      />
 
-      <motion.div variants={item} className="mb-4 flex items-start gap-2 rounded-xl bg-accent-soft px-4 py-2.5 text-[13px] text-text">
+      <div className="mb-4 flex items-start gap-2 rounded-xl border border-border bg-surface-2/60 px-4 py-2.5 text-[13px] text-muted">
         <Info className="mt-0.5 size-4 shrink-0 text-accent" />
         <p>
-          Students in this lab see a small <strong className="font-semibold">Class view on</strong> notice while this page is open.
+          Students in this lab see a small <strong className="font-semibold text-text">Class view on</strong> notice while this page is open.
           {data.editor_view
             ? <> Opening someone's editor shows them a banner with your name for as long as you look. Every view is logged.</>
             : <> Viewing individual editors is turned off on this server.</>}
         </p>
-      </motion.div>
+      </div>
 
-      <motion.div variants={item} className="mb-4 flex flex-wrap gap-1.5" role="toolbar" aria-label="Filter students">
+      <div className="mb-4 flex flex-wrap gap-1.5" role="toolbar" aria-label="Filter students">
         <Chip active={filter === null} onClick={() => setFilter(null)}>All <span className="tabular-nums text-faint">{data.students.length}</span></Chip>
         {ORDER.filter((s) => counts.get(s)).map((s) => (
           <Chip key={s} active={filter === s} onClick={() => setFilter(filter === s ? null : s)}>
@@ -171,45 +156,38 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             <MessagesSquare className="size-3.5 text-accent" /> Worth a conversation <span className="tabular-nums text-faint">{nMoments}</span>
           </Chip>
         )}
-      </motion.div>
+      </div>
 
       {data.questions.length > 1 && (
-        <motion.div variants={item} className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {[...data.questions].sort((a, b) => a.position - b.position).map((q) => {
             const on = data.students.filter((s) => s.question_id === q.id && !["submitted", "left"].includes(s.state)).length;
             const done = data.students.filter((s) => s.submitted.includes(q.id)).length;
             return (
-              <div key={q.id} className="rounded-xl border border-border bg-surface px-3 py-2 text-xs">
+              <div key={q.id} className="rounded-xl border border-border bg-surface px-3 py-2 text-xs shadow-sm">
                 <p className="truncate font-medium text-text">Q{q.position + 1} · {q.title}</p>
                 <p className="mt-0.5 text-muted"><span className="tabular-nums">{on}</span> working · <span className="tabular-nums">{done}</span> finished</p>
               </div>
             );
           })}
-        </motion.div>
+        </div>
       )}
 
-      <LayoutGroup>
-        <motion.div layout className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          <AnimatePresence initial={false}>
-            {rows.map((s) => (
-              <motion.div key={s.student_id} layout transition={spring} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}>
-                <StudentCard s={s} now={data.now} editorView={data.editor_view} fresh={fresh.has(s.student_id)}
-                  onSeen={() => setFresh((f) => { const n = new Set(f); n.delete(s.student_id); return n; })} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      </LayoutGroup>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {rows.map((s) => (
+          <StudentCard key={s.student_id} s={s} now={data.now} editorView={data.editor_view} fresh={fresh.has(s.student_id)}
+            onSeen={() => setFresh((f) => { const n = new Set(f); n.delete(s.student_id); return n; })} />
+        ))}
+      </div>
       {rows.length === 0 && <p className="py-10 text-center text-sm text-muted">Nobody here right now.</p>}
-    </motion.div>
+    </Page>
   );
 }
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick} aria-pressed={active}
-      className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+      className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors",
         active ? "border-accent bg-accent-soft text-text" : "border-border bg-surface text-muted hover:text-text")}>
       {children}
     </button>
@@ -222,7 +200,7 @@ function StudentCard({ s, now, editorView, fresh, onSeen }: {
   const st = STATE[s.state];
   const started = s.session_id !== null;
   return (
-    <Card data-student={s.student_id} className={cn("flex h-full flex-col gap-3 p-4 transition-shadow", fresh && "ring-2 ring-accent/60",
+    <Card data-student={s.student_id} className={cn("flex h-full flex-col gap-3 p-4", fresh && "ring-2 ring-accent/60",
       !started && "opacity-70")}>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-mono text-sm font-semibold text-text">{s.student_id}</span>
@@ -259,7 +237,7 @@ function StudentCard({ s, now, editorView, fresh, onSeen }: {
               className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1.5 text-xs font-medium text-accent hover:underline">
               <MessagesSquare className="size-3.5" />
               {s.moments} moment{s.moments === 1 ? "" : "s"} worth a conversation in this lab
-              {fresh && <span className="ml-auto rounded-full bg-accent px-1.5 text-[10px] font-semibold uppercase text-accent-fg">new</span>}
+              {fresh && <span className="ml-auto rounded-md bg-accent px-1.5 text-[11px] font-semibold text-accent-fg">new</span>}
             </a>
           )}
           <div className="mt-auto flex items-center gap-2 pt-1">

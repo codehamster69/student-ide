@@ -48,7 +48,7 @@ export function Submissions({ lab }: { lab: LabDetail }) {
   }), [data, filter]);
 
   if (error) return <Card className="p-5 text-sm text-danger">{error}</Card>;
-  if (!data) return <Skeleton className="h-60 rounded-2xl" />;
+  if (!data) return <Skeleton className="h-60 rounded-xl" />;
   const { counts } = data;
   const expected = counts.students * data.assignments.length;
 

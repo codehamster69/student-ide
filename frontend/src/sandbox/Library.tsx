@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Library as LibraryIcon, Search, X } from "lucide-react";
-import { Badge, Button, Card, Input, Spinner, cn, item, stagger } from "../ui";
+import { Library as LibraryIcon, Search, X } from "lucide-react";
+import { Badge, Button, Card, EmptyState, Input, Page, PageHeader, Spinner, cn } from "../ui";
 import { get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LessonText } from "../learn/LessonText";
@@ -28,13 +28,9 @@ export function SandboxLibrary({ onAuthLost }: { onAuthLost: () => void }) {
   }, [q, difficulty]);
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.sandbox} className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text"><ArrowLeft className="size-3.5" /> Subjects</motion.a>
-      <motion.div variants={item} className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">Library</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">Labs colleagues shared. Using one copies it into your subject as a draft you can change freely.</p>
-      </motion.div>
-      <motion.div variants={item} className="mb-5 flex flex-wrap gap-2">
+    <Page>
+      <PageHeader title="Library" description="Labs colleagues shared. Using one copies it into your subject as a draft you can change freely." />
+      <div className="mb-5 flex flex-wrap gap-2">
         <label className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-3 size-4 text-faint" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title, subject or topic" className="pl-9" />
@@ -42,22 +38,21 @@ export function SandboxLibrary({ onAuthLost }: { onAuthLost: () => void }) {
         <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="h-11 rounded-lg border border-border bg-surface px-3 text-sm text-text">
           <option value="">Any level</option><option value="intro">Intro</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option>
         </select>
-      </motion.div>
+      </div>
 
-      {!entries && <div className="grid gap-3 sm:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}</div>}
+      {!entries && <div className="grid gap-3 sm:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>}
       {entries && entries.length === 0 && (
-        <Card className="px-6 py-12 text-center">
-          <span className="mx-auto grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><LibraryIcon className="size-5" /></span>
-          <p className="mt-3 text-sm text-muted">{q || difficulty ? "Nothing matches." : "Nothing shared yet. Share a lab from its Publish step and it appears here for colleagues."}</p>
-        </Card>
+        <EmptyState icon={LibraryIcon} title={q || difficulty ? "Nothing matches" : "Nothing shared yet"}>
+          {q || difficulty ? "Try a different search or level." : "Share a lab from its Publish step and it appears here for colleagues."}
+        </EmptyState>
       )}
       {entries && entries.length > 0 && (
-        <motion.div variants={stagger(0.04)} className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {entries.map((e) => {
             const Icon = e.base ? BASE_ICON[e.base] : LibraryIcon;
             return (
-              <motion.button key={e.id} variants={item} whileHover={{ y: -3 }} onClick={() => setOpen(e.id)}
-                className="grid gap-2 rounded-2xl border border-border bg-surface p-4 text-left shadow-md hover:border-border-strong">
+              <button key={e.id} onClick={() => setOpen(e.id)}
+                className="grid gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:border-border-strong">
                 <span className="flex items-center gap-2 text-[15px] font-semibold text-text"><Icon className="size-4 text-accent" />{e.title}</span>
                 <span className="line-clamp-2 text-sm text-muted">{e.summary || e.subject_title}</span>
                 <span className="flex flex-wrap gap-1.5">
@@ -67,14 +62,14 @@ export function SandboxLibrary({ onAuthLost }: { onAuthLost: () => void }) {
                   {e.uses > 0 && <Badge tone="success">used {e.uses}×</Badge>}
                 </span>
                 <span className="text-xs text-faint">{e.subject_title} · {e.shared_by ?? "admin"}</span>
-              </motion.button>
+              </button>
             );
           })}
-        </motion.div>
+        </div>
       )}
       {/* portal: the page wrapper is transformed by its enter animation, which would trap position: fixed */}
       {createPortal(<AnimatePresence>{open && <Drawer id={open} subjects={subjects ?? []} onClose={() => setOpen(null)} />}</AnimatePresence>, document.body)}
-    </motion.div>
+    </Page>
   );
 }
 

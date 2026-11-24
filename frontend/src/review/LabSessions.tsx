@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
 import { Boxes, CalendarClock, ChevronRight, MessageCircleQuestion, NotebookPen, Trophy, Users } from "lucide-react";
-import { Badge, Card, item, stagger } from "../ui";
+import { Badge, Card, EmptyState, Page, PageHeader } from "../ui";
 import { AuthError, get, type LabSessionRow, type SessionSummary } from "./api";
 import { Skeleton } from "./bits";
 import { dayKey, span } from "./format";
@@ -56,34 +55,27 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
   }, [labs, rows]);
 
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Lab sessions</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            Each row is one class: a lab on the day it ran. Open it to review what every student did in it, compared with
-            their own baseline weeks, never with the class.
-          </p>
-        </div>
-        <a href={href.reviewAll} className="text-sm font-medium text-accent hover:underline">Every session in one list</a>
-      </motion.div>
+    <Page>
+      <PageHeader
+        title="Lab sessions"
+        description="Each row is one class: a lab on the day it ran. Open it to review what every student did, compared with their own baseline weeks, never with the class."
+        actions={<a href={href.reviewAll} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">Every session in one list</a>}
+      />
 
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
-      {!sittings && !error && <div className="grid gap-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}</div>}
+      {!sittings && !error && <Skeleton className="h-64 w-full rounded-xl" />}
       {sittings && sittings.length === 0 && (
-        <Card variants={item} className="grid place-items-center gap-3 px-6 py-14 text-center">
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><NotebookPen className="size-5" /></span>
-          <p className="text-sm font-medium text-text">Nothing recorded in your labs yet</p>
-          <p className="max-w-sm text-sm text-muted">Sessions show up here once students work in a lab you made or that was shared with you.</p>
-        </Card>
+        <EmptyState icon={NotebookPen} title="Nothing recorded in your labs yet">
+          Sessions show up here once students work in a lab you made or that was shared with you.
+        </EmptyState>
       )}
 
       {sittings && sittings.length > 0 && (
-        <motion.ul variants={stagger(0.05, 0.1)} className="grid gap-3">
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           {sittings.map(({ lab: l, day, start, end, students, sessions, assessed, talkTo }) => (
-            <motion.li key={`${l.id}-${day}`} variants={item}>
+            <li key={`${l.id}-${day}`}>
               <a href={href.reviewLab(l.id, day)}
-                className="group grid items-center gap-x-6 gap-y-2 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md md:grid-cols-[1fr_auto_auto_1.25rem]">
+                className="group grid items-center gap-x-6 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-2/60 md:grid-cols-[1fr_auto_13rem_1rem]">
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">
                     {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
@@ -97,9 +89,9 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
                     {l.subject && <span className="text-faint">· {l.subject}</span>}
                   </span>
                 </span>
-                <span className="flex items-center gap-1.5 text-sm text-muted">
+                <span className="flex items-center gap-1.5 text-sm tabular-nums text-muted">
                   <Users className="size-3.5 text-faint" />
-                  <span className="font-semibold tabular-nums text-text">{students}</span> {students === 1 ? "student" : "students"}
+                  <span className="font-semibold text-text">{students}</span> {students === 1 ? "student" : "students"}
                   <span className="text-faint">· {sessions} sessions</span>
                 </span>
                 {talkTo ? (
@@ -110,12 +102,12 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
                 ) : (
                   <span className="text-xs text-faint">{assessed ? "Nothing stood out" : "Baseline weeks only"}</span>
                 )}
-                <ChevronRight className="hidden size-4 text-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-text md:block" />
+                <ChevronRight className="hidden size-4 text-faint group-hover:text-text md:block" />
               </a>
-            </motion.li>
+            </li>
           ))}
-        </motion.ul>
+        </ul>
       )}
-    </motion.div>
+    </Page>
   );
 }

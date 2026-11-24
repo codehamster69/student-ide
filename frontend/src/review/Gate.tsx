@@ -41,7 +41,7 @@ export function Gate({ cfg, signedInStudent = null, onDone }: {
     <motion.div variants={stagger(0.08)} initial="initial" animate="animate"
       className="mx-auto grid max-w-5xl items-center gap-10 px-6 pb-16 pt-[9vh] lg:grid-cols-[1.1fr_1fr]">
       <div>
-        <motion.p variants={item} className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent">For teachers and interviewers</motion.p>
+        <motion.p variants={item} className="mb-3 text-sm font-medium text-accent">For teachers and interviewers</motion.p>
         <motion.h1 variants={item} className="mb-4 text-4xl font-semibold leading-[1.1] tracking-tight text-text">
           See how a session<br />was written, moment by moment.
         </motion.h1>
