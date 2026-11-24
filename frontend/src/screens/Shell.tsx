@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { GraduationCap, LayoutGrid, LogOut } from "lucide-react";
+import { GraduationCap, LayoutGrid, LifeBuoy, LogOut } from "lucide-react";
 import { Button, Logo, Stepper, cn, page, spring } from "../ui";
 import { MyAttendanceButton } from "./MyAttendance";
 
 const STEPS = ["Sign in", "Consent", "Choose task"];
 
-export type StudentTab = "home" | "learn";
+export type StudentTab = "home" | "learn" | "guide";
 const TABS: { id: StudentTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "home", label: "My labs", icon: LayoutGrid },
   { id: "learn", label: "Learning lab", icon: GraduationCap },
+  { id: "guide", label: "Guide", icon: LifeBuoy },
 ];
 
 /**
