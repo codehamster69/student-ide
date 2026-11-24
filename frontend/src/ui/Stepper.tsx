@@ -21,7 +21,7 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
             )}>
               <span className={cn(
                 "grid size-4 place-items-center rounded-full text-[10px] transition-colors duration-200",
-                done ? "bg-success text-white" : active ? "bg-accent text-accent-fg" : "bg-surface-3 text-muted",
+                done ? "bg-success-soft text-success" : active ? "bg-accent text-accent-fg" : "bg-surface-3 text-muted",
               )}>
                 {done ? <Check className="size-2.5" strokeWidth={3.5} /> : i + 1}
               </span>

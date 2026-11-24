@@ -118,7 +118,7 @@ export function CommandPalette({ open, onClose, commands, load }: {
                     {head && <div className="px-2.5 pb-1 pt-2.5 text-[11.5px] font-medium text-faint">{head}</div>}
                     <div id={`pc-${i}`} data-i={i} role="option" aria-selected={i === sel}
                       onMouseMove={() => setSel(i)} onClick={() => go(c)}
-                      className={cn("flex h-9 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-sm", i === sel ? "bg-accent-soft text-text" : "text-muted")}>
+                      className={cn("flex h-9 cursor-pointer items-center gap-2.5 rounded-md border px-2.5 text-sm", i === sel ? "border-cta/50 text-text" : "border-transparent text-muted")}>
                       {Icon && <Icon className={cn("size-4 shrink-0", i === sel ? "text-accent" : "text-faint")} />}
                       <span className="truncate text-text">{c.label}</span>
                       {c.hint && <span className="truncate text-xs text-faint">{c.hint}</span>}

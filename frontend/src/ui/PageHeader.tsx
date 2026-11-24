@@ -40,7 +40,7 @@ export function EmptyState({ icon: Icon, title, children, action, className }: {
 }) {
   return (
     <div className={cn("grid justify-items-center rounded-xl border border-dashed border-border-strong px-6 py-12 text-center", className)}>
-      <span className="grid size-10 place-items-center rounded-lg bg-accent-soft text-accent"><Icon className="size-5" /></span>
+      <span className="grid size-10 place-items-center rounded-lg border border-border text-cta"><Icon className="size-5" /></span>
       <h2 className="mt-3 text-[15px] font-semibold text-text">{title}</h2>
       {children && <div className="mt-1 max-w-md text-sm leading-relaxed text-muted">{children}</div>}
       {action && <div className="mt-5">{action}</div>}
