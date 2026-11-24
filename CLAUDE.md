@@ -55,7 +55,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
   and update `docs/event-schema.md`.
 - Every module opens with a docstring saying what it is for; keep that.
 - UI uses semantic tokens (`bg-surface`, `text-muted`…) from `frontend/src/ui/tokens.css`, never raw colours,
-  so light and dark both work.
+  so light and dark both work. Pages follow the recipe in `frontend/src/ui/README.md` (`Page`, `PageHeader`, `EmptyState`).
 - Study data stays clean: `sessions.context` marks non-study sessions (`learn`, `preview` from View as
   student) and edits with origin `reset` are skipped by the detector. Exclude any new non-study source too.
 - Thesis log: each notable change adds `thesis/brain/entries/YYYY-MM-DD-NN-slug.md` (from `TEMPLATE.md`,

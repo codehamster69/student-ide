@@ -57,6 +57,45 @@ reduced-motion setting.
   \label{fig:ui-before-after}
 \end{figure}
 
+\subsection{Second redesign: navigation, consistency and guides}
+By November 2026 the tool had grown from one editor into labs, competitions,
+a learning lab, a live class view, the review timeline, Sandbox Labs and
+attendance, each added with its own page layout. A second redesign
+(November 2026, five stacked pull requests) made it one coherent product
+without changing what it records. The teacher area moved from a row of top
+tabs to a sectioned sidebar (authoring, in class, workspace) with
+breadcrumbs and a \emph{Ctrl+K} jump list over pages, labs, subjects and
+guide pages (\cref{fig:ui-redesign-2}); signed-in students get an app bar
+with their labs, the learning lab and a guide. Every page follows one recipe
+(page header with its main action, divided lists, empty states that say what
+to do first), documented in \texttt{frontend/src/ui/README.md}. The brand
+mark became the typing-rhythm bars that the review replay draws, the one
+visual signature kept on purpose.
+
+In-app guides for students and teachers were added as Markdown files,
+rendered without HTML, with search, links between pages and a \emph{Help}
+button on each teacher page that opens the matching guide; the same guides
+are public at \texttt{\#/help} and open from the desktop app's Help menu.
+The same safeguards as the first redesign apply: no animation per keystroke,
+the editor is untouched, and the end-to-end recording test still reports no
+main-thread task over \SI{50}{\milli\second} while typing. Consent wording
+did not change.
+
+\begin{figure}[ht]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{redesign/before/tour-light-13-teach-labs}
+    \caption{Teacher labs, before}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{redesign/after/part1-13-teach-labs}
+    \caption{Teacher labs, sidebar navigation}
+  \end{subfigure}
+  \caption{Second redesign of the teacher area. Every screen before and after
+  is in \texttt{snapshots/redesign/}.}
+  \label{fig:ui-redesign-2}
+\end{figure}
+
 \section{Event schema and storage}
 \todo{Summary here, full schema in \cref{app:schema}.}
 
