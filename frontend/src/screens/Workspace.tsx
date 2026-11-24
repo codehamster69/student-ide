@@ -118,7 +118,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const [link, setLink] = useState({ pending: 0, ok: true });
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [taskOpen, setTaskOpen] = useState(true);
+  const [taskOpen, setTaskOpen] = useState(() => window.innerWidth >= 820);
   const [submitting, setSubmitting] = useState(false);
   const [verdict, setVerdict] = useState<SubmitResult | { error: string } | null>(null);
   const [checking, setChecking] = useState(false);
@@ -530,7 +530,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
           <Button variant="primary" size="sm" onClick={() => void runCode()} disabled={running || saving} className="pr-2">
             {running ? <Spinner className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
             Run
-            <Kbd className="ml-1 border-white/30">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
+            <Kbd className="ml-1 hidden border-white/30 sm:inline-flex">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
           </Button>
           {competing && (
             <Button variant="primary" size="sm" onClick={() => void submit()} disabled={submitting || running || saving || timeUp}
@@ -591,7 +591,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                     {switchError && <p className="mt-1 rounded-md bg-danger-soft px-2 py-1 text-xs text-danger">{switchError}</p>}
                   </nav>
                 )}
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
+                <p className="text-xs font-medium text-accent">
                   {learning ? `${task.lab_title} · lesson ${active + 1} of ${tasks.length}`
                     : task.lab_id ? `Question ${active + 1}${sitting ? ` of ${tasks.length}` : ""}` : "Task"}
                 </p>
@@ -684,13 +684,13 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               <button key={q.id} role="tab" aria-selected={i === active} onClick={() => void switchTo(i)}
                 disabled={opening !== null || saving} title={q.title}
                 className={cn("flex h-[31px] shrink-0 items-center gap-2 rounded-t-lg border border-b-0 px-3 font-mono text-xs transition-colors disabled:cursor-wait",
-                  i === active ? "border-border bg-surface text-text" : "border-transparent text-muted hover:text-text")}>
+                  i === active ? "border-border border-t-2 border-t-accent bg-surface text-text" : "border-transparent text-muted hover:text-text")}>
                 {opening === i ? <Spinner className="size-3" /> : <span className="size-2 rounded-sm" style={{ background: i === active ? lang.color : "var(--text-faint)" }} />}
                 q{i + 1}{lang.file.slice(lang.file.lastIndexOf("."))}
                 <span className="max-w-32 truncate font-sans text-faint">{q.title}</span>
               </button>
             )) : (
-              <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-border bg-surface px-3 font-mono text-xs text-text">
+              <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-t-2 border-border border-t-accent bg-surface px-3 font-mono text-xs text-text">
                 <span className="size-2 rounded-sm" style={{ background: lang.color }} />
                 {lang.file}
               </div>
@@ -769,7 +769,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 </AnimatePresence>
               </PaneHeader>
               <div className="relative min-h-0 flex-1 p-3 pt-0">
-                <div className="relative h-full overflow-hidden rounded-lg bg-console shadow-inner">
+                <div className="relative h-full overflow-hidden rounded-lg bg-console">
                   {running && (
                     <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden">
                       <div className="h-full w-1/2 bg-accent animate-indeterminate" />

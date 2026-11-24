@@ -62,7 +62,7 @@ export function DownloadPage() {
               )}
               {others.length > 0 && (
                 <div className="mt-7 border-t border-border pt-5">
-                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                  <h2 className="mb-2 text-[15px] font-semibold text-text">
                     {best ? "Other systems" : "Downloads"}
                   </h2>
                   <ul className="grid grid-cols-[minmax(0,1fr)] gap-1">

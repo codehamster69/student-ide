@@ -24,7 +24,7 @@ export function DesktopUpdate({ hidden }: { hidden: boolean }) {
     <AnimatePresence>
       {show && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0, transition: spring }} exit={{ opacity: 0, y: 12 }}
-          role="status" className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-3 rounded-2xl border border-border bg-surface p-3.5 text-xs text-muted shadow-lg">
+          role="status" className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-3.5 text-xs text-muted shadow-lg">
           <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
             {st.state === "ready" ? <RefreshCw className="size-3.5" /> : <Download className="size-3.5" />}
           </span>

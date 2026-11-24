@@ -64,7 +64,6 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
 
   return (
     <Card className="relative overflow-clip border-gold/30 p-5">
-      <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><Trophy className="size-4 text-gold" /> Competition</h2>
         <Badge tone={STATE[c.state].tone}>{c.state === "live" && <LiveDot tone="success" />}{STATE[c.state].label}</Badge>

@@ -56,10 +56,10 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
           This editor is part of a research study on how people write code. While you work it records:
         </motion.p>
 
-        <ul className="mt-4 grid gap-1.5">
+        <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-2/60">
           {RECORDED.map(({ icon: Icon, text }) => (
-            <motion.li key={text} variants={item} className="flex items-center gap-3 rounded-xl border border-border bg-surface-2/60 px-3 py-1.5 text-sm text-text">
-              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-accent shadow-sm"><Icon className="size-3.5" /></span>
+            <motion.li key={text} variants={item} className="flex items-center gap-3 px-3 py-2 text-sm text-text">
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-accent border border-border"><Icon className="size-3.5" /></span>
               {text}
             </motion.li>
           ))}
@@ -71,10 +71,10 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
             <p className="mt-1 text-sm leading-relaxed text-muted">
               In a Sandbox Lab your code runs in a Linux container on your own computer. While a lab is open, the app also records:
             </p>
-            <ul className="mt-3 grid gap-1.5">
+            <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-2/60">
               {SANDBOX.map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-3 rounded-xl border border-border bg-surface-2/60 px-3 py-1.5 text-sm text-text">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-accent shadow-sm"><Icon className="size-3.5" /></span>
+                <li key={text} className="flex items-center gap-3 px-3 py-2 text-sm text-text">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-accent border border-border"><Icon className="size-3.5" /></span>
                   {text}
                 </li>
               ))}

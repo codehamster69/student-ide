@@ -31,9 +31,9 @@ export function Saved({ summary, onAnother }: { summary: SessionSummary; onAnoth
       </motion.p>
       <motion.div variants={item} className={cn("mx-auto mt-6 grid divide-x divide-border rounded-xl border border-border bg-surface-2/60 py-3",
         q ? "max-w-sm grid-cols-3" : "max-w-xs grid-cols-2")}>
-        {q && <div><div className="text-lg font-semibold text-text">{q.worked}/{q.total}</div><div className="text-xs text-muted">questions</div></div>}
-        <div><div className="text-lg font-semibold text-text">{mins}</div><div className="text-xs text-muted">{mins === 1 ? "minute" : "minutes"}</div></div>
-        <div><div className="text-lg font-semibold text-text">{summary.runs}</div><div className="text-xs text-muted">{summary.runs === 1 ? "run" : "runs"}</div></div>
+        {q && <div><div className="text-lg font-semibold tabular-nums text-text">{q.worked}/{q.total}</div><div className="text-xs text-muted">questions</div></div>}
+        <div><div className="text-lg font-semibold tabular-nums text-text">{mins}</div><div className="text-xs text-muted">{mins === 1 ? "minute" : "minutes"}</div></div>
+        <div><div className="text-lg font-semibold tabular-nums text-text">{summary.runs}</div><div className="text-xs text-muted">{summary.runs === 1 ? "run" : "runs"}</div></div>
       </motion.div>
       <motion.div variants={item} className="mt-7">
         <Button variant="primary" size="lg" onClick={onAnother} className="group">

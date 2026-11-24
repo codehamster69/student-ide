@@ -425,7 +425,7 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
     <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,3fr)_minmax(140px,2fr)] gap-2 p-2">
       <div className="grid min-h-0 grid-cols-[150px_minmax(0,1fr)] gap-2 lg:grid-cols-[170px_minmax(0,1fr)_340px]">
         <Card className="flex min-h-0 flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-faint">
+          <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-xs font-medium text-faint">
             Files <button onClick={() => void refresh()} aria-label="Refresh files" className="hover:text-text"><RefreshCw className="size-3" /></button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5">
@@ -519,8 +519,8 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
       </div>
 
       <Card className="flex min-h-0 flex-col overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-faint">
-          <SquareTerminal className="size-3.5" /> Terminal <span className="font-mono font-normal normal-case tracking-normal">{a.workdir.replace("/home/student", "~")}</span>
+        <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-xs font-medium text-faint">
+          <SquareTerminal className="size-3.5" /> Terminal <span className="font-mono font-normal">{a.workdir.replace("/home/student", "~")}</span>
         </div>
         <DesktopTerminal instanceId={instanceId} assignmentId={a.id} session={session} visible={active} readOnly={readOnly} />
       </Card>

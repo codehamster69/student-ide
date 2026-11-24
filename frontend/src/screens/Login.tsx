@@ -40,7 +40,6 @@ export function Login({ cfg, onDone, onTeacher }: {
   return (
     <motion.div variants={stagger(0.08)} initial="initial" animate="animate" className="grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
       <div className="hidden lg:block">
-        <motion.p variants={item} className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent">Programming lab</motion.p>
         <motion.h1 variants={item} className="mb-4 text-4xl font-semibold leading-[1.1] tracking-tight text-text">
           Write code the way<br />you always do.
         </motion.h1>

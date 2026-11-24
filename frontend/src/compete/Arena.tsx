@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, CircleDot, FlaskConical, Trophy, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, CircleDot, FlaskConical, Trophy, Users } from "lucide-react";
 import { api } from "../api";
-import { Badge, Button, Card, Input, LiveDot, Spinner, cn, item, pop, spring, stagger } from "../ui";
+import { Badge, Button, Card, Input, LiveDot, PageHeader, Spinner, cn, pop, spring } from "../ui";
 import { POINTS, type ArenaQuestion, type ArenaView } from "./api";
 import { BadgeChip, Countdown, Leaderboard, Podium, RankMark, Ticker } from "./Leaderboard";
 import { LanguageDot } from "../teach/bits";
@@ -63,31 +63,25 @@ export function Arena({ studentId, labId, onPick, onBack }: {
 
   const nQ = view.questions.length;
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="w-full max-w-5xl">
-      <motion.button variants={item} onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
-        <ArrowLeft className="size-4" /> Your labs
-      </motion.button>
+    <div className="w-full max-w-[1120px]">
+      <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 mb-2 text-muted"><ArrowLeft className="size-3.5" />Your labs</Button>
 
-      <motion.div variants={item} className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">
-            <Trophy className="size-3.5" /> Class competition
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-text">{view.title}</h1>
-          {view.description && <p className="mt-1 max-w-2xl text-sm text-muted">{view.description}</p>}
-        </div>
-        {view.state !== "waiting" && (
-          <Card className="flex items-center gap-3 px-4 py-2.5 shadow-sm">
+      <PageHeader
+        title={view.title}
+        description={view.description || undefined}
+        meta={<Badge tone="warn"><Trophy className="size-3" /> Class competition</Badge>}
+        actions={view.state !== "waiting" ? (
+          <Card className="flex items-center gap-3 px-4 py-2 shadow-sm">
             {view.state === "live" && <LiveDot tone="success" />}
             <Countdown comp={view} offset={offset} className="text-xl" />
           </Card>
-        )}
-      </motion.div>
+        ) : undefined}
+      />
 
       {error && <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
 
       <AnimatePresence mode="wait">
-        <motion.div key={view.state} variants={pop} initial="initial" animate="animate" exit="exit" className="mt-6">
+        <motion.div key={view.state} variants={pop} initial="initial" animate="animate" exit="exit" className="mt-2">
           {view.state === "waiting" ? (
             <Lobby view={view} studentId={studentId} onJoined={setView} />
           ) : (
@@ -108,7 +102,7 @@ export function Arena({ studentId, labId, onPick, onBack }: {
                   </Card>
                 )}
                 {view.me && <MyStanding me={view.me} nQ={nQ} ended={view.state === "ended"} />}
-                <div className="grid gap-2.5">
+                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
                   {view.questions.map((q, i) => (
                     <QuestionRow key={q.id} q={q} i={i} live={view.state === "live"} opening={opening} onPick={() => void pick(q)} />
                   ))}
@@ -132,7 +126,7 @@ export function Arena({ studentId, labId, onPick, onBack }: {
           )}
         </motion.div>
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
@@ -157,10 +151,8 @@ function Lobby({ view, studentId, onJoined }: { view: ArenaView; studentId: stri
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_1fr]">
-      <Card className="relative overflow-clip p-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-gold/10 blur-2xl" />
-        <motion.span animate={{ rotate: [0, -8, 8, 0] }} transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 2.4 }}
-          className="grid size-12 place-items-center rounded-2xl bg-gold-soft text-gold"><Trophy className="size-6" /></motion.span>
+      <Card className="p-6">
+        <span className="grid size-11 place-items-center rounded-xl bg-gold-soft text-gold"><Trophy className="size-5" /></span>
         <h2 className="mt-4 text-lg font-semibold text-text">{view.joined ? "You're in" : "Join the competition"}</h2>
         <p className="mt-1 text-sm text-muted">
           Pick the name the class will see on the board, or leave it empty to use your roll number. Questions appear when your teacher starts the clock
@@ -220,15 +212,15 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
   const p = q.progress;
   const partial = p && p.total && !p.solved && p.passed !== null;
   return (
-    <motion.button variants={item} whileHover={live ? { x: 3 } : undefined} whileTap={live ? { scale: 0.99 } : undefined} transition={spring}
+    <button
       onClick={onPick} disabled={!live || !!opening}
-      className="group flex items-center gap-4 rounded-xl border border-border bg-surface px-4 py-3.5 text-left shadow-sm transition-[border-color,box-shadow] duration-200 enabled:hover:border-accent/40 enabled:hover:shadow-md disabled:cursor-default">
-      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg font-mono text-xs font-semibold",
+      className="group flex w-full items-center gap-4 px-5 py-3.5 text-left transition-colors enabled:hover:bg-surface-2 disabled:cursor-default">
+      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg text-xs font-semibold tabular-nums",
         p?.solved ? "bg-success-soft text-success" : partial ? "bg-warn-soft text-warn" : "bg-accent-soft text-accent")}>
         {opening === q.id ? <Spinner /> : p?.solved ? <CheckCircle2 className="size-4" /> : partial ? <CircleDot className="size-4" /> : i + 1}
       </span>
       <span className="min-w-0 flex-1">
-        <strong className="block text-sm font-semibold text-text">{q.title}</strong>
+        <strong className="block text-sm font-medium text-text">{q.title}</strong>
         <span className="line-clamp-1 text-[13px] text-muted">{q.prompt}</span>
         {q.language === "any" && (
           <span className="mt-1 flex flex-wrap gap-1">
@@ -240,8 +232,8 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
       {p?.solved ? <Badge tone="success">Solved · {p.points} pts</Badge>
         : partial ? <Badge tone="warn">{p!.passed}/{p!.total} tests · {p!.points} pts</Badge>
         : p?.tries ? <Badge>{p.tries} {p.tries === 1 ? "try" : "tries"}</Badge> : null}
-      {live && <ArrowUpRight className="size-4 shrink-0 text-faint transition-[transform,color] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />}
-    </motion.button>
+      {live && <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-accent" />}
+    </button>
   );
 }
 
