@@ -50,7 +50,7 @@ export function ClassBoard({ labId }: { labId: string }) {
         </div>
         {notReady.length > 0 && (
           <p className="basis-full text-xs text-muted">
-            Not ready: {notReady.slice(0, 6).map((x) => x.student_id).join(", ")}{notReady.length > 6 ? ` and ${notReady.length - 6} more` : ""}.
+            Not ready: {notReady.slice(0, 6).map((x) => x.student_id).join(",")}{notReady.length > 6 ? ` and ${notReady.length - 6} more` : ""}.
             Each tile says why, so IT can fix that PC before the lab. Their files follow them to any machine that passes the check.
           </p>
         )}
@@ -79,7 +79,7 @@ function TileCard({ x, now }: { x: Tile; now: number }) {
       <p className={cn("mt-1 line-clamp-2 text-xs", x.readiness === "ready" ? "text-muted" : "text-text")}>{x.reason}</p>
       {(x.engine || x.platform) && (
         <p className="mt-1 flex items-center gap-1 text-[11px] text-faint"><Monitor className="size-3" />
-          {[OS[x.platform ?? ""] ?? x.platform, ENGINE[x.engine ?? ""] ?? x.engine, x.app_version && `app ${x.app_version}`].filter(Boolean).join(" · ")}</p>
+          {[OS[x.platform ?? ""] ?? x.platform, ENGINE[x.engine ?? ""] ?? x.engine, x.app_version && `app ${x.app_version}`].filter(Boolean).join(" ·")}</p>
       )}
       {x.session_id && (
         <p className="mt-1.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
@@ -90,8 +90,8 @@ function TileCard({ x, now }: { x: Tile; now: number }) {
       )}
     </>
   );
-  const cls = cn("block rounded-xl border bg-surface p-3 shadow-sm transition-colors",
-    x.readiness === "not_ready" ? "border-warn/40" : "border-border", x.session_id && "hover:border-accent/50 hover:bg-surface-2/60");
+  const cls = cn("block rounded-xl border p-3 shadow-sm transition-colors",
+    x.readiness === "not_ready" ? "border-warn/40" : "border-border", x.session_id && "hover:border-accent/50");
   return (
     <motion.div layout transition={{ type: "spring", stiffness: 420, damping: 34 }}>
       {x.session_id ? <a href={href.liveSession(x.session_id)} className={cls} title="Open the live editor and terminal (the student is told)">{body}</a>

@@ -88,10 +88,10 @@ async function loadCommands(): Promise<Command[]> {
   ]);
   return [
     ...labs.map((l) => ({ id: `l-${l.id}`, label: l.title, group: "Labs", href: href.lab(l.id), icon: l.kind === "competition" ? Trophy : ListChecks,
-      hint: [l.kind === "competition" ? "Competition" : "Lab", l.subject, l.status].filter(Boolean).join(", "), keywords: l.subject })),
+      hint: [l.kind === "competition" ? "Competition" : "Lab", l.subject, l.status].filter(Boolean).join(","), keywords: l.subject })),
     ...labs.filter((l) => l.status === "open").map((l) => ({ id: `lv-${l.id}`, label: `Watch ${l.title}`, group: "Live now", href: href.liveLab(l.id), icon: Radio })),
     ...labs.map((l) => ({ id: `r-${l.id}`, label: `Review ${l.title}`, group: "Review", href: href.reviewLab(l.id), icon: Activity })),
-    ...subjects.map((s) => ({ id: `s-${s.id}`, label: s.title, group: "Sandbox subjects", href: href.sbxSubject(s.id), icon: Boxes, hint: [s.code, s.semester].filter(Boolean).join(", ") })),
+    ...subjects.map((s) => ({ id: `s-${s.id}`, label: s.title, group: "Sandbox subjects", href: href.sbxSubject(s.id), icon: Boxes, hint: [s.code, s.semester].filter(Boolean).join(",") })),
   ];
 }
 
@@ -217,7 +217,7 @@ export function ReviewApp() {
             <MessagesSquare className="mt-px size-3.5 shrink-0" />A highlighted moment starts a conversation, never a penalty.
           </p>
           <div className="flex items-center gap-2 rounded-md px-2 py-1">
-            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-3 text-[11px] font-semibold uppercase text-muted">
+            <span className="grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold uppercase text-muted">
               {(me?.email ?? "T").slice(0, 1)}
             </span>
             <span className="min-w-0 flex-1 truncate text-[12.5px] text-muted" title={me?.email}>{me?.email ?? "Teacher (token)"}</span>

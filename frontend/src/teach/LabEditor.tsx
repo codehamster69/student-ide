@@ -66,7 +66,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
     const failed = results.filter((x) => x.error).length + sent.filter((d) => d.error).length;
     const what = body.status === "closed" ? "Lab closed" : "Sitting ended";
     if (sent.length) setNotes([failed ? `${what}, but attendance for ${failed} class group${failed === 1 ? "" : "s"} could not be sent to Roll Call. Open Attendance to retry.`
-      : `${what}. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`]);
+      : `${what}. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(",")}.`]);
     void loadSittings();
   };
 
@@ -125,7 +125,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
       <AnimatePresence>
         {error && (
           <motion.p key={error} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="mb-4 overflow-hidden rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</motion.p>
+            className="mb-4 overflow-hidden rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">{error}</motion.p>
         )}
       </AnimatePresence>
 
@@ -148,7 +148,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           <AnimatePresence>
             {notes.length > 0 && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                className="mb-3 overflow-hidden rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+                className="mb-3 overflow-hidden rounded-lg border border-warn/40 px-3 py-2 text-xs text-warn" role="status">
                 {notes.map((n) => <p key={n}>{n}</p>)}
                 <button className="mt-1 font-medium underline" onClick={() => setNotes([])}>Dismiss</button>
               </motion.div>
@@ -156,7 +156,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           </AnimatePresence>
 
           <LayoutGroup>
-            <motion.ol layout className={cn("divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm", !lab.questions.length && editing === null && "hidden")}>
+            <motion.ol layout className={cn("divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm", !lab.questions.length && editing === null && "hidden")}>
               <AnimatePresence initial={false}>
                 {lab.questions.map((q, i) => (
                   <motion.li key={q.id} layout transition={spring} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -252,7 +252,7 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
       <div className="flex items-center gap-3">
         <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => void commit()} maxLength={120}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label="Lab title"
-          className="-mx-2 min-w-0 flex-1 rounded-lg bg-transparent px-2 py-0.5 text-[22px] font-semibold leading-tight tracking-[-0.015em] text-text outline-none transition-colors hover:bg-surface-2 focus:bg-surface focus:ring-4 focus:ring-accent/15" />
+          className="-mx-2 min-w-0 flex-1 rounded-lg bg-transparent px-2 py-0.5 text-[22px] font-semibold leading-tight tracking-[-0.015em] text-text border border-transparent outline-none transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong focus:ring-4 focus:ring-accent/15" />
         <AnimatePresence>
           {saved && (
             <motion.span initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
@@ -273,7 +273,7 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
       </div>
       <textarea value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => void commit()} rows={1} maxLength={4000}
         placeholder="Add instructions for students" aria-label="Instructions for students"
-        className="-mx-2 mt-2 block w-full max-w-3xl resize-none rounded-lg bg-transparent px-2 py-1 text-sm text-muted outline-none [field-sizing:content] placeholder:text-faint hover:bg-surface-2 focus:bg-surface focus:ring-4 focus:ring-accent/15" />
+        className="-mx-2 mt-2 block w-full max-w-3xl resize-none rounded-lg bg-transparent px-2 py-1 text-sm text-muted outline-none [field-sizing:content] placeholder:text-faint focus:ring-4 focus:ring-accent/15" />
     </div>
   );
 }
@@ -281,7 +281,7 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
 function StatusSwitch({ value, onChange, disabled }: { value: LabStatus; onChange: (s: LabStatus) => void; disabled: boolean }) {
   return (
     <LayoutGroup id="lab-status">
-      <div className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm" role="radiogroup" aria-label="Lab status">
+      <div className="flex rounded-lg border border-border p-0.5 shadow-sm" role="radiogroup" aria-label="Lab status">
         {(Object.keys(STATUS) as LabStatus[]).map((s) => {
           const off = disabled && s === "open";
           return (
@@ -291,7 +291,7 @@ function StatusSwitch({ value, onChange, disabled }: { value: LabStatus; onChang
                 value === s ? (s === "open" ? "text-success" : "text-text") : "text-muted hover:text-text")}>
               {value === s && (
                 <motion.span layoutId="status-pill" transition={spring}
-                  className={cn("absolute inset-0 rounded-md", s === "open" ? "bg-success-soft" : "bg-surface-3")} />
+                  className={cn("absolute inset-0 rounded-md", s === "open" ? "border border-success/40" : "border border-border-strong")} />
               )}
               <span className="relative flex items-center gap-1.5">
                 {s === "open" && <span className={cn("size-1.5 rounded-full", value === "open" ? "bg-success" : "bg-faint")} />}
@@ -311,15 +311,15 @@ function QuestionCard({ q, index, first, last, onEdit, onMove, anyLanguage }: {
   const langs = anyLanguage ? questionLanguages(q) : [];
   const starter = anyLanguage ? Object.values(q.variants).find((v) => v?.starter_code)?.starter_code ?? "" : q.starter_code;
   return (
-    <div className="group flex gap-4 px-4 py-3.5 transition-colors hover:bg-surface-2/60">
-      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-accent-soft text-xs font-semibold tabular-nums text-accent">{index + 1}</span>
+    <div className="group flex gap-4 px-4 py-3.5 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
+      <span className="grid size-7 shrink-0 place-items-center rounded-md border border-cta/40 text-xs font-semibold tabular-nums text-accent">{index + 1}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <strong className="text-[15px] font-semibold text-text">{q.title}</strong>
           {starter && <Badge className="h-5 px-2 text-[11px]">Starter code</Badge>}
           {anyLanguage && (
             <Badge className="h-5 gap-1 px-2 text-[11px]">
-              {langs.length === Object.keys(LANGUAGES).length ? "All 5 languages" : `Only ${langs.map((l) => LANGUAGES[l].label).join(", ")}`}
+              {langs.length === Object.keys(LANGUAGES).length ? "All 5 languages" : `Only ${langs.map((l) => LANGUAGES[l].label).join(",")}`}
             </Badge>
           )}
           {q.tests.length > 0 && (
@@ -354,7 +354,7 @@ function LiveTextCheck({ live }: { live: LivePrompt }) {
   const { status } = useQuestionText("", live);
   if (status !== "failed") return null;
   return (
-    <p className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+    <p className="mt-2 rounded-lg border border-warn/40 px-3 py-2 text-xs text-warn" role="status">
       The problem text can't be loaded right now, so students would see only a link to the original. Write the prompt in
       your own words (Edit) to be safe.
     </p>
@@ -392,10 +392,10 @@ function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, o
   const save = async () => { setBusy(true); await onSave(f); setBusy(false); };
 
   return (
-    <div className="bg-accent-soft/30 p-5">
+    <div className="border-l-2 border-cta/40 p-5">
       <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="grid gap-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-7 shrink-0 place-items-center rounded-md bg-accent text-xs font-semibold tabular-nums text-accent-fg">{index + 1}</span>
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-cta text-xs font-semibold tabular-nums text-cta">{index + 1}</span>
           <h3 className="text-sm font-semibold text-text">{isNew ? "New question" : "Edit question"}</h3>
         </div>
         <Field label="Title">
@@ -528,8 +528,8 @@ function Teachers({ lab, onSave }: {
         {lab.co_teachers.map((t) => (
           <button key={t} disabled={!canShare} title={canShare ? "Stop sharing" : undefined}
             onClick={() => void onSave({ co_teachers: lab.co_teachers.filter((x) => x !== t) })}
-            className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft pl-2.5 pr-1.5 font-mono text-xs text-accent disabled:pr-2.5">
-            {t}{canShare && <span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:bg-accent group-hover:text-accent-fg">×</span>}
+            className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 border border-cta/40 pl-2.5 pr-1.5 font-mono text-xs text-accent disabled:pr-2.5">
+            {t}{canShare && <span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:text-text">×</span>}
           </button>
         ))}
         {lab.co_teachers.length === 0 && <span className="self-center text-xs text-faint">Not shared with anyone.</span>}
@@ -565,7 +565,7 @@ function Assign({ lab, onSave, onAuthLost }: {
   return (
     <Card className="p-5">
       <h2 className="text-[15px] font-semibold text-text">Roster</h2>
-      <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-2/60 p-3">
+      <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
         <Checkbox checked={lab.everyone} onChange={(e) => void onSave(lab.roster, e.target.checked)} className="mt-0.5" />
         <span>
           <span className="block text-[13px] font-medium text-text">Everyone who signs in</span>
@@ -586,8 +586,8 @@ function Assign({ lab, onSave, onAuthLost }: {
             {lab.roster.map((s) => (
               <motion.button key={s} layout initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }}
                 transition={spring} onClick={() => remove(s)} title="Remove"
-                className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft pl-2.5 pr-1.5 font-mono text-xs text-accent">
-                {s}<span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:bg-accent group-hover:text-accent-fg">×</span>
+                className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 border border-cta/40 pl-2.5 pr-1.5 font-mono text-xs text-accent">
+                {s}<span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:text-text">×</span>
               </motion.button>
             ))}
           </AnimatePresence>
@@ -603,7 +603,7 @@ function Assign({ lab, onSave, onAuthLost }: {
             <div className="flex flex-wrap gap-1.5">
               {suggestions.slice(0, 40).map((s) => (
                 <button key={s} onClick={() => void add([s])}
-                  className="h-7 rounded-full border border-border bg-surface px-2.5 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-text">
+                  className="h-7 rounded-full border border-border px-2.5 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-text">
                   + {s}
                 </button>
               ))}
@@ -638,7 +638,7 @@ function Progress({ lab }: { lab: LabDetail }) {
       ) : (
         <div className="max-h-[360px] overflow-auto border-t border-border">
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-surface-2">
+            <thead className="sticky top-0 bg-bg">
               <tr>
                 <th className="px-5 py-2 text-left font-semibold text-faint">Student</th>
                 {lab.questions.map((q, i) => (

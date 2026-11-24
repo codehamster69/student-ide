@@ -65,7 +65,7 @@ export function Overview({ labId, day, onAuthLost }: { labId?: string; day?: str
         </>}
       />
 
-      <div className="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-surface shadow-sm lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 overflow-hidden rounded-xl border border-border shadow-sm lg:grid-cols-4">
         <Stat label="Students" value={students.length} hint={`${students.filter((s) => s.baseline_ready).length} with a baseline`} loading={!rows} />
         <Stat label="Sessions reviewed" value={assessed.length} hint="after the baseline weeks" loading={!rows} />
         <Stat label="With a moment to discuss" value={withMoments.length} hint="worth a conversation" tone="warn" loading={!rows} />
@@ -73,10 +73,10 @@ export function Overview({ labId, day, onAuthLost }: { labId?: string; day?: str
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-border bg-surface p-0.5">
+        <div className="flex rounded-lg border border-border p-0.5">
           {([["assessed", "Reviewed"], ["moments", "With moments"], ["all", "All incl. baseline"]] as [Filter, string][]).map(([f, label]) => (
             <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}
-              className={cn("h-8 rounded-md px-3 text-[13px] font-medium transition-colors", filter === f ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+              className={cn("h-8 rounded-md px-3 text-[13px] font-medium transition-colors", filter === f ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
               {label}
             </button>
           ))}
@@ -84,14 +84,14 @@ export function Overview({ labId, day, onAuthLost }: { labId?: string; day?: str
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-faint" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a student" aria-label="Find a student"
-            className="h-9 w-48 rounded-lg border border-border bg-surface pl-8 pr-3 text-sm outline-none placeholder:text-faint focus:border-accent focus:ring-4 focus:ring-accent/15" />
+            className="h-9 w-48 rounded-lg border border-border pl-8 pr-3 text-sm outline-none placeholder:text-faint focus:border-accent focus:ring-4 focus:ring-accent/15" />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Users className="mr-1 size-3.5 text-faint" />
           {[null, ...students.map((s) => s.student_id)].map((s) => (
             <button key={s ?? "all"} onClick={() => setStudent(s)}
               className={cn("h-7 rounded-md border px-2.5 font-mono text-xs transition-colors",
-                student === s ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-muted hover:text-text")}>
+                student === s ? "border-cta text-cta" : "border-border text-muted hover:border-border-strong hover:text-text")}>
               {s ?? "everyone"}
             </button>
           ))}
@@ -100,8 +100,8 @@ export function Overview({ labId, day, onAuthLost }: { labId?: string; day?: str
 
       {error && <Card className="p-6 text-sm text-danger">{error}</Card>}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-        <div className="hidden grid-cols-[1.1fr_1.2fr_0.7fr_11rem_1.6fr_1.5rem] gap-4 border-b border-border bg-surface-2/60 px-5 py-2.5 text-xs font-medium text-faint lg:grid">
+      <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+        <div className="hidden grid-cols-[1.1fr_1.2fr_0.7fr_11rem_1.6fr_1.5rem] gap-4 border-b border-border px-5 py-2.5 text-xs font-medium text-faint lg:grid">
           <span>Student</span><span>Task and time</span><span>Length</span><span>Evidence over time</span><span>Moments to discuss</span><span />
         </div>
         {!rows && Array.from({ length: 6 }, (_, i) => (
@@ -138,9 +138,9 @@ function Stat({ label, value, hint, tone, loading }: { label: string; value: num
 function Row({ r }: { r: SessionSummary }) {
   return (
     <a href={href.session(r.id)}
-      className="group grid items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-2/60 lg:grid-cols-[1.1fr_1.2fr_0.7fr_11rem_1.6fr_1.5rem]">
+      className="group grid items-center gap-x-4 gap-y-2 px-5 py-3.5 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong lg:grid-cols-[1.1fr_1.2fr_0.7fr_11rem_1.6fr_1.5rem]">
       <span className="flex items-center gap-2">
-        <span className="grid size-8 place-items-center rounded-full bg-surface-3 font-mono text-[11px] font-semibold text-muted">{r.student_id.slice(-2)}</span>
+        <span className="grid size-8 place-items-center rounded-full font-mono text-[11px] font-semibold text-muted">{r.student_id.slice(-2)}</span>
         <span className="font-mono text-sm font-medium text-text">{r.student_id}</span>
         {r.phase === "baseline" && <Badge className="h-5 px-2 text-[11px]">baseline</Badge>}
         {r.context === "competition" && <Badge tone="warn" className="h-5 px-2 text-[11px]">competition</Badge>}
@@ -155,7 +155,7 @@ function Row({ r }: { r: SessionSummary }) {
         {r.episodes.length === 0 ? (
           <span className="text-xs text-faint">{r.baseline === "ready" ? "Nothing stood out" : "—"}</span>
         ) : r.episodes.map((e, i) => (
-          <span key={i} className="inline-flex items-center gap-1.5 rounded-md border border-warn/30 bg-warn-soft px-2 py-0.5">
+          <span key={i} className="inline-flex items-center gap-1.5 rounded-md border border-warn/30 px-2 py-0.5">
             <MessageCircleQuestion className="size-3 text-warn" />
             <ChannelTag channel={e.channel} />
             <span className="font-mono text-[11px] text-muted">~{clock(e.switch_est)}</span>

@@ -25,11 +25,11 @@ export function Saved({ summary, onAnother }: { summary: SessionSummary; onAnoth
   return (
     <Card variants={stagger(0.08, 0.2)} initial="initial" animate="animate" className="w-full max-w-md p-10 text-center">
       <div className="mb-5 flex justify-center"><DrawnCheck /></div>
-      <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-text">{q ? "Lab saved" : "Session saved"}</motion.h1>
+      <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-text">{q ? "Lab saved" : "Session saved"} <span className="text-accent-2">✦</span></motion.h1>
       <motion.p variants={item} className="mt-2 text-sm leading-relaxed text-muted">
-        Thank you. You can close this tab or start another task.
+        Nice work, that one is in. Close this tab or jump into another task.
       </motion.p>
-      <motion.div variants={item} className={cn("mx-auto mt-6 grid divide-x divide-border rounded-xl border border-border bg-surface-2/60 py-3",
+      <motion.div variants={item} className={cn("mx-auto mt-6 grid divide-x divide-border rounded-xl border border-border py-3",
         q ? "max-w-sm grid-cols-3" : "max-w-xs grid-cols-2")}>
         {q && <div><div className="text-lg font-semibold tabular-nums text-text">{q.worked}/{q.total}</div><div className="text-xs text-muted">questions</div></div>}
         <div><div className="text-lg font-semibold tabular-nums text-text">{mins}</div><div className="text-xs text-muted">{mins === 1 ? "minute" : "minutes"}</div></div>

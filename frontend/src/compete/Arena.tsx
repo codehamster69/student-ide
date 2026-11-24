@@ -56,7 +56,7 @@ export function Arena({ studentId, labId, onPick, onBack }: {
   if (!view) {
     return (
       <div className="flex w-full max-w-5xl justify-center pt-10 text-muted">
-        {error ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p> : <Spinner className="size-5" />}
+        {error ? <p className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{error}</p> : <Spinner className="size-5" />}
       </div>
     );
   }
@@ -78,7 +78,7 @@ export function Arena({ studentId, labId, onPick, onBack }: {
         ) : undefined}
       />
 
-      {error && <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="mt-4 rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <AnimatePresence mode="wait">
         <motion.div key={view.state} variants={pop} initial="initial" animate="animate" exit="exit" className="mt-2">
@@ -102,7 +102,7 @@ export function Arena({ studentId, labId, onPick, onBack }: {
                   </Card>
                 )}
                 {view.me && <MyStanding me={view.me} nQ={nQ} ended={view.state === "ended"} />}
-                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
                   {view.questions.map((q, i) => (
                     <QuestionRow key={q.id} q={q} i={i} live={view.state === "live"} opening={opening} onPick={() => void pick(q)} />
                   ))}
@@ -152,7 +152,7 @@ function Lobby({ view, studentId, onJoined }: { view: ArenaView; studentId: stri
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_1fr]">
       <Card className="p-6">
-        <span className="grid size-11 place-items-center rounded-xl bg-gold-soft text-gold"><Trophy className="size-5" /></span>
+        <span className="grid size-11 place-items-center rounded-xl border border-gold/40 text-gold"><Trophy className="size-5" /></span>
         <h2 className="mt-4 text-lg font-semibold text-text">{view.joined ? "You're in" : "Join the competition"}</h2>
         <p className="mt-1 text-sm text-muted">
           Pick the name the class will see on the board, or leave it empty to use your roll number. Questions appear when your teacher starts the clock
@@ -176,7 +176,7 @@ function Lobby({ view, studentId, onJoined }: { view: ArenaView; studentId: stri
             {view.lobby.map((h) => (
               <motion.span key={h} layout initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={spring}
                 className={cn("inline-flex h-8 items-center rounded-full border px-3 text-sm",
-                  h === view.me?.handle ? "border-accent/40 bg-accent-soft text-accent" : "border-border bg-surface-2 text-text")}>
+                  h === view.me?.handle ? "border-cta/40 text-cta" : "border-border text-text")}>
                 {h}
               </motion.span>
             ))}
@@ -214,9 +214,9 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
   return (
     <button
       onClick={onPick} disabled={!live || !!opening}
-      className="group flex w-full items-center gap-4 px-5 py-3.5 text-left transition-colors enabled:hover:bg-surface-2 disabled:cursor-default">
+      className="group flex w-full items-center gap-4 px-5 py-3.5 text-left border border-transparent transition-[border-color] enabled:hover:border-border-strong disabled:cursor-default">
       <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg text-xs font-semibold tabular-nums",
-        p?.solved ? "bg-success-soft text-success" : partial ? "bg-warn-soft text-warn" : "bg-accent-soft text-accent")}>
+        p?.solved ? "border border-success/40 text-success" : partial ? "border border-warn/40 text-warn" : "border border-cta/40 text-cta")}>
         {opening === q.id ? <Spinner /> : p?.solved ? <CheckCircle2 className="size-4" /> : partial ? <CircleDot className="size-4" /> : i + 1}
       </span>
       <span className="min-w-0 flex-1">
@@ -224,7 +224,7 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
         <span className="line-clamp-1 text-[13px] text-muted">{q.prompt}</span>
         {q.language === "any" && (
           <span className="mt-1 flex flex-wrap gap-1">
-            {(q.languages ?? []).map((l) => <LanguageDot key={l} language={l} className={cn(p?.language === l && "bg-accent-soft text-text")} />)}
+            {(q.languages ?? []).map((l) => <LanguageDot key={l} language={l} className={cn(p?.language === l && "border border-cta/40 text-text")} />)}
           </span>
         )}
       </span>
@@ -232,7 +232,7 @@ function QuestionRow({ q, i, live, opening, onPick }: { q: ArenaQuestion; i: num
       {p?.solved ? <Badge tone="success">Solved · {p.points} pts</Badge>
         : partial ? <Badge tone="warn">{p!.passed}/{p!.total} tests · {p!.points} pts</Badge>
         : p?.tries ? <Badge>{p.tries} {p.tries === 1 ? "try" : "tries"}</Badge> : null}
-      {live && <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-accent" />}
+      {live && <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-cta" />}
     </button>
   );
 }

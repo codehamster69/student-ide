@@ -59,7 +59,7 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
       <PageHeader
         title="Lab sessions"
         description="Each row is one class: a lab on the day it ran. Open it to review what every student did, compared with their own baseline weeks, never with the class."
-        actions={<a href={href.reviewAll} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">Every session in one list</a>}
+        actions={<a href={href.reviewAll} className="inline-flex h-9 items-center rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong">Every session in one list</a>}
       />
 
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
@@ -71,11 +71,11 @@ export function LabSessions({ onAuthLost }: { onAuthLost: () => void }) {
       )}
 
       {sittings && sittings.length > 0 && (
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
           {sittings.map(({ lab: l, day, start, end, students, sessions, assessed, talkTo }) => (
             <li key={`${l.id}-${day}`}>
               <a href={href.reviewLab(l.id, day)}
-                className="group grid items-center gap-x-6 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-2/60 md:grid-cols-[1fr_auto_13rem_1rem]">
+                className="group grid items-center gap-x-6 gap-y-2 px-5 py-3.5 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong md:grid-cols-[1fr_auto_13rem_1rem]">
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">
                     {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
