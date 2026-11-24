@@ -34,7 +34,7 @@ export function SandboxHome({ onAuthLost }: { onAuthLost: () => void }) {
       <PageHeader title="Sandbox Labs"
         description="Labs with a whole Linux machine, a terminal and an editor. Students open them in the desktop app on their own computer; you can try any lab here in a short cloud preview."
         actions={<>
-          <a href={href.sbxLibrary} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
+          <a href={href.sbxLibrary} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong">
             <Library className="size-4" /> Library
           </a>
           <Button variant="primary" onClick={() => setCreating(true)} disabled={creating}><Plus className="size-4" /> New subject</Button>
@@ -65,7 +65,7 @@ export function SandboxHome({ onAuthLost }: { onAuthLost: () => void }) {
 
 function EmptyChoice({ icon: Icon, title, text, onClick }: { icon: typeof Plus; title: string; text: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="grid gap-1 rounded-xl border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:border-border-strong">
+    <button onClick={onClick} className="grid gap-1 rounded-xl border border-border p-4 text-left shadow-sm transition-colors hover:border-border-strong">
       <Icon className="size-4 text-accent" />
       <span className="text-sm font-medium text-text">{title}</span>
       <span className="text-xs text-muted">{text}</span>
@@ -77,13 +77,13 @@ function SubjectCard({ s }: { s: SubjectRow }) {
   const Icon = s.environment ? BASE_ICON[s.environment.base] ?? Boxes : Boxes;
   return (
     <a href={href.sbxSubject(s.id)}
-      className="group relative grid gap-3 overflow-hidden rounded-xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-border-strong">
+      className="group relative grid gap-3 overflow-hidden rounded-xl border border-border p-4 shadow-sm transition-colors hover:border-border-strong">
       <span className="absolute inset-x-0 top-0 h-0.5" style={{ backgroundColor: COLOR_VAR[s.color] }} />
       <div className="flex items-start gap-3">
         <span className="grid size-10 place-items-center rounded-xl" style={tint(s.color)}><Icon className="size-5" /></span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-text">{s.title}</p>
-          <p className="text-xs text-muted">{[s.code, s.semester].filter(Boolean).join(" · ") || "No course code"}</p>
+          <p className="text-xs text-muted">{[s.code, s.semester].filter(Boolean).join(" ·") || "No course code"}</p>
         </div>
         <ChevronRight className="size-4 text-faint group-hover:text-text" />
       </div>
@@ -172,7 +172,7 @@ export function SandboxSubject({ id, onAuthLost }: { id: string; onAuthLost: () 
     <Page>
       <PageHeader
         title={<span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-lg" style={tint(s.color)}><Boxes className="size-5" /></span>{s.title}</span>}
-        description={[s.code, s.semester, s.owner_email].filter(Boolean).join(" · ") || undefined}
+        description={[s.code, s.semester, s.owner_email].filter(Boolean).join(" ·") || undefined}
         actions={<Button disabled={busy} onClick={() => act(async () => {
           const sem = prompt("Copy this subject with all its labs (as drafts) for which semester?", "");
           if (sem === null) return;
@@ -198,10 +198,10 @@ export function SandboxSubject({ id, onAuthLost }: { id: string; onAuthLost: () 
             </form>
           )}
           {s.labs.length === 0 && <Card className="p-6 text-center text-sm text-muted">No labs yet. Start one above, or use one from the library.</Card>}
-          {s.labs.length > 0 && <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+          {s.labs.length > 0 && <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
           {s.labs.map((l) => (
             <li key={l.id}><a href={href.sbxLab(l.id)}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2/60">
+              className="flex items-center gap-3 px-4 py-3 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
               <FileCode2 className="size-4 text-accent" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-text">{l.title}</span>
@@ -267,7 +267,7 @@ function EnvironmentPanel({ s, canEdit, onChanged, onAuthLost }: { s: SubjectDet
   return (
     <Panel title="Environment" action={<BuildBadge status={latest.status} />}>
       <div className="flex items-center gap-2 text-sm text-text"><Icon className="size-4 text-accent" /> {env.title} <span className="font-mono text-xs text-faint">v{latest.version}</span></div>
-      <p className="mt-1 text-xs text-muted">{latest.recipe.dockerfile ? "Raw Dockerfile" : [bases.find((b) => b.id === latest.recipe.base)?.label, ...latest.recipe.tools].filter(Boolean).join(", ")} · about {mb(latest.size_mb)}</p>
+      <p className="mt-1 text-xs text-muted">{latest.recipe.dockerfile ? "Raw Dockerfile" : [bases.find((b) => b.id === latest.recipe.base)?.label, ...latest.recipe.tools].filter(Boolean).join(",")} · about {mb(latest.size_mb)}</p>
       <p className="mt-1 truncate font-mono text-[11px] text-faint" title={latest.image}>{latest.image}</p>
       {latest.status === "queued" && (
         <p className="mt-2 text-xs text-muted">{env.builds_on_demand
@@ -321,7 +321,7 @@ function EnvironmentPanel({ s, canEdit, onChanged, onAuthLost }: { s: SubjectDet
         <details className="mt-3 text-xs text-muted">
           <summary className="cursor-pointer">{env.versions.length} versions</summary>
           <ul className="mt-2 grid gap-1">{[...env.versions].reverse().map((v) => (
-            <li key={v.version} className="flex items-center justify-between gap-2"><span className="font-mono">v{v.version}</span><span className="truncate">{v.recipe.tools.join(", ")}</span><BuildBadge status={v.status} /></li>
+            <li key={v.version} className="flex items-center justify-between gap-2"><span className="font-mono">v{v.version}</span><span className="truncate">{v.recipe.tools.join(",")}</span><BuildBadge status={v.status} /></li>
           ))}</ul>
         </details>
       )}
@@ -364,10 +364,10 @@ function RosterPanel({ s, canEdit, onSaved }: { s: SubjectDetail; canEdit: boole
     <Panel title={`Students (${s.roster.length})`}>
       {s.roster.length > 0 && (
         <div className="mb-3 flex max-h-28 flex-wrap gap-1 overflow-y-auto">
-          {s.roster.map((r) => <span key={r.id} className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">{r.id}{r.section && <span className="text-faint"> {r.section}</span>}</span>)}
+          {s.roster.map((r) => <span key={r.id} className="rounded-md px-1.5 py-0.5 font-mono text-[11px] text-muted">{r.id}{r.section && <span className="text-faint"> {r.section}</span>}</span>)}
         </div>
       )}
-      {sections.length > 0 && <p className="mb-2 text-xs text-muted">Sections: {sections.join(", ")}</p>}
+      {sections.length > 0 && <p className="mb-2 text-xs text-muted">Sections: {sections.join(",")}</p>}
       {canEdit && (
         <div className="grid gap-2">
           <TextArea rows={3} value={text} onChange={(e) => setText(e.target.value)} className="font-mono text-xs"

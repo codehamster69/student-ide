@@ -35,7 +35,7 @@ export function SandboxLibrary({ onAuthLost }: { onAuthLost: () => void }) {
           <Search className="pointer-events-none absolute left-3 top-3 size-4 text-faint" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title, subject or topic" className="pl-9" />
         </label>
-        <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="h-11 rounded-lg border border-border bg-surface px-3 text-sm text-text">
+        <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="h-11 rounded-lg border border-border px-3 text-sm text-text">
           <option value="">Any level</option><option value="intro">Intro</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option>
         </select>
       </div>
@@ -52,7 +52,7 @@ export function SandboxLibrary({ onAuthLost }: { onAuthLost: () => void }) {
             const Icon = e.base ? BASE_ICON[e.base] : LibraryIcon;
             return (
               <button key={e.id} onClick={() => setOpen(e.id)}
-                className="grid gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-sm transition-colors hover:border-border-strong">
+                className="grid gap-2 rounded-xl border border-border p-4 text-left shadow-sm transition-colors hover:border-border-strong">
                 <span className="flex items-center gap-2 text-[15px] font-semibold text-text"><Icon className="size-4 text-accent" />{e.title}</span>
                 <span className="line-clamp-2 text-sm text-muted">{e.summary || e.subject_title}</span>
                 <span className="flex flex-wrap gap-1.5">
@@ -100,7 +100,7 @@ function Drawer({ id, subjects, onClose }: { id: string; subjects: SubjectRow[];
                 <Card key={a.id} className="p-3">
                   <p className="text-sm font-medium text-text">{i + 1}. {a.title}</p>
                   <LessonText markdown={a.statement || "*No statement.*"} language="" className="mt-2" />
-                  <p className="mt-2 font-mono text-[11px] text-faint">{a.files.map((f) => f.path).join("  ")} · {a.tests.kind === "command" ? a.tests.command : `${a.tests.cases?.length ?? 0} tests`}{a.solution_files?.length ? " · has a solution" : ""}</p>
+                  <p className="mt-2 font-mono text-[11px] text-faint">{a.files.map((f) => f.path).join("")} · {a.tests.kind === "command" ? a.tests.command : `${a.tests.cases?.length ?? 0} tests`}{a.solution_files?.length ? " · has a solution" : ""}</p>
                 </Card>
               ))}
             </div>
@@ -110,7 +110,7 @@ function Drawer({ id, subjects, onClose }: { id: string; subjects: SubjectRow[];
           {msg && <p className="text-sm text-danger">{msg}</p>}
           {writable.length === 0 ? <p className="text-sm text-muted">Create a subject first, then use this lab in it.</p> : (
             <div className="flex gap-2">
-              <select value={subject} onChange={(ev) => setSubject(ev.target.value)} className={cn("h-9 flex-1 rounded-lg border border-border bg-surface px-2 text-sm text-text")}>
+              <select value={subject} onChange={(ev) => setSubject(ev.target.value)} className={cn("h-9 flex-1 rounded-lg border border-border px-2 text-sm text-text")}>
                 {writable.map((s) => <option key={s.id} value={s.id}>{s.title}{s.code ? ` (${s.code})` : ""}</option>)}
               </select>
               <Button variant="primary" disabled={busy || !subject} onClick={async () => {

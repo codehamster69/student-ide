@@ -67,8 +67,8 @@ export function DesktopSignIn() {
     );
   } else {
     body = (<>
-      <div className="mb-6 flex items-center gap-3 rounded-xl bg-surface-2 p-3">
-        <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-accent"><Laptop className="size-4" /></span>
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-border p-3">
+        <span className="grid size-9 place-items-center rounded-lg border border-cta/40 text-cta"><Laptop className="size-4" /></span>
         <div className="min-w-0 text-sm">
           <p className="truncate font-medium text-text">{me.name || me.email}</p>
           <p className="truncate text-muted">{me.email}</p>
@@ -83,7 +83,7 @@ export function DesktopSignIn() {
           <Button variant="ghost" size="sm" onClick={() => { location.href = loopback(p, "cancel"); }}>Cancel</Button>
         </div>
       </div>
-      {error && <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
+      {error && <p className="mt-4 rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
     </>);
   }
 

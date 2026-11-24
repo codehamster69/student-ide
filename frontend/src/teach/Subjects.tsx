@@ -129,7 +129,7 @@ export function Subject({ slug, onAuthLost }: { slug: string; onAuthLost: () => 
             meta={g.code ? <span className="font-mono text-xs text-muted">{g.code}</span> : undefined}
             actions={conn?.connected && g.slug !== "no-subject" ? (
               <a href={`${conn.url}/subjects/${g.slug}`} target="_blank" rel="noreferrer"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong">
                 <ExternalLink className="size-4" /> Attendance register in Roll Call
               </a>
             ) : undefined} />
@@ -138,7 +138,7 @@ export function Subject({ slug, onAuthLost }: { slug: string; onAuthLost: () => 
           ) : (
             <Card className="overflow-hidden">
               <table className="w-full text-[13px]">
-                <thead className="bg-surface-2 text-left text-xs text-faint">
+                <thead className="text-left text-xs text-faint">
                   <tr><th className="px-5 py-2.5 font-medium">Lab</th><th className="px-3 py-2.5 font-medium">Status</th>
                     <th className="px-3 py-2.5 font-medium">Class groups</th><th className="px-3 py-2.5 text-right font-medium">Sessions</th>
                     <th className="px-5 py-2.5 text-right font-medium">Attendance</th></tr>
@@ -150,7 +150,7 @@ export function Subject({ slug, onAuthLost }: { slug: string; onAuthLost: () => 
                       <tr key={l.id} className="border-t border-border">
                         <td className="px-5 py-3"><a href={href.lab(l.id)} className="font-medium text-text hover:text-accent">{l.title}</a></td>
                         <td className="px-3 py-3"><Badge tone={TONE[l.status]} className="h-5 px-2 text-[11px]">{STATUS[l.status].label}</Badge></td>
-                        <td className="px-3 py-3 text-muted">{a?.classes.join(", ") || <span className="text-faint">none</span>}</td>
+                        <td className="px-3 py-3 text-muted">{a?.classes.join(",") || <span className="text-faint">none</span>}</td>
                         <td className="px-3 py-3 text-right tabular-nums text-muted">{l.n_sessions}</td>
                         <td className="px-5 py-3 text-right">
                           {a?.classes.length ? (

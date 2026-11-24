@@ -60,15 +60,15 @@ export function Setup({ me, onAuthLost }: { me: Me | null; onAuthLost: () => voi
   const doneCount = steps.filter((x) => x.done).length;
   return (
     <Page>
-      <PageHeader title={`Getting started${me?.name ? `, ${me.name.split(" ")[0]}` : ""}`}
+      <PageHeader title={`Getting started${me?.name ? `, ${me.name.split("")[0]}` : ""}`}
         description="From nothing to your first lab with attendance in about ten minutes. Steps tick themselves as you go."
         meta={labs ? <Badge tone={doneCount === steps.length ? "success" : "neutral"} className="tabular-nums">{doneCount} of {steps.length} done</Badge> : undefined} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <ol className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+        <ol className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
           {steps.map((s, i) => (
             <li key={s.title} className="flex gap-4 px-5 py-4">
               <span className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-full text-[13px] font-semibold tabular-nums",
-                s.done ? "bg-success-soft text-success" : "bg-surface-3 text-muted")}>
+                s.done ? "border border-success/40 text-success" : "border border-border text-muted")}>
                 {s.done ? <Check className="size-4" /> : i + 1}
               </span>
               <div className="min-w-0 flex-1">

@@ -83,10 +83,10 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
     <Page wide>
       <PageHeader title="Similar submissions worth a look" description={rep.title}
         actions={<>
-          <div className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm" role="radiogroup" aria-label="Show pairs from">
+          <div className="flex rounded-lg border border-border p-0.5 shadow-sm" role="radiogroup" aria-label="Show pairs from">
             {LEVELS.map((l) => (
               <button key={l} role="radio" aria-checked={from === l} onClick={() => setFrom(l)}
-                className={cn("h-7 rounded-md px-2.5 text-xs font-medium transition-colors", from === l ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+                className={cn("h-7 rounded-md px-2.5 text-xs font-medium transition-colors", from === l ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
                 {l === LEVELS[0] ? `Strong overlap (${pct(l)}+)` : `Everything from ${pct(l)}`}
               </button>
             ))}
@@ -94,7 +94,7 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
           <Button size="sm" onClick={load} disabled={loading}>{loading ? <Spinner className="size-3.5" /> : <RefreshCw className="size-3.5" />} Refresh</Button>
         </>} />
 
-      <Card className="mb-8 flex gap-3 bg-surface-2 px-5 py-4 text-[13px] leading-relaxed text-muted shadow-none">
+      <Card className="mb-8 flex gap-3 px-5 py-4 text-[13px] leading-relaxed text-muted shadow-none">
         <MessagesSquare className="mt-0.5 size-4 shrink-0 text-accent" />
         <div className="grid gap-1.5">
           <p className="text-text">
@@ -125,11 +125,11 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
                 {q.n_compared < 2 ? "Not enough submissions to compare yet." : "No pair stands out on this question."}
               </p>
             ) : (
-              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
                 {q.pairs.map((p) => (
                   <li key={p.a.submission_id + p.b.submission_id}>
                     <button onClick={() => setOpen({ q: q.title, pair: p })}
-                      className="flex w-full items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-surface-2">
+                      className="flex w-full items-center gap-4 px-4 py-2.5 text-left border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
                       <Who s={p.a} />
                       <span className="text-faint">and</span>
                       <Who s={p.b} />
@@ -219,7 +219,7 @@ function PairView({ labId, question, pair, onClose, onAuthLost }: {
           </div>
           <Button variant="ghost" size="icon" className="ml-auto" onClick={onClose} aria-label="Close"><X className="size-4" /></Button>
         </div>
-        {error && <p className="m-5 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+        {error && <p className="m-5 rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{error}</p>}
         {!d && !error && <div className="grid place-items-center p-16"><Spinner className="size-5" /></div>}
         {d && (
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-auto md:grid-cols-2 md:divide-x md:divide-border">
@@ -258,7 +258,7 @@ function CodeSide({ s, share, ranges, hover, onHover }: {
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface-2/60 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
         <strong className="text-sm font-semibold text-text">{s.handle}</strong>
         {s.handle !== s.student_id && <span className="font-mono text-[11px] text-faint">{s.student_id}</span>}
         <LanguageDot language={s.language} />

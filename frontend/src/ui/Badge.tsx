@@ -4,11 +4,11 @@ import { cn } from "./cn";
 export type Tone = "neutral" | "accent" | "success" | "warn" | "danger";
 
 const tones: Record<Tone, string> = {
-  neutral: "bg-surface-2 text-muted border-border",
-  accent: "bg-accent-soft text-accent border-transparent",
-  success: "bg-success-soft text-success border-transparent",
-  warn: "bg-warn-soft text-warn border-transparent",
-  danger: "bg-danger-soft text-danger border-transparent",
+  neutral: "text-muted border-border",
+  accent: "text-accent-2 border-accent-2/40",
+  success: "text-success border-success/40",
+  warn: "text-warn border-warn/40",
+  danger: "text-danger border-danger/40",
 };
 
 export function Badge({ tone = "neutral", className, children }: { tone?: Tone; className?: string; children: ReactNode }) {
@@ -21,7 +21,7 @@ export function Badge({ tone = "neutral", className, children }: { tone?: Tone; 
 
 /** A dot that radiates a soft ring (CSS only, runs on the compositor). */
 export function LiveDot({ tone = "success", live = true }: { tone?: Tone; live?: boolean }) {
-  const color = { neutral: "bg-faint", accent: "bg-accent", success: "bg-success", warn: "bg-warn", danger: "bg-danger" }[tone];
+  const color = { neutral: "bg-faint", accent: "bg-accent-2", success: "bg-success", warn: "bg-warn", danger: "bg-danger" }[tone];
   return (
     <span className="relative inline-flex size-2">
       {live && <span className={cn("absolute inset-0 rounded-full animate-pulse-ring", color)} />}

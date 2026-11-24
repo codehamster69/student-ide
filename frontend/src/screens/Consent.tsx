@@ -49,17 +49,17 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
     <Card variants={stagger(0.05)} initial="initial" animate="animate" className="w-full max-w-2xl overflow-hidden">
       <div className="p-8 pb-6">
         <motion.div variants={item} className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent"><ShieldCheck className="size-5" /></span>
+          <span className="grid size-10 place-items-center rounded-xl border border-cta/40 text-cta"><ShieldCheck className="size-5" /></span>
           <h1 className="text-2xl font-semibold tracking-tight text-text">Before you start</h1>
         </motion.div>
         <motion.p variants={item} className="mt-2 text-[15px] leading-relaxed text-muted">
           This editor is part of a research study on how people write code. While you work it records:
         </motion.p>
 
-        <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-2/60">
+        <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border">
           {RECORDED.map(({ icon: Icon, text }) => (
             <motion.li key={text} variants={item} className="flex items-center gap-3 px-3 py-2 text-sm text-text">
-              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-accent border border-border"><Icon className="size-3.5" /></span>
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg text-cta border border-border"><Icon className="size-3.5" /></span>
               {text}
             </motion.li>
           ))}
@@ -71,15 +71,15 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
             <p className="mt-1 text-sm leading-relaxed text-muted">
               In a Sandbox Lab your code runs in a Linux container on your own computer. While a lab is open, the app also records:
             </p>
-            <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-2/60">
+            <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border">
               {SANDBOX.map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-3 px-3 py-2 text-sm text-text">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-accent border border-border"><Icon className="size-3.5" /></span>
+                  <span className="grid size-7 shrink-0 place-items-center rounded-lg text-cta border border-border"><Icon className="size-3.5" /></span>
                   {text}
                 </li>
               ))}
             </ul>
-            <p className="mt-3 flex gap-3 rounded-xl border border-border bg-surface-2/60 px-4 py-3 text-sm text-text">
+            <p className="mt-3 flex gap-3 rounded-xl border border-border px-4 py-3 text-sm text-text">
               <WifiOff className="mt-0.5 size-4 shrink-0 text-accent" />
               If the connection drops, your work stays saved on this computer and you can keep going for 5 minutes. After that,
               editing pauses until the connection is back. A gap is never treated as a problem.
@@ -88,13 +88,13 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
         )}
 
         {live !== "off" && (
-          <motion.div variants={item} className="mt-4 flex gap-3 rounded-xl border border-border bg-surface-2/60 px-4 py-3 text-sm text-text">
+          <motion.div variants={item} className="mt-4 flex gap-3 rounded-xl border border-border px-4 py-3 text-sm text-text">
             <MonitorPlay className="mt-0.5 size-4 shrink-0 text-accent" />
             <p>{LIVE[live]}{scope === "sandbox" && live === "editor" ? " In a Sandbox Lab that view shows your terminal commands too." : ""} Nothing from a live view is ever used to mark your work.</p>
           </motion.div>
         )}
 
-        <motion.div variants={item} className="mt-4 flex gap-3 rounded-xl bg-success-soft px-4 py-3 text-sm text-text">
+        <motion.div variants={item} className="mt-4 flex gap-3 rounded-xl border border-success/40 px-4 py-3 text-sm text-text">
           <Ban className="mt-0.5 size-4 shrink-0 text-success" />
           <p>It does <strong className="font-semibold">not</strong> use your webcam or microphone and does not record your screen or other apps.
             {scope === "sandbox" && " In a Sandbox Lab it sees nothing outside the lab's folder and container: not your other files, and no keys typed outside the app's window."}</p>
@@ -108,7 +108,7 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
         </motion.p>
       </div>
 
-      <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-4 border-t border-border bg-surface-2/60 px-8 py-4">
+      <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-8 py-4">
         <label className={cn("flex cursor-pointer items-center gap-3 text-sm font-medium transition-colors", agreed ? "text-text" : "text-muted")}>
           <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
           I have read this and agree to take part.

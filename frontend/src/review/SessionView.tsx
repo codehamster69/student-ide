@@ -133,7 +133,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
       <AnimatePresence>
         {truth && syn && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <p className="mb-4 rounded-xl border border-dashed border-border-strong bg-surface px-4 py-2.5 text-sm text-muted">
+            <p className="mb-4 rounded-xl border border-dashed border-border-strong px-4 py-2.5 text-sm text-muted">
               <span className="font-medium text-text">Simulated condition: {CONDITION[syn.condition]}.</span>{" "}
               {syn.condition === "honest" ? "The same simulated student typed the whole session." :
                 syn.condition === "proxy" ? `Typed throughout by ${syn.author_after}.` :
@@ -161,10 +161,10 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
               </AnimatePresence>
             </Button>
             <Button size="icon" variant="ghost" disabled={!nextEp} onClick={() => nextEp && setT(Math.max(0, nextEp.switch_est - 15))} aria-label="Next moment"><ChevronRight className="size-4" /></Button>
-            <div className="ml-2 flex rounded-lg border border-border bg-surface-2 p-0.5">
+            <div className="ml-2 flex rounded-lg border border-border p-0.5">
               {SPEEDS.map((sp) => (
                 <button key={sp} onClick={() => setSpeed(sp)} className={cn("relative h-7 rounded-md px-2.5 font-mono text-xs transition-colors", speed === sp ? "text-text" : "text-muted hover:text-text")}>
-                  {speed === sp && <motion.span layoutId="speed-pill" transition={spring} className="absolute inset-0 rounded-md bg-surface shadow-sm" />}
+                  {speed === sp && <motion.span layoutId="speed-pill" transition={spring} className="absolute inset-0 rounded-md border border-border-strong" />}
                   <span className="relative">{sp}×</span>
                 </button>
               ))}
@@ -190,17 +190,17 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
             </p>
           </div>
           {files.length > 1 && (
-            <div role="tablist" aria-label="Files" className="flex gap-1 overflow-x-auto border-b border-border bg-surface-2/50 px-2 py-1">
+            <div role="tablist" aria-label="Files" className="flex gap-1 overflow-x-auto border-b border-border px-2 py-1">
               {files.map((f, i) => (
                 <button key={f.path ?? i} role="tab" aria-selected={i === fileIx} onClick={() => pickFile(i)}
-                  className={cn("shrink-0 rounded-md px-2.5 py-1 font-mono text-xs transition-colors", i === fileIx ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+                  className={cn("shrink-0 rounded-md px-2.5 py-1 font-mono text-xs transition-colors", i === fileIx ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
                   {(f.path ?? "code").split("/").pop()}
                 </button>
               ))}
             </div>
           )}
           <div className="h-[430px]"><CodeReplay key={fileIx} doc={code.doc} changed={code.changed} caret={code.caret} language={langOf(files[fileIx]?.path)} /></div>
-          <div className="border-t border-border bg-surface-2/50 px-4 py-3">
+          <div className="border-t border-border px-4 py-3">
             <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
               <span>Typing rhythm just before the playhead</span>
               <span className="text-faint">one bar per key, pauses muted</span>
@@ -235,7 +235,7 @@ function langOf(path: string | null | undefined): ReplayLanguage | undefined {
 function Verdict({ review }: { review: Review }) {
   const n = review.episodes.length;
   const s = review.session;
-  let tone = "border-border bg-surface", icon = <HeartHandshake className="size-5 text-success" />, title: string, body: string;
+  let tone = "border-border", icon = <HeartHandshake className="size-5 text-success" />, title: string, body: string;
   if (review.baseline.status !== "ready") {
     title = "Not scored yet";
     body = s.context === "competition"
@@ -250,7 +250,7 @@ function Verdict({ review }: { review: Review }) {
     title = "Nothing stood out";
     body = "Typing rhythm and way of working stayed within this student's usual range for the whole session.";
   } else {
-    tone = "border-warn/35 bg-warn-soft";
+    tone = "border-warn/35 ";
     icon = <MessageCircleQuestion className="size-5 text-warn" />;
     title = `${n} moment${n > 1 ? "s" : ""} worth a conversation`;
     body = "Part of this session looks different from how this student usually writes code. That is a reason to talk with them, never evidence of misconduct on its own: habits change with tiredness, a hard problem, a new keyboard or an injury.";
@@ -295,7 +295,7 @@ function MomentCard({ ep, index, active, onHover, onJump }: { ep: Episode; index
         <ChannelTag channel={ep.channel} className="mt-0.5 shrink-0 rounded-full border border-border px-2 py-1" />
       </div>
       {ep.evidence.length > 0 && (
-        <div className="mt-3 grid gap-2 rounded-xl bg-surface-2/70 p-3">
+        <div className="mt-3 grid gap-2 rounded-xl p-3">
           <p className="text-xs font-medium text-muted">What moved most, compared with this student's own baseline</p>
           {ep.evidence.map((ev, k) => <EvidenceRow key={ev.feature} ev={ev} k={k} color={CH_COLOR[ep.channel]} />)}
         </div>
@@ -341,7 +341,7 @@ function Guide({ eps }: { eps: Episode[] }) {
         <ol className="mt-2.5 grid gap-2">
           {qs.map((q, i) => (
             <li key={i} className="flex gap-2.5 text-sm text-muted">
-              <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent">{i + 1}</span>{q}
+              <span className="grid size-5 shrink-0 place-items-center rounded-full border border-cta/40 text-[11px] font-semibold text-accent">{i + 1}</span>{q}
             </li>
           ))}
         </ol>
@@ -381,7 +381,7 @@ function windowLengths(review: Review): string {
   const byW = new Map<number, string[]>();
   for (const c of Object.values(review.channels)) byW.set(c!.window_s, [...(byW.get(c!.window_s) ?? []), c!.label.toLowerCase()]);
   if (byW.size <= 1) return `${review.window_s}-second windows`;
-  return [...byW].map(([w, names]) => `${w} s for ${names.join(" and ")}`).join("; ");
+  return [...byW].map(([w, names]) => `${w} s for ${names.join(" and")}`).join(";");
 }
 
 function Nearby({ review, t, onSeek }: { review: Review; t: number; onSeek: (t: number) => void }) {
@@ -400,7 +400,7 @@ function Nearby({ review, t, onSeek }: { review: Review; t: number; onSeek: (t: 
         <AnimatePresence initial={false} mode="popLayout">
           {items.map((x) => (
             <motion.li key={`${x.kind}-${x.t}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              <button onClick={() => onSeek(x.t)} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1 text-left text-[13px] hover:bg-surface-2">
+              <button onClick={() => onSeek(x.t)} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1 text-left text-[13px]">
                 <span className={cn("size-2 shrink-0", x.kind === "paste" ? "rotate-45 rounded-[2px] bg-warn" : "rounded-full",
                   x.kind === "away" && "bg-faint", x.kind === "run" && "bg-success", x.kind === "err" && "bg-danger")} />
                 <span className="font-mono text-xs tabular-nums text-faint">{clock(x.t)}</span>
