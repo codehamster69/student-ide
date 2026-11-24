@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronRight, Eye, ListChecks, Plus, Sparkles, Trophy, Users, X } from "lucide-react";
-import { Badge, Button, Card, Field, Input, Spinner, TextArea, cn, item, pop, stagger } from "../ui";
+import { Eye, ListChecks, Plus, Search, Sparkles, Trophy, X } from "lucide-react";
+import { Badge, Button, Card, EmptyState, Field, Input, Page, PageHeader, Spinner, TextArea, cn, pop } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { dayTime } from "../review/format";
@@ -11,29 +11,37 @@ import { LanguageBadge, LanguageSelect } from "./bits";
 import { href } from "../routes";
 
 const TONE: Record<LabStatus, "neutral" | "success" | "warn"> = { draft: "neutral", open: "success", closed: "warn" };
+const GRID = "md:grid-cols-[minmax(0,1fr)_8rem_4.5rem_5.5rem_8.5rem_9.5rem]";
 
 /** #/teach: the labs this teacher made or was added to (admins: every lab), and a form to start a new one. */
 export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
   const [labs, setLabs] = useState<LabRow[] | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState<false | "lab" | "competition">(false);
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState<"all" | LabStatus>("all");
 
   useEffect(() => {
     get<LabRow[]>("/api/teach/labs").then(setLabs)
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(e.message)));
   }, [onAuthLost]);
 
+  const counts = useMemo(() => {
+    const c = { all: labs?.length ?? 0, draft: 0, open: 0, closed: 0 };
+    labs?.forEach((l) => { c[l.status]++; });
+    return c;
+  }, [labs]);
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return (labs ?? []).filter((l) => (status === "all" || l.status === status)
+      && (!needle || `${l.title} ${l.subject} ${l.owner_email ?? ""}`.toLowerCase().includes(needle)));
+  }, [labs, q, status]);
+
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Labs</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            A lab is one sitting: a set of questions with starter code, assigned to the students who should see it.
-            Every session a student records is linked to the lab and question they worked on.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <Page>
+      <PageHeader title="Labs"
+        description="A lab is one sitting: questions with starter code, assigned to the students who should see it."
+        actions={<div className="flex max-w-[calc(100vw-2rem)] flex-wrap gap-2">
           {/* also in the header, which runs off narrow screens */}
           <a href={href.student} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2 md:hidden">
             <Eye className="size-4" /> View as student
@@ -44,89 +52,106 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
           <Button variant="primary" onClick={() => setCreating("lab")} disabled={!!creating}>
             <Plus className="size-4" /> New lab
           </Button>
-        </div>
-      </motion.div>
+        </div>} />
 
       <AnimatePresence>{creating && <NewLab key={creating} kind={creating} onClose={() => setCreating(false)} onAuthLost={onAuthLost} />}</AnimatePresence>
 
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
 
-      {!labs && (
-        <div className="grid gap-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}</div>
+      {!labs && !error && (
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16 w-full rounded-none border-b border-border last:border-b-0" />)}
+        </div>
       )}
 
       {labs && labs.length === 0 && !creating && (
-        <Card variants={item} className="grid place-items-center gap-3 px-6 py-14 text-center">
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><ListChecks className="size-5" /></span>
-          <p className="text-sm font-medium text-text">No labs yet</p>
-          <p className="max-w-sm text-sm text-muted">Create one, add a few questions, assign your students and open it when the class starts.</p>
-          <div className="mt-2 flex gap-2">
-            <a href={href.setup} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
+        <EmptyState icon={ListChecks} title="No labs yet"
+          action={<>
+            <a href={href.setup} className="mr-2 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
               <Sparkles className="size-4 text-accent" /> Getting started
             </a>
             <Button variant="primary" onClick={() => setCreating("lab")}><Plus className="size-4" /> New lab</Button>
-          </div>
-        </Card>
+          </>}>
+          Create one, add a few questions, assign your students and open it when the class starts.
+        </EmptyState>
       )}
 
       {labs && labs.length > 0 && (
-        <motion.ul variants={stagger(0.05, 0.1)} className="grid gap-3">
-          {labs.map((l) => (
-            <motion.li key={l.id} variants={item}>
-              <a href={href.lab(l.id)}
-                className="group grid items-center gap-x-6 gap-y-2 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md md:grid-cols-[1fr_auto_auto_auto_1.25rem]">
-                <span className="min-w-0">
-                  <span className="flex items-center gap-2">
-                    {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
-                    <strong className="truncate text-[15px] font-semibold text-text">{l.title}</strong>
-                    <Badge tone={TONE[l.status]} className="h-5 px-2 text-[11px]">{STATUS[l.status].label}</Badge>
-                    <LanguageBadge language={l.language} />
-                    <OwnerBadge lab={l} />
-                  </span>
-                  <span className="mt-0.5 block truncate text-[13px] text-muted">
-                    {l.subject && <span className="font-medium text-text/80">{l.subject} · </span>}{l.description || "No description"}
-                  </span>
-                </span>
-                <Count icon={ListChecks} value={l.n_questions} label={l.n_questions === 1 ? "question" : "questions"} />
-                <Count icon={Users} value={l.everyone ? "All" : l.n_roster} label={l.everyone ? "students" : "assigned"} />
-                {l.kind === "competition" ? (
-                  // a link of its own inside the row's link: navigate by hand so the row does not open
-                  <span role="link" tabIndex={0} className="inline-flex h-7 items-center gap-1.5 justify-self-start rounded-full bg-gold-soft px-3 text-xs font-medium text-gold transition-opacity hover:opacity-80 md:justify-self-end"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); }}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); } }}>
-                    <Trophy className="size-3.5" /> Leaderboard
-                  </span>
-                ) : (
-                  <span className="text-xs text-faint md:text-right">
-                    {l.n_sessions ? `${l.n_started} started · ${l.n_sessions} sessions` : `edited ${dayTime(l.updated_at)}`}
-                  </span>
-                )}
-                <ChevronRight className="hidden size-4 text-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-text md:block" />
-              </a>
-            </motion.li>
-          ))}
-        </motion.ul>
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[14rem] flex-1 sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title or subject" aria-label="Search labs" className="h-9 pl-9 text-[13px]" />
+            </div>
+            <div className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm" role="group" aria-label="Filter by status">
+              {(["all", "open", "draft", "closed"] as const).map((s) => (
+                <button key={s} type="button" aria-pressed={status === s} onClick={() => setStatus(s)}
+                  className={cn("h-8 rounded-md px-3 text-[13px] font-medium transition-colors",
+                    status === s ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+                  {s === "all" ? "All" : STATUS[s].label} <span className="tabular-nums text-faint">{counts[s]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+            <div className={cn("hidden gap-x-4 border-b border-border bg-surface-2 px-4 py-2 text-xs font-medium text-faint md:grid", GRID)}>
+              <span>Lab</span><span>Subject</span><span className="text-right">Questions</span><span className="text-right">Assigned</span><span>Activity</span><span>Last edit</span>
+            </div>
+            {shown.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-muted">No labs match. <button className="font-medium text-accent hover:underline" onClick={() => { setQ(""); setStatus("all"); }}>Clear filters</button></p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {shown.map((l) => (
+                  <li key={l.id}>
+                    <a href={href.lab(l.id)} className={cn("group grid items-center gap-x-4 gap-y-1 px-4 py-3 transition-colors hover:bg-surface-2", GRID)}>
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
+                          <strong className="truncate text-sm font-semibold text-text">{l.title}</strong>
+                          <Badge tone={TONE[l.status]} className="h-5 px-2 text-[11px]">{STATUS[l.status].label}</Badge>
+                          <LanguageBadge language={l.language} />
+                        </span>
+                        {(l.description || l.access !== "owner") && (
+                          <span className="mt-1 flex min-w-0 items-center gap-2">
+                            <OwnerBadge lab={l} />
+                            {l.description && <span className="truncate text-[13px] text-muted">{l.description}</span>}
+                          </span>
+                        )}
+                      </span>
+                      <span className="truncate text-[13px] text-muted">{l.subject || <span className="text-faint">No subject</span>}</span>
+                      <span className="text-[13px] text-muted md:text-right"><b className="font-semibold tabular-nums text-text">{l.n_questions}</b> <span className="md:hidden">{l.n_questions === 1 ? "question" : "questions"}</span></span>
+                      <span className="text-[13px] text-muted md:text-right"><b className="font-semibold tabular-nums text-text">{l.everyone ? "All" : l.n_roster}</b> <span className="md:hidden">{l.everyone ? "students" : "assigned"}</span></span>
+                      {l.kind === "competition" ? (
+                        // a link of its own inside the row's link: navigate by hand so the row does not open
+                        <span role="link" tabIndex={0} className="inline-flex h-6 items-center gap-1 justify-self-start rounded-md bg-gold-soft px-2 text-xs font-medium text-gold transition-opacity hover:opacity-80"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); } }}>
+                          <Trophy className="size-3.5" /> Leaderboard
+                        </span>
+                      ) : (
+                        <span className="text-xs tabular-nums text-muted">{l.n_sessions ? `${l.n_started} started, ${l.n_sessions} sessions` : <span className="text-faint">No sessions</span>}</span>
+                      )}
+                      <span className="text-xs tabular-nums text-faint">{dayTime(l.updated_at)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
       )}
-    </motion.div>
+    </Page>
   );
 }
 
 /** Whose lab this is, when it isn't simply yours. */
 export function OwnerBadge({ lab }: { lab: Pick<LabRow, "access" | "owner_email"> }) {
-  if (lab.access === "co_teacher") return <Badge className="h-5 px-2 text-[11px]">Shared with you · {lab.owner_email?.split("@")[0]}</Badge>;
+  if (lab.access === "co_teacher") return <Badge className="h-5 shrink-0 whitespace-nowrap px-2 text-[11px]">Shared with you · {lab.owner_email?.split("@")[0]}</Badge>;
   if (lab.access !== "admin") return null;
   return lab.owner_email
-    ? <Badge className="h-5 px-2 font-mono text-[11px]">{lab.owner_email.split("@")[0]}</Badge>
-    : <Badge tone="warn" className="h-5 px-2 text-[11px]">No owner yet</Badge>;
-}
-
-function Count({ icon: Icon, value, label }: { icon: typeof Users; value: number | string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5 text-sm text-muted">
-      <Icon className="size-3.5 text-faint" />
-      <span className="font-semibold tabular-nums text-text">{value}</span> {label}
-    </span>
-  );
+    ? <Badge className="h-5 shrink-0 whitespace-nowrap px-2 font-mono text-[11px]">{lab.owner_email.split("@")[0]}</Badge>
+    : <Badge tone="warn" className="h-5 shrink-0 whitespace-nowrap px-2 text-[11px]">No owner yet</Badge>;
 }
 
 function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; onClose: () => void; onAuthLost: () => void }) {
@@ -158,10 +183,10 @@ function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; on
 
   return (
     <motion.div variants={pop} initial="initial" animate="animate" exit="exit" className="mb-5">
-      <Card className="p-6">
+      <Card className="p-5">
         <form onSubmit={submit} className="grid gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-text">
+            <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text">
               {comp && <Trophy className="size-4 text-gold" />}{comp ? "New competition" : "New lab"}
             </h2>
             <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cancel"><X className="size-4" /></Button>

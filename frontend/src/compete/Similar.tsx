@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ClipboardPaste, Code2, ExternalLink, Info, Keyboard, MessagesSquare, RefreshCw, ScanSearch, X } from "lucide-react";
-import { Badge, Button, Card, Spinner, cn, item, pop, stagger } from "../ui";
+import { ClipboardPaste, Code2, ExternalLink, Info, Keyboard, MessagesSquare, RefreshCw, ScanSearch, X } from "lucide-react";
+import { Badge, Button, Card, Page, PageHeader, Spinner, cn, pop } from "../ui";
 import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LanguageDot } from "../teach/bits";
@@ -70,9 +70,9 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
 
   if (!rep) {
     return (
-      <div className="mx-auto max-w-[1240px] px-5 pt-8">
-        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-64 w-full rounded-2xl" />}
-      </div>
+      <Page wide>
+        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-64 w-full rounded-xl" />}
+      </Page>
     );
   }
 
@@ -80,18 +80,9 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
   const total = shown.reduce((n, q) => n + q.pairs.length, 0);
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1240px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.lab(id)} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
-        <ArrowLeft className="size-4" /> Back to the competition
-      </motion.a>
-      <motion.div variants={item} className="mb-5 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-            <ScanSearch className="size-3.5" /> Similar submissions worth a look
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-text">{rep.title}</h1>
-        </div>
-        <div className="flex items-center gap-2">
+    <Page wide>
+      <PageHeader title="Similar submissions worth a look" description={rep.title}
+        actions={<>
           <div className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm" role="radiogroup" aria-label="Show pairs from">
             {LEVELS.map((l) => (
               <button key={l} role="radio" aria-checked={from === l} onClick={() => setFrom(l)}
@@ -101,47 +92,44 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
             ))}
           </div>
           <Button size="sm" onClick={load} disabled={loading}>{loading ? <Spinner className="size-3.5" /> : <RefreshCw className="size-3.5" />} Refresh</Button>
+        </>} />
+
+      <Card className="mb-8 flex gap-3 bg-surface-2 px-5 py-4 text-[13px] leading-relaxed text-muted shadow-none">
+        <MessagesSquare className="mt-0.5 size-4 shrink-0 text-accent" />
+        <div className="grid gap-1.5">
+          <p className="text-text">
+            A similar pair is a reason to talk with both students, never proof that anyone copied. Nothing on this page changes a score,
+            and students never see it.
+          </p>
+          <p>
+            Each student's last submission on a question is compared with everyone else's in the same language (C with C++), ignoring
+            names, layout, comments, string texts and the starter code. Code most of the class wrote the same way is left out too.
+            Short answers to small problems often look alike simply because there are few ways to write them, and students who
+            learned together write alike. Look at what matches, and at how the code got into the editor (typed or pasted), before you
+            read anything into it.
+          </p>
         </div>
-      </motion.div>
+      </Card>
 
-      <motion.div variants={item}>
-        <Card className="mb-6 flex gap-3 bg-surface-2/60 px-5 py-4 text-[13px] leading-relaxed text-muted shadow-none">
-          <MessagesSquare className="mt-0.5 size-4 shrink-0 text-accent" />
-          <div className="grid gap-1.5">
-            <p className="text-text">
-              A similar pair is a reason to talk with both students, never proof that anyone copied. Nothing on this page changes a score,
-              and students never see it.
-            </p>
-            <p>
-              Each student's last submission on a question is compared with everyone else's in the same language (C with C++), ignoring
-              names, layout, comments, string texts and the starter code. Code most of the class wrote the same way is left out too.
-              Short answers to small problems often look alike simply because there are few ways to write them, and students who
-              learned together write alike. Look at what matches, and at how the code got into the editor (typed or pasted), before you
-              read anything into it.
-            </p>
-          </div>
-        </Card>
-      </motion.div>
-
-      <div className="grid gap-5">
+      <div className="grid gap-8">
         {shown.map((q, qi) => (
-          <motion.section key={q.id} variants={item}>
+          <section key={q.id}>
             <div className="mb-2 flex items-baseline justify-between gap-3">
-              <h2 className="text-sm font-semibold text-text">
-                <span className="mr-2 font-mono text-xs text-faint">Q{qi + 1}</span>{q.title}
+              <h2 className="text-[15px] font-semibold text-text">
+                <span className="mr-2 text-xs font-medium tabular-nums text-faint">Q{qi + 1}</span>{q.title}
               </h2>
-              <span className="text-xs text-muted">{q.n_students} student{q.n_students === 1 ? "" : "s"} compared</span>
+              <span className="text-xs tabular-nums text-muted">{q.n_students} student{q.n_students === 1 ? "" : "s"} compared</span>
             </div>
             {q.pairs.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border px-4 py-3 text-[13px] text-muted">
                 {q.n_compared < 2 ? "Not enough submissions to compare yet." : "No pair stands out on this question."}
               </p>
             ) : (
-              <ul className="grid gap-1.5">
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
                 {q.pairs.map((p) => (
                   <li key={p.a.submission_id + p.b.submission_id}>
                     <button onClick={() => setOpen({ q: q.title, pair: p })}
-                      className="flex w-full items-center gap-4 rounded-xl border border-border bg-surface px-4 py-2.5 text-left shadow-sm transition-[border-color,box-shadow] hover:border-accent/40 hover:shadow-md">
+                      className="flex w-full items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-surface-2">
                       <Who s={p.a} />
                       <span className="text-faint">and</span>
                       <Who s={p.b} />
@@ -155,7 +143,7 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
                 ))}
               </ul>
             )}
-          </motion.section>
+          </section>
         ))}
         {total === 0 && rep.questions.some((q) => q.n_compared > 1) && from === LEVELS[0] && (
           <p className="text-center text-xs text-faint">Nothing above {pct(from)}. "Everything from {pct(LEVELS[1])}" lists weaker overlaps too.</p>
@@ -171,7 +159,7 @@ export function Similar({ id, onAuthLost }: { id: string; onAuthLost: () => void
       <AnimatePresence>
         {open && <PairView labId={id} question={open.q} pair={open.pair} onClose={() => setOpen(null)} onAuthLost={onAuthLost} />}
       </AnimatePresence>
-    </motion.div>
+    </Page>
   );
 }
 
@@ -216,10 +204,10 @@ function PairView({ labId, question, pair, onClose, onAuthLost }: {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
       <motion.div variants={pop} initial="initial" animate="animate" exit="exit" onClick={(e) => e.stopPropagation()}
         role="dialog" aria-modal="true" aria-label="Two similar submissions side by side"
-        className="flex max-h-[92vh] w-full max-w-[1320px] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+        className="flex max-h-[92vh] w-full max-w-[1320px] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
         <div className="flex items-center gap-3 border-b border-border px-5 py-3">
           <ScanSearch className="size-4 text-accent" />
           <div className="min-w-0">

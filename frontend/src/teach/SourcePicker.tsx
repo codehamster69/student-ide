@@ -43,7 +43,7 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
   const p = providers?.find((x) => x.id === pid);
 
   return (
-    <Card className="overflow-hidden border-accent/40 ring-4 ring-accent/10">
+    <Card className="overflow-hidden border-border-strong">
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
         <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg"><Globe className="size-4" /></span>
         <div className="min-w-0">
@@ -62,7 +62,7 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
               pid === x.id ? "text-text" : "text-muted hover:text-text")}>
             {pid === x.id && <motion.span layoutId="source-tab" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
             <span className={cn("relative", x.languages && !x.languages.includes(language) && "opacity-50")}>{x.name}</span>
-            <span className={cn("relative rounded-full px-1.5 text-[10px] font-semibold uppercase tracking-wide", STATUS_CHIP[x.status][1])}>
+            <span className={cn("relative rounded-md px-1.5 text-[10.5px] font-medium", STATUS_CHIP[x.status][1])}>
               {STATUS_CHIP[x.status][0]}
             </span>
           </button>
@@ -77,7 +77,7 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
             <p className="font-medium text-text">
               {p.name} questions are for {p.languages.map((l) => LANGUAGES[l].label).join(" and ")} labs only
             </p>
-            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or {onLink ? "switch the lab's language in Session settings" : "pick another language"}.</p>
+            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or {onLink ? "switch the lab's language in Basics" : "pick another language"}.</p>
           </div>
           {p.can_link && onLink && (
             <details className="border-t border-border">
@@ -187,7 +187,7 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
       <div className={cn("grid gap-2", query && "opacity-40")}>
         {groupCategories(cats ?? []).map(([group, cs]) => (
           <div key={group} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={group}>
-            <span className="w-16 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-faint">{group}</span>
+            <span className="w-14 shrink-0 text-xs font-medium text-faint">{group}</span>
             {cs.map((c) => (
               <button key={c.id} onClick={() => { setQuery(""); setCat(c.id); }} aria-pressed={cat === c.id && !query}
                 className={cn("h-7 rounded-full border px-2.5 text-xs transition-colors",

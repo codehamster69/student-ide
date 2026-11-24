@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AllRegisters } from "./Attendance";
-import { motion } from "motion/react";
 import { Search, ShieldCheck, Undo2, UserPlus } from "lucide-react";
-import { Badge, Button, Card, Field, Input, Spinner, cn, item, stagger } from "../ui";
+import { Badge, Button, Card, Field, Input, Page, PageHeader, Spinner, cn } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { dayTime } from "../review/format";
@@ -59,16 +58,12 @@ export function Users({ me, onAuthLost }: { me: string; onAuthLost: () => void }
   const count = (r: Role) => users?.filter((u) => u.role === r).length ?? 0;
 
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">People</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Roles follow the college address: <span className="font-mono text-xs">ug/pg + year + branch + roll</span> is a student,
-          any other college address is a teacher. Override a role here for TAs or unusual addresses; it then sticks at every sign-in.
-        </p>
-      </motion.div>
+    <Page>
+      <PageHeader title="People"
+        description={<>Roles follow the college address: <span className="font-mono text-xs">ug/pg + year + branch + roll</span> is a student,
+          any other college address is a teacher. Override a role here for TAs or unusual addresses; it then sticks at every sign-in.</>} />
 
-      <Card variants={item} className="mb-4 p-5">
+      <Card className="mb-4 p-5">
         <form onSubmit={addTeacher} className="flex flex-wrap items-end gap-3">
           <div className="min-w-72 flex-1">
             <Field label="Add a teacher before their first sign-in">
@@ -83,20 +78,20 @@ export function Users({ me, onAuthLost }: { me: string; onAuthLost: () => void }
 
       {error && <Card className="mb-4 p-4 text-sm text-danger" role="alert">{error}</Card>}
 
-      <motion.div variants={item} className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 text-xs text-muted">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-2 text-xs tabular-nums text-muted">
           {ROLES.map((r) => <Badge key={r} tone={TONE[r]}>{count(r)} {r}{count(r) === 1 ? "" : "s"}</Badge>)}
         </div>
         <label className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-faint" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="h-8 w-56 pl-8 text-[13px]" />
         </label>
-      </motion.div>
+      </div>
 
       {!users ? (
         <div className="grid gap-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}</div>
       ) : (
-        <Card variants={item} className="divide-y divide-border overflow-hidden">
+        <Card className="divide-y divide-border overflow-hidden">
           {shown.length === 0 && <p className="px-5 py-8 text-center text-sm text-muted">Nobody yet. Accounts appear at their first sign-in.</p>}
           {shown.map((u) => (
             <div key={u.email} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
@@ -127,7 +122,7 @@ export function Users({ me, onAuthLost }: { me: string; onAuthLost: () => void }
           ))}
         </Card>
       )}
-      <motion.div variants={item} className="mt-6"><AllRegisters onAuthLost={onAuthLost} /></motion.div>
-    </motion.div>
+      <div className="mt-8"><AllRegisters onAuthLost={onAuthLost} /></div>
+    </Page>
   );
 }

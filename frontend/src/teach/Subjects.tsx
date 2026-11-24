@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
-import { ArrowLeft, BookOpen, ChevronRight, ClipboardCheck, ExternalLink, Plus } from "lucide-react";
-import { Badge, Button, Card, Field, Input, item, stagger } from "../ui";
+import { BookOpen, ChevronRight, ClipboardCheck, ExternalLink, Plus } from "lucide-react";
+import { Badge, Button, Card, EmptyState, Field, Input, Page, PageHeader } from "../ui";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { href, subjectSlug } from "../routes";
@@ -49,37 +48,27 @@ export function Subjects({ onAuthLost }: { onAuthLost: () => void }) {
   const [adding, setAdding] = useState(false);
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Subjects</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            Your labs grouped by the subject set on each lab{conn?.connected ? ", together with the subjects in your Roll Call" : ""}.
-            Attendance from a lab is filed under its subject in Roll Call.
-          </p>
-        </div>
-        {conn?.connected && <Button onClick={() => setAdding(!adding)}><Plus className="size-4" /> New subject</Button>}
-      </motion.div>
+    <Page>
+      <PageHeader title="Subjects"
+        description={<>Your labs grouped by the subject set on each lab{conn?.connected ? ", together with the subjects in your Roll Call" : ""}.
+          Attendance from a lab is filed under its subject in Roll Call.</>}
+        actions={conn?.connected ? <Button variant="primary" onClick={() => setAdding(!adding)}><Plus className="size-4" /> New subject</Button> : undefined} />
       {adding && <NewSubject onDone={() => { setAdding(false); reload(); }} onAuthLost={onAuthLost} />}
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
-      {!labs ? <Skeleton className="h-40 w-full rounded-2xl" /> : groups.length === 0 ? (
-        <Card className="grid place-items-center gap-2 px-6 py-14 text-center">
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><BookOpen className="size-5" /></span>
-          <p className="text-sm font-medium text-text">No subjects yet</p>
-          <p className="max-w-sm text-sm text-muted">Set a subject on a lab (Session settings) and it shows up here.</p>
-        </Card>
+      {!labs ? <Skeleton className="h-40 w-full rounded-xl" /> : groups.length === 0 ? (
+        <EmptyState icon={BookOpen} title="No subjects yet">Set a subject on a lab (under Basics) and it shows up here.</EmptyState>
       ) : (
-        <motion.ul variants={stagger(0.04, 0.05)} className="grid gap-3 md:grid-cols-2">
+        <ul className="grid gap-3 md:grid-cols-2">
           {groups.map((g) => {
             const classes = [...new Set(g.labs.flatMap((l) => att[l.id]?.classes ?? []))];
             const open = g.labs.filter((l) => l.status === "open").length;
             return (
-              <motion.li key={g.slug} variants={item}>
+              <li key={g.slug}>
                 <a href={`#/teach/subjects/${encodeURIComponent(g.slug)}`} className="block h-full">
-                  <Card className="flex h-full flex-col gap-3 p-5 transition-shadow hover:shadow-md">
+                  <Card className="flex h-full flex-col gap-3 p-5 transition-colors hover:border-border-strong">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        {g.code && <div className="font-mono text-[11px] font-semibold text-accent">{g.code}</div>}
+                        {g.code && <div className="font-mono text-xs text-muted">{g.code}</div>}
                         <div className="text-[15px] font-semibold text-text">{g.name}</div>
                       </div>
                       <ChevronRight className="size-4 text-faint" />
@@ -88,7 +77,7 @@ export function Subjects({ onAuthLost }: { onAuthLost: () => void }) {
                       {classes.length ? classes.map((c) => <Badge key={c} className="h-5 px-2 text-[11px]">{c}</Badge>)
                         : <span className="text-xs text-faint">No class group attached</span>}
                     </div>
-                    <div className="mt-auto flex gap-3 text-xs text-muted">
+                    <div className="mt-auto flex gap-3 text-xs tabular-nums text-muted">
                       <span>{g.labs.length} lab{g.labs.length === 1 ? "" : "s"}</span>
                       {open > 0 && <span className="text-success">{open} open</span>}
                       <span>{g.labs.reduce((a, l) => a + l.n_sessions, 0)} sessions</span>
@@ -96,12 +85,12 @@ export function Subjects({ onAuthLost }: { onAuthLost: () => void }) {
                     </div>
                   </Card>
                 </a>
-              </motion.li>
+              </li>
             );
           })}
-        </motion.ul>
+        </ul>
       )}
-    </motion.div>
+    </Page>
   );
 }
 
@@ -130,36 +119,29 @@ export function Subject({ slug, onAuthLost }: { slug: string; onAuthLost: () => 
   const { labs, att, conn, groups, error } = useSubjects(onAuthLost);
   const g = groups.find((x) => x.slug === slug);
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.subjects} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
-        <ArrowLeft className="size-4" /> Subjects
-      </motion.a>
+    <Page>
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
-      {!labs ? <Skeleton className="h-40 w-full rounded-2xl" /> : !g ? (
+      {!labs ? <Skeleton className="h-40 w-full rounded-xl" /> : !g ? (
         <Card className="p-6 text-sm text-muted">No labs with this subject.</Card>
       ) : (
         <>
-          <motion.div variants={item} className="mb-5 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              {g.code && <div className="font-mono text-xs font-semibold text-accent">{g.code}</div>}
-              <h1 className="text-2xl font-semibold tracking-tight text-text">{g.name}</h1>
-            </div>
-            {conn?.connected && g.slug !== "no-subject" && (
+          <PageHeader title={g.name}
+            meta={g.code ? <span className="font-mono text-xs text-muted">{g.code}</span> : undefined}
+            actions={conn?.connected && g.slug !== "no-subject" ? (
               <a href={`${conn.url}/subjects/${g.slug}`} target="_blank" rel="noreferrer"
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
                 <ExternalLink className="size-4" /> Attendance register in Roll Call
               </a>
-            )}
-          </motion.div>
+            ) : undefined} />
           {g.labs.length === 0 ? (
             <Card className="p-6 text-sm text-muted">This subject is in Roll Call but no lab uses it yet. Set it as a lab's subject to file the lab's attendance here.</Card>
           ) : (
             <Card className="overflow-hidden">
               <table className="w-full text-[13px]">
-                <thead className="bg-surface-2/80 text-left text-xs text-faint">
-                  <tr><th className="px-5 py-2.5 font-semibold">Lab</th><th className="px-3 py-2.5 font-semibold">Status</th>
-                    <th className="px-3 py-2.5 font-semibold">Class groups</th><th className="px-3 py-2.5 text-right font-semibold">Sessions</th>
-                    <th className="px-5 py-2.5 text-right font-semibold">Attendance</th></tr>
+                <thead className="bg-surface-2 text-left text-xs text-faint">
+                  <tr><th className="px-5 py-2.5 font-medium">Lab</th><th className="px-3 py-2.5 font-medium">Status</th>
+                    <th className="px-3 py-2.5 font-medium">Class groups</th><th className="px-3 py-2.5 text-right font-medium">Sessions</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Attendance</th></tr>
                 </thead>
                 <tbody>
                   {g.labs.map((l) => {
@@ -186,6 +168,6 @@ export function Subject({ slug, onAuthLost }: { slug: string; onAuthLost: () => 
           )}
         </>
       )}
-    </motion.div>
+    </Page>
   );
 }

@@ -171,7 +171,7 @@ export function GradeView({ grade, dark }: { grade: GradeResult; dark?: boolean 
 function Pre({ label, text }: { label: string; text: string }) {
   return (
     <div className="min-w-0">
-      <p className="mb-0.5 font-sans text-[10.5px] font-semibold uppercase tracking-wide text-faint">{label}</p>
+      <p className="mb-0.5 font-sans text-[11px] font-medium text-faint">{label}</p>
       <pre className="m-0 max-h-28 overflow-auto whitespace-pre-wrap break-words">{text}</pre>
     </div>
   );

@@ -83,7 +83,7 @@ export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, em
   const big = size === "lg";
   return (
     <LayoutGroup>
-      <motion.ol layout className="grid gap-1.5">
+      <motion.ol layout className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
         <AnimatePresence initial={false}>
           {rows.map((r) => {
             const moved = moves.get(r.handle);
@@ -91,16 +91,15 @@ export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, em
               <motion.li key={r.handle} layout="position" transition={spring}
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className={cn(
-                  "relative flex items-center gap-3 rounded-xl border px-3",
-                  big ? "py-3" : "py-2",
-                  r.me ? "border-accent/50 bg-accent-soft/60" : "border-border bg-surface",
-                  r.rank === 1 && r.points > 0 && !r.me && "border-gold/40",
+                  "relative flex items-center gap-3 px-4",
+                  big ? "py-3" : "py-2.5",
+                  r.me ? "bg-accent-soft/60" : r.rank === 1 && r.points > 0 ? "bg-gold-soft/30" : "bg-surface",
                 )}>
                 <RankMark rank={r.rank} points={r.points} className={big ? "size-10 text-base" : undefined} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <strong className={cn("truncate font-semibold text-text", big ? "text-lg" : "text-sm")}>{r.handle}</strong>
-                    {r.me && <span className="rounded-full bg-accent px-1.5 text-[10px] font-semibold uppercase tracking-wide text-accent-fg">You</span>}
+                    {r.me && <span className="rounded-md bg-accent px-1.5 text-[11px] font-medium text-accent-fg">You</span>}
                     {showIds && r.student_id && r.student_id !== r.handle && (
                       <span className="font-mono text-[11px] text-faint">{r.student_id}</span>
                     )}

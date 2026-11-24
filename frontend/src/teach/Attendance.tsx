@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  AlertTriangle, ArrowLeft, Check, ClipboardCheck, Copy, ExternalLink, KeyRound, Link2, Plus, RefreshCw, Send, Settings2, Unplug, UsersRound, X,
+  AlertTriangle, Check, ClipboardCheck, Copy, ExternalLink, KeyRound, Link2, Plus, RefreshCw, Send, Settings2, Unplug, UsersRound, X,
 } from "lucide-react";
-import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, cn, item, stagger } from "../ui";
+import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Page, PageHeader, Spinner, cn } from "../ui";
 import { AuthError, get, send, token } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { href } from "../routes";
@@ -178,7 +178,7 @@ export function AllRegisters({ onAuthLost }: { onAuthLost: () => void }) {
   if (!rows) return null;
   return (
     <Card className="p-5">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><ClipboardCheck className="size-4 text-accent" /> Teachers' Roll Call registers</h2>
+      <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text"><ClipboardCheck className="size-4 text-accent" /> Teachers' Roll Call registers</h2>
       <p className="mt-1 text-xs text-muted">
         As an admin you can open any teacher's register with full access: Roll Call shows a banner saying whose it is, and each open is logged here.
       </p>
@@ -291,7 +291,7 @@ export function ClassGroupsCard({ lab, onAuthLost, onRosterChanged }: {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><ClipboardCheck className="size-4 text-accent" /> Class groups and attendance</h2>
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text"><ClipboardCheck className="size-4 text-accent" /> Class groups and attendance</h2>
         {info && info.classes.length > 0 && (
           <a href={href.labAttendance(lab.id)} className="text-xs font-medium text-accent hover:underline">Attendance</a>
         )}
@@ -373,7 +373,7 @@ function ClassPicker({ lab, attached, onSave, onCancel, onAuthLost }: {
         return (
           <div key={c.id} className="contents">
           {head && (
-            <p className={cn("px-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint", i > 0 && "mt-2")}>
+            <p className={cn("px-1.5 text-xs font-medium text-faint", i > 0 && "mt-2")}>
               {c.owner || "Shared register"}
             </p>
           )}
@@ -473,7 +473,7 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
     }, fail), [lab.id, fail]);
   useEffect(() => { void load(day); }, [load, day]);
 
-  if (!p) return <div className="mx-auto max-w-[1240px] px-5 pt-8">{error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-40 w-full rounded-2xl" />}</div>;
+  if (!p) return <Page wide>{error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-40 w-full rounded-xl" />}</Page>;
 
   const mark = (s: StudentMark): boolean => (overrides[s.student_id] ? overrides[s.student_id] === "P" : s.auto);
   const toggle = (s: StudentMark) => {
@@ -486,16 +486,10 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
   const sentAll = p.classes.some((c) => !idle(c)) && p.classes.every((c) => idle(c) || (c.sent && !c.sent.error));
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1240px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.lab(lab.id)} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
-        <ArrowLeft className="size-4" /> {lab.title}
-      </motion.a>
-      <motion.div variants={item} className="mb-5 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Attendance</h1>
-          <p className="mt-1 text-sm text-muted">{p.describe}. Learning-lab practice and staff previews never count. Tap a mark to change it.</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <Page wide>
+      <PageHeader title="Attendance"
+        description={<>{p.describe}. Learning-lab practice and staff previews never count. Tap a mark to change it.</>}
+        actions={<>
           {p.days.length > 0 && (
             <select value={p.day} onChange={(e) => setDay(e.target.value)} aria-label="Lab day"
               className="h-9 rounded-lg border border-border bg-surface px-2.5 text-[13px] text-text shadow-sm">
@@ -519,8 +513,7 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
           }}>
             {busy ? <Spinner /> : sentAll ? <RefreshCw className="size-3.5" /> : <Send className="size-3.5" />} {sentAll ? "Send again" : "Send to Roll Call"}
           </Button>
-        </div>
-      </motion.div>
+        </>} />
 
       <AnimatePresence>
         {editRule && (
@@ -538,15 +531,15 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
           No class group is attached to this lab. <a href={href.lab(lab.id)} className="font-medium text-accent hover:underline">Attach one</a> from the lab page.
         </Card>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           {p.classes.map((c) => {
             const present = c.students.filter(mark).length;
             return (
-              <motion.div key={c.class_id} variants={item}>
+              <div key={c.class_id}>
                 <Card className="overflow-hidden">
                   <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
                     <div>
-                      <h2 className="text-sm font-semibold text-text">{c.label}</h2>
+                      <h2 className="text-[15px] font-semibold text-text">{c.label}</h2>
                       <p className="text-xs text-muted">
                         {!c.sent && idle(c) ? "Not sent: nobody from this group worked in the lab this day"
                           : c.sent ? (c.sent.error ? <span className="text-danger">Not sent: {c.sent.error}</span>
@@ -558,8 +551,8 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
                   </div>
                   <div className="max-h-[520px] overflow-auto">
                     <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-surface-2/95 text-left text-faint backdrop-blur">
-                        <tr><th className="px-5 py-2 font-semibold">Student</th><th className="px-2 py-2 font-semibold">Mark</th><th className="px-5 py-2 font-semibold">Why</th></tr>
+                      <thead className="sticky top-0 bg-surface-2 text-left text-faint">
+                        <tr><th className="px-5 py-2 font-medium">Student</th><th className="px-2 py-2 font-medium">Mark</th><th className="px-5 py-2 font-medium">Why</th></tr>
                       </thead>
                       <tbody>
                         {c.students.map((s) => {
@@ -585,16 +578,16 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
                     </table>
                   </div>
                 </Card>
-              </motion.div>
+              </div>
             );
           })}
         </div>
       )}
 
       {p.not_in_any_class.length > 0 && (
-        <motion.div variants={item}>
+        <div>
           <Card className="mt-5 border-warn/40 p-5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><AlertTriangle className="size-4 text-warn" /> Worked in the lab, but in no attached class group</h2>
+            <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text"><AlertTriangle className="size-4 text-warn" /> Worked in the lab, but in no attached class group</h2>
             <p className="mt-1 text-xs text-muted">
               They won't be marked anywhere. Usually their Roll Call roster uses a different prefix than the college address, or their group isn't attached.
             </p>
@@ -606,12 +599,12 @@ export function AttendancePage({ lab, onAuthLost }: { lab: LabDetail; onAuthLost
               ))}
             </div>
           </Card>
-        </motion.div>
+        </div>
       )}
       <p className="mt-5 flex items-center gap-1.5 text-xs text-faint">
         <ExternalLink className="size-3" /> Each class group gets one Roll Call session per lab day. Sending again replaces it, so edits made in Roll Call are overwritten.
       </p>
-    </motion.div>
+    </Page>
   );
 }
 
@@ -622,7 +615,7 @@ function RuleForm({ labId, rule, autoSend, onSaved, onAuthLost }: {
   const [error, setError] = useState("");
   const fail = useFail(onAuthLost, setError);
   return (
-    <Card className="mb-5 grid gap-4 p-5 sm:grid-cols-[1fr_1fr_1.3fr_auto] sm:items-end">
+    <Card className="mb-4 grid gap-4 p-5 sm:grid-cols-[1fr_1fr_1.3fr_auto] sm:items-end">
       <Field label="Active minutes" hint="minutes with typing, a run or a Check">
         <Input type="number" min={0} max={600} value={f.min_active_minutes} onChange={(e) => setF({ ...f, min_active_minutes: Number(e.target.value) })} className="h-9" />
       </Field>
