@@ -43,7 +43,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
         description="A lab is one sitting: questions with starter code, assigned to the students who should see it."
         actions={<div className="flex max-w-[calc(100vw-2rem)] flex-wrap gap-2">
           {/* also in the header, which runs off narrow screens */}
-          <a href={href.student} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2 md:hidden">
+          <a href={href.student} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong md:hidden">
             <Eye className="size-4" /> View as student
           </a>
           <Button onClick={() => setCreating("competition")} disabled={!!creating}>
@@ -59,7 +59,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
       {error && <Card className="mb-4 p-6 text-sm text-danger">{error}</Card>}
 
       {!labs && !error && (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border shadow-sm">
           {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16 w-full rounded-none border-b border-border last:border-b-0" />)}
         </div>
       )}
@@ -67,7 +67,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
       {labs && labs.length === 0 && !creating && (
         <EmptyState icon={ListChecks} title="No labs yet"
           action={<>
-            <a href={href.setup} className="mr-2 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
+            <a href={href.setup} className="mr-2 inline-flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong">
               <Sparkles className="size-4 text-accent" /> Getting started
             </a>
             <Button variant="primary" onClick={() => setCreating("lab")}><Plus className="size-4" /> New lab</Button>
@@ -83,19 +83,19 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title or subject" aria-label="Search labs" className="h-9 pl-9 text-[13px]" />
             </div>
-            <div className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm" role="group" aria-label="Filter by status">
+            <div className="flex rounded-lg border border-border p-0.5 shadow-sm" role="group" aria-label="Filter by status">
               {(["all", "open", "draft", "closed"] as const).map((s) => (
                 <button key={s} type="button" aria-pressed={status === s} onClick={() => setStatus(s)}
                   className={cn("h-8 rounded-md px-3 text-[13px] font-medium transition-colors",
-                    status === s ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+                    status === s ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
                   {s === "all" ? "All" : STATUS[s].label} <span className="tabular-nums text-faint">{counts[s]}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-            <div className={cn("hidden gap-x-4 border-b border-border bg-surface-2 px-4 py-2 text-xs font-medium text-faint md:grid", GRID)}>
+          <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+            <div className={cn("hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-faint md:grid", GRID)}>
               <span>Lab</span><span>Subject</span><span className="text-right">Questions</span><span className="text-right">Assigned</span><span>Activity</span><span>Last edit</span>
             </div>
             {shown.length === 0 ? (
@@ -104,7 +104,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
               <ul className="divide-y divide-border">
                 {shown.map((l) => (
                   <li key={l.id}>
-                    <a href={href.lab(l.id)} className={cn("group grid items-center gap-x-4 gap-y-1 px-4 py-3 transition-colors hover:bg-surface-2", GRID)}>
+                    <a href={href.lab(l.id)} className={cn("group grid items-center gap-x-4 gap-y-1 px-4 py-3 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong", GRID)}>
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           {l.kind === "competition" && <Trophy className="size-4 shrink-0 text-gold" aria-label="Competition" />}
@@ -124,7 +124,7 @@ export function Labs({ onAuthLost }: { onAuthLost: () => void }) {
                       <span className="text-[13px] text-muted md:text-right"><b className="font-semibold tabular-nums text-text">{l.everyone ? "All" : l.n_roster}</b> <span className="md:hidden">{l.everyone ? "students" : "assigned"}</span></span>
                       {l.kind === "competition" ? (
                         // a link of its own inside the row's link: navigate by hand so the row does not open
-                        <span role="link" tabIndex={0} className="inline-flex h-6 items-center gap-1 justify-self-start rounded-md bg-gold-soft px-2 text-xs font-medium text-gold transition-opacity hover:opacity-80"
+                        <span role="link" tabIndex={0} className="inline-flex h-6 items-center gap-1 justify-self-start rounded-md border border-gold/50 px-2 text-xs font-medium text-gold transition-opacity hover:opacity-80"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); }}
                           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); location.hash = href.board(l.id); } }}>
                           <Trophy className="size-3.5" /> Leaderboard
@@ -205,13 +205,13 @@ function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; on
                   {(Object.keys(BOARD_MODES) as BoardMode[]).map((m) => (
                     <button type="button" key={m} onClick={() => setBoard(m)}
                       className={cn("h-11 flex-1 rounded-lg border text-[13px] font-medium transition-colors",
-                        board === m ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-muted hover:text-text")}>
+                        board === m ? "border-cta text-cta" : "border-border text-muted hover:border-border-strong hover:text-text")}>
                       {BOARD_MODES[m].label}
                     </button>
                   ))}
                 </div>
               </Field>
-              <p className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted md:col-span-2">
+              <p className="rounded-lg px-3 py-2 text-xs text-muted md:col-span-2">
                 Competitions are graded on test cases: every question needs at least one test before you can start the clock.
                 Students earn points for tests passed and a bonus for solving early. Nothing from the review timeline ever reaches the board.
               </p>
@@ -231,7 +231,7 @@ function NewLab({ kind, onClose, onAuthLost }: { kind: "lab" | "competition"; on
             <TextArea rows={3} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="Work through the questions in order. Run your code as often as you like." />
           </Field>
-          {error && <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+          {error && <p className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{error}</p>}
           <div className={cn("flex justify-end gap-2")}>
             <Button onClick={onClose}>Cancel</Button>
             <Button type="submit" variant="primary" disabled={busy || !title.trim()}>

@@ -62,7 +62,7 @@ export function SetupByHand({ p, onReload, onAuthLost }: { p: Preview; onReload:
       {saved !== null ? (
         <Card className="grid flex-1 place-items-center p-10 text-center">
           <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grid max-w-md justify-items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-full bg-success-soft text-success"><Check className="size-5" /></span>
+            <span className="grid size-10 place-items-center rounded-full border border-success/40 text-success"><Check className="size-5" /></span>
             <p className="text-sm font-medium text-text">Saved as version {saved}. It is being built now.</p>
             <p className="text-xs text-muted">Every student's machine gets exactly this setup. Labs already published keep their version until you move them.</p>
             <Button variant="primary" onClick={() => history.back()}>Back to the subject</Button>
@@ -89,7 +89,7 @@ export function SetupByHand({ p, onReload, onAuthLost }: { p: Preview; onReload:
           <div className="grid min-h-0 grid-rows-[auto_1fr] gap-2">
             <ol className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
               {["Install what the subject needs (sudo works, so does apt, pip, npm)", "Try it here", "Check the recipe on the right, then save"].map((s, i) => (
-                <li key={s} className="flex items-center gap-1.5"><span className="grid size-4 place-items-center rounded-full bg-accent text-[10px] text-accent-fg">{i + 1}</span>{s}</li>
+                <li key={s} className="flex items-center gap-1.5"><span className="grid size-4 place-items-center rounded-full border border-cta text-[10px] text-cta">{i + 1}</span>{s}</li>
               ))}
             </ol>
             <PreviewTerminal url={wsUrl} />

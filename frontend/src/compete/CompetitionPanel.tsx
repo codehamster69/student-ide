@@ -70,13 +70,13 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
       </div>
 
       {started && (
-        <div className="relative mt-4 flex items-center justify-between rounded-xl bg-surface-2 px-4 py-3">
+        <div className="relative mt-4 flex items-center justify-between rounded-xl px-4 py-3">
           <Countdown comp={c} offset={offset} className="text-2xl" />
           <span className="text-xs text-muted">{c.board.length} on the board</span>
         </div>
       )}
       {started && (
-        <a href={href.board(labId)} className="relative mt-3 grid gap-1 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-surface-2"
+        <a href={href.board(labId)} className="relative mt-3 grid gap-1 rounded-xl border border-border px-3 py-2.5 transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong"
           title="Open the full leaderboard">
           {c.handing_in && <p className="flex items-center gap-2 text-xs text-muted"><Spinner className="size-3" /> Grading the code students had open…</p>}
           {c.board.slice(0, 5).map((r) => (
@@ -104,11 +104,11 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
         </label>
         <div className="grid gap-1.5">
           <span className="text-[13px] font-medium text-text">Students see</span>
-          <div className="flex rounded-lg border border-border bg-surface p-0.5">
+          <div className="flex rounded-lg border border-border p-0.5">
             {(Object.keys(BOARD_MODES) as BoardMode[]).map((m) => (
               <button key={m} onClick={() => m !== c.board_mode && void act("PATCH", "", { board: m })} disabled={busy}
                 className={cn("h-7 flex-1 rounded-md text-xs font-medium transition-colors",
-                  c.board_mode === m ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+                  c.board_mode === m ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
                 {BOARD_MODES[m].label}
               </button>
             ))}
@@ -134,7 +134,7 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
       <AnimatePresence>
         {error && (
           <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="relative mt-3 overflow-hidden rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger" role="alert">{error}</motion.p>
+            className="relative mt-3 overflow-hidden rounded-lg border border-danger/40 px-3 py-2 text-xs text-danger" role="alert">{error}</motion.p>
         )}
       </AnimatePresence>
 
@@ -149,12 +149,12 @@ export function CompetitionPanel({ labId, version, onChanged, onAuthLost }: {
           <Button onClick={() => setConfirmEnd(true)} disabled={busy}><Square className="size-3.5 fill-current" /> End now</Button>
         )}
         <a href={href.board(labId)}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
           <MonitorPlay className="size-4" /> Open leaderboard
         </a>
         {started && (
           <a href={href.similar(labId)} title="Pairs of submissions that look alike: something to talk about, never a score"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface text-sm font-medium text-text shadow-sm transition-colors hover:bg-surface-2">
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
             <ScanSearch className="size-4" /> Similar submissions
           </a>
         )}

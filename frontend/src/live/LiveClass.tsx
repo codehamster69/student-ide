@@ -38,10 +38,10 @@ export function LiveLabs({ onAuthLost }: { onAuthLost: () => void }) {
         </EmptyState>
       )}
       {labs && labs.length > 0 && (
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
           {labs.map((l) => (
             <li key={l.id}>
-              <a href={href.liveLab(l.id)} className="group flex flex-wrap items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2/60">
+              <a href={href.liveLab(l.id)} className="group flex flex-wrap items-center justify-between gap-4 px-5 py-3.5 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-[15px] font-semibold text-text">
                     {l.title} <LanguageBadge language={l.language} />
@@ -134,7 +134,7 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
         </>}
       />
 
-      <div className="mb-4 flex items-start gap-2 rounded-xl border border-border bg-surface-2/60 px-4 py-2.5 text-[13px] text-muted">
+      <div className="mb-4 flex items-start gap-2 rounded-xl border border-border px-4 py-2.5 text-[13px] text-muted">
         <Info className="mt-0.5 size-4 shrink-0 text-accent" />
         <p>
           Students in this lab see a small <strong className="font-semibold text-text">Class view on</strong> notice while this page is open.
@@ -164,7 +164,7 @@ export function LiveClass({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             const on = data.students.filter((s) => s.question_id === q.id && !["submitted", "left"].includes(s.state)).length;
             const done = data.students.filter((s) => s.submitted.includes(q.id)).length;
             return (
-              <div key={q.id} className="rounded-xl border border-border bg-surface px-3 py-2 text-xs shadow-sm">
+              <div key={q.id} className="rounded-xl border border-border px-3 py-2 text-xs shadow-sm">
                 <p className="truncate font-medium text-text">Q{q.position + 1} · {q.title}</p>
                 <p className="mt-0.5 text-muted"><span className="tabular-nums">{on}</span> working · <span className="tabular-nums">{done}</span> finished</p>
               </div>
@@ -188,7 +188,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   return (
     <button onClick={onClick} aria-pressed={active}
       className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors",
-        active ? "border-accent bg-accent-soft text-text" : "border-border bg-surface text-muted hover:text-text")}>
+        active ? "border-cta text-text" : "border-border text-muted hover:border-border-strong hover:text-text")}>
       {children}
     </button>
   );
@@ -234,10 +234,10 @@ function StudentCard({ s, now, editorView, fresh, onSeen }: {
           </div>
           {s.moments > 0 && (
             <a href={href.session(s.moment_session_id ?? s.session_id)} onClick={onSeen}
-              className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1.5 text-xs font-medium text-accent hover:underline">
+              className="flex items-center gap-1.5 rounded-lg border border-cta/40 px-2.5 py-1.5 text-xs font-medium text-accent hover:underline">
               <MessagesSquare className="size-3.5" />
               {s.moments} moment{s.moments === 1 ? "" : "s"} worth a conversation in this lab
-              {fresh && <span className="ml-auto rounded-md bg-accent px-1.5 text-[11px] font-semibold text-accent-fg">new</span>}
+              {fresh && <span className="ml-auto rounded-md border border-cta/40 px-1.5 text-[11px] font-semibold text-cta">new</span>}
             </a>
           )}
           <div className="mt-auto flex items-center gap-2 pt-1">
