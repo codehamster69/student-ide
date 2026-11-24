@@ -10,10 +10,20 @@ React 18 + Tailwind CSS v4 + [Motion](https://motion.dev).
 | `tokens.css` | Semantic colour tokens (`--surface`, `--accent`, `--syn-*` …) with light and dark themes, fonts (Inter, JetBrains Mono, self-hosted), keyframes. Exposed to Tailwind as `bg-surface`, `text-muted`, `border-border`, `bg-accent-soft`, etc. Import once at the app entry. |
 | `motion.ts` | Durations, easings, springs and variants (`page`, `stagger`, `item`, `pop`, `fade`). |
 | `Button`, `Input`/`TextArea`/`Field`/`Checkbox`, `Badge`/`LiveDot`/`Kbd`/`Spinner`, `Card`, `Dialog`, `Stepper`, `Logo` | Primitives. |
+| `AppShell` (+ `Breadcrumbs`, `TopBarButton`) | App frame: left sidebar of sections, top bar with breadcrumbs and actions, drawer below `lg`. The teacher area uses it (`review/ReviewApp.tsx`, `SECTIONS`). |
+| `Page`, `PageHeader`, `EmptyState` | Page body width, title row (title, description, actions on the right), and empty states that say what to do next. New pages should use these instead of hand-rolled headers. |
+| `CommandPalette` (+ `useCommandPalette`, `SearchButton`) | Ctrl+K / ⌘K jump list of pages plus loaded items (labs, subjects). Never mount it on a screen that records typing. |
 | `RhythmBars` | One bar per inter-key interval; pauses drawn muted. Used on sign-in and in the review replay. |
 | `TypingDemo` | Self-typing code card with a live rhythm strip (sign-in screen). |
 
 Everything is re-exported from `ui/index.ts`.
+
+## Look
+
+A calm, dense working tool: cool grey surfaces, one indigo accent, Inter for the interface and
+JetBrains Mono for code and roll numbers only. Cards are `rounded-xl` with `shadow-sm`; dialogs and
+the palette get `shadow-lg`. The one signature element is the typing-rhythm bars (logo, sign-in demo,
+review replay); keep other decoration out. Sentence-case labels, no all-caps eyebrows.
 
 ## Theme
 

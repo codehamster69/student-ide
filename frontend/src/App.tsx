@@ -6,7 +6,7 @@ import { setPreviewToken, type Lab, type LearnTrack, type Task } from "./api";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig } from "./auth";
 import { newSittingId, startSession, type LiveSession } from "./editor/session";
 import { page, spring } from "./ui";
-import { Shell } from "./screens/Shell";
+import { Shell, type StudentTab } from "./screens/Shell";
 import { Login } from "./screens/Login";
 import { Consent } from "./screens/Consent";
 import { Tasks } from "./screens/Tasks";
@@ -71,6 +71,12 @@ export function App() {
     });
   }, []);
 
+  // the signed-in student's top bar: My labs / Learning lab
+  const tabs = (studentId: string, tab?: StudentTab) => ({
+    tab,
+    onTab: (t: StudentTab) => setScreen(t === "learn" ? { name: "learn", studentId } : { name: "tasks", studentId }),
+  });
+
   let content;
   switch (screen.name) {
     case "loading":
@@ -92,7 +98,7 @@ export function App() {
       break;
     case "tasks":
       content = (
-        <Shell step={2} studentId={screen.studentId} onSignOut={signOut}>
+        <Shell step={2} studentId={screen.studentId} onSignOut={signOut} {...tabs(screen.studentId, "home")}>
           <Tasks
             studentId={screen.studentId}
             onPick={async (task) => {
@@ -113,7 +119,7 @@ export function App() {
       break;
     case "learn":
       content = (
-        <Shell step={2} studentId={screen.studentId} onSignOut={signOut}>
+        <Shell step={2} studentId={screen.studentId} onSignOut={signOut} {...tabs(screen.studentId, "learn")}>
           <Learn
             studentId={screen.studentId}
             onBack={() => setScreen({ name: "tasks", studentId: screen.studentId })}
@@ -136,7 +142,7 @@ export function App() {
       break;
     case "arena":
       content = (
-        <Shell step={2} studentId={screen.studentId} onSignOut={signOut}>
+        <Shell step={2} studentId={screen.studentId} onSignOut={signOut} {...tabs(screen.studentId, "home")}>
           <Arena
             studentId={screen.studentId}
             labId={screen.labId}
@@ -166,7 +172,7 @@ export function App() {
       break;
     case "saved":
       content = (
-        <Shell step={3} studentId={screen.studentId} onSignOut={signOut}>
+        <Shell step={3} studentId={screen.studentId} onSignOut={signOut} {...tabs(screen.studentId)}>
           <Saved summary={screen.summary} onAnother={() => setScreen({ name: "tasks", studentId: screen.studentId })} />
         </Shell>
       );

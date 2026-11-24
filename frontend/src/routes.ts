@@ -156,3 +156,29 @@ export const href = {
 } as const;
 
 export const go = (hash: string) => { location.hash = hash; };
+
+/** Breadcrumb trail for the top bar: the area, then the collection, then "this page". */
+export function trail(r: Route): { label: string; href?: string }[] {
+  switch (r.name) {
+    case "labs": return [{ label: "Labs" }];
+    case "lab": return r.view ? [{ label: "Labs", href: href.labs }, { label: "Lab", href: href.lab(r.id) }, { label: "Attendance" }] : [{ label: "Labs", href: href.labs }, { label: "Lab" }];
+    case "board": return [{ label: "Labs", href: href.labs }, { label: "Competition", href: href.lab(r.id) }, { label: "Leaderboard" }];
+    case "similar": return [{ label: "Labs", href: href.labs }, { label: "Competition", href: href.lab(r.id) }, { label: "Similar submissions" }];
+    case "subjects": return [{ label: "Subjects" }];
+    case "subject": return [{ label: "Subjects", href: href.subjects }, { label: "Subject" }];
+    case "setup": return [{ label: "Getting started" }];
+    case "people": return [{ label: "People" }];
+    case "live": return [{ label: "Live" }];
+    case "live-lab": return [{ label: "Live", href: href.live }, { label: "Class" }];
+    case "live-session": return [{ label: "Live", href: href.live }, { label: "Student" }];
+    case "overview": return [{ label: "Review" }];
+    case "review-lab": return [{ label: "Review", href: href.review }, { label: "Lab session" }];
+    case "review-all": return [{ label: "Review", href: href.review }, { label: "All sessions" }];
+    case "session": return [{ label: "Review", href: href.review }, { label: "All sessions", href: href.reviewAll }, { label: "Timeline" }];
+    case "sbx-subjects": return [{ label: "Sandbox Labs" }];
+    case "sbx-subject": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Subject" }];
+    case "sbx-lab": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Lab" }];
+    case "sbx-library": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Library" }];
+    case "sbx-preview": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Try as a student" }];
+  }
+}

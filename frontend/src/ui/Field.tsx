@@ -4,13 +4,13 @@ import { cn } from "./cn";
 const control =
   "w-full rounded-lg border border-border bg-surface px-3 text-sm text-text shadow-sm outline-none " +
   "placeholder:text-faint transition-[border-color,box-shadow] duration-150 " +
-  "hover:border-border-strong focus:border-accent focus:ring-4 focus:ring-accent/15";
+  "hover:border-border-strong focus:border-accent focus:ring-3 focus:ring-accent/15";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...rest },
   ref,
 ) {
-  return <input ref={ref} className={cn(control, "h-11", className)} {...rest} />;
+  return <input ref={ref} className={cn(control, "h-10", className)} {...rest} />;
 });
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function TextArea(

@@ -35,7 +35,7 @@ export function Dialog({ open, onClose, title, description, icon, actions }: Dia
             aria-modal="true"
             aria-labelledby="dialog-title"
             variants={pop}
-            className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-lg"
+            className="relative w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-lg"
           >
             <div className="flex gap-4">
               {icon && <div className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">{icon}</div>}

@@ -84,7 +84,7 @@ await shot(t, "03-class", true);
 
 // DEMO01 is still typing while the teacher watches.
 const watched = students.DEMO01;
-const cardSel = "div.rounded-2xl:has(span:text-is('DEMO01'))";
+const cardSel = "[data-student='DEMO01']";
 await t.click(`${cardSel} button:has-text('View editor')`);
 await t.waitForSelector("text=can see that you are viewing their editor");
 await watched.keyboard.type("best = sorted(counts.items(), key=lambda kv: -kv[1])[:3]\n", { delay: 20 });

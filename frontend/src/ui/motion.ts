@@ -17,20 +17,21 @@ export const softSpring: Transition = { type: "spring", stiffness: 220, damping:
 
 /** Whole-screen enter/exit. */
 export const page: Variants = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.out } },
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.out } },
   exit: { opacity: 0, y: -8, transition: { duration: duration.fast, ease: ease.inOut } },
 };
 
-/** Parent that reveals its `item` children one after another. */
-export const stagger = (gap = 0.06, delay = 0.05): Variants => ({
+/** Parent that reveals its `item` children one after another. The gap is capped so a
+ * long page settles in a quarter second instead of cascading. */
+export const stagger = (gap = 0.03, delay = 0.02): Variants => ({
   initial: {},
-  animate: { transition: { staggerChildren: gap, delayChildren: delay } },
+  animate: { transition: { staggerChildren: Math.min(gap, 0.03), delayChildren: Math.min(delay, 0.03) } },
 });
 
 export const item: Variants = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.out } },
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.out } },
 };
 
 export const pop: Variants = {
