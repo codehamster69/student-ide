@@ -46,3 +46,23 @@ Keystroke timing is the thesis's raw signal, so on any screen that records:
 
 `frontend/e2e/record.mjs` fails if any main-thread task over 50 ms overlaps the
 typing window.
+
+## Page recipe
+
+Every staff page and every student screen outside the editor follows the same shape:
+
+```tsx
+<Page>                                   {/* wide for boards and timelines */}
+  <PageHeader title="Labs" description="One sentence on what this page is for."
+    actions={<><Button>Secondary</Button><Button variant="primary">New lab</Button></>} />
+  {loading ? <Skeleton/> : rows.length ? <List/> : <EmptyState icon={…} title="No labs yet" action={…}>What to do first.</EmptyState>}
+</Page>
+```
+
+- Back links live in the top-bar breadcrumbs (`trail()` in `routes.ts`), not as "← Back" rows above the title.
+  Student screens have no breadcrumbs, so they keep a quiet back button.
+- Section headings inside a page: `text-[15px] font-semibold`, sentence case. No uppercase/tracked labels.
+- Lists of things are one bordered container with divided rows (`divide-y divide-border`), not a stack of
+  separate floating cards; use cards for genuinely separate objects (a tile grid, a summary panel).
+- Numbers that change or line up use `tabular-nums`. Mono only for code, roll numbers and ids.
+- Errors say what failed and what to do; empty states say what to do first.
