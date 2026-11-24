@@ -11,8 +11,10 @@ Rohan asked for a rebrand: a new name with a small existing footprint, a logo,
 a subdomain on hokora.xyz, the live site and the desktop app updated. The work is
 stacked on the redesign PR stack (#55–#59) and replaces the rhythm-bar mark it added.
 
-- Name: **Scribelab**. Logo: a pen nib (the scribe) finishing a line of keystrokes
-  drawn as dashes of different lengths; the nib's slit doubles as a text caret.
+- Name: **Scribelab**. Logo ("Squiggle", picked by Rohan from three bolder options after he
+  asked for a look that feels right to Gen Z students): a chunky hand-drawn "s" with a yellow
+  text caret on a violet-pink-orange gradient; lowercase heavy wordmark with a gradient "lab".
+  A first, quieter pen-nib mark was dropped. Options board: `snapshots/rebrand/scribelab-logo-options.png`.
   Sources: `frontend/src/ui/Logo.tsx`, `frontend/public/favicon.svg`,
   `desktop/installer/packaging/build/icon.{svg,png}` (electron-builder makes .ico/.icns).
 - User-facing text in the web app, guides, desktop app, installer, docs and Roll Call
