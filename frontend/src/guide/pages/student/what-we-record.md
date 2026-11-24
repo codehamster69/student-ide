@@ -5,7 +5,7 @@ order: 2
 keywords: [privacy, recording, keystrokes, data, retention, webcam, flag, conversation, study]
 ---
 
-Student IDE is part of a research study on *how* people write code. This page explains the consent screen in plain words. The consent screen itself is the text you agree to.
+Scribelab is part of a research study on *how* people write code. This page explains the consent screen in plain words. The consent screen itself is the text you agree to.
 
 ## What is recorded
 

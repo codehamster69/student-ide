@@ -2,9 +2,9 @@
 # Run from desktop/installer:  npm run package -- --linux   (or --win, --mac)
 # Paths are relative to the app (projectDir = ../app).
 appId: xyz.hokora.studentide
-productName: Student IDE
-artifactName: StudentIDE-${version}-${os}-${arch}.${ext}
-copyright: Student IDE, IIIT Surat
+productName: Scribelab
+artifactName: Scribelab-${version}-${os}-${arch}.${ext}
+copyright: Scribelab, IIIT Surat
 directories:
   output: ../installer/out
   buildResources: ../installer/packaging/build
@@ -18,9 +18,9 @@ files:
 asar: true
 executableName: studentide
 extraMetadata:
-  homepage: https://studentide.hokora.xyz
+  homepage: https://scribelab.hokora.xyz
   author:
-    name: Student IDE
+    name: Scribelab
     email: noreply@hokora.xyz
 # The update feed is the server itself (backend/studentide/desktop_updates.py), which
 # serves the newest GitHub release. Builds run with --publish never; CI's release job
@@ -28,7 +28,7 @@ extraMetadata:
 # The app points the updater at the server it is locked to at run time (modules/updates.ts).
 publish:
   provider: generic
-  url: https://studentide.hokora.xyz/api/desktop/updates
+  url: https://scribelab.hokora.xyz/api/desktop/updates
 
 # Hardening asked for in docs/desktop.md (Packaging).
 electronFuses:
@@ -69,7 +69,7 @@ nsis:
   include: ../installer/packaging/build/installer.nsh
 
 portable:
-  artifactName: StudentIDE-${version}-portable.${ext}
+  artifactName: Scribelab-${version}-portable.${ext}
 
 mac:
   target:
@@ -90,7 +90,7 @@ linux:
     - target: deb
       arch: [x64]
   category: Education
-  maintainer: Student IDE <noreply@hokora.xyz>
+  maintainer: Scribelab <noreply@hokora.xyz>
   extraResources:
     - from: ../installer/assets/podman-static/podman-linux-amd64.tar.gz
       to: installer/podman-static/podman-linux-amd64.tar.gz

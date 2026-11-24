@@ -1,4 +1,4 @@
-# Student IDE pilot deployment: one VM, four containers (five with the optional previews profile).
+# Scribelab pilot deployment: one VM, four containers (five with the optional previews profile).
 #
 #   caddy   HTTPS on 443 (Let's Encrypt certificate, renewed automatically), proxies to app
 #   app     the web app and API; holds the database volume
@@ -18,6 +18,8 @@ services:
     ports: ["80:80", "443:443", "443:443/udp"]
     environment:
       STUDENTIDE_DOMAIN: ${STUDENTIDE_DOMAIN:?set STUDENTIDE_DOMAIN in .env}
+      # old addresses that redirect to the new one (see Caddyfile)
+      STUDENTIDE_OLD_DOMAINS: ${STUDENTIDE_OLD_DOMAINS:-http://renamed.invalid}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

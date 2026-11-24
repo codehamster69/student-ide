@@ -1,7 +1,7 @@
 // The student home's "Sandbox labs" section: published Sandbox Labs of the
 // student's subjects (GET /api/sandbox/my/labs), one shelf per subject. In the
 // desktop app a card opens the lab workspace (SandboxLab.tsx); on the website
-// the labs are listed with a note to open them in the Student IDE app, because
+// the labs are listed with a note to open them in the Scribelab app, because
 // they run in a Linux instance on the student's own machine (docs/sandbox-labs.md).
 import { useEffect, useState } from "react";
 import { Boxes, CalendarClock, ChevronRight, Download, Laptop, ShieldCheck } from "lucide-react";
@@ -75,7 +75,7 @@ export function SandboxLabs({ studentId, onOpen }: {
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3">
           <Laptop className="size-5 shrink-0 text-accent" />
           <p className="min-w-0 flex-1 text-[13px] text-text">
-            <strong className="font-semibold">Open these in the Student IDE app.</strong>{" "}
+            <strong className="font-semibold">Open these in the Scribelab app.</strong>{" "}
             <span className="text-muted">Sandbox labs run on your computer, so they need the desktop app; the website only lists them.</span>
           </p>
           <span className="flex flex-wrap items-center gap-3">
@@ -107,7 +107,7 @@ export function SandboxLabs({ studentId, onOpen }: {
                     <button
                       onClick={() => can && onOpen(lab, s)}
                       disabled={!can}
-                      title={!desktop ? "Open this lab in the Student IDE app" : tooOld ? `Update the app to ${lab.min_desktop_version} or later to open this lab` : "Open the lab"}
+                      title={!desktop ? "Open this lab in the Scribelab app" : tooOld ? `Update the app to ${lab.min_desktop_version} or later to open this lab` : "Open the lab"}
                       className={cn("group flex w-full items-center gap-4 px-5 py-3.5 text-left transition-colors", can ? "hover:bg-surface-2" : "cursor-default")}
                     >
                       <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={tint(s.color)}><Boxes className="size-4" /></span>

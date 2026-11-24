@@ -4,7 +4,7 @@
 #
 # Set once in the repository settings:
 #   secrets.STUDENTIDE_BUILD_TOKEN  same value as the server's STUDENTIDE_BUILD_TOKEN
-#   vars.STUDENTIDE_URL             the server, e.g. https://studentide.hokora.xyz
+#   vars.STUDENTIDE_URL             the server, e.g. https://scribelab.hokora.xyz
 # After the first build, make the ghcr.io/<owner>/studentide-env package public
 # (Package settings → Change visibility) so the desktop app can pull without a login.
 name: Sandbox environment images

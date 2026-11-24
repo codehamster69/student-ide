@@ -1,6 +1,6 @@
 # Learning lab
 
-An always-open part of the student IDE where each lesson explains one idea
+An always-open part of the app where each lesson explains one idea
 next to code the student can change and run. Inspired by sites like
 learn-c.org; every lesson here is our own text.
 

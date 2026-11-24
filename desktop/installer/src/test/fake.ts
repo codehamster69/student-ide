@@ -18,7 +18,7 @@ export function fakeHost(over: Partial<Host> & { rules: Rule[]; files?: Record<s
     freeDiskBytes: async () => 100 * 1024 ** 3,
     dataDir: '/data',
     assetsDir: '/assets',
-    appExe: 'C:\\Program Files\\Student IDE\\Student IDE.exe',
+    appExe: 'C:\\Program Files\\Scribelab\\Scribelab.exe',
     env: { XDG_RUNTIME_DIR: '/run/user/1000' },
     exists: (p) => p in files || p.replace(/\\/g, '/').startsWith('/assets/'), // Windows path.join uses backslashes
     writeFile: (p, d) => {

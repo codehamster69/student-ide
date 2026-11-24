@@ -39,7 +39,7 @@ export function OpenRollCall({ onAuthLost, onOpened, label = "Open Roll Call", v
 }
 
 /**
- * Roll Call for this teacher. Student IDE makes their key (their own Roll Call
+ * Roll Call for this teacher. Scribelab makes their key (their own Roll Call
  * register, seen only by them) and signs them in with one button; a teacher who
  * already keeps a register there can paste that key instead. Used on Getting
  * started and in a lab.
@@ -76,7 +76,7 @@ export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
           )}
           {!compact && (
             <Button size="sm" variant="ghost" onClick={async () => {
-              if (!confirm("Disconnect Roll Call? Your register stays in Roll Call and labs keep their class groups, but attendance can't be sent until you connect again. Keep your key (Show key) if Student IDE made it.")) return;
+              if (!confirm("Disconnect Roll Call? Your register stays in Roll Call and labs keep their class groups, but attendance can't be sent until you connect again. Keep your key (Show key) if Scribelab made it.")) return;
               try { update(await send<Connection>("DELETE", "/api/teach/attendance")); setShown(null); } catch (e) { fail(e); }
             }}><Unplug className="size-3.5" /> Disconnect</Button>
           )}
@@ -118,7 +118,7 @@ export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
     <div className="grid gap-2">
       {!compact && (
         <p className="text-[13px] text-muted">
-          Roll Call is the attendance register. Student IDE makes your own key for it, so you see only your classes, and signs you in with one press.
+          Roll Call is the attendance register. Scribelab makes your own key for it, so you see only your classes, and signs you in with one press.
         </p>
       )}
       {!pasting ? (
@@ -150,7 +150,7 @@ export function ConnectRollCall({ onAuthLost, onChange, compact = false }: {
             </Button>
           </div>
           <button type="button" className="justify-self-start text-xs font-medium text-muted hover:text-text" onClick={() => setPasting(false)}>
-            Back: let Student IDE set it up
+            Back: let Scribelab set it up
           </button>
         </form>
       )}
@@ -163,7 +163,7 @@ interface Register { email: string; issued: boolean; connected_at: number; labs:
 
 /**
  * Admins: every teacher's Roll Call register, each opened with full access in a
- * new tab (Roll Call shows whose it is; Student IDE logs each open). Renders
+ * new tab (Roll Call shows whose it is; Scribelab logs each open). Renders
  * nothing for teachers.
  */
 export function AllRegisters({ onAuthLost }: { onAuthLost: () => void }) {

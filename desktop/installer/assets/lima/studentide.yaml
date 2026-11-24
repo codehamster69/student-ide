@@ -1,4 +1,4 @@
-# Student IDE engine VM for macOS (Lima, Apple Virtualization framework).
+# Scribelab engine VM for macOS (Lima, Apple Virtualization framework).
 # Adapted from Lima v1.0.7 templates/podman.yaml (Apache-2.0). Differences:
 # no host folders are mounted (the sandbox must not see the student's home),
 # fixed small size, vz only. Fedora images are pinned by digest; Fedora 41 is

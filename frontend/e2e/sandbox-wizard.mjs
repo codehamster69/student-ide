@@ -57,11 +57,11 @@ await page.waitForSelector("text=Sandbox Labs");
 await page.goto(`${BASE}/#/sandbox/labs/${lab.id}`);
 await page.waitForSelector("text=Basics");
 
-// 1. import a question from the bundled Student IDE sets
+// 1. import a question from the bundled Scribelab sets
 await page.click("nav button:has-text('Assignments')");
 await page.click("button:has-text('Import a question')");
 await page.waitForSelector("text=Add a question from a platform");
-await page.click("[role=tab]:has-text('Student IDE sets')");
+await page.click("[role=tab]:has-text('Scribelab sets')");
 await page.fill("input[placeholder^='Search']", "leap");
 await page.click("text=Leap Year Detective");
 await page.waitForSelector("button:has-text('Add to lab')");

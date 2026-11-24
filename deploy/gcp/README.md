@@ -7,7 +7,7 @@ What runs today (set up 2026-10-26):
 | project | `studentide-iiits-1026` (billing: Rohan's account) |
 | VM | `studentide`, e2-medium, Ubuntu 24.04, 40 GB, zone `asia-south1-a` (Mumbai) |
 | IP | static `studentide-ip`, 34.14.186.251; firewall rule `allow-web` (80, 443) |
-| DNS | `studentide.hokora.xyz` A record in Vercel DNS |
+| DNS | `scribelab.hokora.xyz` and the old `studentide.hokora.xyz` A records in Vercel DNS (team codehamsters-projects); `deploy.env` sets `STUDENTIDE_DOMAIN=scribelab.hokora.xyz`, `STUDENTIDE_OLD_DOMAINS=studentide.hokora.xyz` |
 | release | `gs://studentide-iiits-1026-deploy/studentide.tar.gz` + `deploy.env` (private bucket, Mumbai) |
 
 The VM has no copy of the repo or of GitHub credentials. On every boot

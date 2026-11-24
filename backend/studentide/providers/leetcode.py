@@ -95,7 +95,7 @@ class TreeNode:
 """
 
 HARNESS = '''\
-# Student IDE test driver: builds the test's arguments, calls Solution().{fn}
+# Scribelab test driver: builds the test's arguments, calls Solution().{fn}
 # and prints what it returns as JSON (linked lists and trees as lists).
 import json as _json, sys as _sys
 from collections import deque as _deque

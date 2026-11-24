@@ -81,7 +81,7 @@ def _version(v: str) -> tuple:
 def readiness(p, lab_image: str | None, min_version: str | None, now: float) -> tuple[str, str]:
     """(status, one-line reason) for one student's machine: ready | not_ready | unknown."""
     if p is None:
-        return "unknown", "has not opened the Student IDE app yet"
+        return "unknown", "has not opened the Scribelab app yet"
     if min_version and _version(p["app_version"]) < _version(min_version):
         return "not_ready", f"app {p['app_version'] or 'too old'}: needs {min_version} or newer"
     problems = json.loads(p["problems_json"])

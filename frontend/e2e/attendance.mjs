@@ -1,6 +1,6 @@
 // End-to-end check of attendance through Roll Call, with screenshots for the thesis:
-// Student IDE makes the teacher's Roll Call key, the teacher attaches two class
-// groups to a lab (one made from Student IDE), students work in the lab, the
+// Scribelab makes the teacher's Roll Call key, the teacher attaches two class
+// groups to a lab (one made from Scribelab), students work in the lab, the
 // teacher previews who counts as present, overrides one mark and sends; "Open
 // Roll Call" then signs the teacher in to Roll Call, which shows one session per
 // class group under the lab's subject; a student's "My attendance" opens their
@@ -8,7 +8,7 @@
 //
 //   BASE=http://127.0.0.1:8000 TOKEN=demo RC=http://127.0.0.1:3100 node frontend/e2e/attendance.mjs [screenshot-dir] [light|dark]
 //
-// Student IDE in dev mode (STUDENTIDE_ADMIN_TOKEN=$TOKEN, STUDENTIDE_ATTENDANCE_URL=$RC, a database with
+// Scribelab in dev mode (STUDENTIDE_ADMIN_TOKEN=$TOKEN, STUDENTIDE_ATTENDANCE_URL=$RC, a database with
 // no Roll Call link yet) and a Roll Call with a database (DATABASE_URL set) must both be running.
 
 import { createRequire } from "node:module";
@@ -21,7 +21,7 @@ const BASE = process.env.BASE ?? "http://127.0.0.1:8000";
 const TOKEN = process.env.TOKEN ?? "demo";
 const RC = process.env.RC ?? "http://127.0.0.1:3100";
 const [OUT, SCHEME = "light"] = process.argv.slice(2);
-let KEY = ""; // made by Student IDE below
+let KEY = ""; // made by Scribelab below
 const SUBJECT = "Data Structures";
 
 const browser = await chromium.launch();
@@ -56,9 +56,9 @@ const rc = async (method, path, body) => {
   return r.json();
 };
 
-// --- teacher: getting started, Student IDE makes the Roll Call key ----------------
+// --- teacher: getting started, Scribelab makes the Roll Call key ----------------
 const lab0 = await api("GET", "/api/teach/attendance");
-assert.equal(lab0.connected, false, "start from a Student IDE database with no Roll Call link");
+assert.equal(lab0.connected, false, "start from a Scribelab database with no Roll Call link");
 const t = await open();
 await t.goto(`${BASE}/#/teach/setup`);
 await t.fill("input[type=password]", TOKEN);
@@ -176,10 +176,10 @@ const r = await popup(t, "button:has-text('Open Roll Call') >> nth=0", `${RC}/`)
 await r.setViewportSize({ width: 1280, height: 860 });
 assert.equal(await r.evaluate(() => localStorage.getItem("attendance:sync-key")), KEY);
 await r.goto(`${RC}/sessions`);
-await r.waitForSelector("text=Student IDE");
+await r.waitForSelector("text=Scribelab");
 await shot(r, "08-rollcall-sessions");
 await r.goto(`${RC}/sessions/${g1.id}/report`);
-await r.waitForSelector("text=Recorded by Student IDE");
+await r.waitForSelector("text=Recorded by Scribelab");
 await shot(r, "09-rollcall-report");
 await r.goto(`${RC}/subjects`);
 await r.waitForSelector(`text=${SUBJECT}`);
@@ -191,7 +191,7 @@ await r.goto(`${RC}/classes/${g2.id}`);
 await r.waitForSelector("text=Edit roster");
 await shot(r, "12-rollcall-class");
 await r.goto(`${RC}/settings#student-ide`);
-await r.waitForSelector("text=Connect Student IDE");
+await r.waitForSelector("text=Connect Scribelab");
 await r.locator("#student-ide").scrollIntoViewIfNeeded();
 await shot(r, "13-rollcall-connect");
 await r.goto(`${RC}/start`);
@@ -276,7 +276,7 @@ await shot(r, "19-rollcall-key-replaced");
 // students' read access moved with the register
 const after = await (await fetch(`${RC}/api/me`, { headers: { "x-student-key": studentKey } })).json();
 assert.deepEqual(after.sessions.map((x) => x.mark), ["P"]);
-// and Student IDE keeps sending with the new key
+// and Scribelab keeps sending with the new key
 const resent = await api("POST", `/api/teach/labs/${lab.id}/attendance`, { day: g1.date });
 assert.ok(resent.results.every((x) => x.error === null));
 
@@ -289,7 +289,7 @@ const adm = await popup(t, "button:has-text('Open register')", `${RC}/`);
 await adm.setViewportSize({ width: 1280, height: 860 });
 await adm.waitForSelector("text=Admin access");
 await adm.goto(`${RC}/sessions`);
-await adm.waitForSelector("text=Student IDE");
+await adm.waitForSelector("text=Scribelab");
 await shot(adm, "21-rollcall-admin");
 assert.equal(await adm.evaluate(() => localStorage.getItem("attendance:sync-key")), NEW);
 

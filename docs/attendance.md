@@ -1,14 +1,14 @@
 # Attendance through Roll Call
 
-Student IDE can mark lab attendance in [Roll Call](https://attendance.hokora.xyz)
+Scribelab can mark lab attendance in [Roll Call](https://attendance.hokora.xyz)
 (codehamsters/attendance). Code: `backend/studentide/attendance.py`,
 `frontend/src/teach/Attendance.tsx`; tests `backend/tests/test_attendance.py`,
 `frontend/e2e/attendance.mjs`.
 
 ## For a teacher
 
-1. **Set up Roll Call once.** Student IDE → Getting started (`#/teach/setup`) →
-   *Set up Roll Call for me*. Student IDE makes your own Roll Call key (your own
+1. **Set up Roll Call once.** Scribelab → Getting started (`#/teach/setup`) →
+   *Set up Roll Call for me*. Scribelab makes your own Roll Call key (your own
    register: nobody else's key opens it). From then on *Open Roll Call* (there,
    in a lab, or *Roll Call* in the header) opens Roll Call already signed in.
    *Show key* reveals the key to sign in by hand at `<roll call>/login`.
@@ -56,18 +56,18 @@ The detector is never consulted: a highlighted moment does not change attendance
 ## Keys and sign-in
 
 - **Google sign-in in Roll Call.** Teachers without labs can use Roll Call on its
-  own: *Sign in with Google* on `/login` (the Student IDE OAuth client, college
+  own: *Sign in with Google* on `/login` (the Scribelab OAuth client, college
   addresses only, student-shaped addresses are sent to My attendance). The first
   sign-in makes their register. With `STUDENTIDE_ROLLCALL_LINK_SECRET` set (same
-  value as Roll Call's `LINK_SECRET`), Student IDE and Roll Call keep **one
-  register per teacher**: setting up in Student IDE adopts a register the teacher
-  already made in Roll Call, a key made in Student IDE is linked so Google sign-in
+  value as Roll Call's `LINK_SECRET`), Scribelab and Roll Call keep **one
+  register per teacher**: setting up in Scribelab adopts a register the teacher
+  already made in Roll Call, a key made in Scribelab is linked so Google sign-in
   opens it, and every existing teacher's key is linked once at start
   (`POST /api/link/teacher`). Admins in Roll Call's `ADMINS` get a *Teachers'
   registers* page there too (Settings), with the same full access and banner.
 
-- **Teachers.** Each teacher's key is one Roll Call workspace. Student IDE keeps it
-  on its server (`attendance_links`, `issued = 1` when Student IDE made it). *Open
+- **Teachers.** Each teacher's key is one Roll Call workspace. Scribelab keeps it
+  on its server (`attendance_links`, `issued = 1` when Scribelab made it). *Open
   Roll Call* asks Roll Call for a one-time link (`POST /api/v1/login-codes`): the
   browser goes to `/login#code=…`, which works once, for two minutes, and stores
   the key in that browser. Roll Call stores the key only encrypted with the code.
@@ -77,7 +77,7 @@ The detector is never consulted: a highlighted moment does not change attendance
   (`PUT /api/v1/viewers`, Roll Call stores only its sha256) and opens Roll Call's
   `/me` signed in: their own marks, read-only, grouped by subject. A student key
   opens no workspace, and a browser holding one only ever shows `/me`.
-  Students who never use Student IDE sign in to Roll Call with Google instead:
+  Students who never use Scribelab sign in to Roll Call with Google instead:
   their address gives a 30-day signed pass to the marks under their own roll
   number in every register. Nothing in the URL can pick another student.
 - **New key.** *Show key* → *Make a new key* moves the whole register (classes,
@@ -89,9 +89,9 @@ The detector is never consulted: a highlighted moment does not change attendance
 - **Admins** (`STUDENTIDE_ADMINS`, or the admin token in dev mode) see every
   teacher's register under *Teachers' Roll Call registers* (People, and Getting
   started). *Open register* signs them in to it with full access; Roll Call shows
-  a banner naming whose register it is, and Student IDE logs every open
+  a banner naming whose register it is, and Scribelab logs every open
   (`attendance_admin_opens`). Roll Call itself has no admin notion: the access
-  comes from Student IDE holding the teachers' keys.
+  comes from Scribelab holding the teachers' keys.
 - **Shared computers.** Roll Call → Settings → *Sign out* forgets the key and the
   records in that browser. Signing in on a browser that holds someone else's
   records asks whether to move them in or leave them.

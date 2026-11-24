@@ -65,7 +65,7 @@ export function explain(stderr: string, kind: EngineInfo["kind"]): { message: st
   if (/wsl.*(not installed|is not enabled)|wsl_e_wsl_optional_component_required|there is no distribution with the supplied name/.test(s)) {
     return {
       message: "Windows Subsystem for Linux (WSL2) or the StudentIDE engine is not set up on this PC.",
-      fix: "Run the Student IDE installer again. Turning on WSL2 needs admin rights once; ask IT if you do not have them.",
+      fix: "Run the Scribelab installer again. Turning on WSL2 needs admin rights once; ask IT if you do not have them.",
     };
   }
   if (/cannot connect to the docker daemon|is the docker daemon running|docker_engine.*(cannot find|no such)|error during connect/.test(s)) {
@@ -73,12 +73,12 @@ export function explain(stderr: string, kind: EngineInfo["kind"]): { message: st
   }
   if (/cannot connect to podman|unable to connect to podman|podman machine|connection refused/.test(s)) {
     return {
-      message: kind === "podman" ? "Podman is installed but its service is not reachable." : "The Student IDE engine is not running.",
-      fix: kind === "podman" ? "Run `podman machine start` (macOS/Windows) or `systemctl --user start podman.socket`, then check again." : "Quit and reopen Student IDE; it restarts its engine. If that fails, run the installer again.",
+      message: kind === "podman" ? "Podman is installed but its service is not reachable." : "The Scribelab engine is not running.",
+      fix: kind === "podman" ? "Run `podman machine start` (macOS/Windows) or `systemctl --user start podman.socket`, then check again." : "Quit and reopen Scribelab; it restarts its engine. If that fails, run the installer again.",
     };
   }
   if (/permission denied.*docker\.sock|got permission denied/.test(s)) {
-    return { message: "Your user may not use Docker on this machine.", fix: "Ask the machine's admin to add you to the docker group, or use the Student IDE installer, which brings its own engine." };
+    return { message: "Your user may not use Docker on this machine.", fix: "Ask the machine's admin to add you to the docker group, or use the Scribelab installer, which brings its own engine." };
   }
   if (/no space left on device/.test(s)) {
     return { message: "The disk is full.", fix: "Free at least 10 GB, then check again." };
@@ -136,7 +136,7 @@ export async function setupCheck(info: EngineInfo, opts: CheckOptions = {}): Pro
   const engine = new Engine(info, opts.spawnFn);
   const ver = await engine.call(["version", "--format", "json"], { timeoutMs: 30_000 });
   if (/ENOENT/.test(ver.stderr) && !ver.stdout.length) {
-    add({ id: "engine.cli", ok: false, message: `The container engine program (${info.cli[0]}) was not found.`, fix: `Run the Student IDE installer, which sets up its own engine. ${MOVE}` });
+    add({ id: "engine.cli", ok: false, message: `The container engine program (${info.cli[0]}) was not found.`, fix: `Run the Scribelab installer, which sets up its own engine. ${MOVE}` });
     return done();
   }
   add({ id: "engine.cli", ok: true, message: `Engine: ${info.kind}.` });
@@ -150,7 +150,7 @@ export async function setupCheck(info: EngineInfo, opts: CheckOptions = {}): Pro
   }
   if (ver.code !== 0 || !server.version) {
     const why = explain(ver.stderr, info.kind);
-    add({ id: "engine.running", ok: false, message: why?.message ?? "The container engine did not answer.", fix: `${why?.fix ?? "Quit and reopen Student IDE, or run the installer again."} ${MOVE}` });
+    add({ id: "engine.running", ok: false, message: why?.message ?? "The container engine did not answer.", fix: `${why?.fix ?? "Quit and reopen Scribelab, or run the installer again."} ${MOVE}` });
     return done();
   }
   add({ id: "engine.running", ok: true, message: `The engine answers (version ${server.version}).` });

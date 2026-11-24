@@ -14,7 +14,7 @@ Assessed, due time, and, once grading is on the server, "n of m submitted" and "
 - **Desktop app** (`window.studentDesktop` present): the card opens the lab. A lab with
   `min_desktop_version` above the app's version says "Update the app to open". The last opened
   lab is marked.
-- **Website**: the same cards, not clickable, under "Open these in the Student IDE app" with a
+- **Website**: the same cards, not clickable, under "Open these in the Scribelab app" with a
   "Get the app" link from `/api/desktop/config` `download_url`. Labs run on the student's own
   machine, so there is no browser fallback (teachers have cloud previews; students do not).
 

@@ -58,7 +58,7 @@ async def _pipe(r: asyncio.StreamReader, w: asyncio.StreamWriter) -> None:
 
 
 async def _refuse(w: asyncio.StreamWriter, code: int, why: str) -> None:
-    body = f"Student IDE preview: {why}\n".encode()
+    body = f"Scribelab preview: {why}\n".encode()
     w.write(f"HTTP/1.1 {code} {why}\r\nContent-Length: {len(body)}\r\nConnection: close\r\n\r\n".encode() + body)
     try:
         await w.drain()

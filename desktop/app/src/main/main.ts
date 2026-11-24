@@ -1,5 +1,5 @@
 /**
- * Student IDE desktop shell: one locked-down window on the Student IDE server.
+ * Scribelab desktop shell: one locked-down window on the Scribelab server.
  *
  * The window shows the server's own web app, so labs, sittings, competitions, the
  * learning lab, live view, review, attendance and View as student all work exactly
@@ -105,7 +105,7 @@ async function load() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1320, height: 860, minWidth: 900, minHeight: 600, show: false, title: "Student IDE",
+    width: 1320, height: 860, minWidth: 900, minHeight: 600, show: false, title: "Scribelab",
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#0c0e13" : "#f4f5f7", // --bg in frontend/src/ui/tokens.css
     autoHideMenuBar: true,
     webPreferences: prefs(),
@@ -125,7 +125,7 @@ function openGuide(page = "") {
   const url = `${server()}/#/help${page}`;
   if (guideWin) { void guideWin.loadURL(url); guideWin.show(); guideWin.focus(); return; }
   guideWin = new BrowserWindow({
-    width: 1100, height: 800, minWidth: 600, minHeight: 500, title: "Student IDE guide",
+    width: 1100, height: 800, minWidth: 600, minHeight: 500, title: "Scribelab guide",
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#0c0e13" : "#f4f5f7",
     autoHideMenuBar: true, webPreferences: prefs(),
   });

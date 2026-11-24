@@ -1,8 +1,8 @@
 # Desktop installer: no prerequisites
 
 Sandbox Labs need a container engine on the student's PC. Students do not
-install Docker first: the Student IDE installer sets up a private engine for
-Student IDE alone, pulls the lab images and checks that a lab container
+install Docker first: the Scribelab installer sets up a private engine for
+Scribelab alone, pulls the lab images and checks that a lab container
 starts. Code: `desktop/installer/` (package `@studentide/installer`), plan:
 `thesis/plans/2026-10-30-desktop-client.md` section 3.6.
 

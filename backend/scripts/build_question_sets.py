@@ -1,4 +1,4 @@
-"""Builds the original question sets shipped with Student IDE
+"""Builds the original question sets shipped with Scribelab
 (studentide/providers/data/sets/*.json, served by providers/originals.py).
 
 Each question is written here once: statement, starter code, a reference

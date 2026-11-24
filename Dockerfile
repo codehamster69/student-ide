@@ -1,4 +1,4 @@
-# Student IDE: one image for the web app, the code runner, the backup job and the
+# Scribelab: one image for the web app, the code runner, the backup job and the
 # optional teacher preview service (deploy/docker-compose.yml runs it each way). Build from the repo root:
 #   docker build -t studentide .
 

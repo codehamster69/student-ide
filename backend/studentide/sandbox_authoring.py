@@ -177,7 +177,7 @@ def assignment_from_question(got, language: str) -> tuple[dict, list[str]]:
 SETUP_HISTORY = "/home/student/.studentide-setup-history"
 # Put in the preview's home before the terminal opens. bash -l reads ~/.bash_profile
 # (then the usual ~/.profile); every command is appended to the history file as soon as it runs.
-BASH_PROFILE = f"""# Student IDE "set up by hand": every command you run here is kept for the recipe.
+BASH_PROFILE = f"""# Scribelab "set up by hand": every command you run here is kept for the recipe.
 [ -f ~/.profile ] && . ~/.profile
 export HISTFILE={SETUP_HISTORY} HISTSIZE=100000 HISTFILESIZE=100000 HISTCONTROL=
 shopt -s histappend

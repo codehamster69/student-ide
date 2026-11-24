@@ -192,7 +192,7 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     batches.init(db)
     cfg = auth_config or Config.from_env(admin_token)
     auth = Auth(db, cfg, verify_google)
-    app = FastAPI(title="Student IDE", version="0.2.0")
+    app = FastAPI(title="Scribelab", version="0.2.0")
     app.state.db = db
     app.state.auth = auth
     reviewer = Reviewer(db)

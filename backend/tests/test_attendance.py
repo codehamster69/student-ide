@@ -470,23 +470,23 @@ def test_teacher_picks_the_performing_group_when_opening(client, rc):
 
 
 def test_one_register_per_teacher_with_roll_calls_google_sign_in(tmp_path, rc, monkeypatch):
-    """Roll Call's own Google sign-in and Student IDE share one register per teacher."""
+    """Roll Call's own Google sign-in and Scribelab share one register per teacher."""
     cfg = Config(client_id="test-client", secure_cookie=False)
     make = lambda name: create_app(tmp_path / name, serve_frontend=False, auth_config=cfg, verify_google=fake_google,
                                    attendance_transport=rc)
-    # without the link secret nothing is linked: Student IDE works on its own keys as before
+    # without the link secret nothing is linked: Scribelab works on its own keys as before
     alone = sign_in(make("a.sqlite3"), "nisha.k@" + DOMAIN)
     alone.post("/api/teach/attendance/key")
     assert not any(c[1].endswith("/api/link/teacher") for c in rc.calls) and rc.accounts == {}
 
     monkeypatch.setenv("STUDENTIDE_ROLLCALL_LINK_SECRET", "s" * 20)
     app = make("b.sqlite3")
-    # Priya signed in to Roll Call with Google first: Student IDE uses that register
+    # Priya signed in to Roll Call with Google first: Scribelab uses that register
     rc.accounts["priya.shah@" + DOMAIN] = KEY_A
     priya = sign_in(app, "priya.shah@" + DOMAIN)
     priya.post("/api/teach/attendance/open")
     assert priya.get("/api/teach/attendance/key").json()["sync_key"] == KEY_A
-    # Meera starts in Student IDE: her new key is linked, so Google sign-in in Roll Call opens it
+    # Meera starts in Scribelab: her new key is linked, so Google sign-in in Roll Call opens it
     meera = sign_in(app, "meera.rao@" + DOMAIN)
     meera.post("/api/teach/attendance/open")
     mine = meera.get("/api/teach/attendance/key").json()["sync_key"]
@@ -495,7 +495,7 @@ def test_one_register_per_teacher_with_roll_calls_google_sign_in(tmp_path, rc, m
     meera.post("/api/teach/attendance/key/rotate")
     new = meera.get("/api/teach/attendance/key").json()["sync_key"]
     assert new != mine and rc.accounts["meera.rao@" + DOMAIN] == new
-    # Roll Call down while linking: setting up still works, on Student IDE's own key
+    # Roll Call down while linking: setting up still works, on Scribelab's own key
     rc.accounts.clear()
     real = rc.__call__
 

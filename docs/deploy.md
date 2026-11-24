@@ -1,6 +1,6 @@
-# Deploying Student IDE at IIIT Surat (pilot)
+# Deploying Scribelab at IIIT Surat (pilot)
 
-This is how to run Student IDE for real students of one college: Google
+This is how to run Scribelab for real students of one college: Google
 sign-in limited to `@iiitsurat.ac.in`, HTTPS, nightly backups and data kept
 in India. It targets one Linux VM in an Indian cloud region, but nothing in
 it is tied to a provider; a college server works the same way.
@@ -29,7 +29,7 @@ All four containers come from one image (`Dockerfile` at the repo root) and
 
 ## 1. A VM in India
 
-The running pilot (GCP Mumbai, studentide.hokora.xyz) is described in
+The running pilot (GCP Mumbai, scribelab.hokora.xyz) is described in
 [deploy/gcp/README.md](../deploy/gcp/README.md).
 
 
@@ -64,10 +64,10 @@ continue.
 ## 3. The Google OAuth client (you create this once)
 
 1. Open <https://console.cloud.google.com> **signed in with your
-   `@iiitsurat.ac.in` account** and create a project, e.g. "Student IDE".
+   `@iiitsurat.ac.in` account** and create a project, e.g. "Scribelab".
    Creating it inside the college's Google Workspace organisation lets you mark
    the app *Internal*, so Google itself refuses non-college accounts.
-2. **Google Auth Platform → Branding**: app name "Student IDE", your support
+2. **Google Auth Platform → Branding**: app name "Scribelab", your support
    email. **Audience**: *Internal* if offered; otherwise *External*, and add
    yourself as a test user until you publish it.
 3. **Clients → Create client → Web application**.
@@ -104,6 +104,7 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | variable | meaning |
 |---|---|
 | `STUDENTIDE_DOMAIN`, `ACME_EMAIL` | site name, and where certificate notices go |
+| `STUDENTIDE_OLD_DOMAINS` | earlier site names (space separated); Caddy sends browsers to `STUDENTIDE_DOMAIN` (308, same path) but still serves `/api/*` and the desktop app (user agent `StudentIDE-Desktop`) there, so apps locked to the old address keep working until they update |
 | `STUDENTIDE_GOOGLE_CLIENT_ID` | turns on Google sign-in; roll-number sign-in is then off |
 | `STUDENTIDE_ALLOWED_DOMAIN` | `iiitsurat.ac.in`; both the Workspace `hd` claim and the address must match |
 | `STUDENTIDE_ADMINS` | comma-separated addresses that are always admins |
@@ -112,8 +113,8 @@ Then open `https://<your domain>`. Sign in with the address you put in
 | `STUDENTIDE_SESSION_DAYS` | how long a sign-in lasts (default 7) |
 | `STUDENTIDE_ADMIN_TOKEN` | leave empty; only for scripts, then unset again |
 | `STUDENTIDE_ATTENDANCE_URL` | Roll Call for lab attendance (default `https://attendance.hokora.xyz`), see [attendance.md](attendance.md) |
-| `STUDENTIDE_PUBLIC_URL` | e.g. `https://studentide.hokora.xyz`, for the link back from Roll Call |
-| `STUDENTIDE_ROLLCALL_LINK_SECRET` | random, 16+ chars, same as Roll Call's `LINK_SECRET`: Roll Call's Google sign-in and Student IDE share one register per teacher |
+| `STUDENTIDE_PUBLIC_URL` | e.g. `https://scribelab.hokora.xyz`, for the link back from Roll Call |
+| `STUDENTIDE_ROLLCALL_LINK_SECRET` | random, 16+ chars, same as Roll Call's `LINK_SECRET`: Roll Call's Google sign-in and Scribelab share one register per teacher |
 | `STUDENTIDE_DESKTOP_MIN_VERSION`, `STUDENTIDE_DESKTOP_DOWNLOAD_URL` | optional: oldest desktop app allowed to load the site, and where to get a new one (see [desktop.md](desktop.md)); with updates on, the download link defaults to the newest release |
 | `STUDENTIDE_UPDATES_REPO`, `STUDENTIDE_UPDATES_TOKEN` | optional: GitHub repository whose `desktop-v*` releases feed the desktop app's auto-update (`codehamster69/student-ide`), and a fine-grained token with read-only Contents on that repository (it is private). Unset = no updates |
 | `STUDENTIDE_PREVIEW_URL`, `STUDENTIDE_PREVIEW_TOKEN` | optional: Sandbox Labs teacher previews through the `previews` Compose profile (`docker compose --profile previews up -d`); caps in [sandbox-labs.md](sandbox-labs.md); the profile also starts `preview-proxy` (registries-only network) |

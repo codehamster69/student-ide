@@ -16,7 +16,7 @@ export const HOOK_DIR = "/etc/studentide";
 export const RCFILE = `${HOOK_DIR}/bashrc`;
 export const HOOK_VERSION = 1;
 
-export const BASHRC = `# Student IDE terminal hooks v${HOOK_VERSION}. Written by the app on every start.
+export const BASHRC = `# Scribelab terminal hooks v${HOOK_VERSION}. Written by the app on every start.
 [ -f /etc/bash.bashrc ] && . /etc/bash.bashrc
 [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 case $- in *i*) ;; *) return ;; esac

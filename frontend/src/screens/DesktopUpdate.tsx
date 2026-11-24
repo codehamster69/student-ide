@@ -29,7 +29,7 @@ export function DesktopUpdate({ hidden }: { hidden: boolean }) {
             {st.state === "ready" ? <RefreshCw className="size-3.5" /> : <Download className="size-3.5" />}
           </span>
           <div className="grid gap-1.5">
-            <p><strong className="font-semibold text-text">Student IDE {st.latest} is {st.state === "ready" ? "ready" : "out"}.</strong>{" "}
+            <p><strong className="font-semibold text-text">Scribelab {st.latest} is {st.state === "ready" ? "ready" : "out"}.</strong>{" "}
               {st.state === "ready" ? "It installs by itself next time you close the app. Your work is saved either way." : st.reason}</p>
             {err && <p className="text-danger">{err}</p>}
             <div className="flex gap-2">

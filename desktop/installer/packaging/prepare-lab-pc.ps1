@@ -1,6 +1,6 @@
 <#
-  Student IDE: prepare a lab PC once (run as administrator, e.g. from your deployment tool).
-  Turns on WSL2 so every student can finish Student IDE setup without admin rights.
+  Scribelab: prepare a lab PC once (run as administrator, e.g. from your deployment tool).
+  Turns on WSL2 so every student can finish Scribelab setup without admin rights.
   It cannot turn on virtualization: that is a BIOS/UEFI setting (Intel VT-x / AMD-V / SVM).
 
     powershell -ExecutionPolicy Bypass -File prepare-lab-pc.ps1 [-Install StudentIDE-Setup.exe]
@@ -42,5 +42,5 @@ if ($LASTEXITCODE -ne 0) {
 if ($Install) { Start-Process -FilePath $Install -ArgumentList '/S','/allusers' -Wait }
 
 if ($restart) { Write-Output 'WSL2 turned on. Restart this PC to finish.'; exit 3010 }
-Write-Output 'This PC is ready for Student IDE.'
+Write-Output 'This PC is ready for Scribelab.'
 exit 0

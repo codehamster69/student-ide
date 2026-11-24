@@ -6,7 +6,7 @@ public GitHub repositories.
   starter    the track's solution stub (Python and JavaScript only, see below)
   tests      exercism/problem-specifications/exercises/<slug>/canonical-data.json
 
-Exercism's own tests are unit tests that call a function. Student IDE tests
+Exercism's own tests are unit tests that call a function. Scribelab tests
 are stdin -> stdout, so for Python and JavaScript each canonical case becomes
 a test whose stdin is the argument list as JSON, plus a short harness that
 calls the student's function and prints the result as JSON. A case is only
@@ -37,10 +37,10 @@ STARTERS = {
 }
 
 HARNESS = {
-    "python": ("# Student IDE test driver: reads the arguments as JSON, calls your function, prints the result.\n"
+    "python": ("# Scribelab test driver: reads the arguments as JSON, calls your function, prints the result.\n"
                "import json as _json, sys as _sys\n"
                "print(_json.dumps({fn}(*_json.loads(_sys.stdin.read()))))\n"),
-    "javascript": ("// Student IDE test driver: reads the arguments as JSON, calls your function, prints the result.\n"
+    "javascript": ("// Scribelab test driver: reads the arguments as JSON, calls your function, prints the result.\n"
                    "import {{ readFileSync as __sidRead }} from \"node:fs\";\n"
                    "console.log(JSON.stringify({fn}(...JSON.parse(__sidRead(0, \"utf8\")))));\n"),
 }

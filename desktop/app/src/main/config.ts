@@ -12,7 +12,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export const DEFAULT_SERVER = "https://studentide.hokora.xyz";
+export const DEFAULT_SERVER = "https://scribelab.hokora.xyz";
+/** Servers the app used before the rename; a saved one is read as DEFAULT_SERVER. */
+const RENAMED_SERVERS = ["https://studentide.hokora.xyz"];
+/** Data folder name from before the rename, kept so sign-in, settings and the journal survive the update. */
+const DATA_DIR_NAME = "Student IDE";
 
 export interface Settings {
   server?: string;
@@ -27,6 +31,7 @@ export function setupPaths(): boolean {
   const dataDir = arg("user-data");
   if (dataDir) app.setPath("userData", dataDir);
   else if (exeDir) app.setPath("userData", join(exeDir, "StudentIDE-data"));
+  else app.setPath("userData", join(app.getPath("appData"), DATA_DIR_NAME));
   return Boolean(exeDir);
 }
 
@@ -64,7 +69,7 @@ export class Config {
   server(): string {
     for (const c of [arg("server"), process.env.STUDENTIDE_SERVER, this.data.server]) {
       const o = c && normaliseOrigin(c);
-      if (o) return o;
+      if (o) return RENAMED_SERVERS.includes(o) ? DEFAULT_SERVER : o;
     }
     return DEFAULT_SERVER;
   }

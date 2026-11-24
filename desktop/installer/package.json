@@ -2,7 +2,7 @@
   "name": "@studentide/installer",
   "version": "0.1.0",
   "private": true,
-  "description": "Sets up the Student IDE sandbox engine on the student's own PC: WSL2 + Podman distro on Windows, Lima VM on macOS, rootless Podman on Linux.",
+  "description": "Sets up the Scribelab sandbox engine on the student's own PC: WSL2 + Podman distro on Windows, Lima VM on macOS, rootless Podman on Linux.",
   "license": "UNLICENSED",
   "type": "commonjs",
   "main": "dist/index.js",

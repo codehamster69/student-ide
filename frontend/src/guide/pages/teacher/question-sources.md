@@ -9,7 +9,7 @@ In a lab's question editor choose **Import** to pick a question by topic and dif
 
 | Source | How | Notes |
 | --- | --- | --- |
-| **Student IDE sets** | Bundled, original | 13 C fundamentals questions, each with visible examples and hidden tests |
+| **Scribelab sets** | Bundled, original | 13 C fundamentals questions, each with visible examples and hidden tests |
 | **Codeforces** | Bundled dataset + link | Thousands of problems by topic and rating, with tests |
 | **CodeChef** | Bundled dataset + link | Easy and medium problems, difficulty only |
 | **LeetCode** | Bundled tests, text fetched live | Topics and Easy/Medium/Hard. The statement is fetched on demand and never stored; if it cannot be fetched, students see a link and the lab editor warns you |

@@ -1,4 +1,4 @@
-# Desktop app: test the installer, then package Student IDE for Windows, macOS and Linux
+# Desktop app: test the installer, then package Scribelab for Windows, macOS and Linux
 # with the bundled container engine (WSL distro / Lima / static Podman).
 # Pushing a tag desktop-vX.Y.Z also publishes a GitHub release of that version: the
 # server serves it to installed apps as their auto-update feed (desktop_updates.py).
@@ -182,5 +182,5 @@ jobs:
           ls -la dist dist/out 2>/dev/null || true
           files=$(find dist -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' \
                   -o -name 'latest*.yml' -o -name '*.blockmap' -o -name 'prepare-lab-pc.ps1' \))
-          gh release create "$GITHUB_REF_NAME" $files --title "Student IDE ${GITHUB_REF_NAME#desktop-v}" \
+          gh release create "$GITHUB_REF_NAME" $files --title "Scribelab ${GITHUB_REF_NAME#desktop-v}" \
             --notes "Installed Windows and Linux AppImage apps update themselves the next time they close. Mac and portable builds: download the new version."

@@ -1,9 +1,9 @@
 {
   "name": "@studentide/desktop",
-  "productName": "Student IDE",
+  "productName": "Scribelab",
   "version": "0.1.0",
   "private": true,
-  "description": "Student IDE desktop app: the Student IDE web app in a locked-down window, plus local Sandbox Labs.",
+  "description": "Scribelab desktop app: the Scribelab web app in a locked-down window, plus local Sandbox Labs.",
   "main": "dist/main/main.js",
   "scripts": {
     "build": "npm --prefix ../sandbox run build && tsc -p .",

@@ -175,7 +175,7 @@ POST   /api/sessions  {sandbox_lab_id, assignment_id, sitting_id, …}   one rec
 ## Lab wizard extras
 
 - **Import a question.** Assignments step, "Import a question": any importable question source of web
-  labs (Student IDE sets, Codeforces/CodeChef, MBPP; link-only sites are left out). The teacher picks the
+  labs (Scribelab sets, Codeforces/CodeChef, MBPP; link-only sites are left out). The teacher picks the
   language students answer in; the import brings the statement (with the source's credit line), one
   starter file, a Run command for that language and the source's tests as input/output pairs. A
   function-style question also gets its test driver as `.studentide/harness.<ext>`, which the Run command
@@ -323,7 +323,7 @@ once and every image after that is pullable without a login. Setup, once:
 
 1. In the repo's Actions settings add the secret `STUDENTIDE_BUILD_TOKEN` (the
    same value as on the VM) and the variable `STUDENTIDE_URL`
-   (`https://studentide.hokora.xyz`). Without the variable the job does nothing.
+   (`https://scribelab.hokora.xyz`). Without the variable the job does nothing.
 2. After the first build, set the `studentide-env` package's visibility to public.
 
 GitHub treats the 10-minute schedule as best effort: on this repository it ran

@@ -2,7 +2,7 @@
 
 export interface Rule { min_active_minutes: number; min_typed_chars: number; require_run: boolean }
 
-/** `issued`: the key was made by Student IDE (else the teacher pasted one they already used) */
+/** `issued`: the key was made by Scribelab (else the teacher pasted one they already used) */
 export interface Connection { connected: boolean; url: string; connected_at: number | null; issued: boolean; rule: Rule; timezone: string }
 
 /**

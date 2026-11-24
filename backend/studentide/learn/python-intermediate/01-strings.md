@@ -5,8 +5,8 @@ summary: Indexing, slicing, and the string methods you will use every day.
 A string is a sequence of characters, so it can be indexed and sliced like a list. Strings are **immutable**: methods return a *new* string and leave the old one alone.
 
 ```python
-s = "  Student IDE  "
-t = s.strip()                 # "Student IDE"
+s = "  Scribelab  "
+t = s.strip()                 # "Scribelab"
 print(t.lower(), t.upper(), len(t))
 print(t[0], t[-1], t[0:7], t[::-1])
 print(t.split())              # ['Student', 'IDE']

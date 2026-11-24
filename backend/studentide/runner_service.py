@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from . import runner
 
-app = FastAPI(title="Student IDE runner")
+app = FastAPI(title="Scribelab runner")
 
 
 class RunIn(BaseModel):

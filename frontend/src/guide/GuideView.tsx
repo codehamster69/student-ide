@@ -39,7 +39,7 @@ export function GuideIndex({ nav, audiences = ["student", "teacher"] }: { nav: G
   const hits = useMemo(() => searchPages(q).filter((p) => audiences.includes(p.audience)), [q, audiences]);
   return (
     <Page>
-      <PageHeader title="Guide" description="How Student IDE works, step by step. Search, or pick a topic below." />
+      <PageHeader title="Guide" description="How Scribelab works, step by step. Search, or pick a topic below." />
       <SearchBox value={q} onChange={setQ} className="mb-8 max-w-xl" />
       {q.trim() ? (
         <Results hits={hits} nav={nav} q={q} />

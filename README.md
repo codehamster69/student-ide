@@ -1,4 +1,8 @@
-# Student IDE
+# Scribelab
+
+<img src="frontend/public/favicon.svg" width="64" alt="Scribelab logo: a pen nib finishing a line of keystrokes">
+
+_Formerly Scribelab. Live pilot: https://scribelab.hokora.xyz (the old studentide.hokora.xyz address redirects)._
 
 A free, open-source, self-hostable coding environment for college programming
 labs. Students write, run and submit code in the browser or in a desktop app.
@@ -27,7 +31,7 @@ below to try it locally. Issues and pull requests are welcome. MIT licensed.
 
 ## Research background
 
-Student IDE began as the lab editor for the M.Tech thesis *"Who is at the keyboard?
+Scribelab (first called Scribelab) began as the lab editor for the M.Tech thesis *"Who is at the keyboard?
 Process-aware authorship continuity in programming assessment"* (IIIT Surat). The
 detector, evaluation harness and thesis sources live in this repository too.
 
@@ -43,7 +47,7 @@ detector, evaluation harness and thesis sources live in this repository too.
 | Guides and help centre | student and teacher guides in the app (Guide in the sidebar and student app bar, Help button per teacher page, Ctrl+K), public at `#/help`, desktop Help menu; see [docs/guide.md](docs/guide.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
 | Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, server grading of submissions (hidden tests, gradebook, regrade), see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
-| Sandbox Labs (student side) | home shelf per subject; in the desktop app a lab workspace with files, editor, terminal, Run/Check/Submit and grade; website lists them with "Open in the Student IDE app"; see [docs/sandbox-student.md](docs/sandbox-student.md) |
+| Sandbox Labs (student side) | home shelf per subject; in the desktop app a lab workspace with files, editor, terminal, Run/Check/Submit and grade; website lists them with "Open in the Scribelab app"; see [docs/sandbox-student.md](docs/sandbox-student.md) |
 
 ## Stack
 
