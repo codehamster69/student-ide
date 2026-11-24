@@ -71,19 +71,19 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
         title={<span className="flex items-center gap-2"><span className="font-mono">{s.student_id}</span><span className="text-faint">/</span><span className="truncate">{s.question_title}</span></span>}
         description={<span className="tabular-nums">{s.lab_id && s.lab_title && <><a href={href.liveLab(s.lab_id)} className="text-accent hover:underline">{s.lab_title}</a> · </>}Started {ago(d.now, s.started_at)} · last edit {ago(d.now, d.last_edit_at)}</span>}
         meta={<Badge tone={st.tone}><LiveDot tone={st.tone} live={st.live} />{st.label}</Badge>}
-        actions={<a href={href.session(s.id)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-text shadow-sm hover:bg-surface-2">
+        actions={<a href={href.session(s.id)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong">
           <Activity className="size-3.5" /> Timeline
         </a>}
       />
 
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-warn/30 bg-warn-soft px-4 py-2.5 text-[13px] text-text" role="status">
+      <div className="mb-4 flex items-center gap-2 rounded-xl border border-warn/30 px-4 py-2.5 text-[13px] text-text" role="status">
         <Eye className="size-4 shrink-0 text-warn" />
         <p><span className="font-mono">{s.student_id}</span> can see that you are viewing their editor{d.terminal ? " and terminal" : ""}. This view is read-only and is logged.</p>
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-          <div className="flex h-10 items-center justify-between gap-2 border-b border-border bg-surface-2 px-3">
+        <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+          <div className="flex h-10 items-center justify-between gap-2 border-b border-border px-3">
             <span className="flex items-center gap-2 font-mono text-xs text-text">
               <span className="size-2 rounded-sm" style={{ background: lang.color }} />{d.path ? d.path.split("/").pop() : lang.file}
               {d.files && d.files.length > 1 && <span className="font-sans text-faint">· {d.files.length} files, showing the one edited last</span>}

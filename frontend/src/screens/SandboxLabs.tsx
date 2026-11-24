@@ -72,7 +72,7 @@ export function SandboxLabs({ studentId, onOpen }: {
       </div>
 
       {!desktop && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-cta/40 px-4 py-3">
           <Laptop className="size-5 shrink-0 text-accent" />
           <p className="min-w-0 flex-1 text-[13px] text-text">
             <strong className="font-semibold">Open these in the Scribelab app.</strong>{" "}
@@ -80,7 +80,7 @@ export function SandboxLabs({ studentId, onOpen }: {
           </p>
           <span className="flex flex-wrap items-center gap-3">
             <a href={download?.href ?? DOWNLOAD_PAGE} target={download ? undefined : "_blank"} rel="noreferrer"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-accent-fg hover:bg-accent-hover">
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-3 text-[13px] font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta">
               <Download className="size-3.5" /> {download ? `Get the app for ${download.os === "mac" ? "Mac" : download.os === "windows" ? "Windows" : "Linux"}` : "Get the app"}
             </a>
             {download && <a href={DOWNLOAD_PAGE} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-accent hover:underline">Other systems</a>}
@@ -90,8 +90,8 @@ export function SandboxLabs({ studentId, onOpen }: {
 
       <div className="grid gap-4">
         {subjects.map((s) => (
-          <div key={s.id} className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-5 py-2.5">
+          <div key={s.id} className="overflow-hidden rounded-xl border border-border shadow-sm">
+            <div className="flex items-center gap-2 border-b border-border px-5 py-2.5">
               <span className="size-2.5 rounded-full" style={{ backgroundColor: COLOR_VAR[s.color] ?? COLOR_VAR.indigo }} />
               <h3 className="text-[13px] font-semibold text-text">{s.title}</h3>
               {s.code && <span className="font-mono text-[11px] text-faint">{s.code}</span>}
@@ -108,7 +108,7 @@ export function SandboxLabs({ studentId, onOpen }: {
                       onClick={() => can && onOpen(lab, s)}
                       disabled={!can}
                       title={!desktop ? "Open this lab in the Scribelab app" : tooOld ? `Update the app to ${lab.min_desktop_version} or later to open this lab` : "Open the lab"}
-                      className={cn("group flex w-full items-center gap-4 px-5 py-3.5 text-left transition-colors", can ? "hover:bg-surface-2" : "cursor-default")}
+                      className={cn("group flex w-full items-center gap-4 px-5 py-3.5 text-left border border-transparent transition-[border-color,transform,box-shadow]", can ? "hover:border-border-strong" : "cursor-default")}
                     >
                       <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={tint(s.color)}><Boxes className="size-4" /></span>
                       <span className="min-w-0 flex-1">
@@ -130,7 +130,7 @@ export function SandboxLabs({ studentId, onOpen }: {
                           {!desktop && <span className="text-[11px] text-faint">Open in the app</span>}
                         </span>
                       </span>
-                      {can && <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-accent" />}
+                      {can && <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-cta" />}
                     </button>
                   </li>
                 );

@@ -27,7 +27,7 @@ export function HelpPage() {
     <div className="min-h-full">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-md sm:px-6">
         <a href={href.help()} className="rounded-lg"><Logo subtitle="Guide" /></a>
-        <a href="#/" className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-muted hover:bg-surface-2 hover:text-text">
+        <a href="#/" className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2.5 text-[13px] font-medium text-muted hover:border-border hover:text-text">
           <ArrowLeft className="size-3.5" />Back to Scribelab
         </a>
       </header>

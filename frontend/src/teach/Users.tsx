@@ -104,7 +104,7 @@ export function Users({ me, onAuthLost }: { me: string; onAuthLost: () => void }
               <div className="flex items-center gap-2">
                 <select value={u.role} disabled={u.role_source === "env" || busy === u.email}
                   onChange={(e) => void setRole(u.email, e.target.value as Role)}
-                  className={cn("h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-text shadow-sm",
+                  className={cn("h-8 rounded-md border border-border px-2 text-[13px] text-text shadow-sm",
                     u.role_source === "env" && "opacity-60")} aria-label={`Role of ${u.email}`}>
                   {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>

@@ -58,7 +58,7 @@ export function FileEditor({ path, value, onChange, readOnly = false, extensions
       parent: host.current!,
       state: EditorState.create({
         doc: value,
-        extensions: [vimSlot.current.of(vimExtension(vimOn() && !readOnly)), basicSetup, languageFor(path), editorTheme, indentUnit.of("    "),
+        extensions: [vimSlot.current.of(vimExtension(vimOn() && !readOnly)), basicSetup, languageFor(path), editorTheme, indentUnit.of(""),
           EditorState.readOnly.of(readOnly), EditorView.theme({ "&": { fontSize: "13px", height: "100%" } }),
           EditorView.updateListener.of((u) => { if (u.docChanged) cb.current?.(u.state.doc.toString()); }), ...extensions],
       }),

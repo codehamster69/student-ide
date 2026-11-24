@@ -106,7 +106,7 @@ async function load() {
 function createWindow() {
   win = new BrowserWindow({
     width: 1320, height: 860, minWidth: 900, minHeight: 600, show: false, title: "Scribelab",
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0c0e13" : "#f4f5f7", // --bg in frontend/src/ui/tokens.css
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0b0b0f" : "#f6f6f1", // --bg in frontend/src/ui/tokens.css
     autoHideMenuBar: true,
     webPreferences: prefs(),
   });
@@ -126,7 +126,7 @@ function openGuide(page = "") {
   if (guideWin) { void guideWin.loadURL(url); guideWin.show(); guideWin.focus(); return; }
   guideWin = new BrowserWindow({
     width: 1100, height: 800, minWidth: 600, minHeight: 500, title: "Scribelab guide",
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0c0e13" : "#f4f5f7",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0b0b0f" : "#f6f6f1",
     autoHideMenuBar: true, webPreferences: prefs(),
   });
   guideWin.on("closed", () => { guideWin = null; });

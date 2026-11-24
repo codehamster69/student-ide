@@ -48,9 +48,9 @@ export function GuideIndex({ nav, audiences = ["student", "teacher"] }: { nav: G
           {AUDIENCES.filter((a) => audiences.includes(a.id)).map((a) => {
             const Icon = ICON[a.id];
             return (
-              <section key={a.id} className="rounded-xl border border-border bg-surface shadow-sm">
+              <section key={a.id} className="rounded-xl border border-border">
                 <header className="flex items-start gap-3 border-b border-border px-5 py-4">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Icon className="size-[18px]" /></span>
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-border text-cta"><Icon className="size-[18px]" /></span>
                   <div>
                     <h2 className="text-[15px] font-semibold text-text">{a.label}</h2>
                     <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{a.about}</p>
@@ -59,7 +59,7 @@ export function GuideIndex({ nav, audiences = ["student", "teacher"] }: { nav: G
                 <ul className="divide-y divide-border">
                   {pages(a.id).map((p) => (
                     <li key={p.slug}>
-                      <GuideLink nav={nav} audience={a.id} slug={p.slug} className="group flex w-full items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-2">
+                      <GuideLink nav={nav} audience={a.id} slug={p.slug} className="group flex w-full items-center gap-3 border-l-2 border-transparent px-5 py-3 transition-colors hover:border-cta">
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium text-text">{p.title}</span>
                           <span className="block truncate text-[13px] text-muted">{p.summary}</span>
@@ -81,10 +81,10 @@ export function GuideIndex({ nav, audiences = ["student", "teacher"] }: { nav: G
 function Results({ hits, nav, q }: { hits: GuidePage[]; nav: GuideNav; q: string }) {
   if (!hits.length) return <p className="text-sm text-muted">No guide page mentions “{q}”. Try a shorter word, or browse the topics.</p>;
   return (
-    <ul className="divide-y divide-border rounded-xl border border-border bg-surface shadow-sm">
+    <ul className="divide-y divide-border rounded-xl border border-border">
       {hits.map((p) => (
         <li key={`${p.audience}/${p.slug}`}>
-          <GuideLink nav={nav} audience={p.audience} slug={p.slug} className="flex w-full items-center gap-3 px-5 py-3 hover:bg-surface-2">
+          <GuideLink nav={nav} audience={p.audience} slug={p.slug} className="flex w-full items-center gap-3 border-l-2 border-transparent px-5 py-3 transition-colors hover:border-cta">
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium text-text">{p.title}</span>
               <span className="block truncate text-[13px] text-muted">{p.summary}</span>
@@ -102,7 +102,7 @@ function SearchBox({ value, onChange, className }: { value: string; onChange: (v
     <label className={cn("relative block", className)}>
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Search the guide" aria-label="Search the guide"
-        className="h-10 w-full rounded-lg border border-border bg-surface pl-9 pr-3 text-sm text-text shadow-sm outline-none placeholder:text-faint hover:border-border-strong focus:border-accent focus:ring-3 focus:ring-accent/15" />
+        className="h-10 w-full rounded-lg border border-border bg-transparent pl-9 pr-3 text-sm text-text outline-none placeholder:text-faint hover:border-border-strong focus:border-accent focus:ring-3 focus:ring-accent/15" />
     </label>
   );
 }
@@ -135,11 +135,11 @@ export function GuideReader({ audience, slug, hash, nav, audiences = ["student",
     <div className="mx-auto grid w-full max-w-[1280px] gap-8 px-4 pb-24 pt-6 sm:px-6 sm:pt-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_200px]">
       <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto">
         {audiences.length > 1 && (
-          <div className="mb-3 grid grid-cols-2 gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5" role="tablist" aria-label="Guide">
+          <div className="mb-3 grid grid-cols-2 gap-0.5 rounded-lg border border-border p-0.5" role="tablist" aria-label="Guide">
             {audiences.map((a) => (
               <GuideLink key={a} nav={nav} audience={a} slug={findPage(a)?.slug} current={a === audience}
-                className={cn("rounded-md px-2 py-1 text-center text-[12.5px] font-medium transition-colors",
-                  a === audience ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+                className={cn("rounded-md border px-2 py-1 text-center text-[12.5px] font-medium transition-colors",
+                  a === audience ? "border-cta/50 text-cta" : "border-transparent text-muted hover:text-text")}>
                 {a === "student" ? "Students" : "Teachers"}
               </GuideLink>
             ))}
@@ -152,7 +152,7 @@ export function GuideReader({ audience, slug, hash, nav, audiences = ["student",
               <li key={p.slug}>
                 <GuideLink nav={nav} audience={audience} slug={p.slug} current={p.slug === page.slug}
                   className={cn("block w-full rounded-md px-2.5 py-1.5 text-[13.5px] transition-colors",
-                    p.slug === page.slug ? "bg-surface-3 font-medium text-text" : "text-muted hover:bg-surface-2 hover:text-text")}>
+                    p.slug === page.slug ? "border-l-2 border-cta font-medium text-text" : "border-l-2 border-transparent text-muted hover:border-border-strong hover:text-text")}>
                   {p.title}
                 </GuideLink>
               </li>
