@@ -85,11 +85,11 @@ function blocks(md: string, language: string, onTry?: (code: string) => void): R
         const runnable = !!onTry && b.lang === language;
         return (
           <div key={k} className="group relative">
-            <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12.5px] leading-relaxed text-text">{b.text}</pre>
+            <pre className="m-0 overflow-x-auto rounded-lg border border-border px-3 py-2.5 font-mono text-[12.5px] leading-relaxed text-text">{b.text}</pre>
             {runnable && (
               <button onClick={() => onTry!(b.text)}
                 title="Put this example in the editor (Ctrl Z brings your code back)"
-                className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-accent shadow-sm transition-colors hover:border-accent/40">
+                className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-cta shadow-sm transition-colors hover:border-accent/40">
                 <CornerDownLeft className="size-3" />Try it
               </button>
             )}
@@ -138,7 +138,7 @@ function inline(s: string): ReactNode[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(s))) {
     if (m.index > last) out.push(s.slice(last, m.index));
-    if (m[1] !== undefined) out.push(<code key={m.index} className="rounded bg-surface-2 px-1 py-px font-mono text-[12.5px] text-text">{m[1]}</code>);
+    if (m[1] !== undefined) out.push(<code key={m.index} className="rounded border border-border px-1 py-px font-mono text-[12.5px] text-text">{m[1]}</code>);
     else if (m[2] !== undefined) out.push(<strong key={m.index} className="font-semibold text-text">{m[2]}</strong>);
     else out.push(<em key={m.index}>{m[3]}</em>);
     last = re.lastIndex;
