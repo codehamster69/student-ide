@@ -22,6 +22,8 @@
   --text-muted: #565e6e;
   --text-faint: #878e9d;
 
+  /* brand lime (logo wordmark): darker on light backgrounds for contrast */
+  --brand: #5f8a00;
   --accent: #4b4ee0;
   --accent-hover: #3e40c6;
   --accent-soft: #eeeffe;
@@ -81,7 +83,9 @@
     --text-muted: #9ba2b1;
     --text-faint: #69707f;
 
-    --accent: #8d92ff;
+    --brand: #c6f432;
+    --brand: #c6f432;
+  --accent: #8d92ff;
     --accent-hover: #a8acff;
     --accent-soft: rgb(139 147 255 / 0.14);
     --accent-fg: #0c0e13;
@@ -185,6 +189,7 @@
   --color-text: var(--text);
   --color-muted: var(--text-muted);
   --color-faint: var(--text-faint);
+  --color-brand: var(--brand);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);

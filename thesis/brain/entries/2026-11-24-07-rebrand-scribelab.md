@@ -11,10 +11,12 @@ Rohan asked for a rebrand: a new name with a small existing footprint, a logo,
 a subdomain on hokora.xyz, the live site and the desktop app updated. The work is
 stacked on the redesign PR stack (#55–#59) and replaces the rhythm-bar mark it added.
 
-- Name: **Scribelab**. Logo ("Squiggle", picked by Rohan from three bolder options after he
-  asked for a look that feels right to Gen Z students): a chunky hand-drawn "s" with a yellow
-  text caret on a violet-pink-orange gradient; lowercase heavy wordmark with a gradient "lab".
-  A first, quieter pen-nib mark was dropped. Options board: `snapshots/rebrand/scribelab-logo-options.png`.
+- Name: **Scribelab**. Logo ("Acid nib", picked by Rohan from three bolder options after he
+  asked for a look that feels right to Gen Z students): a lime pen nib (the scribe) with a pink
+  sparkle on a near-black tile with a faint lime rim; lowercase heavy wordmark "scribelab" with
+  "lab" in the `brand` token (#5f8a00 light, #c6f432 dark). The mark's colours are fixed, not
+  tied to the accent palette. A first, quieter nib mark was dropped. Options board:
+  `snapshots/rebrand/scribelab-logo-options.png` (A Squiggle, B Acid nib, C Cursor buddy).
   Sources: `frontend/src/ui/Logo.tsx`, `frontend/public/favicon.svg`,
   `desktop/installer/packaging/build/icon.{svg,png}` (electron-builder makes .ico/.icns).
 - User-facing text in the web app, guides, desktop app, installer, docs and Roll Call
