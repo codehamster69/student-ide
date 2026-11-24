@@ -39,8 +39,8 @@ export function Shell({ step, studentId, onSignOut, tab, onTab, children }: {
                 <button key={id} type="button" onClick={() => onTab!(id)} aria-current={tab === id ? "page" : undefined}
                   className={cn("relative flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13.5px] font-medium transition-colors",
                     tab === id ? "text-text" : "text-muted hover:text-text")}>
-                  {tab === id && <motion.span layoutId="student-tab" transition={spring} className="absolute inset-0 rounded-md bg-surface-3" />}
-                  <Icon className={cn("relative size-4", tab === id ? "text-accent" : "text-faint")} />
+                  {tab === id && <motion.span layoutId="student-tab" transition={spring} className="absolute inset-0 rounded-md border border-border-strong" />}
+                  <Icon className={cn("relative size-4", tab === id ? "text-cta" : "text-faint")} />
                   <span className="relative hidden sm:inline">{label}</span>
                 </button>
               ))}
@@ -52,7 +52,7 @@ export function Shell({ step, studentId, onSignOut, tab, onTab, children }: {
         <div className="ml-auto flex min-w-0 items-center justify-end gap-1">
           {studentId && step >= 2 && studentId !== "STAFF_PREVIEW" && <MyAttendanceButton studentId={studentId} />}
           {studentId && (
-            <div className="flex items-center gap-1 rounded-full border border-border bg-surface py-0.5 pl-3 pr-0.5 shadow-sm">
+            <div className="flex items-center gap-1 rounded-full border border-border py-0.5 pl-3 pr-0.5 shadow-sm">
               <span className="truncate font-mono text-xs text-muted">{studentId}</span>
               {onSignOut && (
                 <Button variant="ghost" size="icon" className="size-7 rounded-full" onClick={onSignOut} aria-label="Sign out" title="Sign out">

@@ -70,7 +70,7 @@ export function AppShell({ home, subtitle, nav, footer, trail, actions, children
               initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-y-0 left-0 w-64 border-r border-border bg-sidebar shadow-lg">
               <button onClick={() => setOpen(false)} aria-label="Close menu"
-                className="absolute right-2 top-3 grid size-8 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-text">
+                className="absolute right-2 top-3 grid size-8 place-items-center rounded-md border border-transparent text-muted hover:border-border hover:text-text">
                 <X className="size-4" />
               </button>
               {sidebar}
@@ -81,7 +81,7 @@ export function AppShell({ home, subtitle, nav, footer, trail, actions, children
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-bg/85 px-3 backdrop-blur-md sm:px-5">
           <button onClick={() => setOpen(true)} aria-label="Open menu"
-            className="grid size-9 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-text lg:hidden">
+            className="grid size-9 place-items-center rounded-md border border-transparent text-muted hover:border-border hover:text-text lg:hidden">
             <Menu className="size-[18px]" />
           </button>
           <Breadcrumbs trail={trail ?? []} />
@@ -99,11 +99,11 @@ function SideLink({ item }: { item: NavItem }) {
     <li>
       <a href={item.href} title={item.title} aria-current={item.active ? "page" : undefined}
         className={cn(
-          "group relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] transition-colors",
-          item.active ? "bg-surface-3 font-medium text-text" : "text-muted hover:bg-surface-2 hover:text-text",
+          "group relative flex h-8 items-center gap-2.5 rounded-md border px-2.5 text-[13.5px] transition-colors",
+          item.active ? "border-border-strong font-medium text-text" : "border-transparent text-muted hover:border-border hover:text-text",
         )}>
-        {item.active && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-accent" />}
-        <Icon className={cn("size-4 shrink-0", item.active ? "text-accent" : "text-faint group-hover:text-muted")} />
+        {item.active && <span className="absolute inset-y-1.5 -left-px w-[3px] rounded-full bg-cta" />}
+        <Icon className={cn("size-4 shrink-0", item.active ? "text-cta" : "text-faint group-hover:text-muted")} />
         <span className="truncate">{item.label}</span>
         {item.badge != null && <span className="ml-auto">{item.badge}</span>}
       </a>
@@ -136,7 +136,7 @@ export function Breadcrumbs({ trail }: { trail: Crumb[] }) {
 export function TopBarButton({ label, onClick, href, children, className }: {
   label: string; onClick?: () => void; href?: string; children: ReactNode; className?: string;
 }) {
-  const cls = cn("inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text", className);
+  const cls = cn("inline-flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] font-medium text-muted transition-colors hover:border-border hover:text-text", className);
   return href
     ? <a href={href} title={label} aria-label={label} className={cls}>{children}</a>
     : <button type="button" onClick={onClick} title={label} aria-label={label} className={cls}>{children}</button>;

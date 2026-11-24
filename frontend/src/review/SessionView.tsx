@@ -118,7 +118,7 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
       {/* header */}
       <motion.div variants={item} className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-accent to-[#8b5cf6] font-mono text-sm font-semibold text-white shadow-md">
+          <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-accent-2 font-mono text-sm font-semibold text-[#0b0b0f] shadow-md">
             {s.student_id.slice(-2)}
           </span>
           <div>

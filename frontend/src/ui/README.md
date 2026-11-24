@@ -20,10 +20,22 @@ Everything is re-exported from `ui/index.ts`.
 
 ## Look
 
-A calm, dense working tool: cool grey surfaces, one indigo accent, Inter for the interface and
-JetBrains Mono for code and roll numbers only. Cards are `rounded-xl` with `shadow-sm`; dialogs and
-the palette get `shadow-lg`. The one signature element is the typing-rhythm bars (logo, sign-in demo,
-review replay); keep other decoration out. Sentence-case labels, no all-caps eyebrows.
+"Acid Night": ink backgrounds, one lime accent (`cta`, `brand`) and a pink second accent
+(`accent-2`, used for badges and highlights). Space Grotesk (`font-display`) for page titles, Inter
+for the interface, JetBrains Mono for code and roll numbers. Dark mode adds a faint pink and lime
+glow behind the page (`--bg-glow`); light mode is warm off-white with ink text and darker lime.
+
+### Border-first (Rohan's guideline)
+
+- No background fills for emphasis. Cards, tabs, rows and badges sit on the page background.
+- Borders separate things only when they must stand apart from their siblings (a card in a grid,
+  an input, the selected item).
+- Buttons are text at rest. On hover or keyboard focus a border pops in with a 1 px lift; the
+  primary button also glows lime (`--button-glow`). Danger buttons are red text with a red border on hover.
+- Active and selected states use a border, an underline or a left rule plus accent text, never a
+  filled pill.
+- Fills stay only where they do a job: the page base, dialog scrims and panels, the code editor,
+  the console, images and charts.
 
 ## Theme
 
