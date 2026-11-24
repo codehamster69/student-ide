@@ -85,7 +85,7 @@ export function GuideMarkdown({ markdown, linkTo, className }: { markdown: strin
               ? <h2 key={k} id={headingId(b.text)} className="mt-6 scroll-mt-20 text-lg font-semibold tracking-[-0.01em] text-text">{inl(b.text)}</h2>
               : <h3 key={k} id={headingId(b.text)} className="mt-2 scroll-mt-20 text-[15px] font-semibold text-text">{inl(b.text)}</h3>;
           case "note":
-            return <div key={k} className="rounded-lg border border-accent/25 bg-accent-soft px-4 py-3 text-[14px] text-text">{inl(b.text)}</div>;
+            return <div key={k} className="rounded-lg border-l-2 border-accent-2 py-1 pl-4 pr-2 text-[14px] text-text">{inl(b.text)}</div>;
           case "list": {
             const Tag = b.ordered ? "ol" : "ul";
             return (
@@ -98,7 +98,7 @@ export function GuideMarkdown({ markdown, linkTo, className }: { markdown: strin
             return (
               <div key={k} className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full border-collapse text-[14px]">
-                  <thead className="bg-surface-2">
+                  <thead className="border-b border-border-strong">
                     <tr>{b.rows[0]?.map((c, m) => <th key={m} className="px-3 py-2 text-left font-semibold text-text">{inl(c)}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -125,7 +125,7 @@ function inline(s: string, linkTo: LinkTo): ReactNode[] {
   while ((m = re.exec(s))) {
     if (m.index > last) out.push(s.slice(last, m.index));
     const k = m.index;
-    if (m[1] !== undefined) out.push(<code key={k} className="rounded bg-surface-2 px-1.5 py-px font-mono text-[13px] text-text">{m[1]}</code>);
+    if (m[1] !== undefined) out.push(<code key={k} className="rounded border border-border px-1.5 py-px font-mono text-[13px] text-text">{m[1]}</code>);
     else if (m[2] !== undefined) out.push(<strong key={k} className="font-semibold text-text">{inline(m[2], linkTo)}</strong>);
     else if (m[3] !== undefined) out.push(<em key={k}>{m[3]}</em>);
     else {
