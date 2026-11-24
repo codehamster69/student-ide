@@ -487,7 +487,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   return (
     <div className="grid h-full grid-rows-[52px_1fr] bg-bg">
       {/* Top bar */}
-      <header className="flex items-center gap-3 border-b border-border bg-surface px-3">
+      <header className="flex items-center gap-3 border-b border-border px-3">
         <LogoMark className="size-6" />
         <Button variant="ghost" size="icon" onClick={() => setTaskOpen((o) => !o)} aria-label={taskOpen ? "Hide task" : "Show task"}>
           {taskOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
@@ -510,7 +510,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
             transition={{ duration: duration.base, ease: ease.out }}
             className={cn(
               "flex h-7 items-center gap-2 rounded-full px-3 text-xs font-medium",
-              link.ok ? "bg-success-soft text-success" : "bg-warn-soft text-warn",
+              link.ok ? "border border-success/40 text-success" : "border border-warn/40 text-warn",
             )}
             role="status"
             title={learning
@@ -522,7 +522,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
           </motion.div>
           <WatchNotice v={watching} />
           {compLab && clockAt.ends_at !== null && (
-            <span className="flex h-7 items-center rounded-full bg-surface-2 px-3 text-xs" title="When the clock runs out, your code is handed in for you">
+            <span className="flex h-7 items-center rounded-full border border-border px-3 text-xs" title="When the clock runs out, your code is handed in for you">
               <Countdown comp={{ ends_at: clockAt.ends_at, state: timeUp ? "ended" : "live" }} offset={clockAt.offset} />
             </span>
           )}
@@ -530,11 +530,11 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
           <Button variant="primary" size="sm" onClick={() => void runCode()} disabled={running || saving} className="pr-2">
             {running ? <Spinner className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
             Run
-            <Kbd className="ml-1 hidden border-white/30 sm:inline-flex">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
+            <Kbd className="ml-1 hidden border-border sm:inline-flex">{isMac ? "⌘" : "Ctrl"} ↵</Kbd>
           </Button>
           {competing && (
             <Button variant="primary" size="sm" onClick={() => void submit()} disabled={submitting || running || saving || timeUp}
-              className="bg-gold text-accent-fg hover:bg-gold hover:opacity-90">
+              className="text-gold hover:border-gold hover:shadow-none">
               {submitting ? <Spinner className="size-3.5" /> : <FlaskConical className="size-3.5" />}
               Submit
             </Button>
@@ -569,7 +569,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               animate={{ width: panelW, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={dragging ? { duration: 0 } : { duration: duration.base, ease: ease.out }}
-              className="shrink-0 overflow-hidden border-r border-border bg-surface"
+              className="shrink-0 overflow-hidden border-r border-border"
             >
               <div className="h-full overflow-y-auto overscroll-contain p-5" style={{ width: panelW }}>
                 {/* lessons are long reads: the editor tabs and Previous/Next move between them instead */}
@@ -578,17 +578,17 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                     {tasks.map((q, i) => (
                       <button key={q.id} onClick={() => void switchTo(i)} disabled={opening !== null || saving}
                         aria-current={i === active ? "true" : undefined}
-                        className={cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-wait",
-                          i === active ? "bg-accent-soft text-text" : "text-muted hover:bg-surface-2 hover:text-text")}>
+                        className={cn("flex items-center gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-[13px] transition-[border-color,color] disabled:cursor-wait",
+                          i === active ? "border border-cta/40 text-text" : "text-muted hover:border-border-strong hover:text-text")}>
                         <span className={cn("grid size-6 shrink-0 place-items-center rounded-md font-mono text-[11px] font-semibold",
-                          i === active ? "bg-accent text-accent-fg" : isDone(i) ? "bg-success-soft text-success" : "bg-surface-2 text-muted")}>
+                          i === active ? "border border-cta text-cta" : isDone(i) ? "border border-success/40 text-success" : "border border-border text-muted")}>
                           {opening === i ? <Spinner className="size-3" /> : isDone(i) && i !== active ? <CheckCircle2 className="size-3.5" /> : i + 1}
                         </span>
                         <span className="min-w-0 flex-1 truncate font-medium">{q.title}</span>
                         {visited.has(i) && i !== active && <span className="size-1.5 shrink-0 rounded-full bg-accent/60" title="Opened in this sitting" />}
                       </button>
                     ))}
-                    {switchError && <p className="mt-1 rounded-md bg-danger-soft px-2 py-1 text-xs text-danger">{switchError}</p>}
+                    {switchError && <p className="mt-1 rounded-md border border-danger/40 px-2 py-1 text-xs text-danger">{switchError}</p>}
                   </nav>
                 )}
                 <p className="text-xs font-medium text-accent">
@@ -607,14 +607,14 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                     Answer in any of {task.languages!.map((l) => LANGUAGES[l].label).join(", ")}: pick it above the editor. Each language keeps its own code.
                   </p>
                 )}
-                {!sitting && switchError && <p className="mt-2 rounded-md bg-danger-soft px-2 py-1 text-xs text-danger" role="alert">{switchError}</p>}
+                {!sitting && switchError && <p className="mt-2 rounded-md border border-danger/40 px-2 py-1 text-xs text-danger" role="alert">{switchError}</p>}
                 {task.tests && task.tests.length > 0 && (
                   <div className="mt-5 grid gap-2">
                     <p className="text-xs font-medium text-text">{learning ? "Exercise examples (input → output)" : "Examples"}</p>
                     {task.tests.slice(0, 3).map((t, i) => (
                       <div key={i} className="grid grid-cols-2 gap-2 font-mono text-[11.5px]">
-                        <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-text">{t.stdin || "(no input)"}</pre>
-                        <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-text">{t.expected}</pre>
+                        <pre className="m-0 overflow-x-auto rounded-lg border border-border px-2.5 py-1.5 text-text">{t.stdin || "(no input)"}</pre>
+                        <pre className="m-0 overflow-x-auto rounded-lg border border-border px-2.5 py-1.5 text-text">{t.expected}</pre>
                       </div>
                     ))}
                     {task.harness && (
@@ -625,7 +625,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                   </div>
                 )}
                 {canCheck && (
-                  <p className="mt-4 flex items-start gap-1.5 rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">
+                  <p className="mt-4 flex items-start gap-1.5 rounded-lg border border-cta/40 px-3 py-2 text-xs text-accent">
                     <FlaskConical className="mt-0.5 size-3.5 shrink-0" />
                     <span>
                       {task.n_tests} test{task.n_tests === 1 ? "" : "s"} to check against
@@ -637,7 +637,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 {task.sample_input && (
                   <div className="mt-5">
                     <p className="mb-1.5 text-xs font-medium text-text">Sample input</p>
-                    <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-text">{task.sample_input}</pre>
+                    <pre className="m-0 overflow-x-auto rounded-lg border border-border px-3 py-2 font-mono text-xs text-text">{task.sample_input}</pre>
                   </div>
                 )}
                 {sitting && (
@@ -679,18 +679,18 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
         {/* Editor + console */}
         <div ref={column} className="grid min-w-0 flex-1"
           style={{ gridTemplateRows: `38px minmax(0,1fr) ${consoleSize ? `${consoleSize}px` : "minmax(200px,34%)"}` }}>
-          <div className="flex items-end gap-1 overflow-x-auto border-b border-border bg-surface-2 px-2" role={sitting ? "tablist" : undefined}>
+          <div className="flex items-end gap-1 overflow-x-auto border-b border-border px-2" role={sitting ? "tablist" : undefined}>
             {sitting ? tasks.map((q, i) => (
               <button key={q.id} role="tab" aria-selected={i === active} onClick={() => void switchTo(i)}
                 disabled={opening !== null || saving} title={q.title}
                 className={cn("flex h-[31px] shrink-0 items-center gap-2 rounded-t-lg border border-b-0 px-3 font-mono text-xs transition-colors disabled:cursor-wait",
-                  i === active ? "border-border border-t-2 border-t-accent bg-surface text-text" : "border-transparent text-muted hover:text-text")}>
+                  i === active ? "border-border border-t-2 border-t-accent text-text" : "border-transparent text-muted hover:text-text")}>
                 {opening === i ? <Spinner className="size-3" /> : <span className="size-2 rounded-sm" style={{ background: i === active ? lang.color : "var(--text-faint)" }} />}
                 q{i + 1}{lang.file.slice(lang.file.lastIndexOf("."))}
                 <span className="max-w-32 truncate font-sans text-faint">{q.title}</span>
               </button>
             )) : (
-              <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-t-2 border-border border-t-accent bg-surface px-3 font-mono text-xs text-text">
+              <div className="flex h-[31px] items-center gap-2 rounded-t-lg border border-b-0 border-t-2 border-border border-t-accent px-3 font-mono text-xs text-text">
                 <span className="size-2 rounded-sm" style={{ background: lang.color }} />
                 {lang.file}
               </div>
@@ -710,7 +710,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
                 <span className="relative">
                   <select value={language} onChange={(e) => void switchLanguage(e.target.value as Language)} disabled={switchingLang || saving || running}
                     aria-label="Language for this question"
-                    className="h-7 appearance-none rounded-md border border-border bg-surface pl-2.5 pr-7 text-xs font-medium text-text shadow-sm outline-none hover:border-border-strong focus:border-accent">
+                    className="h-7 appearance-none rounded-md border border-border pl-2.5 pr-7 text-xs font-medium text-text shadow-sm outline-none hover:border-border-strong focus:border-accent">
                     {task.languages!.map((l) => <option key={l} value={l}>{LANGUAGES[l].label}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-faint" />
@@ -720,7 +720,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
           </div>
           <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />
 
-          <section ref={consoleRow} className="relative grid min-h-0 border-t border-border bg-surface-2"
+          <section ref={consoleRow} className="relative grid min-h-0 border-t border-border"
             style={{ gridTemplateColumns: inputSize ? `${inputSize}px minmax(0,1fr)` : "minmax(180px,1fr) 2fr" }}>
             <ResizeHandle orientation="horizontal" label="Output height" className="absolute inset-x-0 -top-1"
               size={() => consoleRow.current?.offsetHeight ?? 200}
@@ -875,7 +875,7 @@ function WatchNotice({ v }: { v: Viewers }) {
           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: duration.base, ease: ease.out }}
           title="Your teacher is looking at a read-only copy of your code right now. They cannot type in your editor."
-          className="flex h-7 items-center gap-1.5 rounded-full bg-warn-soft px-3 text-xs font-medium text-warn">
+          className="flex h-7 items-center gap-1.5 rounded-full border border-warn/40 px-3 text-xs font-medium text-warn">
           <Eye className="size-3.5" />
           <span className="max-w-56 truncate">{names.join(", ")} {names.length === 1 ? "is" : "are"} viewing your editor</span>
         </motion.div>
@@ -884,7 +884,7 @@ function WatchNotice({ v }: { v: Viewers }) {
           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: duration.base, ease: ease.out }}
           title="Your teacher has this lab's live class view open: they can see who is working, on which question, and your runs and checks. Not your code."
-          className="flex h-7 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-xs font-medium text-muted">
+          className="flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted">
           <Eye className="size-3.5" /> Class view on
         </motion.div>
       ) : null}
@@ -902,8 +902,8 @@ function PaneHeader({ icon, label, children, tabs }: {
         <span className="flex items-center gap-1" role="tablist">
           {(["output", "tests"] as const).map((t) => (
             <button key={t} role="tab" aria-selected={tabs.value === t} onClick={() => tabs.onChange(t)}
-              className={cn("flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
-                tabs.value === t ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+              className={cn("flex h-7 items-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-medium transition-[border-color,color]",
+                tabs.value === t ? "border border-border text-text" : "text-muted hover:text-text")}>
               {t === "output" ? <>{icon}{label}</> : <><FlaskConical className="size-3.5" />Tests{tabs.tests && <span className="tabular-nums text-faint">{tabs.tests}</span>}</>}
             </button>
           ))}
