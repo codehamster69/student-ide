@@ -1,5 +1,8 @@
 % Who is at the keyboard? Process-Aware Authorship Continuity in Programming Assessment
 % M.Tech thesis, IIIT Surat. Build: latexmk -pdf main.tex
+% No official IIIT Surat thesis template is published; the front matter follows the usual
+% Indian M.Tech order (title, approval, certificate, declaration, acknowledgements, abstract,
+% contents, lists, abbreviations). Check margins, title page and signatures with the department.
 \documentclass[12pt,a4paper,oneside]{report}
 
 \input{preamble}
@@ -9,13 +12,16 @@
 % ---------- Front matter ----------
 \pagenumbering{roman}
 \input{frontmatter/titlepage}
+\input{frontmatter/approval}
 \input{frontmatter/certificate}
 \input{frontmatter/declaration}
 \input{frontmatter/acknowledgements}
 \input{frontmatter/abstract}
 
 \tableofcontents
+\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{List of Figures}
 \listoffigures
+\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{List of Tables}
 \listoftables
 \input{frontmatter/abbreviations}
 
@@ -44,6 +50,6 @@
 \input{appendices/B-ethics-and-consent}
 \input{appendices/C-ablation-studies}
 \input{appendices/D-detector-verification}
-\input{appendices/E-project-progress}
+\input{appendices/E-teaching-features}
 
 \end{document}

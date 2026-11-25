@@ -1,3 +1,94 @@
-\chapter{Ethics Approval and Consent Forms}
+\chapter{Ethics and Consent}
 \label{app:ethics}
-\todo{Approval letter, participant information sheet, consent form, survey.}
+
+\section{Institutional approval}
+\label{app:approval}
+The pilot runs in ordinary IIIT Surat lab classes with \emph{oral} institutional
+approval from the Dean, the Head of the Department of Computer Science and
+Engineering and the faculty who teach the classes. Written confirmation of that
+approval is pending and will be attached here when it is issued. No student was
+recruited for a separate study session: the thesis uses only recordings of
+normal classes (\cref{sec:naturalistic}), the tool was used for teaching in
+any case, and a flag only ever leads to the kind of conversation about code that
+teachers have with students anyway.
+
+The safeguards that the approval rests on are part of the system and are
+described in \cref{sec:privacy}: a consent screen before any recording, no
+camera, microphone or screen capture, raw keystrokes deleted after at most
+28~days, erasure of a student's data on request, data kept in India, staff
+access limited to their own classes, and analysis on pseudonymous aggregates
+only. Spliced sessions used in the evaluation exist only inside the analysis and
+are never shown to a teacher or attached to either student
+(\cref{sec:splicing}).
+
+\section{Consent text}
+\label{app:consent}
+Students see the following text, in full, on first sign-in and before any
+event is recorded (\cref{fig:editor}a shows the screen). They tick ``I have read
+this and agree to take part.'' and press \emph{Start}; the time and the version
+of the text they agreed to are stored. A student who agreed to an earlier
+version is asked again before their next session.
+
+\begin{quote}\small
+\textbf{Before you start}
+
+This editor is part of a research study on how people write code. While you
+work it records:
+\begin{itemize}[nosep]
+  \item When each key is pressed and released (timing, and which key)
+  \item Every edit to your code
+  \item Anything you paste, copy or cut in the editor
+  \item Each time you run your program, with its output
+  \item When you switch away from the editor or this tab
+\end{itemize}
+
+During a lab your teacher can follow the class live and open a read-only view
+of your editor. The editor always tells you when they do, with their name.
+Nothing from a live view is ever used to mark your work.
+
+It does \textbf{not} use your webcam or microphone and does not record your
+screen or other apps.
+
+Your typing patterns are compared only with your own earlier sessions. If
+something looks unusual, the only consequence is a conversation with your
+instructor, never an automatic penalty. After such a conversation your
+instructor may note how it went (for example ``explained, own work''). Only
+staff see this note, it is never a mark, and the research reports only
+class-wide counts without names. Raw keystroke data is deleted once summary
+statistics have been computed: when your four-week baseline is built, and never
+kept longer than 28 days.
+
+\emph{\textsquare\ I have read this and agree to take part.} \quad [Start]
+\end{quote}
+
+\paragraph{Versions.} Version~1 (from 26 October 2026) had the list of what is
+recorded, what is not, and the comparison, conversation and deletion
+paragraph. Version~2 (27 October 2026, with the live classroom view) added
+the live-view paragraph; students who had agreed to version~1 were asked again.
+The sentences on the conversation note were added on 25 November 2026 when the
+note was introduced (\cref{sec:review-timeline}). They describe a record that
+staff keep about their own conversations, not new data about the student, so
+the version was not raised and no student was asked again; students who signed
+in afterwards saw the new text. If the live view is limited to the class
+overview, the live paragraph instead reads: ``During a lab your teacher can
+follow the class live: who is working, on which question, and your runs and
+checks (not your code). A notice in the editor tells you while they do.'' If it
+is turned off, the paragraph is not shown.
+
+\paragraph{Sandbox Labs (version 3).} Before a student's first Sandbox Lab in
+the desktop app, the screen adds that in such a lab the app also records the
+keys pressed in the lab's terminal (including in vim or nano), each command
+run with its folder, result and last lines of output, pastes into the terminal,
+files in the lab folder changed outside the editor, packages installed, the
+names of websites the lab connects to (never what is sent), programs listening
+on a port, and a copy of the lab folder; that it sees nothing outside the lab's
+folder and container; and that terminal typing is compared only with the
+student's own sessions and counts toward attendance. Sandbox Labs are outside
+the evaluation in this thesis, and the version~3 wording is still awaiting
+the author's final approval.
+
+\section{Data protection}
+\Cref{tab:dpdp} maps the design onto India's Digital Personal Data Protection
+Act, 2023. Two further commitments apply to the thesis itself: every figure of
+real data reports class-wide aggregates under pseudonyms, and screenshots of
+the tool in this thesis show demo data, not real students.
