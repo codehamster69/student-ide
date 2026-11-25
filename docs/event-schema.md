@@ -43,14 +43,17 @@ digraph latency = down(k₂) − down(k₁). The typed character is not stored h
 
 **`edit`** — each change to the document. `origin` is CodeMirror's user event
 (`input.type`, `input.paste`, `input.drop`, `input.complete` (autocomplete), `delete.backward`,
-`delete.forward`, `delete.selection`, `undo`, `redo`, `input.indent`, ...).
+`delete.forward`, `delete.selection`, `undo`, `redo`, `input.indent`, ...). v4 adds
+`input.paste.internal` / `input.drop.internal`: text copied inside Scribelab (see below),
+which counts as ordinary editing, not paste evidence (`schema.is_outside_paste()`).
 `changes` is a list of `[from, to, inserted]` in pre-edit coordinates,
 `len_before` / `len_after` are the document lengths. Offsets are UTF-16 code units
 (JavaScript's), so `replay.py` works in UTF-16 too.
 
-**`clipboard`** — `paste`, `copy` or `cut` in the editor, with `length`, `lines` and the
+**`clipboard`** — `paste`, `copy`, `cut` or (v4) `drop` in the editor, with `length`, `lines` and the
 `text` (first 20 000 characters, `truncated` flag). For a paste, the matching `edit`
-with origin `input.paste` follows immediately.
+with origin `input.paste` follows immediately. v4 adds `source`, `blocked` and `surface`
+(see Version 4).
 
 **`cursor`** — selection moves that are not edits (clicks, arrow keys), at most one
 per 100 ms: `anchor`, `head`, `line`.
@@ -124,6 +127,24 @@ Additive again (`SUPPORTED_VERSIONS = (1, 2, 3)`).
 None of the v3 events feed the detector (see the thesis brain entry
 `2026-11-08-13-sandbox-monitoring-detector-feed.md`); they feed the review's
 evidence lanes.
+
+### Version 4 (paste guard)
+
+Additive (`SUPPORTED_VERSIONS = (1, 2, 3, 4)`). In labs, competitions and Sandbox Labs
+(not the learning lab) the editor only accepts pastes and drops of text copied inside
+Scribelab (`frontend/src/pasteguard.ts`: a hash of every copy, cut or drag on a study
+screen, kept 24 h in localStorage, plus the student's own open documents).
+
+- **`clipboard.source`** for a paste or drop: `editor` (copied from a Scribelab editor or
+  the desktop terminal), `page` (read-only text on the screen, e.g. the question),
+  `document` (already in the student's code), `external`, or null (guard off / before v4).
+- **`clipboard.blocked`** — an `external` paste or drop that was refused. No `edit`
+  follows; the text the student tried to paste is kept as evidence of copying.
+- **`clipboard.surface`** — `terminal` for a blocked paste into the desktop terminal
+  (allowed terminal pastes stay `term_paste`).
+- **`edit.origin`** `input.paste.internal` / `input.drop.internal` for allowed pastes
+  and drops. Review, Live, attendance and the similarity check treat them as editing,
+  not pasting. Copies out of form fields (the stdin box) never count as inside.
 
 ## Reading the data
 

@@ -499,10 +499,13 @@ def _evidence_events(events: list[dict]) -> dict:
     away: dict[str, float] = {}
     for ev in events:
         t, d = ev["t"] / 1000, ev["data"]
-        if ev["type"] == "clipboard" and d["action"] == "paste":
+        if ev["type"] == "clipboard" and d["action"] in ("paste", "drop"):
+            if d.get("source") not in (None, "external"):
+                continue  # v4: pasting or dragging the student's own code inside the IDE is ordinary editing
             text = d.get("text") or ""
             pastes.append({"t": t, "length": d["length"], "lines": d["lines"],
-                           "preview": text[:240], "truncated": d.get("truncated", False) or len(text) > 240})
+                           "preview": text[:240], "truncated": d.get("truncated", False) or len(text) > 240,
+                           "blocked": bool(d.get("blocked"))})
         elif ev["type"] == "focus" and d["target"] in ("window", "page"):
             if d["state"] == "out":
                 away.setdefault(d["target"], t)
