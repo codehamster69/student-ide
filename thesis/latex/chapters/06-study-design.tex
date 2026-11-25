@@ -82,8 +82,11 @@ reported separately.
 \section{Baselines from the earliest minutes}
 \label{sec:baseline}
 Without baseline weeks, a student's baseline is simply their earliest $M$ active minutes
-of typing, from whatever sessions those were in ($M = 20$ by default; the dev split
-sweeps it). Sessions that contribute to the baseline are never scored. Since flags rose
+of typing, from whatever sessions those were in ($M = 10$ by default; the dev split
+sweeps it), but never the student's last session, so that something is left to assess.
+A student whose baseline would cover less than three active minutes is not scored.
+Most pilot students typed well under 20 active minutes in total, so a longer baseline
+would leave almost nothing to assess. Sessions that contribute to the baseline are never scored. Since flags rose
 on a student's less usual device, the baseline can be kept per device class (lab-PC-like,
 personal-like, desktop app): a session is then scored against the student's baseline on
 the same class, and the dev split decides whether this helps. Device classes come from a
@@ -214,9 +217,36 @@ would slow every alarm. Fourth, sessions with an outside paste do not flag more 
 others, so copying is reported as its own signal (outside pastes, blocked pastes) rather
 than through the process channel. A minimum of 10 minutes of baseline typing reduces the
 drift (identity 1.27 to 0.76) but leaves a quarter of the sessions scorable. Same-device
-baselines changed nothing measurable yet. Both stay available, but they are off. The cost
-of $k=2$ on detection is measured on spliced takeovers (\cref{sec:splicing}) on dev before
-the configuration is frozen.
+baselines changed nothing measurable yet. Both stay available, but they are off.
+
+\paragraph{What quiet costs.} Measured on dev takeovers spliced from real sessions
+(\cref{sec:splicing}), the quiet configuration fails: with $k=2$ only 11\% of 45 splices
+are caught, against 64\% for the frozen configuration (\cref{tab:retune-splice}). Every
+step between the two trades false alarms for missed takeovers, and build order, which looked
+like noise from flag rates alone, carries part of the splice detection. The frozen
+configuration therefore stays live; the pilot fixes (own pastes, the 1\,ms floor) apply to
+every configuration.
+
+\begin{table}[ht]
+  \centering
+  \caption{False alarms against spliced takeovers on dev pilot data (90 honest sessions,
+    27.7 active hours, 45 splices; earliest 10 active minutes as baseline; 95\% student-bootstrap
+    intervals).}
+  \label{tab:retune-splice}
+  \small
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Configuration & False alarms/h & Takeovers caught & Median delay \\
+    \midrule
+    Frozen (build order; $k$ 1/0.5/0.5) & 1.59 [1.12, 2.06] & 64\% [49, 78] & 450\,s \\
+    Build order, $k=1$ & 0.87 [0.54, 1.21] & 49\% [33, 64] & 450\,s \\
+    No build order, frozen $k$ & 1.15 [0.78, 1.50] & 51\% [36, 65] & 450\,s \\
+    No build order, $k=1$ & 0.58 [0.34, 0.80] & 40\% [26, 55] & 585\,s \\
+    No build order, $k=1.5$ & 0.07 [0, 0.19] & 27\% [13, 40] & 660\,s \\
+    No build order, $k=2$ & 0.04 [0, 0.12] & 11\% [3, 20] & 1140\,s \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Evaluation protocol}
 \label{sec:protocol}
@@ -295,12 +325,14 @@ sample (moments mixed with unflagged windows) remains a possible extension.
     overstated and precision understated; splices may differ from real takeovers
     (\cref{sec:splicing}).
   \item \emph{Self-selected devices.} Device effects are compared within students only.
+  \item \emph{Little judgement of usefulness.} Only flags that teachers chose to discuss
+    say anything about whether a flag was worth raising (\cref{sec:teacher-review}).
   \item \emph{One institution, one term, two languages.} Results may not transfer to
     other courses or to typing in other languages.
   \item \emph{Teacher-chosen conversations.} Conversation outcomes exist only for moments a
     teacher chose to discuss, and what a student says in that conversation is not ground
     truth; they are reported as counts only (\cref{sec:teacher-review}).
-  \item \emph{Short baselines.} Median sessions are about five minutes, so 20 active
+  \item \emph{Short baselines.} Median sessions are about five minutes, so 10 active
     minutes may span several sessions and days; the dev split tests shorter and longer.
   \item \emph{Raw-key purge.} After 28 days only stored windows remain, so keystroke
     baselines can be compared only on recent sessions; run the analysis within that

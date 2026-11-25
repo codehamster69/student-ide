@@ -187,6 +187,7 @@
    "build order (fill_in_frac, open_blocks) left out of process",
    "CUSUM k = 2 on every channel (absorbs day-to-day drift: mean honest score 1.2-1.4, not 0)",
    "h kept: recalibrating on 10.7 active hours is too noisy (in-sample 0, other half 0.57/h)"
-  ]
+  ],
+  "status": "rejected 2026-11-25 on dev splices: takeovers caught 64% -> 11% (brain 2026-11-25-07); kept for the record"
  }
 }

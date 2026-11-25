@@ -285,6 +285,7 @@ function Legend() {
       {CHANNELS.map((ch) => <ChannelTag key={ch} channel={ch} />)}
       <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-4 rounded-sm border border-warn/60 bg-[repeating-linear-gradient(45deg,var(--warn-soft),var(--warn-soft)_2px,transparent_2px,transparent_4px)]" />moment to discuss</span>
       <span className="inline-flex items-center gap-1.5"><span className="inline-block size-2.5 rotate-45 rounded-[2px] bg-warn" />paste</span>
+      <span className="inline-flex items-center gap-1.5"><span className="inline-block size-2.5 rotate-45 rounded-[2px] border border-warn" />blocked paste</span>
       <span className="inline-flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-success" />run ok</span>
       <span className="inline-flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-danger" />run error</span>
     </div>
@@ -431,7 +432,8 @@ function Nearby({ review, t, onSeek }: { review: Review; t: number; onSeek: (t: 
   const items = useMemo(() => {
     const ev = review.events;
     return [
-      ...ev.pastes.map((p) => ({ t: p.t, kind: "paste" as const, text: `Pasted ${p.length} characters (${p.lines} line${p.lines > 1 ? "s" : ""})`, detail: p.preview })),
+      ...ev.pastes.map((p) => ({ t: p.t, kind: "paste" as const, detail: p.preview,
+        text: `${p.blocked ? "Tried to paste" : "Pasted"} ${p.length} characters (${p.lines} line${p.lines > 1 ? "s" : ""})${p.blocked ? " from outside, blocked" : ""}` })),
       ...ev.focus.map((f) => ({ t: f.t, kind: "away" as const, text: `Left the editor for ${clock(f.until - f.t)}`, detail: "" })),
       ...ev.runs.map((r) => ({ t: r.t, kind: r.error_type ? "err" as const : "run" as const, text: r.error_type ? `Ran the code: ${r.error_type}` : "Ran the code: no errors", detail: "" })),
     ].filter((x) => x.t <= t && x.t > t - 120).sort((a, b) => b.t - a.t).slice(0, 4);

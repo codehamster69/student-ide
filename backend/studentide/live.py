@@ -457,7 +457,8 @@ def _event_stats(db: Database, ids: list[str], now: float) -> dict[str, dict]:
     with db.connect() as conn:
         for r in conn.execute(f"""SELECT session_id, COUNT(*) AS n,
                                          MAX(CASE WHEN type = 'edit' THEN received_at END) AS last_edit,
-                                         SUM(type = 'clipboard' AND json_extract(data, '$.action') = 'paste') AS pastes
+                                         SUM(type = 'clipboard' AND json_extract(data, '$.action') = 'paste'
+                                             AND COALESCE(json_extract(data, '$.source'), 'external') = 'external') AS pastes
                                   FROM events WHERE session_id IN ({_marks(len(ids))}) GROUP BY session_id""", ids):
             out[r["session_id"]].update(n=r["n"], last_edit=r["last_edit"], pastes=r["pastes"] or 0)
         for r in conn.execute(f"""SELECT session_id, CAST((received_at - ?) / {BIN_S} AS INTEGER) AS b, COUNT(*) AS n

@@ -482,7 +482,8 @@ def main(argv=None) -> None:
     p.add_argument("--labels", type=Path, help="folder with sessions.csv / students.csv")
     p.add_argument("--classroom", action="store_true",
                    help="with --db: every study session, no labels; baselines from the earliest minutes, splices as switches")
-    p.add_argument("--baseline-min", type=float, default=20.0, help="--classroom: active minutes in a baseline")
+    p.add_argument("--baseline-min", type=float, default=10.0,
+                   help="--classroom: active minutes in a baseline (capped so a student's last session is scored)")
     p.add_argument("--by-device", action="store_true", help="--classroom: one baseline per student and device class")
     p.add_argument("--test-frac", type=float, default=0.3)
     p.add_argument("--target", type=float, default=0.2, help="false alarms per honest hour")

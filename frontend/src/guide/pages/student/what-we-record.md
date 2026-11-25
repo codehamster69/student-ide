@@ -13,7 +13,7 @@ While you work in the editor it records:
 
 - When each key is pressed and released (the timing, and which key).
 - Every edit to your code.
-- Anything you paste, copy or cut in the editor.
+- Anything you paste, copy or cut in the editor, including a paste from outside Scribelab that was turned away.
 - Each time you run your program, with its output.
 - When you switch away from the editor or the browser tab.
 

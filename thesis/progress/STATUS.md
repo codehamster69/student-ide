@@ -66,7 +66,7 @@ flowchart LR
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ✅ | #9 |
-| 4 Evaluation | Classroom mode: every study session, baseline = earliest 20 active minutes (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #63 |
+| 4 Evaluation | Classroom mode: every study session, baseline = earliest 10 active minutes (never the last session) (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #63 |
 | 4 Evaluation | Run on the classroom test split (once per frozen config) | ⬜ | |
 | 5 Deployment | Google sign-in limited to @iiitsurat.ac.in; roles from the address format, admin override (People page) | ✅ | #14 |
 | 5 Deployment | Raw keystrokes deleted after the 4-week baseline or 28 days, window summaries kept; erase a student on request | ✅ | #14 |
@@ -99,14 +99,14 @@ entry 2026-11-25-02.
 | Recording | 2-6 | Every lab and competition recorded on the live editor, lab PCs and own laptops; 1,118 sessions by 23 Nov | 🟧 |
 | Recording | 2-6 | Blocked outside pastes logged as a copying sign (paste guard) | 🟧 (#62) |
 | Design on dev | 3-7 | Spliced takeovers; split by student (30 %) and by week (from 24 Nov) | ✅ (#63) |
-| Design on dev | 3-7 | Detector re-tune on the dev split of pilot data: #64 proposal 6.8 → 0.28 flags/h (k = 2, no build order); splice check pending | 🟧 |
+| Design on dev | 3-7 | Detector re-tune on the dev split of pilot data: #64 fixes + trade-off curve; k = 2 rejected on splices (64% → 11% caught), frozen config kept | 🟧 |
 | Design on dev | 3-7 | Baseline length and device-aware baselines chosen on dev | ⬜ |
 | Held-out test | 8 | Score the test split once; RQ1 to RQ4 | ⬜ |
 | — | 8-12 | Write up RQ1 to RQ4 | ⬜ |
-| Optional | — | A teacher reviews about 30 flagged moments, blind (else future work) | ⬜ |
 
 Dropped on 2026-11-25: student survey, Phase 1 baseline labs, Phase 2 staged conditions A-E,
-Phase 3 mock remote interview (RQ3 is now transfer across devices).
+Phase 3 mock remote interview (RQ3 is now transfer across devices). No separate teacher review:
+flags are discussed as part of normal teaching when they need to be (Rohan).
 
 ## Thesis groundwork
 

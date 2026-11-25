@@ -146,3 +146,10 @@ def test_compare_scores_configs_at_their_own_operating_point(classroom, tmp_path
     assert out["dev_students"] == 4 and a["honest_sessions"] == 4
     assert b["fa_per_h"] <= a["fa_per_h"]  # a larger k can only remove alarms at the same h
     assert "takeover" in a and a["takeover"]["n"] == 4
+
+
+def test_long_baseline_still_leaves_the_last_session_to_score(classroom):
+    c = classroom_corpus(classroom, baseline_min=500, test_frac=0.0)
+    for st in c.students:
+        roles = [s.role for s in sorted(c.sessions, key=lambda s: s.order) if s.student == st]
+        assert roles == ["baseline", "test"]

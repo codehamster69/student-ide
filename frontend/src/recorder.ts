@@ -6,7 +6,7 @@
 
 import { desktop } from "./desktop";
 
-export const SCHEMA_VERSION = 3; // v2 and v3 are additive (Sandbox Labs); the server accepts 1, 2 and 3
+export const SCHEMA_VERSION = 4; // v2-v4 are additive (Sandbox Labs, paste guard); the server accepts 1 to 4
 const journal = desktop?.journal ?? null;
 const FLUSH_MS = journal ? 500 : 2000; // the journal is local disk: hand events over sooner
 const MAX_BATCH = 500;

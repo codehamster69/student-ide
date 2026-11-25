@@ -94,7 +94,8 @@ export interface Review {
   episodes: Episode[];
   windows: { start: number; end: number; active: boolean; n_keys: number }[];
   events: {
-    pastes: { t: number; length: number; lines: number; preview: string; truncated: boolean }[];
+    /** pastes from outside the IDE; blocked = refused by the paste guard (schema v4), nothing reached the code */
+    pastes: { t: number; length: number; lines: number; preview: string; truncated: boolean; blocked?: boolean }[];
     focus: { t: number; until: number; target: string }[];
     runs: { t: number; exit_code: number | null; error_type: string | null }[];
   };

@@ -84,6 +84,6 @@ fitted on them.
   move them into the harness for the test split.
 - The live review still builds baselines from the first four lab weeks
   (`BASELINE_DAYS`); aligning it with "earliest M minutes" is for the re-tune thread.
-- Ask a teacher for one hour of blind review of ~30 flags; otherwise RQ3/teacher
-  review stays future work.
+- Teacher review of flags: Rohan (same day) says no teacher would spare the hour, so
+  it is future work and ch 6 says so.
 - Appendix B: attach the written confirmation of the oral approval when it comes.
