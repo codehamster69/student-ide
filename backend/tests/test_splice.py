@@ -129,3 +129,20 @@ def test_harness_dev_then_test_on_classroom_data(tmp_path):
     harness_main(["dev", *args])
     harness_main(["test", *args])
     assert (tmp_path / "out/test-ledger.jsonl").read_text().count("\n") == 1
+
+
+def test_compare_scores_configs_at_their_own_operating_point(classroom, tmp_path):
+    import json
+    from pathlib import Path
+    from studentide.harness.run import main as harness_main
+    frozen = Path(__file__).resolve().parents[2] / "thesis/evaluation/frozen-config.json"
+    loose = json.loads(frozen.read_text())
+    loose["operating_point"]["k"] = {ch: 2.0 for ch in loose["operating_point"]["k"]}
+    (tmp_path / "k2.json").write_text(json.dumps(loose))
+    harness_main(["compare", "--db", str(classroom), "--classroom", "--baseline-min", "2", "--test-frac", "0",
+                  "--configs", str(frozen), str(tmp_path / "k2.json"), "--compare-out", str(tmp_path / "c.json")])
+    out = json.loads((tmp_path / "c.json").read_text())
+    a, b = out["configs"].values()
+    assert out["dev_students"] == 4 and a["honest_sessions"] == 4
+    assert b["fa_per_h"] <= a["fa_per_h"]  # a larger k can only remove alarms at the same h
+    assert "takeover" in a and a["takeover"]["n"] == 4
