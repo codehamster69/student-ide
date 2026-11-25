@@ -66,7 +66,7 @@ flowchart LR
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ✅ | #9 |
-| 4 Evaluation | Classroom mode: every study session, baseline = earliest 20 active minutes (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #63 |
+| 4 Evaluation | Classroom mode: every study session, baseline = earliest 10 active minutes (never the last session) (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #63 |
 | 4 Evaluation | Run on the classroom test split (once per frozen config) | ⬜ | |
 | 5 Deployment | Google sign-in limited to @iiitsurat.ac.in; roles from the address format, admin override (People page) | ✅ | #14 |
 | 5 Deployment | Raw keystrokes deleted after the 4-week baseline or 28 days, window summaries kept; erase a student on request | ✅ | #14 |

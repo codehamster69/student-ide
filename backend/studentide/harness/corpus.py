@@ -219,7 +219,8 @@ def db_corpus(db_path: Path, labels_dir: Path) -> Corpus:
 
 # ------------------------------------------------------------ naturalistic classroom data
 
-BASELINE_MIN = 20.0  # active typing minutes that make a student's baseline
+BASELINE_MIN = 10.0  # active typing minutes that make a student's baseline (pilot median total is short)
+MIN_BASELINE_MIN = 3.0  # below this a student is not scored
 
 
 def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_device: bool = False,
@@ -228,7 +229,9 @@ def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_devic
 
     All sessions are honest as far as anyone knows. A student's baseline is their
     earliest `baseline_min` active typing minutes (30 s windows with enough keys), from
-    whatever sessions those were in; the rest are scored. With `by_device`, each
+    whatever sessions those were in, but never their last session, so something is left
+    to score; the rest are scored. A student whose baseline would be under
+    MIN_BASELINE_MIN, or who has one usable session, is role "unscored". With `by_device`, each
     (student, device class) pair is its own "student" with its own baseline, and the
     split still hashes the person. Sessions with no active window are left out (role
     "idle") so empty tabs don't count as honest hours. Dev-hash students' sessions from
@@ -284,19 +287,34 @@ def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_devic
     side = assign({s.meta["person"] for s in sessions}, tf)
     used: dict[str, float] = {}
     order: dict[str, int] = {}
+    usable: dict[str, list[Session]] = {}
     for s in sessions:  # already in time order
         active = sum(w["active"] for w in c.windows(s, 30.0)) * 0.5  # minutes
         if side[s.meta["person"]] == "dev" and s.meta["started_at"] >= PILOT_TEST_FROM:
             s.role = "later"
         elif not active:
             s.role = "idle"
-        elif used.get(s.student, 0.0) < baseline_min:
-            s.role = "baseline"
-            used[s.student] = used.get(s.student, 0.0) + active
         else:
-            s.role = "test"
-        s.order = order[s.student] = order.get(s.student, -1) + 1
+            usable.setdefault(s.student, []).append(s)
         s.meta["active_min"] = active
+    # baseline: the shortest run of earliest sessions reaching baseline_min, but never the
+    # student's last session (something must be left to score); under MIN_BASELINE_MIN the
+    # student is not scored at all ("unscored")
+    for st, ss in usable.items():
+        n, tot = 0, 0.0
+        while n < len(ss) - 1 and tot < baseline_min:
+            tot += ss[n].meta["active_min"]
+            n += 1
+        if len(ss) == 1 or tot < MIN_BASELINE_MIN:
+            for s in ss:
+                s.role = "unscored"
+            continue
+        for i, s in enumerate(ss):
+            s.role = "baseline" if i < n else "test"
+        used[st] = tot
+    for s in sessions:
+        active = s.meta["active_min"]
+        s.order = order[s.student] = order.get(s.student, -1) + 1
         a = c.students.setdefault(s.student, {"person": s.meta["person"]})
         for k in ("device", "lang", "ctx"):
             a.setdefault(f"_{k}", {}).setdefault(s.meta[k], 0.0)

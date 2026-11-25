@@ -12,8 +12,8 @@ python -m studentide.harness dev  --thesis ../thesis/latex   # design + freeze, 
 python -m studentide.harness test --thesis ../thesis/latex   # report once, ~5 min
 
 # classroom data (a copy of the live database): spliced takeovers, no labels needed
-python -m studentide.harness dev  --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 20]
-python -m studentide.harness test --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 20] --thesis ../thesis/latex
+python -m studentide.harness dev  --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10]
+python -m studentide.harness test --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10] --thesis ../thesis/latex
 
 # staged recordings with a labels manifest (kept for completeness; the thesis no longer stages sessions)
 python -m studentide.harness dev  --db data/study.sqlite3 --labels data/labels/ --thesis ../thesis/latex
@@ -104,8 +104,11 @@ is known clean. `--classroom` builds the corpus like this:
   sessions (raw keys gone after 28 days) carry their stored windows (`Session.win`),
   so the thesis detector still scores them; scaled Manhattan and TypeNet-style need
   raw keys and only see recent sessions.
-- **Baseline.** A student's earliest `--baseline-min` (20) active minutes, from
-  whatever sessions those were in; those sessions are never scored. `--by-device`
+- **Baseline.** A student's earliest `--baseline-min` (10) active minutes, from
+  whatever sessions those were in, but never the student's last session (so something
+  is scored); a student with under 3 baseline minutes or one usable session is
+  `unscored`. Baseline sessions are never scored. (At 20 min the pilot dev split had
+  nothing left to score: most students type well under 20 active minutes in total.) `--by-device`
   keys each (student, device class) separately, the split still hashing the person.
   Device class comes from `pilot.device_fingerprint` / `device_class` (a fingerprint
   shared by 3+ students = lab-PC-like).

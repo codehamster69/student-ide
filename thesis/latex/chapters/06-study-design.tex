@@ -82,8 +82,11 @@ reported separately.
 \section{Baselines from the earliest minutes}
 \label{sec:baseline}
 Without baseline weeks, a student's baseline is simply their earliest $M$ active minutes
-of typing, from whatever sessions those were in ($M = 20$ by default; the dev split
-sweeps it). Sessions that contribute to the baseline are never scored. Since flags rose
+of typing, from whatever sessions those were in ($M = 10$ by default; the dev split
+sweeps it), but never the student's last session, so that something is left to assess.
+A student whose baseline would cover less than three active minutes is not scored.
+Most pilot students typed well under 20 active minutes in total, so a longer baseline
+would leave almost nothing to assess. Sessions that contribute to the baseline are never scored. Since flags rose
 on a student's less usual device, the baseline can be kept per device class (lab-PC-like,
 personal-like, desktop app): a session is then scored against the student's baseline on
 the same class, and the dev split decides whether this helps. Device classes come from a
@@ -237,7 +240,7 @@ assessed by its design (\cref{ch:system}).
     say anything about whether a flag was worth raising (\cref{sec:teacher-review}).
   \item \emph{One institution, one term, two languages.} Results may not transfer to
     other courses or to typing in other languages.
-  \item \emph{Short baselines.} Median sessions are about five minutes, so 20 active
+  \item \emph{Short baselines.} Median sessions are about five minutes, so 10 active
     minutes may span several sessions and days; the dev split tests shorter and longer.
   \item \emph{Raw-key purge.} After 28 days only stored windows remain, so keystroke
     baselines can be compared only on recent sessions; run the analysis within that
