@@ -1,6 +1,50 @@
 \chapter{Conclusion and Future Work}
 \label{ch:conclusion}
 \section{Conclusion}
+\label{sec:conclusion}
+This thesis asked whether a change of author partway through a programming
+session can be detected from how the code is written, against the student's own
+earlier work, without a camera and without watching the screen. To answer it, it
+built Scribelab, a lab editor that records key timing, edits with their origin,
+pastes, runs and focus; deployed it in real IIIT Surat classes, where it recorded
+1,118 sessions of 281 students in its first four weeks without losing events; and
+evaluated a per-student, two-stage detector (30-second window features scored
+against an early baseline, then CUSUM per channel) on that classroom data alone.
+
+Because no real session carries a label, the evaluation recovered what it could
+without staging anything: takeovers spliced from two real sessions at a known
+time, false alarms on real sessions as an upper bound, devices that students
+changed on their own as a natural experiment, and copying signs the editor
+records as weak labels, all under a split by student and by week that was fixed
+before the single held-out run.
+
+The answers are these. \RQ{1}: with thresholds calibrated on classroom data for
+0.2 false alarms per active hour, 31\% of spliced takeovers are caught (18--45\%,
+cross-fitted dev), a median of ten minutes after the switch, and the held-out
+split confirms the false-alarm rate (0.15 per hour); the live thresholds catch
+64\% at 1.59 false alarms per hour. Detection is possible, but slower and far
+noisier than on simulated typists, because honest classwork drifts from a short
+early baseline, and every setting that removes false alarms also removes
+detections. \RQ{2}: the process score agrees moderately with outside pastes (AUC
+0.71--0.74), typing measures do not, and most pastes are the student's own code,
+so copying is best evidenced directly by paste origin and blocked outside
+pastes. \RQ{3}: transfer between devices could not be measured with four
+students on both, but over time typing rhythm is stable while process features
+drift, and alarms grow with the time since the baseline. \RQ{4}: at realistic
+prevalences most flags are honest students (precision 5.4\% at 1 in 100, 1.1\%
+at 1 in 500), and at the live thresholds false alarms differ several-fold by
+operating system and by context.
+
+The central conclusion follows from the last answer. Process evidence can show a
+teacher where to look, and when in a session something changed, but it cannot
+decide whether a student cheated. Used as the system was designed, a flag starts
+a conversation about the code, and nothing more; used as evidence of misconduct,
+it would be wrong most of the time. Within that use, the thesis contributes an
+editor that captures the writing process with explicit consent and limited
+retention, a detector that estimates when authorship changed, a review timeline
+that shows the evidence rather than a verdict, and an evaluation method for
+behavioural detectors that needs no staged cheating and no ground truth.
+
 \section{Future work}
 
 \subsection{Sandbox Labs: a desktop client with local sandboxes}
