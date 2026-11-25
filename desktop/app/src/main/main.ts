@@ -106,7 +106,7 @@ async function load() {
 function createWindow() {
   win = new BrowserWindow({
     width: 1320, height: 860, minWidth: 900, minHeight: 600, show: false, title: "Student IDE",
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#111113" : "#f7f7f8",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0b0b0f" : "#f6f6f1", // --bg in frontend/src/ui/tokens.css
     autoHideMenuBar: true,
     webPreferences: prefs(),
   });
@@ -117,6 +117,20 @@ function createWindow() {
     if (isMain && code !== -3 && sameOrigin(url)) staticPage("offline.html", { reason: desc });
   });
   void load();
+}
+
+// The guide opens in its own window so a running lab session in the main window is never interrupted.
+let guideWin: BrowserWindow | null = null;
+function openGuide(page = "") {
+  const url = `${server()}/#/help${page}`;
+  if (guideWin) { void guideWin.loadURL(url); guideWin.show(); guideWin.focus(); return; }
+  guideWin = new BrowserWindow({
+    width: 1100, height: 800, minWidth: 600, minHeight: 500, title: "Student IDE guide",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0b0b0f" : "#f6f6f1",
+    autoHideMenuBar: true, webPreferences: prefs(),
+  });
+  guideWin.on("closed", () => { guideWin = null; });
+  void guideWin.loadURL(url);
 }
 
 function menu() {
@@ -130,6 +144,13 @@ function menu() {
       ...(devtools ? [{ role: "toggleDevTools" as const }] : []),
     ] },
     { role: "windowMenu" },
+    { role: "help", submenu: [
+      { label: "Student guide", click: () => openGuide("/student") },
+      { label: "Teacher guide", click: () => openGuide("/teacher") },
+      { label: "Keyboard shortcuts", accelerator: "F1", click: () => openGuide("/student/shortcuts") },
+      { type: "separator" },
+      { label: "Sandbox Labs on this computer", click: () => openGuide("/student/sandbox-labs") },
+    ] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

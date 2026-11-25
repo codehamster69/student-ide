@@ -36,6 +36,8 @@ server can refuse old shells (`STUDENTIDE_DESKTOP_MIN_VERSION`). Builds are not 
 | Version gate | Before loading, `GET /api/desktop/config`; below `min_version` it shows an update page with `download_url`. Where the app can update itself it downloads the new version on that page and restarts into it. |
 | Updates | `modules/updates.ts` (below). |
 | Offline | A local page with retry when the server can't be reached; work is on the server. `app.online` events tell the web app when the network drops (the 5-minute reconnect buffer of plan 4.3 builds on this). |
+| Help menu | Student guide, Teacher guide, Keyboard shortcuts (F1) and Sandbox Labs open the server's public guide (`#/help/…`, `frontend/src/guide/`) in a separate window, so a lab session in the main window is never interrupted. |
+| Look | The offline and update pages use the same tokens and logo as the web app (`frontend/src/ui/tokens.css`); the window background matches `--bg` so there is no flash on load. |
 | Device | A random install id, hashed (`app.info().deviceId`), so analysis can tell devices apart (RQ3) without machine identifiers. The web app records it in `sessions.client_meta.client`. |
 | Portable | `--portable` (or the portable .exe) keeps settings and cookies in `StudentIDE-data/` next to the app. `--server=<origin>` / `$STUDENTIDE_SERVER` point it at another server (https, or http on localhost). |
 
