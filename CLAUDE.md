@@ -35,6 +35,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `backend/studentide/harness/` phase 4 evaluation (dev/test split, baselines, LaTeX outputs)
 - `backend/studentide/providers/` question sources; `data/*.jsonl.gz` and `data/sets/` are bundled
 - `backend/studentide/learn/<lang>/` learning-lab lessons as Markdown files
+- `frontend/src/guide/` in-app student/teacher guides (`pages/<audience>/<slug>.md`) and the help centre; docs/guide.md
 - `backend/scripts/` one-off builders for bundled question data (`build_*.py`)
 - `backend/tests/` pytest, one file per feature
 - `frontend/src/` `recorder.ts` + `capture.ts` (framework-free event capture), `screens/` (student app),

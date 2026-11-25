@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { DesktopUpdate } from "./screens/DesktopUpdate";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { ArrowLeft, Eye } from "lucide-react";
@@ -24,12 +24,18 @@ type Screen =
   | { name: "tasks"; studentId: string }
   | { name: "arena"; studentId: string; labId: string }
   | { name: "learn"; studentId: string }
+  // the student guide (guide/), page by page
+  | { name: "guide"; studentId: string; slug?: string }
   // a Sandbox lab in the desktop app (its own instance, files and terminal; screens/SandboxLab.tsx)
   | { name: "sandbox"; studentId: string; labId: string }
   // One practice task or competition question, a whole lab sitting (tasks = its questions),
   // or a learning-lab track (tasks = its lessons; back to the learning lab when done).
   | { name: "session"; studentId: string; tasks: Task[]; start: number; session: LiveSession; sitting?: string; arena?: string; learn?: boolean }
   | { name: "saved"; studentId: string; summary: SessionSummary };
+
+// the guide is loaded on demand, like the teacher area, so the editor bundle stays small
+const GuideReader = lazy(() => import("./guide/GuideView").then((m) => ({ default: m.GuideReader })));
+const GuideIndex = lazy(() => import("./guide/GuideView").then((m) => ({ default: m.GuideIndex })));
 
 /** The teacher area's dev-mode token (review/api.ts), read here so the student bundle stays small. */
 const teacherToken = () => { try { return sessionStorage.getItem("studentide.review.token") ?? ""; } catch { return ""; } };
@@ -74,7 +80,7 @@ export function App() {
   // the signed-in student's top bar: My labs / Learning lab
   const tabs = (studentId: string, tab?: StudentTab) => ({
     tab,
-    onTab: (t: StudentTab) => setScreen(t === "learn" ? { name: "learn", studentId } : { name: "tasks", studentId }),
+    onTab: (t: StudentTab) => setScreen(t === "learn" ? { name: "learn", studentId } : t === "guide" ? { name: "guide", studentId } : { name: "tasks", studentId }),
   });
 
   let content;
@@ -168,6 +174,19 @@ export function App() {
             : screen.learn ? { name: "learn", studentId: screen.studentId }
             : { name: "saved", studentId: screen.studentId, summary })}
         />
+      );
+      break;
+    case "guide":
+      content = (
+        <Shell step={2} studentId={screen.studentId} onSignOut={signOut} {...tabs(screen.studentId, "guide")}>
+          <Suspense fallback={null}><div className="-mt-8 w-full">
+            {screen.slug
+              ? <GuideReader audience="student" slug={screen.slug} audiences={["student"]}
+                  nav={{ go: (_a, slug) => setScreen({ name: "guide", studentId: screen.studentId, slug }) }} />
+              : <GuideIndex audiences={["student"]}
+                  nav={{ go: (_a, slug) => setScreen({ name: "guide", studentId: screen.studentId, slug }) }} />}
+          </div></Suspense>
+        </Shell>
       );
       break;
     case "saved":

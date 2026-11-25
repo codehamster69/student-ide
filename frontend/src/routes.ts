@@ -19,6 +19,8 @@
  *   #/sandbox                        Sandbox Labs: my subjects    #/sandbox/subjects/<id>     one subject
  *   #/sandbox/labs/<id>              one sandbox lab              #/sandbox/library           shared labs
  *   #/sandbox/previews/<id>          Try as a student (a cloud preview instance)
+ *   #/guide                          the guide (help centre)      #/guide/<student|teacher>/<slug>  one guide page
+ *   #/help[/<student|teacher>/<slug>]  the same guide, public (no sign-in; main.tsx, guide/HelpPage.tsx)
  *
  * Older links (#/teach/l/<id>, #/teach/c/<id>, #/teach/similar/<id>, #/live/l/<id>,
  * #/live/s/<id>, #/review/l/<id>, #/review/s/<id>, #/review/all) still open the
@@ -31,9 +33,10 @@ export type Route =
   | { name: "live" } | { name: "live-lab"; id: string } | { name: "live-session"; id: string }
   | { name: "overview" } | { name: "review-lab"; id: string; day?: string } | { name: "review-all" } | { name: "session"; id: string }
   | { name: "sbx-subjects" } | { name: "sbx-subject"; id: string } | { name: "sbx-lab"; id: string } | { name: "sbx-library" }
-  | { name: "sbx-preview"; id: string };
+  | { name: "sbx-preview"; id: string }
+  | { name: "guide"; audience?: "student" | "teacher"; slug?: string };
 
-export type Area = "teach" | "live" | "review" | "sandbox";
+export type Area = "teach" | "live" | "review" | "sandbox" | "guide";
 
 const ID = "([A-Za-z0-9_-]+)";
 const DAY = "(\\d{4}-\\d{2}-\\d{2})";
@@ -59,6 +62,7 @@ const TABLE: [RegExp, (m: RegExpMatchArray) => Route][] = [
   [re(`sandbox/previews/${ID}`), (m) => ({ name: "sbx-preview", id: m[1] })],
   [re("sandbox/library"), () => ({ name: "sbx-library" })],
   [re("sandbox(?:/subjects)?"), () => ({ name: "sbx-subjects" })],
+  [re("guide(?:/(student|teacher)(?:/([\\w-]+))?)?"), (m) => ({ name: "guide", audience: m[1] as "student" | "teacher" | undefined, slug: m[2] })],
   // older links
   [re(`teach/l/${ID}`), (m) => ({ name: "lab", id: m[1] })],
   [re(`teach/c/${ID}`), (m) => ({ name: "board", id: m[1] })],
@@ -107,18 +111,20 @@ export function routeHash(r: Route): string {
     case "sbx-lab": return href.sbxLab(r.id);
     case "sbx-library": return href.sbxLibrary;
     case "sbx-preview": return href.sbxPreview(r.id);
+    case "guide": return href.guide(r.audience, r.slug);
   }
 }
 
 /** Rewrites an older link in the address bar to the current scheme, without a new history entry. */
 export function canonicalize(): void {
-  if (!/^#\/(teach|live|review|sandbox)/.test(location.hash)) return;
+  if (!/^#\/(teach|live|review|sandbox|guide)/.test(location.hash)) return;
   const want = routeHash(parseRoute());
   if (want !== location.hash.replace(/\/$/, "")) history.replaceState(null, "", want);
 }
 
 export function areaOf(r: Route): Area {
   if (r.name.startsWith("sbx-")) return "sandbox";
+  if (r.name === "guide") return "guide";
   if (r.name.startsWith("live")) return "live";
   if (r.name === "overview" || r.name.startsWith("review") || r.name === "session") return "review";
   return "teach";
@@ -152,6 +158,8 @@ export const href = {
   sbxLab: (id: string) => `#/sandbox/labs/${id}`,
   sbxLibrary: "#/sandbox/library",
   sbxPreview: (id: string) => `#/sandbox/previews/${id}`,
+  guide: (audience?: "student" | "teacher", slug?: string) => `#/guide${audience ? `/${audience}${slug ? `/${slug}` : ""}` : ""}`,
+  help: (audience?: "student" | "teacher", slug?: string) => `#/help${audience ? `/${audience}${slug ? `/${slug}` : ""}` : ""}`,
   download: "#/download",           // public desktop download page (screens/Download.tsx)
 } as const;
 
@@ -180,5 +188,8 @@ export function trail(r: Route): { label: string; href?: string }[] {
     case "sbx-lab": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Lab" }];
     case "sbx-library": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Library" }];
     case "sbx-preview": return [{ label: "Sandbox Labs", href: href.sandbox }, { label: "Try as a student" }];
+    case "guide": return r.audience
+      ? [{ label: "Guide", href: href.guide() }, { label: r.audience === "student" ? "Students" : "Teachers", href: href.guide(r.audience) }]
+      : [{ label: "Guide" }];
   }
 }

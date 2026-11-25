@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { Activity, BookOpen, Boxes, ListChecks, Eye, LogOut, MessagesSquare, Radio, Sparkles, Trophy, UsersRound } from "lucide-react";
+import { Activity, BookOpen, Boxes, ListChecks, Eye, LogOut, CircleHelp, LifeBuoy, MessagesSquare, Radio, Sparkles, Trophy, UsersRound } from "lucide-react";
 import { authConfig, currentUser, signOut as endGoogleSession, type AuthConfig, type Me } from "../auth";
-import { AppShell, Button, CommandPalette, Logo, SearchButton, page, useCommandPalette, type Command, type NavSection } from "../ui";
+import { AppShell, Button, CommandPalette, Logo, SearchButton, TopBarButton, page, useCommandPalette, type Command, type NavSection } from "../ui";
 import type { LabRow } from "../teach/api";
+import { findPage, pages as guidePages } from "../guide/content";
+import { GuideIndex, GuideReader } from "../guide/GuideView";
 import type { SubjectRow } from "../sandbox/api";
 import { Labs } from "../teach/Labs";
 import { LabEditor } from "../teach/LabEditor";
@@ -41,6 +43,7 @@ const SECTIONS = (admin: boolean, r: Route): NavSection[] => [
     // Roll Call, class groups, keys (and for admins every teacher's register)
     { href: href.setup, label: "Getting started", icon: Sparkles, active: r.name === "setup" },
     ...(admin ? [{ href: href.people, label: "People", icon: UsersRound, active: r.name === "people" }] : []),
+    { href: href.guide(), label: "Guide", icon: LifeBuoy, active: r.name === "guide" },
     { href: href.student, label: "View as student", icon: Eye, title: "Open the student side under your own account; nothing you do there is study data" },
   ] },
 ];
@@ -55,7 +58,28 @@ const PAGES: Command[] = [
   { id: "p-all", label: "Review: every session", group: "Pages", href: href.reviewAll, icon: Activity },
   { id: "p-setup", label: "Getting started", group: "Pages", href: href.setup, icon: Sparkles, keywords: "roll call attendance class groups setup" },
   { id: "p-stu", label: "View as student", group: "Pages", href: href.student, icon: Eye, keywords: "preview" },
+  { id: "p-guide", label: "Guide", group: "Pages", href: href.guide(), icon: LifeBuoy, keywords: "help docs how" },
+  ...(["teacher", "student"] as const).flatMap((a) => guidePages(a).map((p) => ({
+    id: `g-${a}-${p.slug}`, label: p.title, group: a === "teacher" ? "Teacher guide" : "Student guide", href: href.guide(a, p.slug),
+    icon: LifeBuoy, hint: p.summary, keywords: p.keywords.join(" "),
+  }))),
 ];
+
+/** The guide page that explains the page you are on (the "?" in the top bar). */
+function helpFor(r: Route): string {
+  switch (r.name) {
+    case "labs": case "lab": return "making-a-lab";
+    case "board": return "competitions";
+    case "similar": return "competitions";
+    case "subjects": case "subject": return "making-a-lab";
+    case "setup": return "getting-started";
+    case "people": return "admin";
+    case "live": case "live-lab": case "live-session": return "live-view";
+    case "overview": case "review-lab": case "review-all": case "session": return "review-timeline";
+    case "sbx-subjects": case "sbx-subject": case "sbx-lab": case "sbx-library": case "sbx-preview": return "sandbox-labs";
+    case "guide": return "";
+  }
+}
 
 async function loadCommands(): Promise<Command[]> {
   const [labs, subjects] = await Promise.all([
@@ -98,7 +122,7 @@ export function ReviewApp() {
   const teaching = areaOf(r) === "teach";
   const watching = areaOf(r) === "live";
   const palette = useCommandPalette();
-  useEffect(() => { document.title = `${watching ? "Live" : teaching ? "Labs" : "Review"} · Student IDE`; }, [teaching, watching]);
+  useEffect(() => { document.title = `${r.name === "guide" ? "Guide" : watching ? "Live" : teaching ? "Labs" : areaOf(r) === "sandbox" ? "Sandbox Labs" : "Review"} · Student IDE`; }, [r, teaching, watching]);
 
   const signOut = () => {
     token.clear();
@@ -140,6 +164,8 @@ export function ReviewApp() {
     <Subject slug={r.slug} onAuthLost={signOut} />
   ) : r.name === "setup" ? (
     <Setup me={me} onAuthLost={signOut} />
+  ) : r.name === "guide" ? (
+    r.audience ? <GuideReader audience={r.audience} slug={r.slug} nav={{ href: href.guide }} /> : <GuideIndex nav={{ href: href.guide }} />
   ) : r.name === "labs" ? (
     <Labs onAuthLost={signOut} />
   ) : r.name === "review-lab" ? (
@@ -176,9 +202,14 @@ export function ReviewApp() {
         home={href.labs}
         subtitle="Teacher area"
         nav={SECTIONS(me?.role === "admin", r)}
-        trail={trail(r)}
+        trail={r.name === "guide" && r.audience && r.slug ? [...trail(r), { label: findPage(r.audience, r.slug)?.title ?? "Page" }] : trail(r)}
         actions={<>
           <SearchButton onClick={() => palette.setOpen(true)} />
+          {helpFor(r) && (
+            <TopBarButton label="Help for this page" href={r.name === "lab" && r.view ? href.guide("teacher", "attendance") : href.guide("teacher", helpFor(r))}>
+              <CircleHelp className="size-4" /><span className="hidden xl:inline">Help</span>
+            </TopBarButton>
+          )}
           <HeaderRollCall />
         </>}
         footer={<>
