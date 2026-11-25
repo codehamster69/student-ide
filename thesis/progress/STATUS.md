@@ -103,10 +103,10 @@ entry 2026-11-25-02.
 | Design on dev | 3-7 | Baseline length and device-aware baselines chosen on dev | ⬜ |
 | Held-out test | 8 | Score the test split once; RQ1 to RQ4 | ⬜ |
 | — | 8-12 | Write up RQ1 to RQ4 | ⬜ |
-| Optional | — | A teacher reviews about 30 flagged moments, blind (else future work) | ⬜ |
 
 Dropped on 2026-11-25: student survey, Phase 1 baseline labs, Phase 2 staged conditions A-E,
-Phase 3 mock remote interview (RQ3 is now transfer across devices).
+Phase 3 mock remote interview (RQ3 is now transfer across devices). Teacher review of flags is
+future work: no teacher is asked for extra time (Rohan).
 
 ## Thesis groundwork
 
