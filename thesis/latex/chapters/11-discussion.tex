@@ -93,10 +93,13 @@ to 11\% at 0.04, and recalibrating $h$ on classroom data for 0.2 per hour lands
 at 31\%. The quiet configuration that looked best from flag rates alone
 hid the takeovers along with the drift. The thesis therefore reports the whole
 trade-off curve rather than a single tuned point, and the choice of operating
-point is left to the people who will act on the flags. For a tool whose flags
-lead only to a conversation, the live system kept the earlier thresholds (more
-flags, more takeovers caught); the evaluation reports the classroom-calibrated
-point because its false-alarm rate was fixed before the held-out run.
+point is left to the people who will act on the flags. Because a flag only starts a conversation, the live system deliberately keeps
+the earlier, higher-recall thresholds (64\% caught at 1.59 false alarms per
+hour) rather than the classroom-calibrated ones (31\% at 0.22;
+\cref{sec:operating-point}): a teacher can dismiss an extra moment in seconds,
+but a missed takeover is never discussed at all. The evaluation reports the
+classroom-calibrated point as its headline because that false-alarm rate was
+fixed before the held-out run, and reports the live point next to it.
 
 \subsection{Which signals carry the evidence}
 Three channels contribute differently. The rhythm-based identity channel behaves
