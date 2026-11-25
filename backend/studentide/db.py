@@ -153,6 +153,20 @@ CREATE TABLE IF NOT EXISTS checks (
     results_json  TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS checks_by_session ON checks(session_id, created_at);
+
+-- What came of the conversation about a review moment, noted by staff afterwards
+-- (docs/review.md, "Conversation outcomes"). Staff-only: no student endpoint reads it,
+-- and the detector never does (it reads events only). A moment is its session, channel
+-- and estimated start (the episode's switch_est, rounded to 0.1 s).
+CREATE TABLE IF NOT EXISTS moment_outcomes (
+    session_id  TEXT NOT NULL REFERENCES sessions(id),
+    channel     TEXT NOT NULL,
+    start_s     REAL NOT NULL,
+    outcome     TEXT NOT NULL,
+    noted_by    TEXT,
+    noted_at    REAL NOT NULL,
+    PRIMARY KEY (session_id, channel, start_s)
+);
 """
 
 # Columns added after phase 1. Older database files get them on open.
@@ -486,10 +500,32 @@ class Database:
                 return 0
             have = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             marks = ",".join("?" * len(ids))
-            for table in ("events", "runs", "checks", "session_windows", "submissions"):
+            for table in ("events", "runs", "checks", "session_windows", "submissions", "moment_outcomes"):
                 if table in have:
                     conn.execute(f"DELETE FROM {table} WHERE session_id IN ({marks})", ids)
             return conn.execute(f"DELETE FROM sessions WHERE id IN ({marks})", ids).rowcount
+
+    # conversation outcomes (staff-only notes on review moments) --------------
+
+    def moment_outcomes(self, session_id: str) -> list[dict]:
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT channel, start_s, outcome, noted_by, noted_at FROM moment_outcomes WHERE session_id = ?",
+                (session_id,))]
+
+    def set_moment_outcome(self, session_id: str, channel: str, start_s: float, outcome: str | None,
+                           noted_by: str | None = None) -> None:
+        """Note (or with outcome None, clear) what came of the conversation about one moment."""
+        key = (session_id, channel, round(start_s, 1))
+        with self.connect() as conn:
+            if outcome is None:
+                conn.execute("DELETE FROM moment_outcomes WHERE session_id = ? AND channel = ? AND start_s = ?", key)
+            else:
+                conn.execute("""INSERT INTO moment_outcomes(session_id, channel, start_s, outcome, noted_by, noted_at)
+                                VALUES (?,?,?,?,?,?) ON CONFLICT(session_id, channel, start_s)
+                                DO UPDATE SET outcome = excluded.outcome, noted_by = excluded.noted_by,
+                                              noted_at = excluded.noted_at""",
+                             (*key, outcome, noted_by, time.time()))
 
     def lab_roster(self, lab_id: str) -> list[str]:
         with self.connect() as conn:

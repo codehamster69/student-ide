@@ -49,6 +49,8 @@ Review timeline (phase 3, same access):
     GET  /api/review/sessions[?student_id=&lab_id=]   per-session summary + flags (lab_id=practice: outside labs)
     GET  /api/review/sessions/{id}            evidence timeline
     GET  /api/review/sessions/{id}/replay     edits + key times to rebuild the code
+    PUT  /api/review/sessions/{id}/outcome    {channel, start_s, outcome|null}: what came of the conversation
+                                              about a moment (staff-only note; the detector never reads it)
 
 Learning lab (always open, never reviewed; see learn.py):
     GET  /api/learn[?student_id=]                  tracks and lessons, with the student's progress
@@ -94,7 +96,7 @@ from . import (attendance, batches, compete, desktop, desktop_updates, grading, 
 from .auth import Auth, Config
 from .db import CONSENT_VERSION, SANDBOX_CONSENT_VERSION, Database, has_consent, has_sandbox_consent
 from .providers import PROVIDERS, ProviderError
-from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, Reviewer, replay_data
+from .review import BASELINE_DAYS, CHANNEL_INFO, MIN_BASELINE, OUTCOMES, Reviewer, replay_data
 from .replay import ReplayError, final_text
 from .schema import SCHEMA_VERSION, SUPPORTED_VERSIONS, Event
 
@@ -116,6 +118,12 @@ class FrontendFiles(StaticFiles):
             hashed = path.replace("\\", "/").startswith("assets/")
             resp.headers["Cache-Control"] = "public, max-age=31536000, immutable" if hashed else "no-cache"
         return resp
+
+
+class OutcomeIn(BaseModel):
+    channel: str
+    start_s: float
+    outcome: str | None = None
 
 
 class LoginIn(BaseModel):
@@ -496,7 +504,8 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
         return {"h": reviewer.h, "window_s": reviewer.window_s, "baseline_days": BASELINE_DAYS,
                 "min_baseline": MIN_BASELINE, "config_source": st.source, "prior_n": st.prior_n,
                 "channels": {ch: {"label": l, "about": a, "window_s": st.window_s[ch], "k": st.k[ch]}
-                             for ch, (l, a) in CHANNEL_INFO.items() if ch in st.channels}}
+                             for ch, (l, a) in CHANNEL_INFO.items() if ch in st.channels},
+                "outcomes": OUTCOMES}
 
     @app.get("/api/review/students", dependencies=[Depends(require_admin)])
     def review_students(request: Request) -> list[dict]:
@@ -562,6 +571,17 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
     def review_replay(session_id: str, request: Request) -> dict:
         teacher_session(session_id, request)
         return replay_data(db, session_id)
+
+    @app.put("/api/review/sessions/{session_id}/outcome", dependencies=[Depends(require_admin)])
+    def review_outcome(session_id: str, body: OutcomeIn, request: Request) -> dict:
+        """Note what came of the conversation about one moment; outcome null clears it."""
+        teacher_session(session_id, request)
+        if body.channel not in CHANNEL_INFO:
+            raise HTTPException(422, f"unknown channel {body.channel!r}")
+        if body.outcome is not None and body.outcome not in OUTCOMES:
+            raise HTTPException(422, f"outcome must be one of {sorted(OUTCOMES)} or null")
+        db.set_moment_outcome(session_id, body.channel, body.start_s, body.outcome, auth.teacher(request).email)
+        return {"channel": body.channel, "start_s": round(body.start_s, 1), "outcome": body.outcome}
 
     @app.get("/api/review/sessions/{session_id}/sandbox", dependencies=[Depends(require_admin)])
     def review_sandbox(session_id: str, request: Request) -> dict:

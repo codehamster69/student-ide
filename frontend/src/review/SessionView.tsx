@@ -6,7 +6,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { Badge, Button, Card, Page, PageHeader, RhythmBars, cn, pop, spring } from "../ui";
-import { AuthError, CHANNELS, get, type Episode, type ReplayData, type Review, type SandboxLanes as Lanes } from "./api";
+import { AuthError, CHANNELS, get, OUTCOMES, send, type Episode, type Outcome, type ReplayData, type Review, type SandboxLanes as Lanes } from "./api";
 import { SandboxLanes } from "./SandboxLanes";
 import { CH_CHANGED, CH_COLOR, ChannelTag, Skeleton } from "./bits";
 import { CodeReplay, type ReplayLanguage } from "./CodeReplay";
@@ -46,6 +46,18 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
       .catch((e) => (e instanceof AuthError ? onAuthLost() : setError(e.message)));
     get<Lanes>(`/api/review/sessions/${id}/sandbox`).then(setLanes).catch(() => setLanes(null));
   }, [id, onAuthLost]);
+
+  // what came of the conversation about a moment: shown at once, undone if the save fails
+  const noteOutcome = (i: number, outcome: Outcome | null) => {
+    if (!review) return;
+    const ep = review.episodes[i];
+    const put = (o: Outcome | null) =>
+      setReview((r) => r && { ...r, episodes: r.episodes.map((e, k) => (k === i ? { ...e, outcome: o } : e)) });
+    const was = ep.outcome;
+    put(outcome);
+    send(`PUT`, `/api/review/sessions/${id}/outcome`, { channel: ep.channel, start_s: ep.switch_est, outcome })
+      .catch((e) => { put(was); if (e instanceof AuthError) onAuthLost(); });
+  };
 
   const pickFile = (i: number) => { setFileIx(i); setReplay(files[i].r); };
 
@@ -216,7 +228,8 @@ export function SessionView({ id, onAuthLost }: { id: string; onAuthLost: () => 
           {eps.length === 0 && <p className="-mt-2 text-sm text-muted">No moment crossed the threshold in this session.</p>}
           {eps.map((ep, i) => (
             <MomentCard key={i} ep={ep} index={i} active={focusEp === i} onHover={setFocusEp}
-              onJump={() => { setPlaying(false); setT(Math.max(0, ep.switch_est - 15)); }} />
+              onJump={() => { setPlaying(false); setT(Math.max(0, ep.switch_est - 15)); }}
+              onOutcome={(o) => noteOutcome(i, o)} />
           ))}
           {s.phase === "assessed" && review.baseline.status === "ready" && <Guide eps={eps} />}
           <ChannelsExplained review={review} />
@@ -278,7 +291,10 @@ function Legend() {
   );
 }
 
-function MomentCard({ ep, index, active, onHover, onJump }: { ep: Episode; index: number; active: boolean; onHover: (i: number | null) => void; onJump: () => void }) {
+function MomentCard({ ep, index, active, onHover, onJump, onOutcome }: {
+  ep: Episode; index: number; active: boolean; onHover: (i: number | null) => void; onJump: () => void;
+  onOutcome: (o: Outcome | null) => void;
+}) {
   return (
     <Card onPointerEnter={() => onHover(index)} onPointerLeave={() => onHover(null)}
       className={cn("p-4 transition-[box-shadow,border-color] duration-200", active && "border-warn/60 ring-1 ring-warn/40")}>
@@ -303,7 +319,34 @@ function MomentCard({ ep, index, active, onHover, onJump }: { ep: Episode; index
       <Button size="sm" variant="secondary" className="mt-3" onClick={onJump}>
         <RunIcon className="size-3.5" /> Replay from {clock(Math.max(0, ep.switch_est - 15))}
       </Button>
+      <OutcomePicker value={ep.outcome} onChange={onOutcome} />
     </Card>
+  );
+}
+
+/** One tap after the conversation; tap the chosen one again to clear it. Border-first:
+ *  the choice is an accent border and accent text, never a fill. Staff-only. */
+function OutcomePicker({ value, onChange }: { value: Outcome | null; onChange: (o: Outcome | null) => void }) {
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <p className="text-xs font-medium text-muted">After talking with the student</p>
+      <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label="What came of the conversation">
+        {OUTCOMES.map((o) => {
+          const on = value === o.id;
+          return (
+            <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => onChange(on ? null : o.id)}
+              className={cn("min-h-8 rounded-lg border px-2.5 text-[13px] font-medium outline-none",
+                "transition-[border-color,color,transform,box-shadow] duration-150 ease-out motion-reduce:transition-none",
+                "hover:-translate-y-px focus-visible:-translate-y-px motion-reduce:hover:translate-y-0",
+                on ? "border-accent text-accent"
+                  : "border-transparent text-muted hover:border-border-strong hover:text-text focus-visible:border-border-strong focus-visible:text-text")}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[11.5px] text-faint">Only staff see this. It records the conversation, not a verdict.</p>
+    </div>
   );
 }
 

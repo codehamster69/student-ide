@@ -2,7 +2,7 @@
 title: Review timeline
 summary: How to read a session's timeline: baselines, the three channels, moments worth a conversation, evidence and code replay.
 order: 6
-keywords: [review, timeline, moments, evidence, baseline, channels, typing rhythm, key-pair, way of working, flag, conversation, replay, cusum]
+keywords: [review, timeline, moments, evidence, baseline, channels, typing rhythm, key-pair, way of working, flag, conversation, outcome, after the conversation, replay, cusum]
 ---
 
 **A highlighted moment is a reason for a conversation, never a penalty.** It is not proof of anything, and no mark follows from the screen. Habits change for ordinary reasons: tiredness, a hard problem, a new keyboard, an injury.
@@ -34,6 +34,10 @@ Consecutive alarms are merged into one **moment** with an estimated start and en
 Other things on the timeline: pastes, runs that worked or failed, and focus changes. The **code replay** rebuilds the code at any point from the recorded edits.
 
 The banner at the top says one of: *Not scored yet*, *Baseline week*, *Nothing stood out*, or *N moments worth a conversation*.
+
+## After the conversation
+
+Under each moment, **After talking with the student** takes one tap: *Explained, own work*, *Had help*, *Copied* or *Not discussed*. Tap it again to clear it. Only staff see it, students never do, and it does not change anything the detector shows. It records how the conversation went, not a verdict. Across the class these notes are counted, without names, for the research.
 
 ## Competition sessions
 

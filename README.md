@@ -39,7 +39,7 @@ detector, evaluation harness and thesis sources live in this repository too.
 |-------|--------|
 | 1. Event-logging editor | done |
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
-| 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
+| 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md); staff-only one-tap conversation outcome per moment |
 | 4. Evaluation harness | done on synthetic data; classroom mode with spliced takeovers (no staging, no labels), see [docs/evaluation.md](docs/evaluation.md) |
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
 | Pilot data statistics | aggregates-only, pseudonymous report of live recordings (data quality, devices, copying signs, detector flag rates); see [docs/pilot-data.md](docs/pilot-data.md). Dev-only detector re-tune (`pilot_tune`): own in-IDE pastes discounted, build order off, k = 2 proposal |

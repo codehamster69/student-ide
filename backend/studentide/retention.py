@@ -147,7 +147,7 @@ def erase_student(db: Database, student_id: str) -> dict[str, int]:
         have = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         ids = [r[0] for r in conn.execute("SELECT id FROM sessions WHERE student_id = ?", (student_id,))]
         marks = ",".join("?" * len(ids))
-        for table in ("events", "runs", "checks", "session_windows", "submissions"):
+        for table in ("events", "runs", "checks", "session_windows", "submissions", "moment_outcomes"):
             if table in have and ids:
                 n[table] = conn.execute(f"DELETE FROM {table} WHERE session_id IN ({marks})", ids).rowcount
         n["sessions"] = conn.execute("DELETE FROM sessions WHERE student_id = ?", (student_id,)).rowcount
