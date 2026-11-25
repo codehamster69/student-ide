@@ -166,6 +166,21 @@ def freeze(a):
            "deployed": metrics(fixed_outcomes(runs, corpus, dep["k"], dep["h"]))}
     log(f"  dev at target: {json.dumps(dev['at_target'], default=float)[:400]}")
 
+    speeds = [corpus.students[s].get("speed_kpm") for s in dev_s if corpus.students[s].get("speed_kpm")]
+    cuts = [float(x) for x in np.percentile(speeds, [100 / 3, 200 / 3])] if len(speeds) >= 6 else []
+    # the larger, cross-fitted dev sample for RQ4 subgroups and the baseline comparison
+    # (each fold's h from the other folds' students; the test split stays untouched)
+    dev["subgroups"] = subgroups(outcomes(runs, corpus, source, T), cuts)
+    dev["subgroups_deployed"] = subgroups(fixed_outcomes(runs, corpus, dep["k"], dep["h"]), cuts)
+    dev["methods"] = {}
+    for key, sp in base["methods"].items():
+        if key == "thesis":
+            continue
+        log(f"  dev cross-fit {key} ...")
+        rm = cv_runs(lambda sp=sp: R.make(sp), corpus, dev_s)
+        kk = _k(key, sp, rm[0].method)
+        dev["methods"][key] = {"metrics": metrics(outcomes(rm, corpus, source, T, kk, sp["rule"])),
+                               "curve": curve(rm, corpus, TARGETS, source, kk, sp["rule"])}
     ops = {}
     for key, sp in base["methods"].items():
         m = R.make(sp)
@@ -178,8 +193,6 @@ def freeze(a):
         if key == "thesis":
             ops[key]["pair_vocab"] = m.vocab
         log(f"  {key}: h {ops[key]['h']}")
-    speeds = [corpus.students[s].get("speed_kpm") for s in dev_s if corpus.students[s].get("speed_kpm")]
-    cuts = [float(x) for x in np.percentile(speeds, [100 / 3, 200 / 3])] if len(speeds) >= 6 else []
     desc = describe(corpus)
     fz = {"created": time.strftime("%Y-%m-%d"), "kind": "classroom", "corpus": desc,
           "base_config": {"file": Path(base_path).name, "hash": config_hash({k: v for k, v in base.items() if k != "created"})},
