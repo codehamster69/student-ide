@@ -92,6 +92,22 @@ whether a device change makes a takeover easier to see.
 
 \input{tables/cls-dev-methods}
 
+\subsection{Which operating point runs in class}
+\label{sec:operating-point}
+Two operating points are now measured on the same real sessions (\cref{tab:cls-dev-methods}):
+the thresholds calibrated on classroom dev data (31\% of takeovers caught at 0.22 false alarms
+per active hour, 6\% of sessions flagged) and the thresholds calibrated on simulated typists
+that the site already used (64\% at 1.59 per hour, 29\% of sessions flagged). The live site
+keeps the second (Rohan, 25 November 2026). The reason is the design rule of
+\cref{ch:problem}: a flag only marks a moment for the teacher to talk about, never a finding,
+so a missed takeover costs more than a conversation that turns out to be about honest work.
+Favouring recall doubles the takeovers caught and shortens the delay from 10 to 7.5 minutes.
+The price is also measured: about 45 honest sessions flagged per real one at a 1-in-100
+cheating rate instead of 18 (\cref{ch:rq4}), and flags concentrated in Python lab sessions and
+on Windows machines (\cref{tab:cls-subgroups-deployed}). The calibrated thresholds stay in
+\texttt{classroom-frozen-config.json} as the alternative for a setting where false alarms
+weigh more, for example if flags were ever shown to anyone but the teacher.
+
 \paragraph{What the splices leave out.} $B$ continues their own code, so build order and
 the absence of a reading pause favour the process channel (\cref{sec:splicing}); its small
 contribution at real-data thresholds means this bias barely touches the headline. Real
