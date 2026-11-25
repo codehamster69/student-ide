@@ -171,3 +171,8 @@ or export everything to JSONL: `python -m studentide.export --db data/studentide
   baseline weeks end, any session after `STUDENTIDE_RAW_KEY_DAYS`, default 28) after the
   detector's window features are stored in `session_windows`; the session is stamped
   `keys_purged_at`. See `backend/studentide/retention.py` and [deploy.md](deploy.md).
+- Not an event: after a conversation about a review moment, staff may note its outcome in
+  the `moment_outcomes` table (session, channel, moment start, one of `own_work`,
+  `had_help`, `copied`, `not_discussed`, who and when). It is staff-only, never part of a
+  session's event stream, never read by the detector, and no student endpoint returns it;
+  so no `SCHEMA_VERSION` change. See [review.md](review.md#conversation-outcomes).

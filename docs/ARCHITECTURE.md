@@ -63,7 +63,9 @@ Run/Check go through `runner.py` (or `STUDENTIDE_RUNNER_URL`) and are stored in 
 builds windowed habit features (skipping `reset` edits) → `detector/detector.py` scores them
 against the student's baseline with the config frozen in `thesis/evaluation/frozen-config.json`
 → the review timeline (`frontend/src/review/`) shows alarms with evidence and code replay.
-Sessions with context `learn` or `preview` never become study data.
+Sessions with context `learn` or `preview` never become study data. Staff notes on how a
+conversation about a moment went (`moment_outcomes`) are attached for display only and
+never feed the detector.
 
 **3. Evaluation.** `harness dev` builds a corpus (synthetic, classroom `--db … --classroom`, or recorded `--db` + labels),
 tunes on dev students and freezes the config; `harness test` scores held-out students once,

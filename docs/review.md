@@ -28,6 +28,7 @@ Screenshots for the thesis: `BASE=http://127.0.0.1:8000 TOKEN=change-me node fro
 | evidence for a session (channels, moments, events) | `backend/studentide/review.py` (`Reviewer`) |
 | replay data (initial text, edits, key times) | `review.replay_data` |
 | API (admin token) | `/api/review/{config,labs,students,sessions,sessions/{id},sessions/{id}/replay}`; teachers see only their own labs (see `docs/teaching.md`) in `app.py` |
+| conversation outcomes | `PUT /api/review/sessions/{id}/outcome`, table `moment_outcomes` (`db.py`), `review.attach_outcomes`, `pilot.outcome_counts` |
 | demo data | `backend/studentide/seed.py` |
 | screens | `frontend/src/review/` (lazy-loaded at `#/review`) |
 
@@ -67,6 +68,39 @@ Screenshots for the thesis: `BASE=http://127.0.0.1:8000 TOKEN=change-me node fro
   count, and warmed in a background thread at start-up when the token is
   set (36 demo sessions take ~6 s cold).
 
+## Conversation outcomes
+
+Teachers talk through review moments with students as part of teaching. After
+that conversation, each moment card takes an optional one-tap note of how it
+went: **Explained, own work**, **Had help**, **Copied** or **Not discussed**.
+Tapping the chosen one again clears it.
+
+- **Stored per moment**: table `moment_outcomes`, keyed by session, channel
+  and the moment's estimated start (`switch_est`, rounded to 0.1 s), with who
+  noted it and when. `GET /api/review/sessions/{id}` puts it on each moment as
+  `outcome` (or null); notes whose moment is no longer shown (the detector
+  config changed since) come back in `other_outcomes` rather than vanishing.
+  `PUT /api/review/sessions/{id}/outcome` `{channel, start_s, outcome}` writes
+  one (`outcome: null` clears it), with the same lab check as the timeline.
+- **Staff-only**: only the review endpoints (teacher account or admin token)
+  read or write it; nothing a student can call returns it, and the card says
+  "Only staff see this".
+- **Never detector input**: the detector reads events only, so a note cannot
+  change any score, moment or threshold (`tests/test_outcomes.py` checks the
+  timeline is identical before and after a note). Erasing a student, or a
+  teacher's preview session, deletes its notes too.
+- **For the thesis, descriptive only**: `python -m studentide.pilot` adds
+  `outcomes` to its report, counts by outcome and by channel × outcome on the
+  shared dev split (`harness.split.pilot_split`), plus how many notes were
+  held out. `--summary REPORT --thesis ../thesis/latex` writes
+  `tables/teacher-outcomes.tex`. These are what teachers recorded after a
+  conversation, not labels of cheating, and the thesis reports them that way.
+- **Consent**: the consent screen and the student guide say that after a conversation the
+  instructor may note how it went, staff-only, never a mark, reported only as class-wide counts.
+  Added without a `CONSENT_VERSION` bump (Rohan, 2026-11-25): it describes what follows a
+  conversation the text already promised; teachers mention it in class.
+- Browser check and screenshot: `BASE=… TOKEN=… node frontend/e2e/review-outcomes.mjs [thesis/latex/snapshots/review] [light|dark]`.
+
 ## Sandbox Lab sessions
 
 Sandbox Labs appear in the Review tab's lab list (a box icon) for their subject's owner, teachers and
@@ -92,5 +126,7 @@ Same wording rule: something to ask about, not a verdict.
 - Every moment carries suggested questions and the reminder that habits
   change for ordinary reasons (tiredness, a hard problem, a new keyboard,
   an injury) and that no mark follows from the screen.
+- The outcome note words what happened in the conversation ("Had help"),
+  never a verdict, and says it records the conversation, not a verdict.
 - Simulated ground truth appears only for seeded sessions and only when the
   reviewer turns it on.

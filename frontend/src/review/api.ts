@@ -37,7 +37,19 @@ export interface Episode {
   last_alarm: number;
   n_alarms: number;
   evidence: Evidence[];
+  /** what came of the conversation, noted by staff afterwards (null = nothing noted) */
+  outcome: Outcome | null;
 }
+
+/** Staff-only note after talking with the student about a moment. Never shown to
+ *  students and never read by the detector (docs/review.md, "Conversation outcomes"). */
+export type Outcome = "own_work" | "had_help" | "copied" | "not_discussed";
+export const OUTCOMES: { id: Outcome; label: string }[] = [
+  { id: "own_work", label: "Explained, own work" },
+  { id: "had_help", label: "Had help" },
+  { id: "copied", label: "Copied" },
+  { id: "not_discussed", label: "Not discussed" },
+];
 
 export interface Evidence {
   feature: string;

@@ -288,18 +288,36 @@ precision. All intervals are 95\% percentile intervals from resampling students.
   \label{fig:harness}
 \end{figure}
 
-\section{Flags in teaching}
+\section{Teacher review and conversation outcomes}
 \label{sec:teacher-review}
-No teacher is asked for extra time to review flags for the study. A flag is discussed when
-it needs to be, as part of ordinary teaching: the teacher opens the evidence timeline and
-talks with the student, and the flag leads to nothing else. The study does not stage or
-script these conversations. After one, the teacher can note its outcome with one tap on
-the moment (explained, own work; had help; copied; not discussed). These notes are
-reported descriptively, by channel and context, as evidence of whether moments were worth
-raising. They are not labels of cheating: a teacher's judgement after a short conversation
-is itself uncertain, students who were never flagged are never asked, and the notes are
-never used to tune the detector. Where no outcome is noted, the review interface is
-assessed by its design (\cref{ch:system}).
+A moment on the review timeline is meant to start a conversation, and teachers hold
+those conversations anyway as part of teaching. After one, the teacher can note its
+outcome on the moment with one tap: \emph{explained, own work}, \emph{had help},
+\emph{copied} or \emph{not discussed} (\cref{fig:review-outcome}). This adds no
+procedure for students: nothing is staged and nobody is interviewed for the study.
+
+The notes are staff-only and never feed the detector, so they cannot leak into the
+features, thresholds or splits that \cref{sec:splicing} evaluates. The thesis reports
+them descriptively, as counts by outcome and by channel on the dev split
+(\texttt{pilot.outcome\_counts}, the same split as detector tuning; notes on held-out
+sessions are counted only as a total), in \cref{tab:teacher-outcomes}. They are what a
+teacher recorded after talking with a student, not labels of cheating: a moment noted
+\emph{own work} is not proof of a false alarm, and \emph{had help} or \emph{copied} is
+not a confirmed switch of author. They are not used to compute precision or recall.
+Which moments get discussed is the teacher's choice, so the counts describe how the
+moments were used in class rather than a random sample of them; this is a threat to
+validity for any reading beyond that. If a teacher can spare about an hour, a blind
+sample (moments mixed with unflagged windows) remains a possible extension.
+
+\begin{table}[ht]
+  \centering
+  \IfFileExists{tables/teacher-outcomes.tex}{\input{tables/teacher-outcomes}}{%
+    \emph{Generated from the pilot report once teachers have noted outcomes
+    (\texttt{python -m studentide.pilot --summary REPORT --thesis ../thesis/latex}).}}
+  \caption{Conversation outcomes noted by teachers, by detector channel, on the dev
+  split. Descriptive counts of what was recorded after a conversation; not labels.}
+  \label{tab:teacher-outcomes}
+\end{table}
 
 \section{Threats to validity}
 \begin{itemize}
@@ -311,6 +329,9 @@ assessed by its design (\cref{ch:system}).
     say anything about whether a flag was worth raising (\cref{sec:teacher-review}).
   \item \emph{One institution, one term, two languages.} Results may not transfer to
     other courses or to typing in other languages.
+  \item \emph{Teacher-chosen conversations.} Conversation outcomes exist only for moments a
+    teacher chose to discuss, and what a student says in that conversation is not ground
+    truth; they are reported as counts only (\cref{sec:teacher-review}).
   \item \emph{Short baselines.} Median sessions are about five minutes, so 10 active
     minutes may span several sessions and days; the dev split tests shorter and longer.
   \item \emph{Raw-key purge.} After 28 days only stored windows remain, so keystroke

@@ -52,6 +52,15 @@ MIN_POP_STUDENTS = 3  # students with a baseline needed to fit weights, vocabula
 MIN_WEIGHT_STUDENTS = MIN_POP_STUDENTS  # old name
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "thesis" / "evaluation" / "frozen-config.json"
 
+# What a teacher can note after talking with the student about a moment (staff-only,
+# never shown to students, never read by the detector). Order = order on screen.
+OUTCOMES = {
+    "own_work": "Explained, own work",
+    "had_help": "Had help",
+    "copied": "Copied",
+    "not_discussed": "Not discussed",
+}
+
 CHANNEL_INFO = {
     "identity": ("Typing rhythm", "Are these the same hands? Key timing and digraph speed compared with the student's own baseline."),
     "pairs": ("Key-pair timing", "Which pairs of keys this person types quickly or slowly, relative to their own pace, compared with the student's own baseline."),
@@ -477,6 +486,7 @@ class Reviewer:
             for ep in out["episodes"]:
                 ch = ep["channel"]
                 ep["evidence"] = _evidence(models[ch], cw[ch], ep["switch_est"], ep["first_alarm"], norm) if detail else []
+        out["other_outcomes"] = attach_outcomes(out["episodes"], self.db.moment_outcomes(session_id))
         if detail:
             out["windows"] = [{"start": w["start"], "end": w["end"], "active": bool(w["active"]),
                                "n_keys": int(w["n_keys"])} for w in wins]
@@ -511,6 +521,16 @@ def episodes(alarms: list[tuple[float, float, str]], window_s: float | dict[str,
         last[ch] = ep
         out.append(ep)
     return sorted(out, key=lambda x: x["switch_est"])
+
+
+def attach_outcomes(eps: list[dict], notes: list[dict]) -> list[dict]:
+    """Put each staff note on its moment (`ep["outcome"]`, or None). Returns the notes
+    whose moment is not shown now (the detector config changed since): kept, not lost."""
+    by_key = {(n["channel"], round(n["start_s"], 1)): n for n in notes}
+    for ep in eps:
+        n = by_key.pop((ep["channel"], round(ep["switch_est"], 1)), None)
+        ep["outcome"] = n["outcome"] if n else None
+    return list(by_key.values())
 
 
 def _session_json(s: dict, duration_s: float, in_baseline: bool) -> dict:

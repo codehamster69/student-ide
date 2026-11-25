@@ -102,7 +102,9 @@ export function Consent({ studentId, onDone, scope = "web" }: { studentId: strin
 
         <motion.p variants={item} className="mt-4 text-sm leading-relaxed text-muted">
           Your typing patterns are compared only with your own earlier sessions. If something looks unusual, the only
-          consequence is a conversation with your instructor, never an automatic penalty. Raw keystroke data is deleted
+          consequence is a conversation with your instructor, never an automatic penalty. After such a conversation your
+          instructor may note how it went (for example &ldquo;explained, own work&rdquo;). Only staff see this note, it is
+          never a mark, and the research reports only class-wide counts without names. Raw keystroke data is deleted
           once summary statistics have been computed: when your four-week baseline is built, and never kept longer than
           28 days.{scope === "sandbox" && " Terminal typing is compared only with your own earlier sessions, like editor typing, and it counts toward lab attendance like editor typing."}
         </motion.p>
