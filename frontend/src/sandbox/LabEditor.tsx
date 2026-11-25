@@ -4,8 +4,8 @@
 // board and live grid (ClassBoard.tsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
-import { Badge, Button, Card, Checkbox, Field, Input, Spinner, TextArea, cn, item, spring, stagger } from "../ui";
+import { ArrowDown, ArrowUp, Check, CircleAlert, Copy, Download, FilePlus2, FlaskConical, History, Info, Play, Plus, Rocket, Share2, Trash2, Undo2, X } from "lucide-react";
+import { Badge, Button, Card, Checkbox, Field, Input, Page, PageHeader, Spinner, TextArea, cn, item, spring, stagger } from "../ui";
 import { get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { LessonText } from "../learn/LessonText";
@@ -43,8 +43,8 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
     finally { setSaving(false); }
   };
 
-  if (error) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
-  if (!lab) return <div className="mx-auto max-w-[1200px] px-5 pt-8"><Skeleton className="h-60 rounded-2xl" /></div>;
+  if (error) return <Page><Card className="p-6 text-sm text-danger">{error}</Card></Page>;
+  if (!lab) return <Page><Skeleton className="h-60 rounded-xl" /></Page>;
   const readOnly = lab.access === "ta";
   const live = lab.status !== "draft";
   const steps = STEPS.filter((s) => (s !== "Submissions" && s !== "Class" || live) && (s !== "History" || live || lab.n_changes > 0));
@@ -52,28 +52,21 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
   const current: Step = step ?? (live ? "Submissions" : "Basics");
 
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1200px] px-5 pb-24 pt-6">
-      <motion.a variants={item} href={href.sbxSubject(lab.subject_id)} className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text">
-        <ArrowLeft className="size-3.5" /> {lab.definition.subject.title}
-      </motion.a>
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">{lab.title}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge tone={lab.status === "published" ? "success" : lab.status === "closed" ? "warn" : "neutral"}>{lab.status}</Badge>
-            <NetworkBadge network={lab.network} />
-            {lab.assessed && <Badge>assessed</Badge>}
-            {lab.shared && <Badge tone="accent"><Share2 className="size-3" /> in library</Badge>}
-            <span className="font-mono text-[11px] text-faint">v{lab.version}</span>
-          </div>
-        </div>
-        <TryButton labId={lab.id} />
-      </motion.div>
+    <Page>
+      <PageHeader title={lab.title}
+        meta={<>
+          <Badge tone={lab.status === "published" ? "success" : lab.status === "closed" ? "warn" : "neutral"}>{lab.status}</Badge>
+          <NetworkBadge network={lab.network} />
+          {lab.assessed && <Badge>assessed</Badge>}
+          {lab.shared && <Badge tone="accent"><Share2 className="size-3" /> in library</Badge>}
+          <span className="font-mono text-[11px] text-faint">v{lab.version}</span>
+        </>}
+        actions={<TryButton labId={lab.id} />} />
       {msg && <Card className="mb-4 flex items-start gap-2 p-4 text-sm text-danger"><CircleAlert className="mt-0.5 size-4 shrink-0" />{msg}</Card>}
       <AnimatePresence>
         {note.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-            <Card className="mb-4 flex items-start gap-2 border-accent/40 bg-accent-soft p-4 text-sm text-text" role="status">
+            <Card className="mb-4 flex items-start gap-2 border-cta/40 p-4 text-sm text-text" role="status">
               <Info className="mt-0.5 size-4 shrink-0 text-accent" />
               <ul className="grid flex-1 gap-0.5">{note.map((n) => <li key={n}>{n}</li>)}</ul>
               <button onClick={() => setNote([])} aria-label="Dismiss"><X className="size-4 text-muted" /></button>
@@ -88,8 +81,8 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
             {steps.map((s, i) => (
               <button key={s} onClick={() => setStep(s)} className={cn("relative flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium",
                 current === s ? "text-text" : "text-muted hover:text-text")}>
-                {current === s && <motion.span layoutId="wizard-step" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
-                <span className={cn("relative grid size-5 place-items-center rounded-full border text-[11px]", current === s ? "border-accent bg-accent text-accent-fg" : "border-border")}>{s === "Submissions" ? "✓" : i + 1}</span>
+                {current === s && <motion.span layoutId="wizard-step" transition={spring} className="absolute inset-0 rounded-lg border border-border-strong" />}
+                <span className={cn("relative grid size-5 place-items-center rounded-full border text-[11px]", current === s ? "border-cta text-cta" : "border-border")}>{s === "Submissions" ? "✓" : i + 1}</span>
                 <span className="relative">{s}</span>
                 {s === "History" && lab.n_changes > 0 && <span className="relative ml-auto font-mono text-[11px] text-faint">{lab.n_changes}</span>}
               </button>
@@ -108,7 +101,7 @@ export function SandboxLabEditor({ id, onAuthLost }: { id: string; onAuthLost: (
           </motion.div>
         </AnimatePresence>
       </div>
-    </motion.div>
+    </Page>
   );
 }
 
@@ -138,7 +131,7 @@ function Basics({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: boo
       <div className="grid gap-3 lg:grid-cols-2">
         <Field label="Description for students" hint="Markdown"><TextArea rows={8} value={description} disabled={readOnly} onChange={(e) => setDescription(e.target.value)} /></Field>
         <div className="grid content-start gap-1.5"><span className="text-[13px] font-medium text-text">Preview</span>
-          <div className="min-h-32 rounded-lg border border-border bg-surface-2 p-3"><LessonText markdown={description || "*Nothing yet.*"} language="" /></div></div>
+          <div className="min-h-32 rounded-lg border border-border p-3"><LessonText markdown={description || "*Nothing yet.*"} language="" /></div></div>
       </div>
       <p className="text-xs text-muted">Environment: {lab.definition.environment?.title ?? "none"} (from the subject){lab.env_version ? `, pinned at v${lab.env_version}` : ""}.</p>
       {!readOnly && <Button variant="primary" className="justify-self-end" disabled={saving} onClick={() => save("PATCH", `/api/sandbox/labs/${lab.id}`, { title, description })}>Save</Button>}
@@ -168,7 +161,7 @@ function Assignments({ lab, readOnly, save, onAuthLost }: { lab: LabDetail; read
             <Card className="overflow-hidden">
               <div className="flex items-center gap-2 p-3">
                 <button className="flex flex-1 items-center gap-2 text-left" onClick={() => setOpen(open === a.id ? null : a.id)}>
-                  <span className="grid size-6 place-items-center rounded-md bg-surface-2 font-mono text-xs text-muted">{i + 1}</span>
+                  <span className="grid size-6 place-items-center rounded-md font-mono text-xs text-muted">{i + 1}</span>
                   <span className="text-sm font-medium text-text">{a.title}</span>
                   <span className="text-xs text-muted">{a.files.length} files · {a.tests.kind === "command" ? "test command" : `${a.tests.cases.length} tests`}{a.solution_files.length ? " · solution" : ""}</span>
                 </button>
@@ -213,7 +206,7 @@ function Assignments({ lab, readOnly, save, onAuthLost }: { lab: LabDetail; read
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                 <Card className="grid gap-3 p-4">
                   <label className="flex flex-wrap items-center gap-2 text-[13px] text-text">Students answer in
-                    <select value={language} onChange={(e) => setLanguage(e.target.value as Language)} className="h-8 rounded-md border border-border bg-surface px-2">
+                    <select value={language} onChange={(e) => setLanguage(e.target.value as Language)} className="h-8 rounded-md border border-border px-2">
                       <option value="c">C</option><option value="cpp">C++</option><option value="python">Python</option>
                       <option value="java">Java</option><option value="javascript">JavaScript</option>
                     </select>
@@ -253,11 +246,11 @@ function CopyPicker({ labId, onPick }: { labId: string; onPick: (assignmentId: s
         <div className="grid max-h-80 gap-3 overflow-y-auto">
           {shown.map((l) => (
             <div key={l.lab_id}>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-faint">{l.subject_title} · {l.lab_title}</p>
+              <p className="text-xs font-medium text-faint">{l.subject_title} · {l.lab_title}</p>
               <div className="mt-1 grid gap-1">
                 {l.assignments.map((a) => (
                   <button key={a.id} disabled={!!busy} onClick={async () => { setBusy(a.id); await onPick(a.id); setBusy(""); }}
-                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm text-text hover:border-accent hover:bg-accent-soft">
+                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm text-text hover:border-cta">
                     <span className="flex-1">{a.title}</span>
                     {busy === a.id ? <Spinner /> : <Plus className="size-3.5 text-accent" />}
                   </button>
@@ -295,7 +288,7 @@ function AssignmentForm({ a, readOnly, published, onSave, onDelete }: {
       {tab === "statement" && (
         <div className="grid gap-3 lg:grid-cols-2">
           <TextArea rows={12} value={f.statement} disabled={readOnly} onChange={(e) => setF({ ...f, statement: e.target.value })} placeholder="What students should do (Markdown)" />
-          <div className="max-h-80 overflow-y-auto rounded-lg border border-border bg-surface-2 p-3"><LessonText markdown={f.statement || "*Nothing yet.*"} language="" /></div>
+          <div className="max-h-80 overflow-y-auto rounded-lg border border-border p-3"><LessonText markdown={f.statement || "*Nothing yet.*"} language="" /></div>
         </div>
       )}
       {tab === "files" && <FilesEditor files={f.files} open={f.open} readOnly={readOnly} onChange={(files, open) => setF({ ...f, files, open })} />}
@@ -331,9 +324,9 @@ function FilesEditor({ files, open, readOnly, onChange }: {
   };
   return (
     <div className="grid min-h-72 overflow-hidden rounded-lg border border-border sm:grid-cols-[180px_1fr]">
-      <div className="grid content-start gap-0.5 border-b border-border bg-surface-2 p-2 sm:border-b-0 sm:border-r">
+      <div className="grid content-start gap-0.5 border-b border-border p-2 sm:border-b-0 sm:border-r">
         {files.map((x) => (
-          <div key={x.path} className={cn("group flex items-center gap-1 rounded-md px-2 py-1 font-mono text-xs", cur === x.path ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+          <div key={x.path} className={cn("group flex items-center gap-1 rounded-md px-2 py-1 font-mono text-xs", cur === x.path ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
             <button className="flex-1 truncate text-left" onClick={() => setCur(x.path)}>{x.path}</button>
             {open && !readOnly && <input type="checkbox" title="Open first in the editor" checked={opened.includes(x.path)} className="size-3"
               onChange={() => onChange(files, opened.includes(x.path) ? opened.filter((p) => p !== x.path) : [...opened, x.path])} />}
@@ -341,8 +334,8 @@ function FilesEditor({ files, open, readOnly, onChange }: {
           </div>
         ))}
         {!readOnly && <>
-          <button className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-accent hover:bg-surface" onClick={() => add((prompt("File path, e.g. main.c or src/app.py") ?? "").trim())}><FilePlus2 className="size-3.5" /> New file</button>
-          <button className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-accent hover:bg-surface" onClick={() => upload.current?.click()}><Plus className="size-3.5" /> Upload files</button>
+          <button className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs border border-transparent font-semibold text-cta transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-cta focus-visible:border-cta" onClick={() => add((prompt("File path, e.g. main.c or src/app.py") ?? "").trim())}><FilePlus2 className="size-3.5" /> New file</button>
+          <button className="flex items-center gap-1 rounded-md px-2 py-1 text-xs border border-transparent font-semibold text-cta transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-cta focus-visible:border-cta" onClick={() => upload.current?.click()}><Plus className="size-3.5" /> Upload files</button>
           <input ref={upload} type="file" multiple hidden onChange={async (e) => {
             const got = await Promise.all([...(e.target.files ?? [])].map(async (fl) => ({ path: fl.name, content: await fl.text() })));
             const merged = [...files.filter((x) => !got.some((g) => g.path === x.path)), ...got];
@@ -378,11 +371,11 @@ function TestsEditor({ tests, readOnly, onChange }: { tests: Tests; readOnly: bo
         </label>
       </div>
       {tests.kind === "command" ? (
-        <Input value={tests.command} disabled={readOnly} onChange={(e) => onChange({ ...tests, command: e.target.value })} placeholder="make test   or   pytest -q" className="h-9 font-mono text-xs" />
+        <Input value={tests.command} disabled={readOnly} onChange={(e) => onChange({ ...tests, command: e.target.value })} placeholder="make test or pytest -q" className="h-9 font-mono text-xs" />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-xs">
-            <thead className="bg-surface-2 text-left text-muted"><tr><th className="p-2">Name</th><th className="p-2">Input</th><th className="p-2">Expected output</th><th className="p-2">Compare</th><th className="p-2">Hidden</th><th /></tr></thead>
+            <thead className="text-left text-muted"><tr><th className="p-2">Name</th><th className="p-2">Input</th><th className="p-2">Expected output</th><th className="p-2">Compare</th><th className="p-2">Hidden</th><th /></tr></thead>
             <tbody>
               {tests.cases.map((c, i) => (
                 <tr key={i} className="border-t border-border align-top">
@@ -391,7 +384,7 @@ function TestsEditor({ tests, readOnly, onChange }: { tests: Tests; readOnly: bo
                   <td className="p-1"><TextArea rows={2} value={c.expected} disabled={readOnly} onChange={(e) => set(i, { expected: e.target.value })}
                     onKeyDown={(e) => { if (e.key === "Tab" && !e.shiftKey && i === tests.cases.length - 1 && !readOnly) onChange({ ...tests, cases: [...tests.cases, blank()] }); }}
                     className="font-mono text-xs" /></td>
-                  <td className="p-1"><select value={c.compare} disabled={readOnly} onChange={(e) => set(i, { compare: e.target.value as TestCase["compare"] })} className="h-8 rounded-md border border-border bg-surface px-1">
+                  <td className="p-1"><select value={c.compare} disabled={readOnly} onChange={(e) => set(i, { compare: e.target.value as TestCase["compare"] })} className="h-8 rounded-md border border-border px-1">
                     <option value="text">text</option><option value="tokens">tokens</option><option value="json">json</option></select></td>
                   <td className="p-2 text-center"><Checkbox checked={c.hidden} disabled={readOnly} onChange={() => set(i, { hidden: !c.hidden })} /></td>
                   <td className="p-1">{!readOnly && <Button size="icon" variant="ghost" onClick={() => onChange({ ...tests, cases: tests.cases.filter((_, j) => j !== i) })} aria-label="Remove test"><X className="size-3.5" /></Button>}</td>
@@ -399,7 +392,7 @@ function TestsEditor({ tests, readOnly, onChange }: { tests: Tests; readOnly: bo
               ))}
             </tbody>
           </table>
-          {!readOnly && <button className="w-full border-t border-border p-2 text-xs text-accent hover:bg-surface-2" onClick={() => onChange({ ...tests, cases: [...tests.cases, blank()] })}><Plus className="mr-1 inline size-3" />Add test</button>}
+          {!readOnly && <button className="w-full border-t border-border p-2 text-xs border border-transparent font-semibold text-cta transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-cta focus-visible:border-cta" onClick={() => onChange({ ...tests, cases: [...tests.cases, blank()] })}><Plus className="mr-1 inline size-3" />Add test</button>}
         </div>
       )}
       <p className="text-xs text-muted">Hidden tests never leave the server; students see only how many there are. "text" ignores trailing spaces and newlines, "tokens" compares words and numbers.</p>
@@ -468,7 +461,7 @@ function CheckStep({ lab }: { lab: LabDetail }) {
 function Publish({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: boolean; saving: boolean; save: Save }) {
   const [network, setNetwork] = useState<Network>(lab.network);
   const [assessed, setAssessed] = useState(lab.assessed);
-  const [sections, setSections] = useState(lab.sections.join(", "));
+  const [sections, setSections] = useState(lab.sections.join(","));
   const [due, setDue] = useState(lab.due_at ? toLocal(lab.due_at) : "");
   const [opens, setOpens] = useState(lab.opens_at ? toLocal(lab.opens_at) : "");
   const [summary, setSummary] = useState("");
@@ -486,7 +479,7 @@ function Publish({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: bo
         <div className="grid gap-2">
           <span className="text-[13px] font-medium text-text">Network</span>
           {(Object.keys(NETWORK) as Network[]).map((n) => (
-            <label key={n} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", network === n ? "border-accent bg-accent-soft" : "border-border",
+            <label key={n} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", network === n ? "border-cta" : "border-border",
               n === "open" && assessed && "cursor-not-allowed opacity-50")}>
               <input type="radio" disabled={readOnly || (n === "open" && assessed)} checked={network === n} onChange={() => setNetwork(n)} className="mt-1" />
               <span><span className="block text-sm font-medium text-text">{NETWORK[n].label}</span><span className="text-xs text-muted">{NETWORK[n].hint}</span></span>
@@ -502,7 +495,7 @@ function Publish({ lab, readOnly, saving, save }: { lab: LabDetail; readOnly: bo
           <span className="text-[13px] font-medium text-text">Grading</span>
           <div className="grid gap-2 sm:grid-cols-3">
             {(Object.keys(GRADING) as GradingMode[]).map((g) => (
-              <label key={g} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", grading === g ? "border-accent bg-accent-soft" : "border-border")}>
+              <label key={g} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", grading === g ? "border-cta" : "border-border")}>
                 <input type="radio" disabled={readOnly} checked={grading === g} onChange={() => setGrading(g)} className="mt-1" />
                 <span><span className="block text-sm font-medium text-text">{GRADING[g].label}</span><span className="text-xs text-muted">{GRADING[g].hint}</span></span>
               </label>
@@ -559,7 +552,7 @@ function LateEditor({ late, onChange, readOnly, hasDue }: { late: LatePolicy; on
       <span className="text-[13px] font-medium text-text">Late work {!hasDue && <span className="font-normal text-muted">(set a due time first)</span>}</span>
       <div className="grid gap-2 sm:grid-cols-3">
         {opts.map(([m, label, hint]) => (
-          <label key={m} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", late.mode === m ? "border-accent bg-accent-soft" : "border-border")}>
+          <label key={m} className={cn("flex cursor-pointer items-start gap-2 rounded-lg border p-3", late.mode === m ? "border-cta" : "border-border")}>
             <input type="radio" disabled={readOnly} checked={late.mode === m} onChange={() => onChange({ ...late, mode: m })} className="mt-1" />
             <span><span className="block text-sm font-medium text-text">{label}</span><span className="text-xs text-muted">{hint}</span></span>
           </label>
@@ -595,7 +588,7 @@ function Summary({ lab, network, sections, opens, due, grading, late }: {
   const hidden = lab.definition.assignments.reduce((s, a) => s + (a.tests.cases?.filter((c) => c.hidden).length ?? 0), 0);
   const when = (t: number) => new Date(t * 1000).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const rows: [string, string][] = [
-    ["Who", sections.length ? `Sections ${sections.join(", ")}` : "Every student of the subject"],
+    ["Who", sections.length ? `Sections ${sections.join(",")}` : "Every student of the subject"],
     ["When", `${opens ? `Opens ${when(opens)}` : "Opens as soon as you publish"}${due ? `, due ${when(due)}` : ", no due time"}`],
     ["Work", `${n} assignment${n === 1 ? "" : "s"}${hidden ? `, ${hidden} hidden test${hidden === 1 ? "" : "s"}` : ""}, in the desktop app`],
     ["Network", NETWORK[network].label],
@@ -603,8 +596,8 @@ function Summary({ lab, network, sections, opens, due, grading, late }: {
     ...(due ? [["Late", lateWords(late)] as [string, string]] : []),
   ];
   return (
-    <div className="rounded-xl border border-border bg-surface-2 p-4">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">What students will see</p>
+    <div className="rounded-xl border border-border p-4">
+      <p className="mb-2 text-xs font-medium text-faint">What students will see</p>
       <dl className="grid gap-1.5 text-[13px] sm:grid-cols-[90px_1fr]">
         {rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-muted">{k}</dt><dd className="text-text">{v}</dd></div>)}
       </dl>

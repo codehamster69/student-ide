@@ -55,11 +55,11 @@ export function RecipeEditor({ recipe, onChange, bases, tools }: {
             return (
               <motion.button key={b.id} type="button" whileHover={{ y: -2 }} transition={spring} onClick={() => onChange({ ...recipe, base: b.id })}
                 className={cn("relative grid gap-1 rounded-xl border p-3 text-left shadow-sm transition-colors",
-                  on ? "border-accent bg-accent-soft" : "border-border bg-surface hover:border-border-strong")}>
+                  on ? "border-cta" : "border-border hover:border-border-strong")}>
                 <span className="flex items-center gap-2 text-sm font-medium text-text"><Icon className="size-4 text-accent" />{b.label}</span>
                 <span className="text-xs text-muted">{b.includes}</span>
                 <span className="font-mono text-[11px] text-faint">{mb(b.mb)}</span>
-                {on && <motion.span layoutId="base-tick" transition={spring} className="absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-accent text-accent-fg"><Check className="size-3" /></motion.span>}
+                {on && <motion.span layoutId="base-tick" transition={spring} className="absolute right-2 top-2 grid size-5 place-items-center rounded-full border border-cta text-cta"><Check className="size-3" /></motion.span>}
               </motion.button>
             );
           })}
@@ -74,15 +74,15 @@ export function RecipeEditor({ recipe, onChange, bases, tools }: {
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tools" className="h-8 w-48 pl-8 text-[13px]" />
           </label>
         </div>
-        <div className="max-h-72 overflow-y-auto rounded-xl border border-border bg-surface p-2">
+        <div className="max-h-72 overflow-y-auto rounded-xl border border-border p-2">
           {groups.map(([group, ts]) => (
             <div key={group} className="mb-2">
-              <p className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-faint">{group}</p>
+              <p className="px-2 pb-1 pt-1 text-xs font-medium text-faint">{group}</p>
               <div className="grid gap-0.5 sm:grid-cols-2">
                 {ts.map((t) => {
                   const inBase = base?.tools.includes(t.id);
                   return (
-                    <label key={t.id} className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px] hover:bg-surface-2", inBase && "opacity-60")}>
+                    <label key={t.id} className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px]", inBase && "opacity-60")}>
                       <Checkbox checked={inBase || recipe.tools.includes(t.id)} disabled={inBase} onChange={() => toggle(t.id)} />
                       <span className="flex-1 text-text">{t.label}</span>
                       <span className="font-mono text-[11px] text-faint">{inBase ? "in base" : mb(t.mb)}</span>
@@ -105,13 +105,13 @@ export function RecipeEditor({ recipe, onChange, bases, tools }: {
           <div className="mt-3 grid gap-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="apt packages" hint="by name, spaces or commas">
-                <Input value={recipe.apt.join(" ")} onChange={(e) => onChange({ ...recipe, apt: words(e.target.value) })} className="h-9 font-mono text-xs" />
+                <Input value={recipe.apt.join("")} onChange={(e) => onChange({ ...recipe, apt: words(e.target.value) })} className="h-9 font-mono text-xs" />
               </Field>
               <Field label="pip packages">
-                <Input value={recipe.pip.join(" ")} onChange={(e) => onChange({ ...recipe, pip: words(e.target.value) })} className="h-9 font-mono text-xs" />
+                <Input value={recipe.pip.join("")} onChange={(e) => onChange({ ...recipe, pip: words(e.target.value) })} className="h-9 font-mono text-xs" />
               </Field>
               <Field label="npm packages">
-                <Input value={recipe.npm.join(" ")} onChange={(e) => onChange({ ...recipe, npm: words(e.target.value) })} className="h-9 font-mono text-xs" />
+                <Input value={recipe.npm.join("")} onChange={(e) => onChange({ ...recipe, npm: words(e.target.value) })} className="h-9 font-mono text-xs" />
               </Field>
             </div>
             <Field label="Setup script" hint="Runs once as root while the image is built, e.g. to download a dataset every lab uses.">
@@ -150,11 +150,11 @@ export function EnvironmentPicker({ value, onChange }: { value: EnvChoice; onCha
   return (
     <div className="grid gap-4">
       {ready.length > 0 && (
-        <div className="flex rounded-lg border border-border bg-surface-2 p-0.5 text-[13px]">
+        <div className="flex rounded-lg border border-border p-0.5 text-[13px]">
           {(["new", "reuse"] as const).map((k) => (
             <button key={k} type="button" onClick={() => onChange(k === "new" ? { kind: "new", recipe: emptyRecipe() } : { kind: "reuse", environment_id: ready[0].id })}
               className={cn("relative flex-1 rounded-md px-3 py-1.5 font-medium", value.kind === k ? "text-text" : "text-muted")}>
-              {value.kind === k && <motion.span layoutId="env-mode" transition={spring} className="absolute inset-0 rounded-md bg-surface shadow-sm" />}
+              {value.kind === k && <motion.span layoutId="env-mode" transition={spring} className="absolute inset-0 rounded-md border border-border-strong" />}
               <span className="relative">{k === "new" ? "Build a new one" : "Reuse an environment"}</span>
             </button>
           ))}
@@ -169,13 +169,13 @@ export function EnvironmentPicker({ value, onChange }: { value: EnvChoice; onCha
             const Icon = BASE_ICON[v.recipe.base] ?? BASE_ICON.linux;
             return (
               <label key={e.id} className={cn("flex cursor-pointer items-center gap-3 rounded-xl border p-3",
-                value.environment_id === e.id ? "border-accent bg-accent-soft" : "border-border bg-surface hover:border-border-strong")}>
+                value.environment_id === e.id ? "border-cta" : "border-border hover:border-border-strong")}>
                 <input type="radio" className="sr-only" checked={value.environment_id === e.id} onChange={() => onChange({ kind: "reuse", environment_id: e.id })} />
                 <Icon className="size-4 text-accent" />
                 <span className="flex-1">
                   <span className="block text-sm font-medium text-text">{e.title}</span>
                   <span className="block text-xs text-muted">
-                    {v.recipe.tools.length ? v.recipe.tools.join(", ") : "base tools only"} · v{v.version} · {mb(v.size_mb)}
+                    {v.recipe.tools.length ? v.recipe.tools.join(",") : "base tools only"} · v{v.version} · {mb(v.size_mb)}
                   </span>
                 </span>
                 {!e.mine && <Badge tone="accent"><Share2 className="size-3" /> shared</Badge>}

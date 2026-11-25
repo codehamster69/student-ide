@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
-import { Activity, ArrowLeft, CheckCircle2, CircleAlert, Eye, FlaskConical, Play, Terminal } from "lucide-react";
-import { Badge, Card, LiveDot, cn, item, stagger } from "../ui";
+import { Activity, CheckCircle2, CircleAlert, Eye, FlaskConical, Play, Terminal } from "lucide-react";
+import { Badge, Card, LiveDot, Page, PageHeader, cn } from "../ui";
 import { AuthError, get, token } from "../review/api";
 import { Skeleton } from "../review/bits";
 import { CodeReplay } from "../review/CodeReplay";
@@ -57,9 +56,9 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
 
   if (!d) {
     return (
-      <div className="mx-auto max-w-[1440px] px-5 pt-8">
-        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-[70vh] w-full rounded-2xl" />}
-      </div>
+      <Page wide>
+        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-[70vh] w-full rounded-xl" />}
+      </Page>
     );
   }
 
@@ -67,37 +66,24 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
   const st = STATE[d.state];
   const lang = LANGUAGES[s.language] ?? LANGUAGES.python;
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1440px] px-5 pb-12 pt-6">
-      <motion.a variants={item} href={s.lab_id ? href.liveLab(s.lab_id) : href.live}
-        className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
-        <ArrowLeft className="size-4" /> {s.lab_title ?? "Live"}
-      </motion.a>
+    <Page wide>
+      <PageHeader
+        title={<span className="flex items-center gap-2"><span className="font-mono">{s.student_id}</span><span className="text-faint">/</span><span className="truncate">{s.question_title}</span></span>}
+        description={<span className="tabular-nums">{s.lab_id && s.lab_title && <><a href={href.liveLab(s.lab_id)} className="text-accent hover:underline">{s.lab_title}</a> · </>}Started {ago(d.now, s.started_at)} · last edit {ago(d.now, d.last_edit_at)}</span>}
+        meta={<Badge tone={st.tone}><LiveDot tone={st.tone} live={st.live} />{st.label}</Badge>}
+        actions={<a href={href.session(s.id)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-transparent px-3 text-sm font-medium text-text transition-[border-color,transform,box-shadow] duration-150 hover:-translate-y-px hover:border-border-strong focus-visible:border-border-strong">
+          <Activity className="size-3.5" /> Timeline
+        </a>}
+      />
 
-      <motion.div variants={item} className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-text">
-            <span className="font-mono">{s.student_id}</span>
-            <span className="text-faint">/</span>
-            <span className="truncate">{s.question_title}</span>
-          </h1>
-          <p className="mt-0.5 text-sm text-muted">Started {ago(d.now, s.started_at)} · last edit {ago(d.now, d.last_edit_at)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge tone={st.tone}><LiveDot tone={st.tone} live={st.live} />{st.label}</Badge>
-          <a href={href.session(s.id)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text shadow-sm hover:bg-surface-2">
-            <Activity className="size-3.5" /> Timeline
-          </a>
-        </div>
-      </motion.div>
-
-      <motion.div variants={item} className="mb-4 flex items-center gap-2 rounded-xl bg-warn-soft px-4 py-2.5 text-[13px] text-text" role="status">
+      <div className="mb-4 flex items-center gap-2 rounded-xl border border-warn/30 px-4 py-2.5 text-[13px] text-text" role="status">
         <Eye className="size-4 shrink-0 text-warn" />
         <p><span className="font-mono">{s.student_id}</span> can see that you are viewing their editor{d.terminal ? " and terminal" : ""}. This view is read-only and is logged.</p>
-      </motion.div>
+      </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <motion.div variants={item} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <div className="flex h-10 items-center justify-between gap-2 border-b border-border bg-surface-2 px-3">
+        <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+          <div className="flex h-10 items-center justify-between gap-2 border-b border-border px-3">
             <span className="flex items-center gap-2 font-mono text-xs text-text">
               <span className="size-2 rounded-sm" style={{ background: lang.color }} />{d.path ? d.path.split("/").pop() : lang.file}
               {d.files && d.files.length > 1 && <span className="font-sans text-faint">· {d.files.length} files, showing the one edited last</span>}
@@ -109,12 +95,12 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
           <div className="h-[64vh] min-h-[360px]">
             <CodeReplay doc={d.text} changed={changed} caret={d.caret ?? d.text.length} language={s.language} showCaret={!s.ended_at} />
           </div>
-        </motion.div>
+        </div>
 
-        <motion.aside variants={item} className="grid gap-4">
+        <aside className="grid gap-4">
           {d.terminal && <TerminalMirror term={d.terminal} />}
           <Card className="p-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-faint">Activity, last 10 minutes</p>
+            <p className="mb-2 text-xs font-medium text-faint">Activity, last 10 minutes</p>
             <ActivityBars bins={d.activity} className="h-10" />
             {d.tab_away && <p className="mt-2 text-xs text-warn">The editor tab is in the background right now.</p>}
           </Card>
@@ -158,13 +144,13 @@ export function LiveEditor({ id, onAuthLost }: { id: string; onAuthLost: () => v
 
           {(s.prompt || s.source?.live_prompt) && (
             <Card className="p-4">
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-faint">Question</p>
+              <p className="mb-1.5 text-xs font-medium text-faint">Question</p>
               <QuestionText prompt={s.prompt} source={s.source} className="max-h-48 overflow-auto text-[13px] leading-relaxed text-muted" />
             </Card>
           )}
-        </motion.aside>
+        </aside>
       </div>
-    </motion.div>
+    </Page>
   );
 }
 

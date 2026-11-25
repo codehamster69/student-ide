@@ -9,9 +9,9 @@ import { LANGUAGES, type Language, type Provider, type SourceCategory, type Sour
 
 const DIFF_TONE: Record<string, "success" | "warn" | "danger"> = { beginner: "success", easy: "success", medium: "warn", hard: "danger" };
 const STATUS_CHIP: Record<Provider["status"], [string, string]> = {
-  live: ["Live", "bg-success-soft text-success"],
-  bundled: ["Dataset", "bg-accent-soft text-accent"],
-  link_only: ["Link only", "bg-surface-2 text-faint"],
+  live: ["Live", "border border-success/40 text-success"],
+  bundled: ["Dataset", "border border-cta/40 text-accent"],
+  link_only: ["Link only", "border border-border text-faint"],
 };
 
 /**
@@ -43,9 +43,9 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
   const p = providers?.find((x) => x.id === pid);
 
   return (
-    <Card className="overflow-hidden border-accent/40 ring-4 ring-accent/10">
+    <Card className="overflow-hidden border-border-strong">
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg"><Globe className="size-4" /></span>
+        <span className="grid size-8 place-items-center rounded-lg border border-cta/40 text-cta"><Globe className="size-4" /></span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-text">Add a question from a platform</h3>
           <p className="text-xs text-muted">{anyLanguage
@@ -60,9 +60,9 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
           <button key={x.id} role="tab" aria-selected={pid === x.id} onClick={() => setPid(x.id)}
             className={cn("relative flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors",
               pid === x.id ? "text-text" : "text-muted hover:text-text")}>
-            {pid === x.id && <motion.span layoutId="source-tab" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
+            {pid === x.id && <motion.span layoutId="source-tab" transition={spring} className="absolute inset-0 rounded-lg border border-border-strong" />}
             <span className={cn("relative", x.languages && !x.languages.includes(language) && "opacity-50")}>{x.name}</span>
-            <span className={cn("relative rounded-full px-1.5 text-[10px] font-semibold uppercase tracking-wide", STATUS_CHIP[x.status][1])}>
+            <span className={cn("relative rounded-md px-1.5 text-[10.5px] font-medium", STATUS_CHIP[x.status][1])}>
               {STATUS_CHIP[x.status][0]}
             </span>
           </button>
@@ -70,14 +70,14 @@ export function SourcePicker({ language, anyLanguage, onImport, onLink, onClose,
         {!providers && <Skeleton className="h-8 w-80 rounded-lg" />}
       </div>
 
-      {error && <p className="mx-5 mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
+      {error && <p className="mx-5 mt-4 rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
       {p && p.can_browse && p.languages && !p.languages.includes(language) ? (
         <>
-          <div className="mx-5 my-4 rounded-xl border border-border bg-surface-2/60 px-4 py-3 text-[13px] text-muted" role="status">
+          <div className="mx-5 my-4 rounded-xl border border-border px-4 py-3 text-[13px] text-muted" role="status">
             <p className="font-medium text-text">
-              {p.name} questions are for {p.languages.map((l) => LANGUAGES[l].label).join(" and ")} labs only
+              {p.name} questions are for {p.languages.map((l) => LANGUAGES[l].label).join(" and")} labs only
             </p>
-            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or {onLink ? "switch the lab's language in Session settings" : "pick another language"}.</p>
+            <p className="mt-1">This lab is in {LANGUAGES[language].label}. Pick another source above, or {onLink ? "switch the lab's language in Basics" : "pick another language"}.</p>
           </div>
           {p.can_link && onLink && (
             <details className="border-t border-border">
@@ -144,7 +144,7 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
         <button onClick={() => setPicked(null)} className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-text">
           <ArrowLeft className="size-3.5" /> Back to the list
         </button>
-        {error && <p className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
+        {error && <p className="mb-3 rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
         {!preview ? <Skeleton className="h-48 w-full rounded-xl" /> : (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="grid gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -159,11 +159,11 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
               )}
             </div>
             <QuestionText prompt={preview.prompt} source={preview.source}
-              className="max-h-56 overflow-auto rounded-lg border border-border bg-surface-2/60 px-4 py-3 text-[13px] leading-relaxed text-muted" />
+              className="max-h-56 overflow-auto rounded-lg border border-border px-4 py-3 text-[13px] leading-relaxed text-muted" />
             {preview.starter_code && (
               <pre className="max-h-32 overflow-auto rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[11.5px] text-muted">{preview.starter_code}</pre>
             )}
-            {preview.notes.map((n) => <p key={n} className="rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">{n}</p>)}
+            {preview.notes.map((n) => <p key={n} className="rounded-lg border border-warn/40 px-3 py-2 text-xs text-warn">{n}</p>)}
             <p className="text-[11px] text-faint">{preview.source.attribution}. You can edit everything after adding it.</p>
             <div className="flex justify-end">
               <Button variant="primary" size="sm" disabled={busy}
@@ -187,11 +187,11 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
       <div className={cn("grid gap-2", query && "opacity-40")}>
         {groupCategories(cats ?? []).map(([group, cs]) => (
           <div key={group} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={group}>
-            <span className="w-16 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-faint">{group}</span>
+            <span className="w-14 shrink-0 text-xs font-medium text-faint">{group}</span>
             {cs.map((c) => (
               <button key={c.id} onClick={() => { setQuery(""); setCat(c.id); }} aria-pressed={cat === c.id && !query}
                 className={cn("h-7 rounded-full border px-2.5 text-xs transition-colors",
-                  cat === c.id && !query ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-muted hover:text-text")}>
+                  cat === c.id && !query ? "border-cta text-cta" : "border-border text-muted hover:border-border-strong hover:text-text")}>
                 {c.label} <span className="tabular-nums text-faint">{c.count}</span>
               </button>
             ))}
@@ -199,7 +199,7 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
         ))}
         {!cats && !error && <Skeleton className="h-7 w-72 rounded-full" />}
       </div>
-      {error && <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
+      {error && <p className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">{error}</p>}
       <ul className="grid max-h-80 gap-1 overflow-auto" aria-label="Questions">
         {!list && !error && Array.from({ length: 5 }, (_, i) => <li key={i}><Skeleton className="h-10 w-full rounded-lg" /></li>)}
         {list?.length === 0 && <li className="py-6 text-center text-xs text-faint">Nothing matches.</li>}
@@ -208,10 +208,10 @@ function LiveBrowser({ provider, language, onImport, onAuthLost }: {
           {list?.map((s, i) => (
             <motion.li key={s.ref} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: Math.min(i, 12) * 0.015 } }}>
               <button onClick={() => setPicked(s.ref)}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-2">
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium text-text">{s.title}</span>
-                  {s.categories.length > 0 && <span className="block truncate text-[11px] text-faint">{s.categories.join(", ")}</span>}
+                  {s.categories.length > 0 && <span className="block truncate text-[11px] text-faint">{s.categories.join(",")}</span>}
                 </span>
                 {s.blurb && /^\d+$/.test(s.blurb) && <span className="font-mono text-[11px] tabular-nums text-faint" title="Codeforces rating">{s.blurb}</span>}
                 {s.difficulty && <Badge tone={DIFF_TONE[s.difficulty] ?? "neutral"} className="h-5 px-2 text-[11px] capitalize">{s.difficulty}</Badge>}
@@ -244,7 +244,7 @@ function LinkOnly({ provider, onLink, compact }: {
       if (await onLink(provider.id, url, title)) { setUrl(""); setTitle(""); }
       setBusy(false);
     }}>
-      {!compact && <div className="rounded-xl border border-border bg-surface-2/60 px-4 py-3 text-[13px] text-muted">
+      {!compact && <div className="rounded-xl border border-border px-4 py-3 text-[13px] text-muted">
         <p className="font-medium text-text">{provider.name} can't be fetched automatically</p>
         <p className="mt-1">{provider.about}</p>
         {provider.terms_url && (

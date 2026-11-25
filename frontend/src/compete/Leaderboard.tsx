@@ -6,9 +6,9 @@ import { clock, secondsLeft, type BadgeInfo, type BoardRow, type CompSettings } 
 import { LanguageDot } from "../teach/bits";
 
 const MEDAL = [
-  "bg-gold-soft text-gold ring-gold/30",
-  "bg-silver-soft text-silver ring-silver/30",
-  "bg-bronze-soft text-bronze ring-bronze/30",
+  " text-gold ring-gold/30",
+  " text-silver ring-silver/30",
+  " text-bronze ring-bronze/30",
 ];
 
 /** A number that counts up to its new value instead of jumping. */
@@ -28,7 +28,7 @@ export function RankMark({ rank, points = 1, className }: { rank: number; points
   return (
     <span className={cn(
       "grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold tabular-nums ring-1",
-      medal ? MEDAL[rank - 1] : "bg-surface-2 text-muted ring-border",
+      medal ? MEDAL[rank - 1] : " text-muted ring-border",
       className,
     )}>
       {rank === 1 && medal ? <Crown className="size-4" /> : rank}
@@ -42,7 +42,7 @@ export function BadgeChip({ b }: { b: BadgeInfo }) {
   const Icon = BADGE_ICON[b.id] ?? (b.id.startsWith("fastest") ? Timer : Award);
   return (
     <motion.span initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={spring}
-      className="inline-flex h-5 items-center gap-1 rounded-full bg-accent-soft px-2 text-[11px] font-medium text-accent">
+      className="inline-flex h-5 items-center gap-1 rounded-full border border-cta/40 px-2 text-[11px] font-medium text-accent">
       <Icon className="size-3" />{b.label}
     </motion.span>
   );
@@ -83,7 +83,7 @@ export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, em
   const big = size === "lg";
   return (
     <LayoutGroup>
-      <motion.ol layout className="grid gap-1.5">
+      <motion.ol layout className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
         <AnimatePresence initial={false}>
           {rows.map((r) => {
             const moved = moves.get(r.handle);
@@ -91,16 +91,15 @@ export function Leaderboard({ rows, nQuestions, size = "md", showIds = false, em
               <motion.li key={r.handle} layout="position" transition={spring}
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className={cn(
-                  "relative flex items-center gap-3 rounded-xl border px-3",
-                  big ? "py-3" : "py-2",
-                  r.me ? "border-accent/50 bg-accent-soft/60" : "border-border bg-surface",
-                  r.rank === 1 && r.points > 0 && !r.me && "border-gold/40",
+                  "relative flex items-center gap-3 px-4",
+                  big ? "py-3" : "py-2.5",
+                  r.me ? "border-l-2 border-cta/60" : r.rank === 1 && r.points > 0 ? "border-l-2 border-gold/50" : "",
                 )}>
                 <RankMark rank={r.rank} points={r.points} className={big ? "size-10 text-base" : undefined} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <strong className={cn("truncate font-semibold text-text", big ? "text-lg" : "text-sm")}>{r.handle}</strong>
-                    {r.me && <span className="rounded-full bg-accent px-1.5 text-[10px] font-semibold uppercase tracking-wide text-accent-fg">You</span>}
+                    {r.me && <span className="rounded-md border border-cta/40 px-1.5 text-[11px] font-medium text-cta">You</span>}
                     {showIds && r.student_id && r.student_id !== r.handle && (
                       <span className="font-mono text-[11px] text-faint">{r.student_id}</span>
                     )}

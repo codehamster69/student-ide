@@ -26,7 +26,7 @@ export function SubmitDialog({ verdict, onClose, onLeave }: {
             {r.results.map((t, i) => (
               <motion.li key={t.name + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ ...spring, delay: 0.08 * i }}
-                className={cn("flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg px-2.5 py-1.5 text-[13px]", t.passed ? "bg-success-soft" : "bg-danger-soft")}>
+                className={cn("flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg px-2.5 py-1.5 text-[13px]", t.passed ? "border border-success/40" : "border border-danger/40")}>
                 {t.passed ? <CheckCircle2 className="size-4 text-success" /> : <CircleX className="size-4 text-danger" />}
                 <span className="flex-1 text-text">{t.name}</span>
                 {t.hidden && <span className="flex items-center gap-1 text-[11px] text-muted"><EyeOff className="size-3" />hidden</span>}
@@ -60,6 +60,6 @@ export function SubmitDialog({ verdict, onClose, onLeave }: {
 }
 
 const clip = (s: string) => {
-  const one = s.trim().replace(/\n/g, " ⏎ ");
+  const one = s.trim().replace(/\n/g, " ⏎");
   return one.length > 60 ? one.slice(0, 60) + "…" : one || "(nothing)";
 };

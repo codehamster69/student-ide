@@ -53,12 +53,12 @@ export function SandboxLanes({ lanes, duration, t, onSeek }: { lanes: Lanes; dur
     `${lanes.saves.filter((s) => s.origin === "terminal-editor").length} vim/nano saves`,
     unexplained.length ? `${unexplained.length} change${unexplained.length === 1 ? "" : "s"} without typing behind ${unexplained.length === 1 ? "it" : "them"}` : null,
     lanes.offline.length ? `offline ${lanes.offline.length}×` : null,
-  ].filter(Boolean).join(" · ");
+  ].filter(Boolean).join(" ·");
 
   return (
     <div className="mt-3 border-t border-border pt-2">
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-md px-1 py-1 text-left text-sm text-text hover:bg-surface-2/60">
+        className="flex w-full items-center justify-between gap-3 rounded-md px-1 py-1 text-left text-sm text-text">
         <span className="flex items-center gap-2 font-medium"><SquareTerminal className="size-4 text-accent" /> Terminal and files
           <span className="text-xs font-normal text-muted">{summary}</span></span>
         <span className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export function SandboxLanes({ lanes, duration, t, onSeek }: { lanes: Lanes; dur
                 <Lane icon={Network} name="Ports, network, packages" duration={duration} t={t} onSeek={onSeek}
                   marks={[...lanes.ports.map((p) => ({ t: p.t, tone: "muted" as const, label: `${p.process || "a program"} ${p.open ? "listening on" : "stopped on"} ${p.port}` })),
                     ...lanes.network.map((n) => ({ t: n.t, tone: n.allowed ? "muted" as const : "warn" as const, label: `${n.host} ${n.allowed ? "reached" : "refused"}` })),
-                    ...lanes.packages.map((p) => ({ t: p.t, tone: "muted" as const, label: `${p.manager} ${p.action} ${p.packages.join(" ")}` }))]} />
+                    ...lanes.packages.map((p) => ({ t: p.t, tone: "muted" as const, label: `${p.manager} ${p.action} ${p.packages.join("")}` }))]} />
               )}
               <Lane icon={WifiOff} name="Offline" duration={duration} t={t} onSeek={onSeek} note="a gap, not a moment"
                 marks={lanes.offline.map((o) => ({ t: o.t, end: o.end, tone: "muted", label: `offline for ${o.seconds} s` }))} />
@@ -96,7 +96,7 @@ export function SandboxLanes({ lanes, duration, t, onSeek }: { lanes: Lanes; dur
             </div>
 
             <div className="mt-2 grid gap-3 pb-1 lg:grid-cols-2">
-              <div className="rounded-lg border border-border bg-surface-2/50 p-2.5">
+              <div className="rounded-lg border border-border p-2.5">
                 <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted"><Radio className="size-3.5" /> Terminal up to {clock(t)}</p>
                 {recent.length === 0 ? <p className="text-xs text-faint">No commands yet.</p> : (
                   <ol className="grid gap-1 font-mono text-[12px] leading-snug">
@@ -112,7 +112,7 @@ export function SandboxLanes({ lanes, duration, t, onSeek }: { lanes: Lanes; dur
                   </ol>
                 )}
               </div>
-              <div className="rounded-lg border border-border bg-surface-2/50 p-2.5">
+              <div className="rounded-lg border border-border p-2.5">
                 <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted"><FileWarning className="size-3.5" /> Appeared without typing</p>
                 {unseenFiles.length === 0 ? (
                   <p className="text-xs text-faint">Everything in the uploaded files was typed, pasted or saved in front of us, or came with the starter files.</p>

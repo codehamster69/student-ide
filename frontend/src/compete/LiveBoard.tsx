@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { motion } from "motion/react";
-import { ArrowLeft, Eye, EyeOff, Maximize2, Minimize2, ScanSearch, Trophy, Users } from "lucide-react";
-import { Button, Card, LiveDot, Spinner, cn, item, stagger } from "../ui";
+import { Eye, EyeOff, Maximize2, Minimize2, ScanSearch, Trophy, Users } from "lucide-react";
+import { Button, Card, LiveDot, Page, Spinner, cn } from "../ui";
 import { AuthError, get } from "../review/api";
 import { Skeleton } from "../review/bits";
 import type { TeacherComp } from "./api";
@@ -45,35 +44,29 @@ export function LiveBoard({ id, onAuthLost }: { id: string; onAuthLost: () => vo
 
   if (!c) {
     return (
-      <div className="mx-auto max-w-[1100px] px-5 pt-8">
-        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-64 w-full rounded-2xl" />}
-      </div>
+      <Page>
+        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-64 w-full rounded-xl" />}
+      </Page>
     );
   }
 
   const ended = c.state === "ended" || c.state === "closed";
   const rows = present ? c.board.map(({ student_id: _, ...r }) => r) : c.board;
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate"
-      className={cn("mx-auto px-5 pb-20 pt-6", present ? "fixed inset-0 z-40 max-w-none overflow-auto bg-bg px-[6vw] pt-[4vh]" : "max-w-[1100px]")}>
-      {!present && (
-        <motion.a variants={item} href={href.lab(id)} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted hover:text-text">
-          <ArrowLeft className="size-4" /> Back to the competition
-        </motion.a>
-      )}
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div className={cn("mx-auto w-full pb-20", present ? "fixed inset-0 z-40 max-w-none overflow-auto bg-bg px-[6vw] pt-[4vh]" : "max-w-[1120px] px-4 pt-6 sm:px-6 sm:pt-8")}>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-gold">
             <Trophy className="size-3.5" /> Class competition
             {c.state === "live" && <span className="ml-2 inline-flex items-center gap-1.5 text-success"><LiveDot tone="success" /> live</span>}
           </p>
-          <h1 className={cn("mt-1 font-semibold tracking-tight text-text", present ? "text-4xl" : "text-2xl")}>{c.title}</h1>
+          <h1 className={cn("mt-1 font-semibold tracking-[-0.015em] text-text", present ? "text-4xl" : "text-[22px] leading-tight")}>{c.title}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Card className="flex items-center gap-3 px-5 py-3 shadow-sm">
-            <Countdown comp={c} offset={offset} className={present ? "text-4xl" : "text-2xl"} />
+          <Card className="flex items-center gap-3 px-4 py-2.5">
+            <Countdown comp={c} offset={offset} className={present ? "text-4xl" : "text-xl"} />
           </Card>
-          <span className="flex items-center gap-1.5 text-sm text-muted"><Users className="size-4" />{c.board.length}</span>
+          <span className="flex items-center gap-1.5 text-sm tabular-nums text-muted"><Users className="size-4" />{c.board.length}</span>
           {!present && (
             <Button variant="ghost" size="sm" onClick={() => setIds((v) => !v)} title="Show roll numbers next to board names">
               {ids ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />} Roll numbers
@@ -83,31 +76,29 @@ export function LiveBoard({ id, onAuthLost }: { id: string; onAuthLost: () => vo
             {present ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />} {present ? "Exit" : "Present"}
           </Button>
         </div>
-      </motion.div>
+      </div>
 
       {c.handing_in && (
-        <motion.div variants={item}>
-          <Card className="mb-5 flex items-center gap-3 border-gold/30 px-5 py-3 text-sm text-text">
-            <Spinner className="size-4 text-gold" />
-            Time is up. Handing in and grading the code each student had open; the final standings follow in a few seconds.
-          </Card>
-        </motion.div>
+        <Card className="mb-5 flex items-center gap-3 border-gold/30 px-5 py-3 text-sm text-text">
+          <Spinner className="size-4 text-gold" />
+          Time is up. Handing in and grading the code each student had open; the final standings follow in a few seconds.
+        </Card>
       )}
       {ended && !c.handing_in && c.board.length > 0 && (
-        <motion.div variants={item}><Card className="mb-5 px-6 pb-6 pt-4"><Podium rows={c.board} /></Card></motion.div>
+        <Card className="mb-5 px-6 pb-6 pt-4"><Podium rows={c.board} /></Card>
       )}
 
-      <motion.div variants={item}>
+      <div>
         <Leaderboard rows={rows} nQuestions={c.questions.length} size={present ? "lg" : "md"} showIds={ids && !present}
           showLanguages={c.language === "any"}
           empty={c.state === "draft" || c.state === "waiting" ? "The board fills up once you start the clock." : "No scores yet."} />
-      </motion.div>
+      </div>
       {!present && (
         <p className="mt-6 text-center text-xs text-faint">
           The board ranks tests passed and solving speed only. Nothing from the review timeline is ever shown here.
           {" "}<a href={href.similar(id)} className="inline-flex items-center gap-1 text-muted hover:text-text"><ScanSearch className="size-3" />Similar submissions</a>
         </p>
       )}
-    </motion.div>
+    </div>
   );
 }

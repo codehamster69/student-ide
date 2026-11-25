@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "r
 import { useQuestionText, type LivePrompt } from "../questionText";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
-  ArrowDown, ArrowLeft, ArrowUp, BookOpen, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, GraduationCap, Pencil, Plus, Radio, Trash2,
-  Trophy, UserPlus, Users,
+  ArrowDown, ArrowUp, Check, CheckCircle2, CircleDashed, Code2, FlaskConical, Globe, Pencil, Plus, Radio, Trash2,
+  Trophy, UserPlus,
 } from "lucide-react";
-import { Badge, Button, Card, Checkbox, Dialog, Field, Input, Spinner, TextArea, cn, item, pop, spring, stagger } from "../ui";
+import { Badge, Button, Card, Checkbox, Dialog, EmptyState, Field, Input, Page, Spinner, TextArea, cn, pop, spring } from "../ui";
 import { authConfig } from "../auth";
 import { AuthError, get, send } from "../review/api";
 import { Skeleton } from "../review/bits";
@@ -14,7 +14,7 @@ import {
   ANY_LANGUAGE, LANGUAGES, parseIds, questionLanguages, STATUS, type GradeResult, type LabLanguage, type Language, type LabDetail, type LabStatus,
   type Question, type QuestionFields, type Variants,
 } from "./api";
-import { LanguagePills, LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
+import { LanguageBadge, LanguagePills, LanguageSelect, SourceBadge, TestsEditor, TryAnswer } from "./bits";
 import { SourcePicker } from "./SourcePicker";
 import { href } from "../routes";
 import { AttendancePage, ClassGroupsCard, PerformingDialog, SittingBar } from "./Attendance";
@@ -66,15 +66,15 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
     const failed = results.filter((x) => x.error).length + sent.filter((d) => d.error).length;
     const what = body.status === "closed" ? "Lab closed" : "Sitting ended";
     if (sent.length) setNotes([failed ? `${what}, but attendance for ${failed} class group${failed === 1 ? "" : "s"} could not be sent to Roll Call. Open Attendance to retry.`
-      : `${what}. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(", ")}.`]);
+      : `${what}. Attendance sent to Roll Call: ${results.map((x) => `${x.label} ${x.present}/${x.total}`).join(",")}.`]);
     void loadSittings();
   };
 
   if (!lab) {
     return (
-      <div className="mx-auto max-w-[1240px] px-5 pt-8">
-        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-40 w-full rounded-2xl" />}
-      </div>
+      <Page wide>
+        {error ? <Card className="p-6 text-sm text-danger">{error}</Card> : <Skeleton className="h-40 w-full rounded-xl" />}
+      </Page>
     );
   }
 
@@ -87,14 +87,10 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
   };
 
   return (
-    <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="mx-auto max-w-[1240px] px-5 pb-20 pt-6">
-      <motion.a variants={item} href={href.labs} className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-text">
-        <ArrowLeft className="size-4" /> All labs
-      </motion.a>
-
-      <motion.div variants={item} className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <Page wide>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <LabHeading lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {lab.kind === "competition" && (
             <Button size="sm" onClick={() => { location.hash = href.board(lab.id); }}><Trophy className="size-3.5 text-gold" /> Leaderboard</Button>
           )}
@@ -116,7 +112,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
             <Trash2 className="size-4" />
           </Button>
         </div>
-      </motion.div>
+      </div>
 
       {lab.status === "open" && <SittingBar lab={lab} info={sittings} onSwitch={() => setPicking("switch")} />}
       <PerformingDialog open={!!picking} switching={picking === "switch"} groups={sittings?.classes ?? []}
@@ -129,15 +125,15 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
       <AnimatePresence>
         {error && (
           <motion.p key={error} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="mb-4 overflow-hidden rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</motion.p>
+            className="mb-4 overflow-hidden rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">{error}</motion.p>
         )}
       </AnimatePresence>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <motion.section variants={item} className="min-w-0">
+      <div className="grid items-start gap-x-8 gap-y-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-faint">
-              Questions <span className="ml-1 tabular-nums text-muted">{lab.questions.length}</span>
+            <h2 className="text-[15px] font-semibold text-text">
+              Questions <span className="ml-1 text-sm font-normal tabular-nums text-muted">{lab.questions.length}</span>
             </h2>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => setEditing("pick")} disabled={editing === "pick"}>
@@ -152,7 +148,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           <AnimatePresence>
             {notes.length > 0 && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                className="mb-3 overflow-hidden rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+                className="mb-3 overflow-hidden rounded-lg border border-warn/40 px-3 py-2 text-xs text-warn" role="status">
                 {notes.map((n) => <p key={n}>{n}</p>)}
                 <button className="mt-1 font-medium underline" onClick={() => setNotes([])}>Dismiss</button>
               </motion.div>
@@ -160,7 +156,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           </AnimatePresence>
 
           <LayoutGroup>
-            <motion.ol layout className="grid gap-3">
+            <motion.ol layout className={cn("divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm", !lab.questions.length && editing === null && "hidden")}>
               <AnimatePresence initial={false}>
                 {lab.questions.map((q, i) => (
                   <motion.li key={q.id} layout transition={spring} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -202,32 +198,29 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
             </motion.ol>
           </LayoutGroup>
 
-          {lab.questions.length === 0 && editing !== "new" && (
-            <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
-              <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent"><Code2 className="size-5" /></span>
-              <p className="text-sm font-medium text-text">Add the first question</p>
-              <p className="max-w-sm text-sm text-muted">
-                Write your own (a prompt, optional starter code, a sample input and optional tests), or pick one from a platform.
-              </p>
-              <div className="mt-2 flex gap-2">
-                <Button size="sm" onClick={() => setEditing("pick")}><Globe className="size-3.5" /> From a platform</Button>
+          {lab.questions.length === 0 && editing === null && (
+            <EmptyState icon={Code2} title="Add the first question"
+              action={<>
+                <Button size="sm" className="mr-2" onClick={() => setEditing("pick")}><Globe className="size-3.5" /> From a platform</Button>
                 <Button variant="primary" size="sm" onClick={() => setEditing("new")}><Plus className="size-3.5" /> Add question</Button>
-              </div>
-            </Card>
+              </>}>
+              Write your own (a prompt, optional starter code, a sample input and optional tests), or pick one from a platform.
+            </EmptyState>
           )}
-        </motion.section>
 
-        <motion.aside variants={item} className="grid gap-5 lg:sticky lg:top-20">
+          <div className="mt-8"><Progress lab={lab} /></div>
+        </section>
+
+        <aside className="grid gap-4 lg:sticky lg:top-20">
           {lab.kind === "competition" && (
             <CompetitionPanel labId={lab.id} version={lab} onAuthLost={onAuthLost}
               onChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
           )}
           <Settings lab={lab} onSave={(f) => write("PATCH", `/api/teach/labs/${lab.id}`, f)} />
+          <Assign lab={lab} onSave={(student_ids, everyone) => write("PUT", `/api/teach/labs/${lab.id}/roster`, { student_ids, everyone })} onAuthLost={onAuthLost} />
           <ClassGroupsCard lab={lab} onAuthLost={onAuthLost} onRosterChanged={() => void get<LabDetail>(`/api/teach/labs/${id}`).then(setLab, fail)} />
           <Teachers lab={lab} onSave={(body) => write("PUT", `/api/teach/labs/${lab.id}/teachers`, body)} />
-          <Assign lab={lab} onSave={(student_ids, everyone) => write("PUT", `/api/teach/labs/${lab.id}/roster`, { student_ids, everyone })} onAuthLost={onAuthLost} />
-          <Progress lab={lab} />
-        </motion.aside>
+        </aside>
       </div>
 
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} icon={<Trash2 className="size-5" />}
@@ -236,7 +229,7 @@ export function LabEditor({ id, view, onAuthLost }: { id: string; view?: "attend
           <Button onClick={() => setConfirmDelete(false)} data-autofocus>Keep</Button>
           <Button variant="danger" onClick={async () => { if (await write("DELETE", `/api/teach/labs/${lab.id}`)) location.hash = href.labs; }}>Delete</Button>
         </>} />
-    </motion.div>
+    </Page>
   );
 }
 
@@ -255,11 +248,11 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
   };
 
   return (
-    <div className="min-w-[min(100%,18rem)] flex-1">
+    <div className="min-w-[min(100%,18rem)] max-w-3xl flex-1">
       <div className="flex items-center gap-3">
         <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => void commit()} maxLength={120}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} aria-label="Lab title"
-          className="-mx-2 min-w-0 flex-1 rounded-lg bg-transparent px-2 py-0.5 text-2xl font-semibold tracking-tight text-text outline-none transition-colors hover:bg-surface-2 focus:bg-surface focus:ring-4 focus:ring-accent/15" />
+          className="-mx-2 min-w-0 flex-1 rounded-lg bg-transparent px-2 py-0.5 text-[22px] font-semibold leading-tight tracking-[-0.015em] text-text border border-transparent outline-none transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong focus:ring-4 focus:ring-accent/15" />
         <AnimatePresence>
           {saved && (
             <motion.span initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
@@ -267,9 +260,20 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
           )}
         </AnimatePresence>
       </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[13px] text-muted">
+        <Badge tone={lab.status === "open" ? "success" : lab.status === "closed" ? "warn" : "neutral"} className="h-5 px-2 text-[11px]">{STATUS[lab.status].label}</Badge>
+        {lab.kind === "competition" && <Badge tone="accent" className="h-5 px-2 text-[11px]"><Trophy className="size-3" /> Competition</Badge>}
+        <LanguageBadge language={lab.language} />
+        {lab.subject && <span>{lab.subject}</span>}
+        <span className="text-faint">·</span>
+        <span className="tabular-nums">{lab.questions.length} {lab.questions.length === 1 ? "question" : "questions"}</span>
+        <span className="text-faint">·</span>
+        <span className="tabular-nums">{lab.everyone ? "Everyone assigned" : `${lab.roster.length} assigned`}</span>
+        {lab.n_sessions > 0 && <><span className="text-faint">·</span><span className="tabular-nums">{lab.n_sessions} {lab.n_sessions === 1 ? "session" : "sessions"}</span></>}
+      </div>
       <textarea value={description} onChange={(e) => setDescription(e.target.value)} onBlur={() => void commit()} rows={1} maxLength={4000}
         placeholder="Add instructions for students" aria-label="Instructions for students"
-        className="-mx-2 mt-1 block w-full max-w-3xl resize-none rounded-lg bg-transparent px-2 py-1 text-sm text-muted outline-none [field-sizing:content] placeholder:text-faint hover:bg-surface-2 focus:bg-surface focus:ring-4 focus:ring-accent/15" />
+        className="-mx-2 mt-2 block w-full max-w-3xl resize-none rounded-lg bg-transparent px-2 py-1 text-sm text-muted outline-none [field-sizing:content] placeholder:text-faint focus:ring-4 focus:ring-accent/15" />
     </div>
   );
 }
@@ -277,7 +281,7 @@ function LabHeading({ lab, onSave }: { lab: LabDetail; onSave: (f: { title?: str
 function StatusSwitch({ value, onChange, disabled }: { value: LabStatus; onChange: (s: LabStatus) => void; disabled: boolean }) {
   return (
     <LayoutGroup id="lab-status">
-      <div className="flex rounded-lg border border-border bg-surface p-0.5 shadow-sm" role="radiogroup" aria-label="Lab status">
+      <div className="flex rounded-lg border border-border p-0.5 shadow-sm" role="radiogroup" aria-label="Lab status">
         {(Object.keys(STATUS) as LabStatus[]).map((s) => {
           const off = disabled && s === "open";
           return (
@@ -287,7 +291,7 @@ function StatusSwitch({ value, onChange, disabled }: { value: LabStatus; onChang
                 value === s ? (s === "open" ? "text-success" : "text-text") : "text-muted hover:text-text")}>
               {value === s && (
                 <motion.span layoutId="status-pill" transition={spring}
-                  className={cn("absolute inset-0 rounded-md", s === "open" ? "bg-success-soft" : "bg-surface-3")} />
+                  className={cn("absolute inset-0 rounded-md", s === "open" ? "border border-success/40" : "border border-border-strong")} />
               )}
               <span className="relative flex items-center gap-1.5">
                 {s === "open" && <span className={cn("size-1.5 rounded-full", value === "open" ? "bg-success" : "bg-faint")} />}
@@ -307,15 +311,15 @@ function QuestionCard({ q, index, first, last, onEdit, onMove, anyLanguage }: {
   const langs = anyLanguage ? questionLanguages(q) : [];
   const starter = anyLanguage ? Object.values(q.variants).find((v) => v?.starter_code)?.starter_code ?? "" : q.starter_code;
   return (
-    <Card className="group flex gap-4 p-4 shadow-sm transition-shadow hover:shadow-md">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft font-mono text-xs font-semibold text-accent">{index + 1}</span>
+    <div className="group flex gap-4 px-4 py-3.5 border-l-2 border-transparent transition-[border-color,transform,box-shadow] duration-150 hover:border-border-strong">
+      <span className="grid size-7 shrink-0 place-items-center rounded-md border border-cta/40 text-xs font-semibold tabular-nums text-accent">{index + 1}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <strong className="text-[15px] font-semibold text-text">{q.title}</strong>
           {starter && <Badge className="h-5 px-2 text-[11px]">Starter code</Badge>}
           {anyLanguage && (
             <Badge className="h-5 gap-1 px-2 text-[11px]">
-              {langs.length === Object.keys(LANGUAGES).length ? "All 5 languages" : `Only ${langs.map((l) => LANGUAGES[l].label).join(", ")}`}
+              {langs.length === Object.keys(LANGUAGES).length ? "All 5 languages" : `Only ${langs.map((l) => LANGUAGES[l].label).join(",")}`}
             </Badge>
           )}
           {q.tests.length > 0 && (
@@ -340,7 +344,7 @@ function QuestionCard({ q, index, first, last, onEdit, onMove, anyLanguage }: {
           <Button variant="ghost" size="icon" disabled={last} onClick={() => onMove(1)} aria-label="Move down"><ArrowDown className="size-3.5" /></Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -350,7 +354,7 @@ function LiveTextCheck({ live }: { live: LivePrompt }) {
   const { status } = useQuestionText("", live);
   if (status !== "failed") return null;
   return (
-    <p className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn" role="status">
+    <p className="mt-2 rounded-lg border border-warn/40 px-3 py-2 text-xs text-warn" role="status">
       The problem text can't be loaded right now, so students would see only a link to the original. Write the prompt in
       your own words (Edit) to be safe.
     </p>
@@ -388,10 +392,10 @@ function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, o
   const save = async () => { setBusy(true); await onSave(f); setBusy(false); };
 
   return (
-    <Card className="border-accent/40 p-5 ring-4 ring-accent/10">
+    <div className="border-l-2 border-cta/40 p-5">
       <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="grid gap-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-xs font-semibold text-accent-fg">{index + 1}</span>
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-cta text-xs font-semibold tabular-nums text-cta">{index + 1}</span>
           <h3 className="text-sm font-semibold text-text">{isNew ? "New question" : "Edit question"}</h3>
         </div>
         <Field label="Title">
@@ -448,7 +452,7 @@ function QuestionForm({ index, initial, harness, livePrompt, onSave, onCancel, o
           </div>
         </div>
       </form>
-    </Card>
+    </div>
   );
 }
 
@@ -467,8 +471,8 @@ function Settings({ lab, onSave }: { lab: LabDetail; onSave: (f: { subject?: str
   }, []);
   return (
     <Card className="p-5">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><BookOpen className="size-4 text-accent" /> Session settings</h2>
-      <div className="mt-4 grid gap-3">
+      <h2 className="text-[15px] font-semibold text-text">Basics</h2>
+      <div className="mt-3 grid gap-3">
         <Field label="Subject">
           <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} placeholder="Data Structures" className="h-9 text-[13px]"
             list="lab-subjects" onBlur={() => subject.trim() !== lab.subject && void onSave({ subject })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
@@ -504,7 +508,7 @@ function Teachers({ lab, onSave }: {
 
   return (
     <Card className="p-5">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><GraduationCap className="size-4 text-accent" /> Teachers</h2>
+      <h2 className="text-[15px] font-semibold text-text">Sharing</h2>
       <p className="mt-1 text-xs text-muted">Only these teachers and admins see this lab, its live view, sessions and review.</p>
       <div className="mt-4 grid gap-1.5 text-[13px]">
         <span className="flex items-center gap-2">
@@ -524,8 +528,8 @@ function Teachers({ lab, onSave }: {
         {lab.co_teachers.map((t) => (
           <button key={t} disabled={!canShare} title={canShare ? "Stop sharing" : undefined}
             onClick={() => void onSave({ co_teachers: lab.co_teachers.filter((x) => x !== t) })}
-            className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft pl-2.5 pr-1.5 font-mono text-xs text-accent disabled:pr-2.5">
-            {t}{canShare && <span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:bg-accent group-hover:text-accent-fg">×</span>}
+            className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 border border-cta/40 pl-2.5 pr-1.5 font-mono text-xs text-accent disabled:pr-2.5">
+            {t}{canShare && <span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:text-text">×</span>}
           </button>
         ))}
         {lab.co_teachers.length === 0 && <span className="self-center text-xs text-faint">Not shared with anyone.</span>}
@@ -560,8 +564,8 @@ function Assign({ lab, onSave, onAuthLost }: {
 
   return (
     <Card className="p-5">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-text"><Users className="size-4 text-accent" /> Assigned to</h2>
-      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface-2/60 p-3">
+      <h2 className="text-[15px] font-semibold text-text">Roster</h2>
+      <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
         <Checkbox checked={lab.everyone} onChange={(e) => void onSave(lab.roster, e.target.checked)} className="mt-0.5" />
         <span>
           <span className="block text-[13px] font-medium text-text">Everyone who signs in</span>
@@ -582,8 +586,8 @@ function Assign({ lab, onSave, onAuthLost }: {
             {lab.roster.map((s) => (
               <motion.button key={s} layout initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }}
                 transition={spring} onClick={() => remove(s)} title="Remove"
-                className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft pl-2.5 pr-1.5 font-mono text-xs text-accent">
-                {s}<span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:bg-accent group-hover:text-accent-fg">×</span>
+                className="group inline-flex h-7 items-center gap-1 rounded-full border border-accent/30 border border-cta/40 pl-2.5 pr-1.5 font-mono text-xs text-accent">
+                {s}<span className="grid size-4 place-items-center rounded-full text-accent/70 group-hover:text-text">×</span>
               </motion.button>
             ))}
           </AnimatePresence>
@@ -599,7 +603,7 @@ function Assign({ lab, onSave, onAuthLost }: {
             <div className="flex flex-wrap gap-1.5">
               {suggestions.slice(0, 40).map((s) => (
                 <button key={s} onClick={() => void add([s])}
-                  className="h-7 rounded-full border border-border bg-surface px-2.5 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-text">
+                  className="h-7 rounded-full border border-border px-2.5 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-text">
                   + {s}
                 </button>
               ))}
@@ -626,7 +630,7 @@ function Progress({ lab }: { lab: LabDetail }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
-        <h2 className="text-sm font-semibold text-text">Progress</h2>
+        <h2 className="text-[15px] font-semibold text-text">Progress</h2>
         <a href={href.reviewLab(lab.id)} className="text-xs font-medium text-accent hover:underline">Open review timeline</a>
       </div>
       {students.length === 0 || lab.questions.length === 0 ? (
@@ -634,7 +638,7 @@ function Progress({ lab }: { lab: LabDetail }) {
       ) : (
         <div className="max-h-[360px] overflow-auto border-t border-border">
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-surface-2/95 backdrop-blur">
+            <thead className="sticky top-0 bg-bg">
               <tr>
                 <th className="px-5 py-2 text-left font-semibold text-faint">Student</th>
                 {lab.questions.map((q, i) => (

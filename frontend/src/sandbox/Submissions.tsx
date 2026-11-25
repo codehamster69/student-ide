@@ -48,7 +48,7 @@ export function Submissions({ lab }: { lab: LabDetail }) {
   }), [data, filter]);
 
   if (error) return <Card className="p-5 text-sm text-danger">{error}</Card>;
-  if (!data) return <Skeleton className="h-60 rounded-2xl" />;
+  if (!data) return <Skeleton className="h-60 rounded-xl" />;
   const { counts } = data;
   const expected = counts.students * data.assignments.length;
 
@@ -81,7 +81,7 @@ export function Submissions({ lab }: { lab: LabDetail }) {
         <div className="flex flex-wrap gap-1">
           {FILTERS.map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)} className={cn("h-8 rounded-full border px-3 text-xs font-medium",
-              filter === f.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:text-text")}>{f.label}</button>
+              filter === f.id ? "border-cta text-cta" : "border-border text-muted hover:text-text")}>{f.label}</button>
           ))}
         </div>
         <div className="flex gap-2">

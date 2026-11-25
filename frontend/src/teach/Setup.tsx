@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { motion } from "motion/react";
 import { ArrowRight, Check, ClipboardCheck, Eye, ListChecks, Lock, PlugZap, Radio, Users } from "lucide-react";
-import { Card, cn, item, stagger } from "../ui";
+import { Badge, Card, Page, PageHeader, cn } from "../ui";
 import type { Me } from "../auth";
 import { AuthError, get } from "../review/api";
 import { href } from "../routes";
@@ -58,38 +57,36 @@ export function Setup({ me, onAuthLost }: { me: Me | null; onAuthLost: () => voi
     },
   ];
 
+  const doneCount = steps.filter((x) => x.done).length;
   return (
-    <motion.div variants={stagger(0.05)} initial="initial" animate="animate" className="mx-auto max-w-[1100px] px-5 pb-20 pt-8">
-      <motion.div variants={item} className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">Getting started{me?.name ? `, ${me.name.split(" ")[0]}` : ""}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">From nothing to your first lab with attendance in about ten minutes. Steps tick themselves as you go.</p>
-      </motion.div>
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
-        <motion.ol variants={stagger(0.04, 0.05)} className="grid gap-3">
+    <Page>
+      <PageHeader title={`Getting started${me?.name ? `, ${me.name.split("")[0]}` : ""}`}
+        description="From nothing to your first lab with attendance in about ten minutes. Steps tick themselves as you go."
+        meta={labs ? <Badge tone={doneCount === steps.length ? "success" : "neutral"} className="tabular-nums">{doneCount} of {steps.length} done</Badge> : undefined} />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <ol className="divide-y divide-border overflow-hidden rounded-xl border border-border shadow-sm">
           {steps.map((s, i) => (
-            <motion.li key={s.title} variants={item}>
-              <Card className="flex gap-4 p-5">
-                <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl text-sm font-semibold",
-                  s.done ? "bg-success-soft text-success" : "bg-accent-soft text-accent")}>
-                  {s.done ? <Check className="size-4" /> : i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h2 className={cn("text-[15px] font-semibold", s.done ? "text-muted" : "text-text")}>{s.title}</h2>
-                  <p className="mt-0.5 text-[13px] text-muted">{s.text}</p>
-                  {s.body && <div className="mt-3">{s.body}</div>}
-                  {s.link && (
-                    <a href={s.link[0]} className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">
-                      {s.link[1]} <ArrowRight className="size-3.5" />
-                    </a>
-                  )}
-                </div>
-              </Card>
-            </motion.li>
+            <li key={s.title} className="flex gap-4 px-5 py-4">
+              <span className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-full text-[13px] font-semibold tabular-nums",
+                s.done ? "border border-success/40 text-success" : "border border-border text-muted")}>
+                {s.done ? <Check className="size-4" /> : i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className={cn("text-[15px] font-semibold", s.done ? "text-muted" : "text-text")}>{s.title}</h2>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{s.text}</p>
+                {s.body && <div className="mt-3">{s.body}</div>}
+                {s.link && (
+                  <a href={s.link[0]} className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">
+                    {s.link[1]} <ArrowRight className="size-3.5" />
+                  </a>
+                )}
+              </div>
+            </li>
           ))}
-        </motion.ol>
-        <motion.aside variants={item} className="grid gap-4 lg:sticky lg:top-20">
+        </ol>
+        <aside className="grid gap-4 lg:sticky lg:top-20">
           <Card className="p-5 text-[13px]">
-            <h2 className="text-sm font-semibold text-text">Who is marked present</h2>
+            <h2 className="text-[15px] font-semibold text-text">Who is marked present</h2>
             <p className="mt-1.5 text-muted">
               For each lab day, a student counts as present with at least <strong className="text-text">10 active minutes</strong> (minutes in which they typed,
               ran or checked code) and <strong className="text-text">40 typed characters</strong>. Pastes don't count as typing. Each lab can change this, and you
@@ -98,14 +95,14 @@ export function Setup({ me, onAuthLost }: { me: Me | null; onAuthLost: () => voi
             <p className="mt-2 text-muted">The learning lab and View as student never count. Attendance never looks at the review timeline's highlighted moments.</p>
           </Card>
           <Card className="p-5 text-[13px]">
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-text"><Lock className="size-3.5" /> Students and their ids</h2>
+            <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-text"><Lock className="size-3.5" /> Students and their ids</h2>
             <p className="mt-1.5 text-muted">
               Students sign in with their college Google account; their id is the part before the @ (for example <span className="font-mono">UG23CS001</span>).
               Roll Call rosters must use the same prefix and digits so each student lands in their own group.
             </p>
           </Card>
           <Card className="p-5 text-[13px]">
-            <h2 className="text-sm font-semibold text-text">Where things are</h2>
+            <h2 className="text-[15px] font-semibold text-text">Where things are</h2>
             <ul className="mt-1.5 grid gap-1 text-muted">
               <li><a className="text-accent hover:underline" href={href.labs}>Labs</a>: make and run labs and competitions</li>
               <li><a className="text-accent hover:underline" href={href.subjects}>Subjects</a>: labs by course, with their class groups</li>
@@ -113,9 +110,9 @@ export function Setup({ me, onAuthLost }: { me: Me | null; onAuthLost: () => voi
               <li><a className="text-accent hover:underline" href={href.review}>Review</a>: timelines after class</li>
             </ul>
           </Card>
-        </motion.aside>
+        </aside>
       </div>
-      <motion.div variants={item} className="mt-6"><AllRegisters onAuthLost={onAuthLost} /></motion.div>
-    </motion.div>
+      <div className="mt-8"><AllRegisters onAuthLost={onAuthLost} /></div>
+    </Page>
   );
 }

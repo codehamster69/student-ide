@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Check, CircleStop, FileText, FlaskConical, Play, RefreshCw, Timer, X } from "lucide-react";
-import { Badge, Button, Card, Spinner, TextArea, cn } from "../ui";
+import { Badge, Button, Card, Page, Spinner, TextArea, cn } from "../ui";
 import { get, send, token } from "../review/api";
 import { LessonText } from "../learn/LessonText";
 import { href } from "../routes";
@@ -27,7 +27,7 @@ export function SandboxPreview({ id, onAuthLost }: { id: string; onAuthLost: () 
     return () => clearInterval(t);
   }, [load, p?.status]);
 
-  if (error) return <div className="mx-auto max-w-[1100px] px-5 pt-8"><Card className="p-6 text-sm text-danger">{error}</Card></div>;
+  if (error) return <Page><Card className="p-6 text-sm text-danger">{error}</Card></Page>;
   if (!p) return <div className="grid place-items-center pt-24"><Spinner /></div>;
   if (p.kind === "setup") return <SetupByHand p={p} onReload={() => void load()} onAuthLost={onAuthLost} />;
   const lab = p.lab;
@@ -75,7 +75,7 @@ export function SandboxPreview({ id, onAuthLost }: { id: string; onAuthLost: () 
             {lab.assignments.map((x, i) => (
               <button key={x.id} onClick={() => setAsg(x.id)} className={cn("relative shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-medium",
                 x.id === asg ? "text-text" : "text-muted hover:text-text")}>
-                {x.id === asg && <motion.span layoutId="asg-tab" className="absolute inset-0 rounded-lg bg-surface-3" />}
+                {x.id === asg && <motion.span layoutId="asg-tab" className="absolute inset-0 rounded-lg border border-border-strong" />}
                 <span className="relative">{i + 1}. {x.title}</span>
               </button>
             ))}
@@ -156,7 +156,7 @@ function Workspace({ previewId, assignment: a, onTouched }: { previewId: string;
       <Card className="flex min-h-0 flex-col overflow-hidden">
         <div className="flex gap-1 border-b border-border p-1.5 text-[13px]">
           {(["statement", "output"] as const).map((t) => (
-            <button key={t} onClick={() => setPanel(t)} className={cn("rounded-md px-2.5 py-1 font-medium capitalize", panel === t ? "bg-surface-3 text-text" : "text-muted")}>{t}</button>
+            <button key={t} onClick={() => setPanel(t)} className={cn("rounded-md px-2.5 py-1 font-medium capitalize", panel === t ? "border border-border-strong text-text" : "border border-transparent text-muted")}>{t}</button>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -173,7 +173,7 @@ function Workspace({ previewId, assignment: a, onTouched }: { previewId: string;
                   <p className="text-sm font-medium text-text">{check.passed} of {check.total} tests pass</p>
                   {check.results.map((r, i) => (
                     <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                      className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40 bg-success-soft" : "border-danger/40 bg-danger-soft")}>
+                      className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40" : "border-danger/40")}>
                       <p className="flex items-center gap-1 font-medium text-text">{r.passed ? <Check className="size-3.5 text-success" /> : <X className="size-3.5 text-danger" />}{r.name}{r.hidden && <Badge className="ml-1">hidden</Badge>}</p>
                       {!r.passed && r.expected !== undefined && <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-muted">expected {JSON.stringify(r.expected)}{"\n"}got      {JSON.stringify(r.got)}</pre>}
                       {!r.passed && r.stderr && <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-danger">{r.stderr.slice(-400)}</pre>}
@@ -197,12 +197,12 @@ function Workspace({ previewId, assignment: a, onTouched }: { previewId: string;
 
       <div className="grid min-h-0 grid-rows-[3fr_2fr] gap-3">
         <Card className="grid min-h-0 grid-cols-[160px_1fr] overflow-hidden">
-          <div className="min-h-0 overflow-y-auto border-r border-border bg-surface-2 p-1.5">
-            <div className="mb-1 flex items-center justify-between px-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">Files
+          <div className="min-h-0 overflow-y-auto border-r border-border p-1.5">
+            <div className="mb-1 flex items-center justify-between px-1.5 text-xs font-medium text-faint">Files
               <button onClick={() => void refresh()} aria-label="Refresh files"><RefreshCw className="size-3" /></button></div>
             {files.map((f) => (
               <button key={f.path} onClick={async () => { await flush(); setCur(f.path); }}
-                className={cn("flex w-full items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-left font-mono text-xs", f.path === cur ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+                className={cn("flex w-full items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-left font-mono text-xs", f.path === cur ? "border border-border-strong text-text" : "border border-transparent text-muted hover:text-text")}>
                 <FileText className="size-3 shrink-0" />{f.path}
               </button>
             ))}

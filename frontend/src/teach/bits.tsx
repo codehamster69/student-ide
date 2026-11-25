@@ -5,7 +5,7 @@ import { Badge, Button, Checkbox, Spinner, TextArea, cn, spring } from "../ui";
 import { ANY_LANGUAGE, BLANK_TEST, LANGUAGES, type GradeResult, type LabLanguage, type Language, type QuestionSource, type TestCase } from "./api";
 
 const select =
-  "h-11 w-full appearance-none rounded-lg border border-border bg-surface pl-3 pr-9 text-sm text-text shadow-sm outline-none " +
+  "h-11 w-full appearance-none rounded-lg border border-border pl-3 pr-9 text-sm text-text shadow-sm outline-none" +
   "transition-[border-color,box-shadow] duration-150 hover:border-border-strong focus:border-accent focus:ring-4 focus:ring-accent/15";
 
 /** `any`: also offer "Any language" (competitions only). */
@@ -36,7 +36,7 @@ export function LanguageBadge({ language }: { language: LabLanguage }) {
 export function LanguageDot({ language, className }: { language: Language; className?: string }) {
   const l = LANGUAGES[language] ?? LANGUAGES.python;
   return (
-    <span className={cn("inline-flex h-5 items-center gap-1 rounded-md bg-surface-2 px-1.5 font-mono text-[10.5px] text-muted", className)}
+    <span className={cn("inline-flex h-5 items-center gap-1 rounded-md px-1.5 font-mono text-[10.5px] text-muted", className)}
       title={`Answered in ${l.label}`}>
       <span className="size-1.5 rounded-sm" style={{ background: l.color }} />{l.label}
     </span>
@@ -53,7 +53,7 @@ export function SourceBadge({ source }: { source: QuestionSource | null }) {
   const name = PROVIDER_NAMES[source.provider] ?? source.provider;
   return (
     <a href={source.url} target="_blank" rel="noreferrer" title={source.attribution ?? `Linked from ${name}`}
-      className="inline-flex h-5 items-center gap-1 rounded-full border border-border bg-surface-2 px-2 text-[11px] font-medium text-muted hover:text-text">
+      className="inline-flex h-5 items-center gap-1 rounded-full border border-border px-2 text-[11px] font-medium text-muted hover:text-text">
       <Link2 className="size-3" /> {source.linked_only ? `${name} link` : `From ${name}`}
     </a>
   );
@@ -89,7 +89,7 @@ export function TestsEditor({ tests, onChange, harness }: { tests: TestCase[]; o
                 Competitions score on these tests, so a competition question needs at least one.
               </p>
               {harness && (
-                <details className="rounded-lg border border-border bg-surface-2/60 px-3 py-2 text-xs text-muted">
+                <details className="rounded-lg border border-border px-3 py-2 text-xs text-muted">
                   <summary className="cursor-pointer font-medium text-text">Test driver (added after the student's code when tests run)</summary>
                   <pre className="mt-2 overflow-x-auto font-mono text-[11.5px]">{harness}</pre>
                 </details>
@@ -97,12 +97,12 @@ export function TestsEditor({ tests, onChange, harness }: { tests: TestCase[]; o
               <AnimatePresence initial={false}>
                 {tests.map((t, i) => (
                   <motion.div key={i} layout transition={spring} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }} className="grid gap-2 rounded-lg border border-border bg-surface p-3">
+                    exit={{ opacity: 0, height: 0 }} className="grid gap-2 rounded-lg border border-border p-3">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-[11px] font-semibold text-faint">#{i + 1}</span>
                       <input value={t.name} onChange={(e) => set(i, { name: e.target.value })} maxLength={120} placeholder="Name (optional)"
                         aria-label={`Test ${i + 1} name`}
-                        className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-2 text-[13px] text-text outline-none hover:bg-surface-2 focus:bg-surface-2" />
+                        className="h-8 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 text-[13px] text-text outline-none transition-colors hover:border-border focus:border-border-strong" />
                       <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted" title="Students see pass or fail only">
                         <Checkbox checked={t.hidden} onChange={(e) => set(i, { hidden: e.target.checked })} className="size-4" />
                         <EyeOff className="size-3.5" /> Hidden
@@ -171,7 +171,7 @@ export function GradeView({ grade, dark }: { grade: GradeResult; dark?: boolean 
 function Pre({ label, text }: { label: string; text: string }) {
   return (
     <div className="min-w-0">
-      <p className="mb-0.5 font-sans text-[10.5px] font-semibold uppercase tracking-wide text-faint">{label}</p>
+      <p className="mb-0.5 font-sans text-[11px] font-medium text-faint">{label}</p>
       <pre className="m-0 max-h-28 overflow-auto whitespace-pre-wrap break-words">{text}</pre>
     </div>
   );
@@ -222,7 +222,7 @@ export function LanguagePills({ value, options, onChange, marked }: {
       {options.map((l) => (
         <button type="button" key={l} role="tab" aria-selected={l === value} onClick={() => onChange(l)}
           className={cn("flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
-            l === value ? "border-accent/50 bg-accent-soft text-text" : "border-border text-muted hover:text-text")}>
+            l === value ? "border-cta/60 text-text" : "border-border text-muted hover:text-text")}>
           <span className="size-1.5 rounded-sm" style={{ background: LANGUAGES[l].color }} />{LANGUAGES[l].label}
           {marked?.has(l) && <span className="size-1 rounded-full bg-accent" />}
         </button>
