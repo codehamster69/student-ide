@@ -16,6 +16,11 @@ test run is appended to a ledger (time, git commit, config hash, corpus
 fingerprint) so the thesis can state exactly how often the test set was
 looked at; running test again on the same corpus and config needs an
 explicit reason.
+
+Classroom (pilot) data adds a second, time-based cut, shared with the
+detector re-tune work: every session that started on or after PILOT_TEST_FROM
+is held out too, whoever typed it (`pilot_split`). So dev = dev-hash students
+before that date; test = test-hash students, plus everyone's later sessions.
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ from pathlib import Path
 
 SALT = "student-ide/v1"
 TEST_FRAC = 0.3
+PILOT_TEST_FROM = 1795458600.0  # 2026-11-24 00:00 IST: sessions from here on are held out for everyone
 
 
 def _u(student: str, salt: str) -> float:
@@ -42,6 +48,12 @@ def assign(students, test_frac: float = TEST_FRAC, salt: str = SALT) -> dict[str
 def split(students, test_frac: float = TEST_FRAC, salt: str = SALT) -> tuple[list[str], list[str]]:
     a = assign(students, test_frac, salt)
     return sorted(s for s in a if a[s] == "dev"), sorted(s for s in a if a[s] == "test")
+
+
+def pilot_split(student: str, started_at: float, test_frac: float = TEST_FRAC, salt: str = SALT) -> str:
+    """"dev" | "test" for one classroom session: later weeks and test-hash students are test.
+    `student` is the real sessions.student_id, never a per-run pseudonym."""
+    return "test" if started_at >= PILOT_TEST_FROM or _u(student, salt) < test_frac else "dev"
 
 
 def folds(students, k: int = 5, salt: str = SALT) -> list[list[str]]:

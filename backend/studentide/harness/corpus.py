@@ -65,6 +65,10 @@ class Session:
     st: Streams
     partner: str | None = None
     order: int = 0  # position among the student's sessions (baseline weeks first)
+    meta: dict = field(default_factory=dict)  # classroom data: lab, question, device, started_at, person, splice
+    # precomputed windows by window length ("separate" comments only): stored windows of a
+    # purged session, or a window-level splice; Corpus.windows uses them before the streams
+    win: dict[float, list[dict]] | None = None
 
 
 @dataclass
@@ -77,6 +81,8 @@ class Corpus:
 
     def baseline(self, student: str, n: int | None = None) -> list[Session]:
         b = sorted((s for s in self.sessions if s.student == student and s.role == "baseline"), key=lambda s: s.order)
+        if "baseline_min" in self.meta:  # classroom data: the baseline is a number of minutes, not sessions
+            return b
         return b[:n] if n else b
 
     def tests(self, students=None) -> list[Session]:
@@ -84,10 +90,21 @@ class Corpus:
         return [s for s in self.sessions if s.role == "test" and (keep is None or s.student in keep)]
 
     def windows(self, s: Session, W: float, comments: str = "separate") -> list[dict]:
+        if comments == "separate" and s.win and float(W) in s.win:
+            return s.win[float(W)]
         key = (s.id, W, comments)
         if key not in self._win:
             self._win[key] = window_features(s.st, W, comments=comments)
         return self._win[key]
+
+    def split_students(self, test_frac: float | None = None) -> tuple[list[str], list[str]]:
+        """Dev and test students. A student key may be one person on one device class
+        (classroom corpus with by_device): the split always hashes the person."""
+        from .split import TEST_FRAC, assign
+        person = {k: a.get("person", k) for k, a in self.students.items()}
+        side = assign(set(person.values()), TEST_FRAC if test_frac is None else test_frac)
+        return (sorted(k for k in person if side[person[k]] == "dev"),
+                sorted(k for k in person if side[person[k]] == "test"))
 
     def fingerprint(self) -> str:
         """Identifies the data a test run was made on (for the ledger)."""
@@ -198,6 +215,116 @@ def db_corpus(db_path: Path, labels_dir: Path) -> Corpus:
                                 r.get("partner") or None, int(m["started_at"])))
         students.setdefault(m["student_id"], {})
     return Corpus(f"db:{Path(db_path).name}", sessions, students, {"labels": str(labels_dir)})
+
+
+# ------------------------------------------------------------ naturalistic classroom data
+
+BASELINE_MIN = 10.0  # active typing minutes that make a student's baseline (pilot median total is short)
+MIN_BASELINE_MIN = 3.0  # below this a student is not scored
+
+
+def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_device: bool = False,
+                     test_frac: float | None = None) -> Corpus:
+    """Every study session in the database, with no staging and no labels manifest.
+
+    All sessions are honest as far as anyone knows. A student's baseline is their
+    earliest `baseline_min` active typing minutes (30 s windows with enough keys), from
+    whatever sessions those were in, but never their last session, so something is left
+    to score; the rest are scored. A student whose baseline would be under
+    MIN_BASELINE_MIN, or who has one usable session, is role "unscored". With `by_device`, each
+    (student, device class) pair is its own "student" with its own baseline, and the
+    split still hashes the person. Sessions with no active window are left out (role
+    "idle") so empty tabs don't count as honest hours. Dev-hash students' sessions from
+    PILOT_TEST_FROM on are role "later": held out with the test split (split.pilot_split).
+    Labelled switches come from splicing these sessions (harness.splice).
+
+    Purged sessions (raw keys deleted, retention.py) carry their stored windows in
+    `Session.win`, so the thesis detector scores them; the keystroke baselines
+    (scaled Manhattan, TypeNet-style) need raw keys and see nothing there."""
+    from ..db import Database
+    from ..export import load_session
+    from ..pilot import device_class, device_fingerprint, ua_info
+    from .split import PILOT_TEST_FROM, TEST_FRAC, assign
+
+    db = Database(str(db_path))
+    tf = TEST_FRAC if test_frac is None else test_frac
+    rows = [dict(r) for r in db.list_sessions()]  # learning lab and previews are never study data
+    with db.connect() as conn:
+        kind = {r[0]: r[1] for r in conn.execute("SELECT id, kind FROM labs")}
+        try:
+            stored = {}
+            for sid, w in conn.execute("SELECT session_id, window_s FROM session_windows"):
+                stored.setdefault(sid, []).append(float(w))
+        except Exception:  # noqa: BLE001 - no purge has run yet
+            stored = {}
+    fps, on_fp = {}, {}
+    for r in rows:
+        meta = json.loads(r["client_meta"] or "{}")
+        client = "desktop" if (meta.get("client") or {}).get("kind") == "desktop" else "web"
+        fps[r["id"]] = (device_fingerprint(meta), client, ua_info(meta.get("user_agent"))[0])
+        on_fp.setdefault(fps[r["id"]][0], set()).add(r["student_id"])
+    from ..retention import stored_windows
+    sessions = []
+    for r in sorted(rows, key=lambda r: r["started_at"]):
+        if not r["n_events"]:
+            continue
+        fp, client, os_ = fps[r["id"]]
+        q = json.loads(r["question_json"]) if r["question_json"] else {}
+        ctx = r["context"] or ("competition" if kind.get(r["lab_id"]) == "competition" else
+                               "lab" if r["lab_id"] in kind else "sandbox" if r["lab_id"] else "practice")
+        dev = device_class(client, os_, len(on_fp[fp]))
+        st = streams(load_session(db, r["id"]))
+        win = {W: stored_windows(db, r["id"], W) for W in stored.get(r["id"], [])} if r["keys_purged_at"] else None
+        person = r["student_id"]
+        sessions.append(Session(
+            r["id"], f"{person}@{dev}" if by_device else person, "", "honest", "honest", None,
+            st.duration_ms / 1000, st, None, 0, win=win,
+            meta={"person": person, "lab": r["lab_id"], "question": r["question_id"] or r["task_id"], "ctx": ctx,
+                  "lang": q.get("language"), "device": dev, "os": os_, "fp": fp, "started_at": r["started_at"],
+                  "purged": r["keys_purged_at"] is not None}))
+    c = Corpus(f"classroom:{Path(db_path).name}", sessions, {},
+               {"baseline_min": baseline_min, "by_device": by_device, "test_from": PILOT_TEST_FROM})
+    side = assign({s.meta["person"] for s in sessions}, tf)
+    used: dict[str, float] = {}
+    order: dict[str, int] = {}
+    usable: dict[str, list[Session]] = {}
+    for s in sessions:  # already in time order
+        active = sum(w["active"] for w in c.windows(s, 30.0)) * 0.5  # minutes
+        if side[s.meta["person"]] == "dev" and s.meta["started_at"] >= PILOT_TEST_FROM:
+            s.role = "later"
+        elif not active:
+            s.role = "idle"
+        else:
+            usable.setdefault(s.student, []).append(s)
+        s.meta["active_min"] = active
+    # baseline: the shortest run of earliest sessions reaching baseline_min, but never the
+    # student's last session (something must be left to score); under MIN_BASELINE_MIN the
+    # student is not scored at all ("unscored")
+    for st, ss in usable.items():
+        n, tot = 0, 0.0
+        while n < len(ss) - 1 and tot < baseline_min:
+            tot += ss[n].meta["active_min"]
+            n += 1
+        if len(ss) == 1 or tot < MIN_BASELINE_MIN:
+            for s in ss:
+                s.role = "unscored"
+            continue
+        for i, s in enumerate(ss):
+            s.role = "baseline" if i < n else "test"
+        used[st] = tot
+    for s in sessions:
+        active = s.meta["active_min"]
+        s.order = order[s.student] = order.get(s.student, -1) + 1
+        a = c.students.setdefault(s.student, {"person": s.meta["person"]})
+        for k in ("device", "lang", "ctx"):
+            a.setdefault(f"_{k}", {}).setdefault(s.meta[k], 0.0)
+            a[f"_{k}"][s.meta[k]] += active
+    for key, a in c.students.items():  # subgroup attributes for RQ4: where most of a student's typing happened
+        for k in ("device", "lang", "ctx"):
+            counts = a.pop(f"_{k}")
+            a[k] = str(max(counts, key=counts.get)) if counts else ""
+        a["baseline_min"] = round(used.get(key, 0.0), 1)
+    return c
 
 
 def write_manifest_template(corpus: Corpus, out: Path) -> None:

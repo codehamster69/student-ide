@@ -1,8 +1,9 @@
 # Evaluation harness (phase 4)
 
-Code: `backend/studentide/harness/`. One protocol for simulated people now and
-for the Phase 1–2 study recordings later: the same command, the same split
-rules, the same metrics, only the corpus changes.
+Code: `backend/studentide/harness/`. One protocol for simulated people and for
+real classroom recordings: the same command, the same split rules, the same
+metrics, only the corpus changes. The thesis concludes from **classroom data
+only** (no staged sessions, no labels; see "Classroom data" below).
 
 ```bash
 pip install -e 'backend[analysis]'
@@ -10,15 +11,20 @@ cd backend
 python -m studentide.harness dev  --thesis ../thesis/latex   # design + freeze, ~20 min on 4 cores
 python -m studentide.harness test --thesis ../thesis/latex   # report once, ~5 min
 
-# recorded study data
+# classroom data (a copy of the live database): spliced takeovers, no labels needed
+python -m studentide.harness dev  --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10]
+python -m studentide.harness test --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10] --thesis ../thesis/latex
+
+# staged recordings with a labels manifest (kept for completeness; the thesis no longer stages sessions)
 python -m studentide.harness dev  --db data/study.sqlite3 --labels data/labels/ --thesis ../thesis/latex
 python -m studentide.harness test --db data/study.sqlite3 --labels data/labels/ --thesis ../thesis/latex
 ```
 
 | module | what it does |
 |--------|--------------|
-| `corpus.py` | labelled sessions: `synthetic_corpus()` (120 simulated students, 8 baseline + 7 test sessions each) or `db_corpus()` (editor database + labels manifest) |
-| `split.py` | dev/test split by student (salted hash), dev cross-fitting folds, frozen-config hash, test ledger |
+| `corpus.py` | sessions to score: `synthetic_corpus()` (120 simulated students, 8 baseline + 7 test sessions each), `classroom_corpus()` (every study session, baseline = earliest active minutes) or `db_corpus()` (editor database + labels manifest) |
+| `splice.py` | labelled takeovers from real sessions: student A up to tau, then student B on the same question |
+| `split.py` | dev/test split by student (salted hash), `pilot_split` (also by week), dev cross-fitting folds, frozen-config hash, test ledger |
 | `methods.py` | the thesis detector and the baselines, all producing standardised window scores |
 | `lstm.py` | NumPy LSTM + triplet loss for the TypeNet-style baseline (gradient-checked in tests) |
 | `alarms.py` | shared alarm stage: CUSUM or per-window threshold over a grid of h, calibration |
@@ -86,6 +92,53 @@ per-feature spread and honest score level towards the population's, as if
 the population were worth `n` extra sessions (default 2). The harness compares
 1–8 baseline sessions with and without it. The prior is off unless the frozen
 config turns it on.
+
+## Classroom data
+
+Rohan's decision (2026-11-25): students are a class, not staged subjects, so the
+thesis uses only what real classes record. No session has a known switch and none
+is known clean. `--classroom` builds the corpus like this:
+
+- **Sessions.** Every study session (`list_sessions`: no learning lab, no previews).
+  Sessions with no active 30 s window are role `idle` and not scored. Purged
+  sessions (raw keys gone after 28 days) carry their stored windows (`Session.win`),
+  so the thesis detector still scores them; scaled Manhattan and TypeNet-style need
+  raw keys and only see recent sessions.
+- **Baseline.** A student's earliest `--baseline-min` (10) active minutes, from
+  whatever sessions those were in, but never the student's last session (so something
+  is scored); a student with under 3 baseline minutes or one usable session is
+  `unscored`. Baseline sessions are never scored. (At 20 min the pilot dev split had
+  nothing left to score: most students type well under 20 active minutes in total.) `--by-device`
+  keys each (student, device class) separately, the split still hashing the person.
+  Device class comes from `pilot.device_fingerprint` / `device_class` (a fingerprint
+  shared by 3+ students = lab-PC-like).
+- **Split (shared with the detector re-tune).** `split.pilot_split(student_id,
+  started_at)`: test = the 30 % test-hash students, plus every session from
+  `PILOT_TEST_FROM` (2026-11-24 00:00 IST) for everyone. Dev students' later
+  sessions are role `later` and are not touched by `dev`. Hash the real
+  `sessions.student_id`, never the pilot tool's per-run pseudonym.
+- **Splices** (`splice.add_splices`). For each scored real session A, a partner B is
+  another student's session on the same question and the same split side; tau is a
+  multiple of 90 s leaving >= 3 min and 2 active windows each side. Same device
+  class -> variant `takeover`; other class -> `takeover_random` (so the existing
+  reports apply). Raw-event splice when both have keys, window splice otherwise.
+  Deterministic per `--seed`.
+- **What it reports.** Real sessions -> false alarms per hour (an upper bound: some
+  may hide real cheating). Splices -> detection, delay, switch-time error.
+  Precision at 1/100 and 1/500 from both (a lower bound). RQ2 there is weak-label
+  agreement (big pastes, blocked outside pastes, paste after look-away, keyless
+  text) and is not run by `test`; the RQ2 table stays synthetic until that
+  analysis is added. The short-baselines sweep (by session count) is skipped; sweep
+  `--baseline-min` on dev instead.
+- **Comparing configs on dev** (as often as needed; aggregates only):
+  `python -m studentide.harness compare --db <copy> --classroom --configs a.json b.json --compare-out c.json`
+  scores dev students' real and spliced sessions at each config's own k and h (not
+  recalibrated), 5-fold cross-fitted: false alarms per hour, takeover detection, delay,
+  with student-bootstrap intervals. Window features come from the harness, so review-side
+  stream options (own-paste filtering) only apply to sessions scored from stored windows.
+- **Limits of a splice.** B continues B's own code, so build order is B's document,
+  and there is no "read the other person's code" pause. Both favour the process
+  channel; report the identity channels alone as well.
 
 ## Labels manifest for real data
 

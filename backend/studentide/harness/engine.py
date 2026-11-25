@@ -118,6 +118,23 @@ def outcomes(runs: list[Run], corpus: Corpus, source: str = "holdout", target: f
     return recs
 
 
+def fixed_outcomes(runs: list[Run], corpus: Corpus, k: dict[str, float], h: dict[str, float],
+                   rule: str = "cusum") -> list[dict]:
+    """Like `outcomes`, but at a given operating point (k and h per channel, e.g. from a
+    frozen config) instead of recalibrating h. h snaps to the nearest grid value."""
+    idx = {ch: int(np.argmin(np.abs(H_GRID - h[ch]))) for ch in h}
+    recs = []
+    for run in runs:
+        ev, _, _ = run.grids({ch: k[ch] for ch in run.method.channels}, rule)
+        for s in run.eval_sessions:
+            o = combine(ev[s.id], {ch: idx[ch] for ch in ev[s.id]})
+            recs.append({"student": s.student, "variant": s.variant, "condition": s.condition,
+                         "switch_s": s.switch_s, "duration_s": s.duration_s, "o": o,
+                         "attrs": corpus.students.get(s.student, {}),
+                         "h": {ch: float(H_GRID[idx[ch]]) for ch in ev[s.id]}})
+    return recs
+
+
 def _med(v):
     return float(np.median(v)) if len(v) else math.nan
 

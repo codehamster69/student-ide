@@ -217,7 +217,8 @@ const BUILD = [
     { t: "Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm", s: "done", pr: "#9" },
     { t: "Calibrate the alarm threshold (students' own baseline weeks)", s: "done", pr: "#9" },
     { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "done", pr: "#9" },
-    { t: "Run on the Phase 1 to 2 recordings (labels manifest)", s: "pend" },
+    { t: "Classroom mode: baselines from earliest minutes, spliced takeovers", s: "done", pr: "#63" },
+    { t: "Run on the classroom test split", s: "pend" },
   ], note: 'Synthetic test students, with key-pair timing: <span class="mono">92%</span> of non-honest sessions caught at <span class="mono">0.19</span> false alarms per hour (matched takeovers <span class="mono">86%</span>, scaled Manhattan 89%); precision of a flag about <span class="mono">12%</span> at 1 in 100.' },
   { n: 5, title: "College deployment (pilot)", s: "prog", items: [
     { t: "Google sign-in for @iiitsurat.ac.in; roles from the address, admin override", s: "done", pr: "#14" },
@@ -230,24 +231,24 @@ const BUILD = [
 ];
 
 const STUDY = [
-  { id: "P0", title: "Phase 0", sub: "Survey, ethics, logger", from: 1, to: 2, s: "prog", fill: "33%", items: [
+  { id: "S0", title: "Set-up", sub: "Logger and ethics", from: 1, to: 2, s: "prog", fill: "50%", items: [
     { t: "Build the logger", s: "done", pr: "#2" },
-    { t: "Student survey", s: "pend" },
     { t: "Ethics approval (oral; written pending)", s: "prog" },
   ]},
-  { id: "P1", title: "Phase 1", sub: "Baseline labs", from: 3, to: 4, s: "pend", items: [
-    { t: "Four weeks of normal labs, 60 to 80 volunteers", s: "pend" },
-    { t: "Per-student baselines; raw keystrokes deleted after", s: "pend" },
+  { id: "S1", title: "Classroom recording", sub: "Real labs and competitions", from: 2, to: 6, s: "prog", fill: "40%", items: [
+    { t: "Every lab and competition recorded, lab PCs and own laptops (no staging)", s: "prog" },
+    { t: "Blocked outside pastes logged as a copying sign", s: "prog" },
   ]},
-  { id: "P2", title: "Phase 2", sub: "Staged sessions", from: 5, to: 6, s: "pend", items: [
-    { t: "Conditions A honest, B full proxy, C takeover, D copying, E paste", s: "pend" },
-    { t: "Grade-matched proxies", s: "pend" },
+  { id: "S2", title: "Design on dev", sub: "Dev split only", from: 3, to: 7, s: "prog", fill: "25%", items: [
+    { t: "Spliced takeovers from real sessions; split by student and by week", s: "done", pr: "#63" },
+    { t: "Detector re-tune on dev pilot data", s: "prog" },
+    { t: "Baseline length and device-aware baselines chosen on dev", s: "pend" },
   ]},
-  { id: "P3", title: "Phase 3", sub: "Remote interview", from: 7, to: 7, s: "pend", items: [
-    { t: "Mock interview on own laptop, 20 to 30 people", s: "pend" },
+  { id: "S3", title: "Held-out test", sub: "Scored once", from: 8, to: 8, s: "pend", items: [
+    { t: "Test students and later weeks, scored once per frozen config", s: "pend" },
   ]},
   { id: "W", title: "Months 8 to 12", sub: "Measure and write", from: 8, to: 12, s: "pend", items: [
-    { t: "Run the evaluation, write up RQ1 to RQ4", s: "pend" },
+    { t: "Write up RQ1 to RQ4 from classroom data", s: "pend" },
   ]},
 ];
 
@@ -255,14 +256,15 @@ const THESIS = [
   { t: "Thesis folder: brain log and LaTeX project", s: "done", pr: "#1" },
   { t: "Related work, Nosi IDE details confirmed from the paper", s: "done", pr: "#3" },
   { t: "Chapter drafts (related work drafted, others scaffolded)", s: "prog" },
+  { t: "RQs and study design rewritten for classroom data only", s: "done", pr: "#63" },
   { t: "Official IIIT Surat thesis template", s: "pend" },
 ];
 
 const DEPS = [
-  { a: "Ethics approval", b: "Phase 1 labs", why: "No real student data is collected before approval." },
+  { a: "Ethics approval", b: "Classroom recording", why: "Oral approval given; written confirmation goes in appendix B." },
   { a: "Detector (step 2)", b: "Dashboard (step 3)", why: "The timeline draws the detector's alarms and switch estimates." },
-  { a: "Phase 2 sessions", b: "Evaluation harness", why: "Staged takeovers are the labelled test set." },
-  { a: "Pilot deployment (step 5)", b: "Phase 1 labs", why: "Baseline labs run on the deployed editor; the pilot checks it first." },
+  { a: "Classroom recordings", b: "Evaluation harness", why: "Spliced takeovers from real sessions are the labelled test set; no staging." },
+  { a: "Design on dev", b: "Held-out test", why: "The test split (30% of students, every session from 24 Nov) is scored once, after the config is frozen." },
 ];
 
 const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));

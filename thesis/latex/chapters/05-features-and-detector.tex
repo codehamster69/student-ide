@@ -77,8 +77,9 @@ uses to separate composing from transcribing \cite{lueder2026nosi}.
 \end{table}
 
 \section{Per-student baseline}
-A student's baseline is fitted on their honest sessions from the first four
-lab weeks and keeps only summary statistics: for every feature a robust
+A student's baseline is fitted on their earliest sessions (in the deployed
+editor, the first four lab weeks; in the evaluation, the earliest $M$ active
+minutes, \cref{sec:baseline}) and keeps only summary statistics: for every feature a robust
 centre (median) and spread ($1.4826\times$ MAD, with a small floor so that a
 habit the student never varies, such as pasting, does not explode), plus the
 mean $\mu_0$ and standard deviation $\sigma_0$ of the student's own distance
@@ -168,7 +169,7 @@ ablation; all three are implemented in the evaluation harness
 (\cref{sec:rq1-harness}).
 
 \section{Synthetic-data pipeline}
-Before Phase 2 data exists, the detector is built and tuned on simulated
+Before classroom data existed, the detector is built and tuned on simulated
 sessions written in the editor's own event format, so the same code reads
 simulated and real logs (\cref{fig:synthetic-evaluation}). Each simulated
 typist has a stable habit profile: base digraph latency and spread,

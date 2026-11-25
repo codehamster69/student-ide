@@ -4,9 +4,14 @@
 Replicate the Nosi scribing measure \cite{lueder2026nosi}: L-scale of
 $\log(\mathrm{IAT})$ after removing pauses over 5 minutes and zero-length
 intervals, classified with a linear SVM under leave-one-participant-out
-cross-validation. Nosi's evidence is $N = 5$ expert authors on one task;
-here it is tested on Phase 2 conditions A (honest) and D (copying out) with
-the full participant pool.
+cross-validation. Nosi's evidence is $N = 5$ expert authors on one task.
+On simulated typists the recipe is tested as a classifier, since copying is known
+there. Classroom data has no copying labels, so there the question is agreement with
+weak signs (\cref{sec:weak-labels}): whether the L-scale and the process-channel score
+are higher in windows before a big paste, a blocked outside paste, a paste after looking
+away or keyless text than in the same student's other windows, and how strongly they
+rank sessions with such signs first. Pasting one's own code produces the same signs, so
+agreement is the claim, not accuracy.
 \todo{Window length sweep (Nosi reports about 80\% at \SI{150}{\second});
 comments-only typing as a known confound; per-student vs.\ population
 thresholds.}

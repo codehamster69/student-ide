@@ -78,6 +78,8 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - Sandbox Labs: the lab definition `studentide.sandbox-lab/1` (docs/sandbox-labs.md) is a contract with `desktop/`;
   keep it additive. Previews are teachers only and never study data; students run labs locally.
 - `harness/report.py` outputs under `thesis/latex/` (tables, graphs, ablations) are generated: rerun, don't edit.
+- Thesis evidence is classroom data only (no staged study): labelled switches are splices (`harness/splice.py`),
+  split = `split.pilot_split` (30 % of students + every session from 24 Nov 2026), shared with detector tuning.
 - `harness test` is a once-only held-out run recorded in `thesis/evaluation/test-ledger.jsonl`; don't rerun casually.
 - `thesis/evaluation/frozen-config.json` is the frozen detector config and is copied into the Docker image.
 - `runner.py` has limits but is not a sandbox; in deployment code runs in the separate `runner` container.

@@ -1,6 +1,22 @@
-\chapter{RQ3: Transfer to Remote Interviews}
+\chapter{RQ3: Transfer Across Devices}
 \label{ch:rq3}
 \section{Setup}
-\todo{Lab baseline applied to own-laptop sessions; device shift.}
+Originally this chapter was to test a lab baseline on mock remote interviews on
+students' own laptops. With classroom data only (\cref{sec:naturalistic}), the same
+question is asked of the devices students actually used: many worked both on lab PCs
+and on their own laptops (\cref{sec:devices}). Three comparisons, within students only:
+\begin{enumerate}
+  \item \emph{Drift.} The robust distance between window-feature medians of two sessions
+    of the same student on the same device class, on different classes, and of two
+    students on the same question.
+  \item \emph{Transfer.} False alarms per active hour and splice detection when each
+    session is scored against a baseline from the other device class, against the
+    device-specific baseline (\texttt{--by-device}) and against a pooled one.
+  \item \emph{Which features move.} Per-feature shift between device classes, to see
+    whether timing (key-pair latency, hold time) or process (pauses, build order) moves.
+\end{enumerate}
+The pilot's first look already showed more flags on a student's less usual device
+(9.9 against 5.7 per active hour, \cref{tab:pilot}).
+\todo{Results on the classroom test split.}
 \section{Results}
 \section{Summary}

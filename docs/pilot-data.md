@@ -37,14 +37,20 @@ soon after a class if those matter.
 | Copying (e.g. from an LLM)? | weak signs: a paste of ≥80 characters, a paste within 60 s of coming back to the window, text typed with no key press within 300 ms (auto-typers), low-revision low-pause "transcription-like" typing | signs, not labels: pasting own code from elsewhere looks the same |
 | How often does the detector flag? | episodes per active typing hour (30 s windows with ≥20 keys), split by context, device, OS, usual vs other device, with vs without copying signs | with no known takeovers, every flag counts toward an *upper bound* on the false-alarm rate |
 
-What each research question can take from it:
+What each research question takes from it (the thesis now uses classroom data only;
+see docs/evaluation.md "Classroom data" and thesis ch 3 and 6):
 
-- **RQ1 (switch detection):** only the false-alarm upper bound and its drivers. Detection
-  delay and hit rate need the staged Phase 2 sessions.
-- **RQ2 (composing vs transcribing):** how common the copying signs are, and whether the
-  detector's process channel moves with them. Not accuracy: there are no labels.
-- **RQ3 (remote transfer):** nothing yet; no remote sessions.
-- **RQ4 (fairness):** flag rates by device class and OS; phones record no key presses at all.
+- **RQ1 (switch detection):** false alarms per hour on real sessions (upper bound), plus
+  detection and delay on takeovers spliced from two real sessions on the same question.
+- **RQ2 (composing vs transcribing):** agreement of the transcription measures with the
+  copying signs above (and blocked outside pastes once paste blocking ships). No accuracy.
+- **RQ3 (now transfer across devices):** students who used both a lab PC and their own
+  laptop; same-device vs other-device drift and cross-device baselines.
+- **RQ4 (fairness):** flag rates and splice detection by device class, OS, language,
+  context and typing speed; phones record no key presses at all.
+
+**Split.** Tuning uses only the dev split: `harness.split.pilot_split(student_id,
+started_at)`, applied to the real id inside the container before pseudonymising.
 
 ## First run (2026-11-25)
 

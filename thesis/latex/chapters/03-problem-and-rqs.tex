@@ -3,25 +3,82 @@
 
 \section{Threat model}
 In scope: a friend, paid proxy or impersonator takes over for part or all
-of a session (full proxy, takeover at a random minute), copying code out of
-another source, pasting. Out of scope: deliberate imitation of another
-student's typing, deepfakes, engagement scoring, grade prediction,
-deployment.
+of a session (a takeover at some minute, or a full proxy), and copying code
+from another source, typed out or pasted, including from a language model.
+Out of scope: deliberate imitation of another student's typing, deepfakes,
+engagement scoring, grade prediction and automated sanctions.
 
 \section{Formal setting}
-\todo{Session as a stream of events $e_1, e_2, \dots$; windows of
-\SI{30}{\second}; feature vector $x_t$; baseline $B_s$ for student $s$;
-score $d_t = d(x_t, B_s)$; switch time $\tau$; detection delay
-$\hat\tau - \tau$.}
+A session is a stream of timed events $e_1, e_2, \dots$ (key presses and
+releases, edits with their origin, pastes, runs, focus changes). It is cut into
+windows of length $W$ (\SI{30}{\second} for timing, \SI{90}{\second} for process);
+window $t$ gives a feature vector $x_t$. Student $s$ has a baseline $B_s$ built
+from their earliest $M$ active minutes of ordinary classwork (\cref{sec:baseline}).
+Each window gets a standardised distance $d_t = d(x_t, B_s)$ per channel, a
+one-sided CUSUM over $d_t - k$ raises an alarm when it passes $h$, and the start
+of the run that crossed gives the estimated switch time $\hat\tau$. A session in
+which author $A$ hands over to author $B$ at time $\tau$ is detected if an alarm
+comes after $\tau$; the delay is the alarm time minus $\tau$.
 
 \section{Research questions and hypotheses}
-\todo{Restate RQ1--RQ4 with measurable hypotheses and metrics.}
+The thesis has one data source: what real classes record (\cref{ch:study}). Nobody
+is staged, so no recorded session carries a known switch, and some honest-looking
+sessions may contain real cheating. Each question is therefore phrased so that it
+can be answered without labels, or with labels that are known by construction.
+
+\paragraph{RQ1: switch detection (main).} \emph{Can a mid-session change of author
+be detected against the student's own baseline, how quickly, and with how many
+false alarms?} Labelled switches are made by splicing (\cref{sec:splicing}): a real
+session of student $A$ continues, from a time $\tau$, with the real typing of
+student $B$ on the same question. Metrics: share of spliced sessions detected after
+$\tau$, median and 90th-percentile delay, error of $\hat\tau$, on the same and on a
+different device class; false alarms per active hour and share of real sessions
+flagged. \emph{H1:} at the calibrated rate of 0.2 false alarms per hour on dev
+students, the detector catches more same-device splices than scaled-Manhattan,
+TypeNet-style and Nosi-style baselines, with a median delay under three minutes.
+Because real sessions may contain undetected cheating, the false-alarm rate on them
+is an upper bound.
+
+\paragraph{RQ2: composing versus transcribing.} \emph{Do measures of transcribing
+agree with observable signs of copying?} With no copying labels, accuracy cannot be
+measured; agreement can. Weak signs, recorded by the editor, are a paste of 80 or
+more characters, an attempt to paste text from outside the editor (blocked in labs
+once paste blocking is on), a paste within a minute of returning to the window,
+and text that arrives with no key press (auto-typers). Metric: the difference in the
+Nosi L-scale and the process-channel score between windows just before such a sign
+and the student's other windows, and the rank correlation per session. \emph{H2:}
+transcription-like rhythm is more common in sessions with copying signs. A positive
+result supports the measure; a null result is reported as a limit of weak labels.
+
+\paragraph{RQ3: transfer across devices.} \emph{How far does a student's typing move
+between devices, and does a baseline from one carry over to another?} Students who
+worked both on lab PCs and on their own laptops form a natural experiment
+(\cref{sec:devices}). Metrics: the distance between two sessions of the same student
+on the same device, on different devices, and of two students; false-alarm rate and
+splice detection when the baseline comes from the other device class, compared with
+a device-specific baseline. \emph{H3:} a device change moves timing features by less
+than the difference between two students but enough to raise false alarms, which a
+device-aware baseline removes. This replaces the planned remote-interview study,
+whose question (does a lab baseline transfer to an own laptop?) it answers with the
+data that exists.
+
+\paragraph{RQ4: fairness and precision.} \emph{Do errors differ across groups, and
+what is a flag worth at realistic rates?} Groups are those the recordings reveal
+without asking: device class, operating system, language (C, Python), lab or
+competition, and typing-speed tercile. Metrics: false alarms per hour and share
+flagged on real sessions, and splice detection, per group with student-bootstrap
+intervals; precision $\mathrm{TPR}\,\pi / (\mathrm{TPR}\,\pi + \mathrm{FPR}(1-\pi))$
+at $\pi = 1/100$ and $1/500$, with TPR from splices and FPR from real sessions.
+\emph{H4:} no group's false-alarm rate is more than twice the overall rate once
+baselines are device-aware. Demographic groups (gender, prior experience) would
+need a survey and are out of scope; this is stated as a limitation.
 
 \section{Design principles}
 \begin{itemize}
   \item No webcam or screen recording.
   \item Each student compared only to their own baseline.
-  \item Raw keystrokes deleted after the baseline is built; summary
-    statistics only.
+  \item Raw key events deleted after 28 days; only window summaries are kept.
   \item A flag starts a conversation, never a penalty.
+  \item Students are not research subjects in a staged study: the tool is
+    evaluated on the classes it serves, as they happen.
 \end{itemize}
