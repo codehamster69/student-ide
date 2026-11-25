@@ -272,6 +272,9 @@ AFTER_SIGN_S = 180.0
 SIGNS = ("outside paste", "big outside paste", "paste after look-away", "blocked outside paste", "keyless text")
 DRIFT_BINS = [(0, 1, "same day"), (1, 7, "1-7 days"), (7, 14, "1-2 weeks"), (14, 21, "2-3 weeks"), (21, 1e9, "3+ weeks")]
 CHANNELS = ("identity", "pairs", "process")
+# the process channel without its paste and focus features: pauses, revisions, build order
+# and runs only, so its association with paste signs is not true by construction
+NO_PASTE = "process_np"
 
 
 def sign_times(db, sid: str, st, purged: bool) -> dict[str, list[float]]:
@@ -341,6 +344,10 @@ def _score_sessions(a, corpus: Corpus, fz: dict, db, with_signs: bool = True) ->
     sp, op = fz["methods"]["thesis"], fz["operating_points"]["thesis"]
     m = R.make(sp)
     m.fit_population(corpus, dev_s, fz["n_base"])
+    from ..detector.features import FEATURES
+    m2 = R.make({**sp, "features": [f for f in FEATURES if FEATURES[f] not in ("paste", "focus")]})
+    m2.fit_population(corpus, dev_s, fz["n_base"])
+    models2 = {}
     dset = set(dev_s)
     base_end, base_dev = {}, {}
     for s in corpus.sessions:
@@ -357,6 +364,9 @@ def _score_sessions(a, corpus: Corpus, fz: dict, db, with_signs: bool = True) ->
         if s.student not in models:
             models[s.student] = m.fit_student(corpus, s.student, corpus.baseline(s.student))
         ser = m.score(corpus, models[s.student], s)
+        if s.student not in models2:
+            models2[s.student] = m2.fit_student(corpus, s.student, corpus.baseline(s.student))
+        ser[NO_PASTE] = m2.score(corpus, models2[s.student], s)["process"]
         bd = base_dev.get(s.student, {})
         r = {"student": s.student, "person": s.meta["person"], "split": "dev" if s.student in dset and not s.meta.get("held_out") else "test",
              "device": s.meta["device"], "base_device": max(bd, key=bd.get) if bd else None, "ctx": s.meta["ctx"],
@@ -365,10 +375,12 @@ def _score_sessions(a, corpus: Corpus, fz: dict, db, with_signs: bool = True) ->
         for ch, x in ser.items():
             v = x.x[np.isfinite(x.x)]
             r["mean"][ch] = float(v.mean()) if len(v) else math.nan
+            if ch == NO_PASTE:
+                continue
             g = grid(x, op["k"][ch], None, "cusum", np.array([op["h"][ch]]))
             r["alarms"][ch] = int(g.n_alarms[0])
         w30 = [w for w in corpus.windows(s, 30.0) if w["active"]]
-        for f in ("del_per_100", "pause_per_100"):
+        for f in ("del_per_100", "pause_per_100", "dg_lscale"):
             v = [w[f] for w in w30 if np.isfinite(w.get(f, np.nan))]
             r[f] = float(np.median(v)) if v else math.nan
         if with_signs:
@@ -387,7 +399,7 @@ def rq2(rows: list[dict]) -> dict:
             neg = [r for r in R if not r["signs"][sg]]
             e = {"sessions": len(pos), "students": len({r["student"] for r in pos}), "events": sum(len(r["signs"][sg]) for r in pos)}
             if len(pos) >= 3 and len(neg) >= 3:
-                for ch in CHANNELS:
+                for ch in (*CHANNELS, NO_PASTE):
                     pm = [r["mean"].get(ch, math.nan) for r in pos]
                     nm = [r["mean"].get(ch, math.nan) for r in neg]
                     e[ch] = {"median_with": float(np.nanmedian(pm)) if np.isfinite(pm).any() else math.nan,
@@ -397,11 +409,11 @@ def rq2(rows: list[dict]) -> dict:
                                                                                [r["mean"].get(ch, math.nan) for r in rs if not r["signs"][sg]]), 500),
                              "flagged_with": float(np.mean([r["alarms"].get(ch, 0) > 0 for r in pos])),
                              "flagged_without": float(np.mean([r["alarms"].get(ch, 0) > 0 for r in neg]))}
-                for f in ("del_per_100", "pause_per_100"):
+                for f in ("del_per_100", "pause_per_100", "dg_lscale"):
                     e[f] = {"median_with": float(np.nanmedian([r[f] for r in pos])), "median_without": float(np.nanmedian([r[f] for r in neg])),
                             "auc": _auc([r[f] for r in pos], [r[f] for r in neg])}
                 # inside the session: windows starting within AFTER_SIGN_S after a sign vs the session's other windows
-                for ch in CHANNELS:
+                for ch in (*CHANNELS, NO_PASTE):
                     diffs = []
                     for r in pos:
                         x = r["series"].get(ch)

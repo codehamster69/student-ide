@@ -92,6 +92,27 @@ def rq1_methods(t: dict, fz: dict) -> str:
                  rows, "The deployed row keeps the thresholds calibrated on simulated typists, which the live site still uses.")
 
 
+def rq1_dev_methods(d: dict, fz: dict) -> str:
+    rows = []
+    entries = [("thesis", d["at_target"]), ("thesis_identity", d["identity_at_target"]), ("deployed", d["deployed"])]
+    entries += [(k, d["methods"][k]["metrics"]) for k in ("sm", "typenet", "nosi") if k in d.get("methods", {})]
+    for key, m in entries:
+        h, a = m["honest"], m.get("takeover", {})
+        rows.append(" & ".join([METHOD[key], num(h["fa_per_h"], 2, h["fa_per_h_ci"]), pct(h["flagged"], h["flagged_ci"]),
+                                pct(a.get("detected"), a.get("detected_ci")), mins(a.get("delay_median_s"), a.get("delay_ci")),
+                                pct(m.get("precision_100"), m.get("precision_100_ci")), pct(m.get("precision_500"), m.get("precision_500_ci"))]))
+        if key == "deployed":
+            rows.append("\\midrule")
+    m = d["at_target"]
+    cap = (f"RQ1 and RQ4 on the dev split, 5-fold cross-fitted: each fold's thresholds come from the other folds' students"
+           f" ({fz['calibration_source']} calibration, {fz['target_fa_per_h']:g} false alarms per hour), so every number is out of"
+           f" sample for the thresholds. {m['honest']['n']} real sessions of {m['honest']['students']} students,"
+           f" {m['honest']['hours']:.1f} active hours, {m.get('takeover', {}).get('n', 0)} same-device splices."
+           f" Precision assumes 1 in 100 or 1 in 500 sessions contain a takeover.")
+    return table(cap, "tab:cls-dev-methods", "@{}lrrrrrr@{}",
+                 "Method & False alarms / h & Sessions flagged & Same-device caught & Delay (min) & Precision 1/100 & 1/500", rows)
+
+
 def rq1_dev(d: dict, fz: dict) -> str:
     rows = []
     for lab, m in (("Frozen thresholds, all channels", d["at_target"]), ("\\quad identity channels only", d["identity_at_target"]),
@@ -136,27 +157,30 @@ def plot_curves(path: Path, t: dict, d: dict):
 
 # ------------------------------------------------------------------ RQ2
 
-def rq2_table(rq: dict, split: str = "test") -> str:
+def rq2_table(rq: dict, split: str = "all") -> str:
     r = rq["rq2"][split]
     rows = []
     for sg in SIGNS:
         e = r["signs"][sg]
         if "process" not in e:
-            rows.append(f"{sg} & {e['sessions']} ({e['students']}) & \\multicolumn{{5}}{{l}}{{too few sessions}}")
+            rows.append(f"{sg} & {e['sessions']} ({e['students']}) & \\multicolumn{{6}}{{l}}{{too few sessions}}")
             continue
-        p = e["process"]
-        rows.append(" & ".join([sg, f"{e['sessions']} ({e['students']})", num(p["auc"], 2, p["auc_ci"]),
+        np_ = e.get("process_np", {})
+        rows.append(" & ".join([sg, f"{e['sessions']} ({e['students']})", num(e["process"]["auc"], 2, e["process"]["auc_ci"]),
+                                num(np_.get("auc"), 2, np_.get("auc_ci")),
                                 num(e["identity"]["auc"], 2, e["identity"]["auc_ci"]), num(e["pairs"]["auc"], 2, e["pairs"]["auc_ci"]),
-                                num(e["process_within"]["mean_diff"], 2, e["process_within"]["ci"]),
-                                f"{pct(p['flagged_with'])} / {pct(p['flagged_without'])}"]))
-    lab = "held-out" if split == "test" else split
-    cap = (f"RQ2: weak copying signs and the detector's channels ({lab} split, {r['sessions']} real scored sessions of"
-           f" {r['students']} students). AUC = chance that a session with the sign scores higher (less like the student's"
-           f" baseline) than one without; 0.5 = no association. Within = mean process score in the 3 minutes after a sign minus"
-           f" the rest of the same session. Flagged = process-channel alarm at the frozen threshold, with / without the sign."
-           f" Association only: the signs are not labels.")
-    return table(cap, f"tab:cls-rq2-{split}", "@{}lrrrrrr@{}",
-                 "Sign & Sessions (students) & Process AUC & Rhythm AUC & Key-pair AUC & Within (process) & Flagged with / without",
+                                num(e.get("dg_lscale", {}).get("auc"), 2),
+                                num(e["process_within"]["mean_diff"], 2, e["process_within"]["ci"]) + f" ({e['process_within']['sessions']})"]))
+    lab = {"all": "all scored sessions", "dev": "dev split", "test": "held-out split"}[split]
+    cap = (f"RQ2: weak copying signs and the detector's channels ({lab}: {r['sessions']} real sessions of"
+           f" {r['students']} students). AUC = chance that a session with the sign scores further from the student's"
+           f" baseline than one without (0.5 = no association; 95\\% intervals resampling students). Process w/o paste ="
+           f" the process channel without its paste and focus features (pauses, revisions, build order, runs), so the"
+           f" association is not true by construction. L-scale = Nosi's transcription measure, session median (higher = more even typing)."
+           f" Within = mean process score in the 3 minutes after a sign minus the rest of the same session (sessions)."
+           f" The signs are not labels: students also paste their own work.")
+    return table(cap, f"tab:cls-rq2-{split}", "@{}lrrrrrrr@{}",
+                 "Sign & Sessions (students) & Process & Process w/o paste & Rhythm & Key pairs & L-scale & Within (process)",
                  rows)
 
 
@@ -175,25 +199,23 @@ def rq3_drift_table(rq: dict, split: str = "all") -> str:
                  "Since baseline & Sessions (students) & Hours & Rhythm & Key pairs & Way of working & Alarms / h", rows)
 
 
-def rq3_device_table(rq: dict, split: str = "all") -> str:
-    d = rq["rq3_devices"][split]
+def rq3_profile_table(rq: dict) -> str:
+    P = rq["rq3_profiles"]
     rows = []
-    for lab, s in (("Same device class as baseline", d["same_device"]), ("Other device class", d["other_device"])):
-        rows.append(" & ".join([lab, f"{s['sessions']} ({s['students']})", num(s["hours"], 1), num(s["identity"], 2), num(s["pairs"], 2),
-                                num(s["process"], 2), num(s["fa_per_h"], 2, s["fa_ci"])]))
-    m = d.get("other_device_matched")
-    if m and m["sessions"]:
-        rows.append("\\midrule")
-        for lab, s in (("Other device, person baseline", m["person_baseline"]), ("Same sessions, own-device baseline", m["device_baseline"])):
-            rows.append(" & ".join([lab, f"{s['sessions']} ({s['students']})", num(s["hours"], 1), num(s["identity"], 2),
-                                    num(s["pairs"], 2), num(s["process"], 2), num(s["fa_per_h"], 2, s["fa_ci"])]))
-    ps = d["paired_score_shift"]
-    shift = ", ".join(f"{CH[c]} {num(ps[c]['median_diff'], 2, ps[c]['ci'])} ({ps[c]['students']} students)" for c in ("identity", "pairs", "process"))
-    cap = (f"RQ3 transfer: the {d['students_both']} students with scored sessions on both a lab-PC-like and a personal-like machine."
-           f" Medians of per-session channel scores; alarms per active hour at the frozen thresholds. Paired within student,"
-           f" other minus same device: {shift}.")
-    return table(cap, "tab:cls-rq3-device", "@{}lrrrrrr@{}",
-                 "Sessions & Sessions (students) & Hours & Rhythm & Key pairs & Way of working & Alarms / h", rows)
+    for lab, e in [(f"Same student, same device class, {k}", v) for k, v in P["gap"].items() if v["pairs"]] + \
+                  [("Same student, same device class, all", P["pairs"]["same"]),
+                   ("Same student, other device class", P["pairs"]["cross"]),
+                   ("Other students, same question and device class", P["pairs"]["between"])]:
+        if lab.endswith(", all") or lab.startswith("Other"):
+            rows.append("\\midrule")
+        rows.append(" & ".join([lab, f"{e['pairs']} ({e['students']})", num(e["rhythm"], 2, e["rhythm_ci"]), num(e["process"], 2, e["process_ci"])]))
+    sp = P["spearman_days"]
+    cap = (f"RQ3: how far apart two session profiles are (median of each feature over a session's active windows; mean absolute"
+           f" difference in population MAD units, capped at 6), for {P['sessions']} sessions of {P['students']} students with at"
+           f" least two minutes of typing on a lab-PC-like or personal-like machine. Medians over students, 95\\% intervals"
+           f" resampling students. Spearman correlation of distance with days apart, same device class: rhythm"
+           f" {num(sp['rhythm']['rho'], 2, sp['rhythm']['ci'])}, way of working {num(sp['process']['rho'], 2, sp['process']['ci'])}.")
+    return table(cap, "tab:cls-rq3-profiles", "@{}lrrr@{}", "Pair of sessions & Pairs (students) & Rhythm distance & Way-of-working distance", rows)
 
 
 def plot_drift(path: Path, rq: dict):
@@ -230,7 +252,7 @@ def rq4_precision(t: dict) -> str:
     return table(cap, "tab:cls-precision", "@{}lrrrr@{}", "Method & Caught & Sessions flagged & Precision at 1/100 & at 1/500", rows)
 
 
-def rq4_subgroups(t: dict, key: str = "subgroups") -> str:
+def rq4_subgroups(t: dict, key: str = "subgroups", split: str = "test") -> str:
     rows, last = [], None
     for r in t["results"][key]:
         if last and r["attribute"] != last:
@@ -242,16 +264,17 @@ def rq4_subgroups(t: dict, key: str = "subgroups") -> str:
                                 num(h["fa_per_h"], 2, h["fa_per_h_ci"]), pct(h["flagged"]),
                                 str(a.get("n", 0)), pct(a.get("detected"), a.get("detected_ci"))]))
     which = "frozen" if key == "subgroups" else "deployed"
-    cap = (f"RQ4 subgroups on the held-out split, thesis detector at the {which} thresholds. A session counts under its own"
+    where = "the held-out split" if split == "test" else "the dev split (cross-fitted)"
+    cap = (f"RQ4 subgroups on {where}, thesis detector at the {which} thresholds. A session counts under its own"
            f" device, OS, language and context; typing speed is the student's baseline keys per minute in dev-split terciles;"
            f" a splice counts under its first student's session. $^\\dagger$ fewer than 5 students.")
-    return table(cap, f"tab:cls-subgroups{'' if key == 'subgroups' else '-deployed'}", "@{}llrrrrrr@{}",
+    return table(cap, f"tab:cls-subgroups{'' if key == 'subgroups' else '-deployed'}{'' if split == 'test' else '-dev'}", "@{}llrrrrrr@{}",
                  "Attribute & Group & Students & Sessions / h & False alarms / h & Flagged & Splices & Caught", rows)
 
 
-def plot_subgroups(path: Path, t: dict):
+def plot_subgroups(path: Path, rows: list[dict], what: str):
     plt = _plt()
-    rs = [r for r in t["results"]["subgroups_deployed"] if not r["small"] and r["honest"]["n"]]
+    rs = [r for r in rows if not r["small"] and r["honest"]["n"]]
     fig, ax = plt.subplots(figsize=(6.4, 0.22 * len(rs) + 0.9))
     y = list(range(len(rs)))[::-1]
     for yi, r in zip(y, rs):
@@ -259,7 +282,7 @@ def plot_subgroups(path: Path, t: dict):
         ax.errorbar(h["fa_per_h"], yi, xerr=[[h["fa_per_h"] - h["fa_per_h_ci"][0]], [h["fa_per_h_ci"][1] - h["fa_per_h"]]],
                     color=C[list(ATTR).index(r["attribute"]) % len(C)], marker="o", markersize=3.5, capsize=2, linewidth=1.1)
     ax.set_yticks(y, [f"{ATTR[r['attribute']]}: {r['group']}" for r in rs], fontsize=7)
-    ax.set_xlabel("false alarms per active hour, deployed thresholds (95% interval)")
+    ax.set_xlabel(f"false alarms per active hour, {what} (95% interval)")
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
@@ -278,16 +301,17 @@ def main(argv=None):
     G.mkdir(parents=True, exist_ok=True)
     write(T / "cls-dev.tex", rq1_dev(d, fz))
     write(T / "cls-rq1.tex", rq1_methods(t, fz))
-    write(T / "cls-rq2-test.tex", rq2_table(rq, "test"))
-    write(T / "cls-rq2-dev.tex", rq2_table(rq, "dev"))
+    write(T / "cls-rq2-all.tex", rq2_table(rq, "all"))
     write(T / "cls-rq3-drift.tex", rq3_drift_table(rq))
-    write(T / "cls-rq3-device.tex", rq3_device_table(rq))
+    write(T / "cls-rq3-profiles.tex", rq3_profile_table(rq))
+    write(T / "cls-dev-methods.tex", rq1_dev_methods(d, fz))
+    write(T / "cls-subgroups-dev.tex", rq4_subgroups({"results": {"subgroups": d["subgroups"]}}, "subgroups", "dev"))
     write(T / "cls-precision.tex", rq4_precision(t))
     write(T / "cls-subgroups.tex", rq4_subgroups(t))
     write(T / "cls-subgroups-deployed.tex", rq4_subgroups(t, "subgroups_deployed"))
     plot_curves(G / "cls-detection-vs-false-alarms.pdf", t, d)
     plot_drift(G / "cls-drift.pdf", rq)
-    plot_subgroups(G / "cls-subgroups.pdf", t)
+    plot_subgroups(G / "cls-subgroups.pdf", d["subgroups_deployed"], "dev split, deployed thresholds")
     print("written tables/cls-*.tex and graphs/cls-*.pdf")
 
 
