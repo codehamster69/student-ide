@@ -86,7 +86,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - `runner.py` has limits but is not a sandbox; in deployment code runs in the separate `runner` container.
 - Cloud sessions: npm downloads can stall; `bun install` is a working fallback (bun.lock is kept).
 - The e2e scripts need a running server with a built frontend and the same admin token.
-- Desktop releases: push a `desktop-vX.Y.Z` tag; CI publishes the GitHub release the server serves as the update feed.
+- Desktop releases: run the `desktop-release` workflow (input version; works from cloud threads) or push a `desktop-vX.Y.Z` tag; CI publishes the GitHub release the server serves as the update feed.
   Builds are unsigned (docs/desktop-installer.md, Signing).
 - Brand: product name is Scribelab (scribelab.hokora.xyz); internal ids stay `studentide` (packages, env vars, DB,
   appId, WSL distro, `StudentIDE-Desktop` UA). Old host is `STUDENTIDE_OLD_DOMAINS` in Caddy: browsers redirected,

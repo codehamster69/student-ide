@@ -91,6 +91,9 @@ an end-to-end setup on a Linux runner as an ordinary user with Podman removed
 packages for all three OS uploaded as workflow artifacts. Engine downloads and Electron zips are cached
 (keyed on the pinned versions), so a GitHub releases outage does not stop packaging. A `desktop-vX.Y.Z`
 tag also publishes a GitHub release that installed apps update from (docs/desktop.md, Updates).
+To cut one without a laptop, run the `desktop-release` workflow (Actions tab, or
+`POST /repos/{owner}/{repo}/actions/workflows/desktop-release.yml/dispatches` with `{"ref":"main","inputs":{"version":"0.3.1"}}`):
+it tags main and starts `desktop.yml` on the tag.
 
 ## Signing (not set up yet)
 

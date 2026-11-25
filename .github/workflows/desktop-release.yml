@@ -1,0 +1,39 @@
+# Cut a desktop release from the Actions tab (or `gh api .../dispatches`), no laptop needed:
+# creates the tag desktop-v<version> on main and starts desktop.yml on that tag, whose
+# `release` job builds every OS and publishes the GitHub release the server serves as the
+# update feed (docs/desktop-installer.md). A tag pushed with the Actions token does not
+# trigger other workflows by itself, so the build is started with a workflow_dispatch,
+# which that token may do.
+name: desktop-release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.3.1 (tag desktop-v0.3.1 on main)"
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - name: Tag main and start the release build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3"; exit 1; }
+          tag="desktop-v$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists"; exit 1
+          fi
+          git tag "$tag" origin/main
+          git push origin "refs/tags/$tag"
+          gh workflow run desktop.yml --ref "$tag" --repo "$GITHUB_REPOSITORY"
+          echo "Tagged $(git rev-parse --short "$tag") as $tag; desktop.yml started on it." >> "$GITHUB_STEP_SUMMARY"
