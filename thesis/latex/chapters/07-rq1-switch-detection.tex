@@ -13,6 +13,21 @@ events (sessions under 28 days old). The identity channels are also reported alo
 since splices favour the process channel.
 \todo{Results on the classroom test split.}
 
+\subsection*{Development results (dev split)}
+On the dev split of the pilot (90 scored real sessions, 27.7 active hours, 45 splices with a
+partner on the same question and device class, 10-minute baselines), the frozen
+configuration catches 64\% of spliced takeovers (95\% interval 49--78\%) with a median delay
+of 450\,s, at 1.59 false alarms per active hour on real sessions (\cref{tab:retune-splice}).
+That is eight times the 0.2 per hour the thresholds were calibrated for on simulated typists,
+so real classwork drifts more than simulated typing, and some real sessions may themselves
+contain switches. No setting of $k$ escapes the trade-off: every step that cuts false alarms
+also cuts detection, down to 0.04 per hour and 11\% at $k = 2$. Two lessons carry to the test
+run. First, thresholds must be calibrated on classroom data (dev students' real sessions or
+their own baselines), not on simulated ones. Second, at these rates a flag starts a
+conversation and nothing more, which is the design's premise (\cref{ch:rq4}). Only 2--3
+splices per run pair different device classes on the same question, too few to report
+separately.
+
 \subsection*{Synthetic pilot (phase 2 of the build)}
 Before any student data, the detector was evaluated on 60 simulated typists
 (\cref{ch:detector}), each with four honest 30-minute baseline sessions and
