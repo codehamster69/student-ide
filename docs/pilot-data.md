@@ -76,7 +76,8 @@ Variants are cumulative: `frozen` (as live), `fixes` (own pastes don't count, 0 
 channel's drift (mean standardised score; 0 when the baseline saw the variation).
 
 Result (brain `2026-11-25-06-pilot-retune.md`): 6.81 → 0.28 episodes per active hour on
-332 scored dev sessions (10.7 h). The proposal is `thesis/evaluation/pilot-dev-config.json`;
-the live review keeps the frozen config until k = 2 is checked on spliced takeovers.
-Try it with `STUDENTIDE_CONFIG=thesis/evaluation/pilot-dev-config.json`.
+332 scored dev sessions (10.7 h) with k = 2 and no build order. The splice check (brain
+`2026-11-25-07-retune-splice-check.md`, `harness compare --classroom`) rejected it: takeovers
+caught 64% → 11%. Every quieter setting misses more takeovers (table in thesis ch 6), so
+the live review keeps the frozen config; `pilot-dev-config.json` stays for the record.
 
