@@ -183,4 +183,4 @@ jobs:
           files=$(find dist -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' \
                   -o -name 'latest*.yml' -o -name '*.blockmap' -o -name 'prepare-lab-pc.ps1' \))
           gh release create "$GITHUB_REF_NAME" $files --title "Scribelab ${GITHUB_REF_NAME#desktop-v}" \
-            --notes "Installed Windows and Linux AppImage apps update themselves the next time they close. Mac and portable builds: download the new version."
+            --notes "Updates are mandatory: installed apps (Windows, Linux AppImage, Mac in Applications) install this version by themselves as soon as no lab is open. Portable and .deb builds: download the new version."
