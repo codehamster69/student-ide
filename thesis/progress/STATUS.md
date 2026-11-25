@@ -66,7 +66,7 @@ flowchart LR
 | 4 Evaluation | Baselines: scaled Manhattan, TypeNet-style, Nosi rhythm | ✅ | #9 |
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ✅ | #9 |
-| 4 Evaluation | Classroom mode: every study session, baseline = earliest 20 active minutes (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #NN |
+| 4 Evaluation | Classroom mode: every study session, baseline = earliest 20 active minutes (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #63 |
 | 4 Evaluation | Run on the classroom test split (once per frozen config) | ⬜ | |
 | 5 Deployment | Google sign-in limited to @iiitsurat.ac.in; roles from the address format, admin override (People page) | ✅ | #14 |
 | 5 Deployment | Raw keystrokes deleted after the 4-week baseline or 28 days, window summaries kept; erase a student on request | ✅ | #14 |
@@ -98,7 +98,7 @@ entry 2026-11-25-02.
 | Set-up | 1-2 | Ethics approval: oral institutional approval (Dean, HoD, faculty) per Rohan, 2026-11-25; written confirmation pending, to attach in appendix B | 🟧 |
 | Recording | 2-6 | Every lab and competition recorded on the live editor, lab PCs and own laptops; 1,118 sessions by 23 Nov | 🟧 |
 | Recording | 2-6 | Blocked outside pastes logged as a copying sign (paste guard) | 🟧 (#62) |
-| Design on dev | 3-7 | Spliced takeovers; split by student (30 %) and by week (from 24 Nov) | ✅ (#NN) |
+| Design on dev | 3-7 | Spliced takeovers; split by student (30 %) and by week (from 24 Nov) | ✅ (#63) |
 | Design on dev | 3-7 | Detector re-tune on the dev split of pilot data | 🟧 |
 | Design on dev | 3-7 | Baseline length and device-aware baselines chosen on dev | ⬜ |
 | Held-out test | 8 | Score the test split once; RQ1 to RQ4 | ⬜ |
@@ -115,5 +115,5 @@ Phase 3 mock remote interview (RQ3 is now transfer across devices).
 | Thesis folder: brain log and LaTeX project | ✅ | #1 |
 | Related work; Nosi IDE details confirmed from the paper | ✅ | #3 |
 | Chapter drafts (related work drafted, others scaffolded) | 🟧 | |
-| RQs, study design (ch 3, 6) and RQ chapter set-ups rewritten for classroom data only | ✅ | #NN |
+| RQs, study design (ch 3, 6) and RQ chapter set-ups rewritten for classroom data only | ✅ | #63 |
 | Official IIIT Surat thesis template | ⬜ | |
