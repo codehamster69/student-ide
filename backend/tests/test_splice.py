@@ -1,6 +1,9 @@
 """Classroom corpus (no labels), the shared pilot split, and spliced takeovers."""
 
+import json
+
 import numpy as np
+
 import pytest
 
 from studentide.db import Database
@@ -127,8 +130,48 @@ def test_harness_dev_then_test_on_classroom_data(tmp_path):
     args = ["--db", str(tmp_path / "pilot.sqlite3"), "--classroom", "--baseline-min", "6", "--test-frac", "0.4",
             "--out", str(tmp_path / "out"), "--workers", "1", "--typenet-steps", "20"]
     harness_main(["dev", *args])
+    # classroom test runs at thresholds frozen on dev students' real sessions
+    harness_main(["freeze", *args, "--base-config", str(tmp_path / "out/frozen-config.json")])
+    fz = json.loads((tmp_path / "out/classroom-frozen-config.json").read_text())
+    assert fz["kind"] == "classroom" and set(fz["operating_points"]) == {"thesis", "sm", "typenet", "nosi"}
+    assert fz["calibration_source"] in ("holdout", "self", "pooled")
     harness_main(["test", *args])
     assert (tmp_path / "out/test-ledger.jsonl").read_text().count("\n") == 1
+    t = json.loads((tmp_path / "out/classroom-test-summary.json").read_text())
+    th = t["results"]["thesis"]["metrics"]
+    assert th["honest"]["n"] > 0 and "takeover" in th and "precision_100" in th
+    assert {r["attribute"] for r in t["results"]["subgroups"]} >= {"device", "os"}
+    with pytest.raises(SystemExit):  # scored once; again only with --reason
+        harness_main(["test", *args])
+    harness_main(["rq", *args])
+    rq = json.loads((tmp_path / "out/classroom-rq.json").read_text())
+    assert rq["sessions"]["scored"] > 0 and "outside paste" in rq["rq2"]["all"]["signs"]
+    blob = json.dumps([t, rq])
+    assert not any(ty.id in blob for ty in population(10, 4))  # aggregates only: no student ids leave
+
+
+def test_held_out_sessions_are_scored_never_calibrated(tmp_path):
+    from studentide.harness.split import PILOT_TEST_FROM
+    db = Database(str(tmp_path / "p.sqlite3"))
+    for i, ty in enumerate(population(3, 2)):
+        db.get_or_create_student(ty.id)
+        for j in range(3):
+            ev, _ = generate_session(ty, "honest", duration_s=360, seed=i * 10 + j)
+            sid = f"{ty.id}-{j}"
+            db.create_session(sid, ty.id, "q1", 1, {})
+            db.insert_events(sid, ev)
+            start = PILOT_TEST_FROM + 3600 if j == 2 else 1_700_000_000 + j * 86400 + i
+            with db.connect() as con:
+                con.execute("UPDATE sessions SET started_at = ?, question_id = 'q1' WHERE id = ?", (start, sid))
+    plain = classroom_corpus(tmp_path / "p.sqlite3", baseline_min=2, test_frac=0.0)
+    held = classroom_corpus(tmp_path / "p.sqlite3", baseline_min=2, test_frac=0.0, held_out=True)
+    assert sum(s.role == "later" for s in plain.sessions) == 3
+    later = [s for s in held.sessions if s.meta.get("held_out")]
+    assert len(later) == 3 and all(s.role == "test" for s in later)
+    roles = lambda c: {s.id: s.role for s in c.sessions if not s.meta.get("held_out") and s.role != "later"}  # noqa: E731
+    assert roles(plain) == roles(held)  # everything else unchanged
+    made = add_splices(held, seed=0, test_frac=0.0)
+    assert made and all(s.meta.get("held_out") for s in made if s.meta.get("partner_session", "").endswith("-2"))
 
 
 def test_compare_scores_configs_at_their_own_operating_point(classroom, tmp_path):
