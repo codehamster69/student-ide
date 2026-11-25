@@ -1,0 +1,1984 @@
+{
+ "sessions": {
+  "scored": 111,
+  "students": 108,
+  "hours": 34.22360941666667,
+  "by_split": {
+   "dev": 90,
+   "test": 21
+  },
+  "by_device": {
+   "lab-PC-like": 82,
+   "personal-like": 26,
+   "phone": 3
+  }
+ },
+ "rq2": {
+  "dev": {
+   "sessions": 90,
+   "students": 88,
+   "signs": {
+    "outside paste": {
+     "sessions": 12,
+     "students": 11,
+     "events": 25,
+     "identity": {
+      "median_with": 1.1758774745848264,
+      "median_without": 1.3990122490111767,
+      "auc": 0.40064102564102566,
+      "auc_ci": [
+       0.20750064080656186,
+       0.5901249999999999
+      ],
+      "flagged_with": 0.08333333333333333,
+      "flagged_without": 0.0
+     },
+     "pairs": {
+      "median_with": 1.5803005322101265,
+      "median_without": 1.3193944576535257,
+      "auc": 0.5328947368421053,
+      "auc_ci": [
+       0.33091432778932783,
+       0.7277872444011684
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.01282051282051282
+     },
+     "process": {
+      "median_with": 1.8812575029473382,
+      "median_without": 1.3119523363500964,
+      "auc": 0.6866666666666666,
+      "auc_ci": [
+       0.5474501287001287,
+       0.8483209170709171
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.01282051282051282
+     },
+     "process_np": {
+      "median_with": 1.5711171782063609,
+      "median_without": 1.2782549190371215,
+      "auc": 0.5833333333333334,
+      "auc_ci": [
+       0.45892911585365853,
+       0.745483682983683
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0
+     },
+     "del_per_100": {
+      "median_with": 10.52023988005997,
+      "median_without": 8.920454545454547,
+      "auc": 0.6047008547008547
+     },
+     "pause_per_100": {
+      "median_with": 9.600614439324117,
+      "median_without": 9.660138248847925,
+      "auc": 0.4658119658119658
+     },
+     "dg_lscale": {
+      "median_with": 0.48855285992126696,
+      "median_without": 0.48226760407372415,
+      "auc": 0.483974358974359
+     },
+     "identity_within": {
+      "sessions": 3,
+      "mean_diff": -0.01038267038463255,
+      "ci": [
+       -0.7445766415709997,
+       0.39724323328538363
+      ]
+     },
+     "pairs_within": {
+      "sessions": 3,
+      "mean_diff": 0.02228272104056031,
+      "ci": [
+       -0.17840523923016738,
+       0.29270339500626896
+      ]
+     },
+     "process_within": {
+      "sessions": 5,
+      "mean_diff": 0.7350360466206193,
+      "ci": [
+       -0.11728821702632972,
+       1.587360310267568
+      ]
+     },
+     "process_np_within": {
+      "sessions": 5,
+      "mean_diff": 0.9105922767859921,
+      "ci": [
+       0.05429928078849913,
+       1.691218743351105
+      ]
+     }
+    },
+    "big outside paste": {
+     "sessions": 10,
+     "students": 9,
+     "events": 21,
+     "identity": {
+      "median_with": 1.232003512776654,
+      "median_without": 1.3984959220627164,
+      "auc": 0.455,
+      "auc_ci": [
+       0.22757452574525744,
+       0.674527569426151
+      ],
+      "flagged_with": 0.1,
+      "flagged_without": 0.0
+     },
+     "pairs": {
+      "median_with": 1.5803005322101265,
+      "median_without": 1.3193944576535257,
+      "auc": 0.5602564102564103,
+      "auc_ci": [
+       0.34155863962177824,
+       0.7569311515899969
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0125
+     },
+     "process": {
+      "median_with": 1.8812575029473382,
+      "median_without": 1.3119523363500964,
+      "auc": 0.7194805194805195,
+      "auc_ci": [
+       0.5960472972972973,
+       0.8766826923076922
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0125
+     },
+     "process_np": {
+      "median_with": 1.6520744863388266,
+      "median_without": 1.2782549190371215,
+      "auc": 0.6142857142857143,
+      "auc_ci": [
+       0.4744561419085889,
+       0.788465653153153
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0
+     },
+     "del_per_100": {
+      "median_with": 10.52023988005997,
+      "median_without": 8.920454545454547,
+      "auc": 0.60625
+     },
+     "pause_per_100": {
+      "median_with": 9.889214727924404,
+      "median_without": 9.583333333333332,
+      "auc": 0.4875
+     },
+     "dg_lscale": {
+      "median_with": 0.48855285992126696,
+      "median_without": 0.48226760407372415,
+      "auc": 0.525
+     },
+     "identity_within": {
+      "sessions": 2,
+      "mean_diff": -0.04165829501420104,
+      "ci": [
+       -0.7445766415709996,
+       0.6612600515425975
+      ]
+     },
+     "pairs_within": {
+      "sessions": 2,
+      "mean_diff": 0.39443021595085437,
+      "ci": [
+       0.29270339500626896,
+       0.49615703689543983
+      ]
+     },
+     "process_within": {
+      "sessions": 3,
+      "mean_diff": 1.1523260437437621,
+      "ci": [
+       0.03267566349324602,
+       2.23750665525317
+      ]
+     },
+     "process_np_within": {
+      "sessions": 3,
+      "mean_diff": 0.9965707406822668,
+      "ci": [
+       0.22466811784949267,
+       1.6116316660749803
+      ]
+     }
+    },
+    "paste after look-away": {
+     "sessions": 8,
+     "students": 7,
+     "events": 18,
+     "identity": {
+      "median_with": 1.3596675034800874,
+      "median_without": 1.383682495680718,
+      "auc": 0.5213414634146342,
+      "auc_ci": [
+       0.25698625091409644,
+       0.7315309486670447
+      ],
+      "flagged_with": 0.125,
+      "flagged_without": 0.0
+     },
+     "pairs": {
+      "median_with": 1.7448683704025076,
+      "median_without": 1.3181280916124316,
+      "auc": 0.628125,
+      "auc_ci": [
+       0.39823098995695844,
+       0.8444701646090534
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.012195121951219513
+     },
+     "process": {
+      "median_with": 1.8812575029473382,
+      "median_without": 1.3369168019436592,
+      "auc": 0.6993670886075949,
+      "auc_ci": [
+       0.5312656728434167,
+       0.904014423076923
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.012195121951219513
+     },
+     "process_np": {
+      "median_with": 1.6049888079293493,
+      "median_without": 1.343633444557475,
+      "auc": 0.5996835443037974,
+      "auc_ci": [
+       0.4140569885361552,
+       0.815821875
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0
+     },
+     "del_per_100": {
+      "median_with": 10.109730848861282,
+      "median_without": 9.307359307359308,
+      "auc": 0.573170731707317
+     },
+     "pause_per_100": {
+      "median_with": 8.786078098471986,
+      "median_without": 9.660138248847925,
+      "auc": 0.40853658536585363
+     },
+     "dg_lscale": {
+      "median_with": 0.49480051480583587,
+      "median_without": 0.48226760407372415,
+      "auc": 0.586890243902439
+     },
+     "identity_within": {
+      "sessions": 2,
+      "mean_diff": -0.16427585727134608,
+      "ci": [
+       -0.7445766415709996,
+       0.4160249270283074
+      ]
+     },
+     "pairs_within": {
+      "sessions": 2,
+      "mean_diff": 0.12262670117592415,
+      "ci": [
+       -0.04744999265442065,
+       0.29270339500626896
+      ]
+     },
+     "process_within": {
+      "sessions": 3,
+      "mean_diff": 1.1523260437437621,
+      "ci": [
+       0.03267566349324602,
+       2.23750665525317
+      ]
+     },
+     "process_np_within": {
+      "sessions": 3,
+      "mean_diff": 0.9965707406822668,
+      "ci": [
+       0.22466811784949267,
+       1.6116316660749803
+      ]
+     }
+    },
+    "blocked outside paste": {
+     "sessions": 0,
+     "students": 0,
+     "events": 0
+    },
+    "keyless text": {
+     "sessions": 0,
+     "students": 0,
+     "events": 0
+    }
+   },
+   "any_strong_sign_sessions": 10
+  },
+  "test": {
+   "sessions": 21,
+   "students": 20,
+   "signs": {
+    "outside paste": {
+     "sessions": 1,
+     "students": 1,
+     "events": 2
+    },
+    "big outside paste": {
+     "sessions": 1,
+     "students": 1,
+     "events": 2
+    },
+    "paste after look-away": {
+     "sessions": 1,
+     "students": 1,
+     "events": 1
+    },
+    "blocked outside paste": {
+     "sessions": 0,
+     "students": 0,
+     "events": 0
+    },
+    "keyless text": {
+     "sessions": 0,
+     "students": 0,
+     "events": 0
+    }
+   },
+   "any_strong_sign_sessions": 1
+  },
+  "all": {
+   "sessions": 111,
+   "students": 108,
+   "signs": {
+    "outside paste": {
+     "sessions": 13,
+     "students": 12,
+     "events": 27,
+     "identity": {
+      "median_with": 1.2016539314676657,
+      "median_without": 1.3990122490111767,
+      "auc": 0.41993720565149134,
+      "auc_ci": [
+       0.2055227600682146,
+       0.5846709045904589
+      ],
+      "flagged_with": 0.07692307692307693,
+      "flagged_without": 0.0
+     },
+     "pairs": {
+      "median_with": 1.6757393436505723,
+      "median_without": 1.420070645875688,
+      "auc": 0.5392628205128205,
+      "auc_ci": [
+       0.3620642481304934,
+       0.7043819240795046
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.02040816326530612
+     },
+     "process": {
+      "median_with": 1.8704852231671927,
+      "median_without": 1.2583845878877402,
+      "auc": 0.7086743044189853,
+      "auc_ci": [
+       0.5674827127659574,
+       0.8453552431610942
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.01020408163265306
+     },
+     "process_np": {
+      "median_with": 1.6182028566158382,
+      "median_without": 1.270368344622932,
+      "auc": 0.6072013093289689,
+      "auc_ci": [
+       0.4806870292105112,
+       0.749741134751773
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0
+     },
+     "del_per_100": {
+      "median_with": 10.344827586206897,
+      "median_without": 8.920454545454547,
+      "auc": 0.5643642072213501
+     },
+     "pause_per_100": {
+      "median_with": 9.523809523809524,
+      "median_without": 9.660138248847925,
+      "auc": 0.45604395604395603
+     },
+     "dg_lscale": {
+      "median_with": 0.4804099697628992,
+      "median_without": 0.48077358954933125,
+      "auc": 0.46153846153846156
+     },
+     "identity_within": {
+      "sessions": 3,
+      "mean_diff": -0.01038267038463255,
+      "ci": [
+       -0.7445766415709997,
+       0.39724323328538363
+      ]
+     },
+     "pairs_within": {
+      "sessions": 3,
+      "mean_diff": 0.02228272104056031,
+      "ci": [
+       -0.17840523923016738,
+       0.29270339500626896
+      ]
+     },
+     "process_within": {
+      "sessions": 5,
+      "mean_diff": 0.7350360466206193,
+      "ci": [
+       -0.11728821702632972,
+       1.587360310267568
+      ]
+     },
+     "process_np_within": {
+      "sessions": 5,
+      "mean_diff": 0.9105922767859921,
+      "ci": [
+       0.05429928078849913,
+       1.691218743351105
+      ]
+     }
+    },
+    "big outside paste": {
+     "sessions": 11,
+     "students": 10,
+     "events": 23,
+     "identity": {
+      "median_with": 1.2623530940856422,
+      "median_without": 1.3984959220627164,
+      "auc": 0.4690909090909091,
+      "auc_ci": [
+       0.2287943722943723,
+       0.6630799592564298
+      ],
+      "flagged_with": 0.09090909090909091,
+      "flagged_without": 0.0
+     },
+     "pairs": {
+      "median_with": 1.6757393436505723,
+      "median_without": 1.420070645875688,
+      "auc": 0.5667903525046383,
+      "auc_ci": [
+       0.3743414702581369,
+       0.7392267798208386
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.02
+     },
+     "process": {
+      "median_with": 1.8704852231671927,
+      "median_without": 1.2583845878877402,
+      "auc": 0.7367424242424242,
+      "auc_ci": [
+       0.6059859376104145,
+       0.8734522517634292
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.01
+     },
+     "process_np": {
+      "median_with": 1.685946116061815,
+      "median_without": 1.270368344622932,
+      "auc": 0.6354166666666666,
+      "auc_ci": [
+       0.49893087121212126,
+       0.7985290376627763
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0
+     },
+     "del_per_100": {
+      "median_with": 10.344827586206897,
+      "median_without": 8.920454545454547,
+      "auc": 0.5590909090909091
+     },
+     "pause_per_100": {
+      "median_with": 9.67741935483871,
+      "median_without": 9.583333333333332,
+      "auc": 0.47363636363636363
+     },
+     "dg_lscale": {
+      "median_with": 0.4804099697628992,
+      "median_without": 0.48077358954933125,
+      "auc": 0.4918181818181818
+     },
+     "identity_within": {
+      "sessions": 2,
+      "mean_diff": -0.04165829501420104,
+      "ci": [
+       -0.7445766415709996,
+       0.6612600515425975
+      ]
+     },
+     "pairs_within": {
+      "sessions": 2,
+      "mean_diff": 0.39443021595085437,
+      "ci": [
+       0.29270339500626896,
+       0.49615703689543983
+      ]
+     },
+     "process_within": {
+      "sessions": 3,
+      "mean_diff": 1.1523260437437621,
+      "ci": [
+       0.03267566349324602,
+       2.23750665525317
+      ]
+     },
+     "process_np_within": {
+      "sessions": 3,
+      "mean_diff": 0.9965707406822668,
+      "ci": [
+       0.22466811784949267,
+       1.6116316660749803
+      ]
+     }
+    },
+    "paste after look-away": {
+     "sessions": 9,
+     "students": 8,
+     "events": 19,
+     "identity": {
+      "median_with": 1.517681075492509,
+      "median_without": 1.383682495680718,
+      "auc": 0.5294117647058824,
+      "auc_ci": [
+       0.30640708710668735,
+       0.7273619989426127
+      ],
+      "flagged_with": 0.1111111111111111,
+      "flagged_without": 0.0
+     },
+     "pairs": {
+      "median_with": 1.8139973971544427,
+      "median_without": 1.395063655192041,
+      "auc": 0.6333333333333333,
+      "auc_ci": [
+       0.4149901455427532,
+       0.8281304755944928
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0196078431372549
+     },
+     "process": {
+      "median_with": 1.8704852231671927,
+      "median_without": 1.2721072702514442,
+      "auc": 0.719954648526077,
+      "auc_ci": [
+       0.571211848457573,
+       0.9021291798836901
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.00980392156862745
+     },
+     "process_np": {
+      "median_with": 1.685946116061815,
+      "median_without": 1.3109441817972982,
+      "auc": 0.6281179138321995,
+      "auc_ci": [
+       0.4519748455428067,
+       0.8345544124243103
+      ],
+      "flagged_with": 0.0,
+      "flagged_without": 0.0
+     },
+     "del_per_100": {
+      "median_with": 9.523809523809524,
+      "median_without": 9.307359307359308,
+      "auc": 0.5163398692810458
+     },
+     "pause_per_100": {
+      "median_with": 9.090909090909092,
+      "median_without": 9.660138248847925,
+      "auc": 0.3997821350762527
+     },
+     "dg_lscale": {
+      "median_with": 0.4804099697628992,
+      "median_without": 0.48077358954933125,
+      "auc": 0.5359477124183006
+     },
+     "identity_within": {
+      "sessions": 2,
+      "mean_diff": -0.16427585727134608,
+      "ci": [
+       -0.7445766415709996,
+       0.4160249270283074
+      ]
+     },
+     "pairs_within": {
+      "sessions": 2,
+      "mean_diff": 0.12262670117592415,
+      "ci": [
+       -0.04744999265442065,
+       0.29270339500626896
+      ]
+     },
+     "process_within": {
+      "sessions": 3,
+      "mean_diff": 1.1523260437437621,
+      "ci": [
+       0.03267566349324602,
+       2.23750665525317
+      ]
+     },
+     "process_np_within": {
+      "sessions": 3,
+      "mean_diff": 0.9965707406822668,
+      "ci": [
+       0.22466811784949267,
+       1.6116316660749803
+      ]
+     }
+    },
+    "blocked outside paste": {
+     "sessions": 0,
+     "students": 0,
+     "events": 0
+    },
+    "keyless text": {
+     "sessions": 0,
+     "students": 0,
+     "events": 0
+    }
+   },
+   "any_strong_sign_sessions": 11
+  }
+ },
+ "rq3_drift": {
+  "dev": {
+   "bins": [
+    {
+     "bin": "same day",
+     "sessions": 60,
+     "students": 58,
+     "hours": 11.133231972222221,
+     "fa_per_h": 0.08982117703960833,
+     "fa_ci": [
+      0.0,
+      0.264067360916833
+     ],
+     "identity": 1.3027842871407944,
+     "identity_ci": [
+      1.0163149893712817,
+      1.4666669903130392
+     ],
+     "pairs": 1.0833925720198,
+     "pairs_ci": [
+      0.8131635989307422,
+      1.295994484619602
+     ],
+     "process": 0.9692749798910555,
+     "process_ci": [
+      0.6628639428071744,
+      1.276011251529908
+     ]
+    },
+    {
+     "bin": "1-7 days",
+     "sessions": 2,
+     "students": 2,
+     "hours": 0.4495441666666667,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      0.0,
+      0.0
+     ],
+     "identity": 2.0829695625217726,
+     "identity_ci": [
+      1.5808254366125714,
+      2.585113688430974
+     ],
+     "pairs": 1.08081586034933,
+     "pairs_ci": [
+      1.08081586034933,
+      1.08081586034933
+     ],
+     "process": 1.8426205851128041,
+     "process_ci": [
+      1.528510512180567,
+      2.156730658045041
+     ]
+    },
+    {
+     "bin": "1-2 weeks",
+     "sessions": 1,
+     "students": 1,
+     "hours": 0.5504696111111111,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": 0.9809761369730488,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": 1.7087842820577195,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": 0.8244757123233268,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    {
+     "bin": "2-3 weeks",
+     "sessions": 26,
+     "students": 26,
+     "hours": 15.415342083333334,
+     "fa_per_h": 0.12974087692561476,
+     "fa_ci": [
+      0.0,
+      0.34114088612799087
+     ],
+     "identity": 1.50689870637992,
+     "identity_ci": [
+      1.3425806973734713,
+      1.6395114689012922
+     ],
+     "pairs": 1.840105257909757,
+     "pairs_ci": [
+      1.6580652294086713,
+      1.9508625628252665
+     ],
+     "process": 2.21972796320229,
+     "process_ci": [
+      2.0894302805592306,
+      2.317380304498688
+     ]
+    },
+    {
+     "bin": "3+ weeks",
+     "sessions": 1,
+     "students": 1,
+     "hours": 0.16325252777777777,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": 1.6990763594451712,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": 1.7155661101365325,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": 2.1082072693746783,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    }
+   ],
+   "spearman": {
+    "identity": 0.20862657941309629,
+    "pairs": 0.5188968335035752,
+    "process": 0.5102427644528686
+   },
+   "spearman_ci": {
+    "identity": [
+     0.007045806769750983,
+     0.3927349055438942
+    ],
+    "pairs": [
+     0.3489544210471177,
+     0.6628921175527147
+    ],
+    "process": [
+     0.2948743882426002,
+     0.6651233001865053
+    ]
+   }
+  },
+  "test": {
+   "bins": [
+    {
+     "bin": "same day",
+     "sessions": 16,
+     "students": 15,
+     "hours": 4.130662666666667,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      0.0,
+      0.0
+     ],
+     "identity": 1.3388358847710848,
+     "identity_ci": [
+      0.565131522650331,
+      1.6282824564950653
+     ],
+     "pairs": 1.5289834670205702,
+     "pairs_ci": [
+      1.229131292727825,
+      1.7440522013188056
+     ],
+     "process": 0.47896156947993324,
+     "process_ci": [
+      0.08527263392577884,
+      1.2485658868024998
+     ]
+    },
+    {
+     "bin": "1-7 days",
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": NaN,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": NaN,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": NaN,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    {
+     "bin": "1-2 weeks",
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": NaN,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": NaN,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": NaN,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    {
+     "bin": "2-3 weeks",
+     "sessions": 5,
+     "students": 5,
+     "hours": 2.381106388888889,
+     "fa_per_h": 0.4199728347571384,
+     "fa_ci": [
+      0.0,
+      1.168572388222859
+     ],
+     "identity": 1.5508127027192795,
+     "identity_ci": [
+      1.2340422045557713,
+      1.8515422559827686
+     ],
+     "pairs": 1.9730820353479241,
+     "pairs_ci": [
+      1.6008765194106929,
+      2.4649592527699937
+     ],
+     "process": 1.7894298456803372,
+     "process_ci": [
+      1.6633635039234929,
+      2.181493733120046
+     ]
+    },
+    {
+     "bin": "3+ weeks",
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": NaN,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": NaN,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": NaN,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    }
+   ],
+   "spearman": {
+    "identity": 0.21168831168831168,
+    "pairs": 0.37272727272727274,
+    "process": 0.6030075187969924
+   },
+   "spearman_ci": {
+    "identity": [
+     -0.24596548188653447,
+     0.5645129870129869
+    ],
+    "pairs": [
+     -0.07041695146958304,
+     0.6654545454545454
+    ],
+    "process": [
+     0.20383116883116884,
+     0.8746697626418988
+    ]
+   }
+  },
+  "all": {
+   "bins": [
+    {
+     "bin": "same day",
+     "sessions": 76,
+     "students": 73,
+     "hours": 15.263894638888889,
+     "fa_per_h": 0.06551407905111126,
+     "fa_ci": [
+      0.0,
+      0.20909155144616776
+     ],
+     "identity": 1.3027842871407944,
+     "identity_ci": [
+      1.0254212646635998,
+      1.4849941014272983
+     ],
+     "pairs": 1.1840284885594232,
+     "pairs_ci": [
+      0.8501147952118262,
+      1.342326557248192
+     ],
+     "process": 0.9368439121931315,
+     "process_ci": [
+      0.5986777333213851,
+      1.165903622631824
+     ]
+    },
+    {
+     "bin": "1-7 days",
+     "sessions": 2,
+     "students": 2,
+     "hours": 0.4495441666666667,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      0.0,
+      0.0
+     ],
+     "identity": 2.0829695625217726,
+     "identity_ci": [
+      1.5808254366125714,
+      2.585113688430974
+     ],
+     "pairs": 1.08081586034933,
+     "pairs_ci": [
+      1.08081586034933,
+      1.08081586034933
+     ],
+     "process": 1.8426205851128041,
+     "process_ci": [
+      1.528510512180567,
+      2.156730658045041
+     ]
+    },
+    {
+     "bin": "1-2 weeks",
+     "sessions": 1,
+     "students": 1,
+     "hours": 0.5504696111111111,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": 0.9809761369730488,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": 1.7087842820577195,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": 0.8244757123233268,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    {
+     "bin": "2-3 weeks",
+     "sessions": 31,
+     "students": 31,
+     "hours": 17.796448472222224,
+     "fa_per_h": 0.16857296019947923,
+     "fa_ci": [
+      0.0,
+      0.40661675420306176
+     ],
+     "identity": 1.517681075492509,
+     "identity_ci": [
+      1.3425806973734713,
+      1.6137481703456948
+     ],
+     "pairs": 1.8574201242957673,
+     "pairs_ci": [
+      1.729092189554184,
+      1.9559681266349924
+     ],
+     "process": 2.176335367304761,
+     "process_ci": [
+      2.0453625507770408,
+      2.2598924048040856
+     ]
+    },
+    {
+     "bin": "3+ weeks",
+     "sessions": 1,
+     "students": 1,
+     "hours": 0.16325252777777777,
+     "fa_per_h": 0.0,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "identity": 1.6990763594451712,
+     "identity_ci": [
+      NaN,
+      NaN
+     ],
+     "pairs": 1.7155661101365325,
+     "pairs_ci": [
+      NaN,
+      NaN
+     ],
+     "process": 2.1082072693746783,
+     "process_ci": [
+      NaN,
+      NaN
+     ]
+    }
+   ],
+   "spearman": {
+    "identity": 0.20756405756405757,
+    "pairs": 0.4906125474932815,
+    "process": 0.5402241423225377
+   },
+   "spearman_ci": {
+    "identity": [
+     0.03919491535118948,
+     0.3616177895994409
+    ],
+    "pairs": [
+     0.31215156148642387,
+     0.616544822128174
+    ],
+    "process": [
+     0.37044664293562196,
+     0.684644376396933
+    ]
+   }
+  }
+ },
+ "rq3_devices": {
+  "dev": {
+   "students_both": 0,
+   "same_device": {
+    "sessions": 0,
+    "students": 0,
+    "hours": 0,
+    "fa_per_h": NaN,
+    "fa_ci": [
+     NaN,
+     NaN
+    ],
+    "flagged": NaN,
+    "identity": NaN,
+    "identity_fa": NaN,
+    "pairs": NaN,
+    "pairs_fa": NaN,
+    "process": NaN,
+    "process_fa": NaN
+   },
+   "other_device": {
+    "sessions": 0,
+    "students": 0,
+    "hours": 0,
+    "fa_per_h": NaN,
+    "fa_ci": [
+     NaN,
+     NaN
+    ],
+    "flagged": NaN,
+    "identity": NaN,
+    "identity_fa": NaN,
+    "pairs": NaN,
+    "pairs_fa": NaN,
+    "process": NaN,
+    "process_fa": NaN
+   },
+   "by_base_device": {
+    "lab-PC-like": {
+     "same": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     },
+     "other": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     }
+    },
+    "personal-like": {
+     "same": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     },
+     "other": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     }
+    }
+   },
+   "paired_score_shift": {
+    "identity": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "pairs": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "process": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    }
+   },
+   "other_device_matched": {
+    "sessions": 0,
+    "students": 0,
+    "person_baseline": {
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "identity": NaN,
+     "identity_fa": NaN,
+     "pairs": NaN,
+     "pairs_fa": NaN,
+     "process": NaN,
+     "process_fa": NaN
+    },
+    "device_baseline": {
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "identity": NaN,
+     "identity_fa": NaN,
+     "pairs": NaN,
+     "pairs_fa": NaN,
+     "process": NaN,
+     "process_fa": NaN
+    }
+   }
+  },
+  "test": {
+   "students_both": 0,
+   "same_device": {
+    "sessions": 0,
+    "students": 0,
+    "hours": 0,
+    "fa_per_h": NaN,
+    "fa_ci": [
+     NaN,
+     NaN
+    ],
+    "flagged": NaN,
+    "identity": NaN,
+    "identity_fa": NaN,
+    "pairs": NaN,
+    "pairs_fa": NaN,
+    "process": NaN,
+    "process_fa": NaN
+   },
+   "other_device": {
+    "sessions": 0,
+    "students": 0,
+    "hours": 0,
+    "fa_per_h": NaN,
+    "fa_ci": [
+     NaN,
+     NaN
+    ],
+    "flagged": NaN,
+    "identity": NaN,
+    "identity_fa": NaN,
+    "pairs": NaN,
+    "pairs_fa": NaN,
+    "process": NaN,
+    "process_fa": NaN
+   },
+   "by_base_device": {
+    "lab-PC-like": {
+     "same": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     },
+     "other": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     }
+    },
+    "personal-like": {
+     "same": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     },
+     "other": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     }
+    }
+   },
+   "paired_score_shift": {
+    "identity": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "pairs": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "process": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    }
+   },
+   "other_device_matched": {
+    "sessions": 0,
+    "students": 0,
+    "person_baseline": {
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "identity": NaN,
+     "identity_fa": NaN,
+     "pairs": NaN,
+     "pairs_fa": NaN,
+     "process": NaN,
+     "process_fa": NaN
+    },
+    "device_baseline": {
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "identity": NaN,
+     "identity_fa": NaN,
+     "pairs": NaN,
+     "pairs_fa": NaN,
+     "process": NaN,
+     "process_fa": NaN
+    }
+   }
+  },
+  "all": {
+   "students_both": 0,
+   "same_device": {
+    "sessions": 0,
+    "students": 0,
+    "hours": 0,
+    "fa_per_h": NaN,
+    "fa_ci": [
+     NaN,
+     NaN
+    ],
+    "flagged": NaN,
+    "identity": NaN,
+    "identity_fa": NaN,
+    "pairs": NaN,
+    "pairs_fa": NaN,
+    "process": NaN,
+    "process_fa": NaN
+   },
+   "other_device": {
+    "sessions": 0,
+    "students": 0,
+    "hours": 0,
+    "fa_per_h": NaN,
+    "fa_ci": [
+     NaN,
+     NaN
+    ],
+    "flagged": NaN,
+    "identity": NaN,
+    "identity_fa": NaN,
+    "pairs": NaN,
+    "pairs_fa": NaN,
+    "process": NaN,
+    "process_fa": NaN
+   },
+   "by_base_device": {
+    "lab-PC-like": {
+     "same": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     },
+     "other": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     }
+    },
+    "personal-like": {
+     "same": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     },
+     "other": {
+      "sessions": 0,
+      "students": 0,
+      "hours": 0,
+      "fa_per_h": NaN,
+      "fa_ci": [
+       NaN,
+       NaN
+      ],
+      "flagged": NaN,
+      "identity": NaN,
+      "identity_fa": NaN,
+      "pairs": NaN,
+      "pairs_fa": NaN,
+      "process": NaN,
+      "process_fa": NaN
+     }
+    }
+   },
+   "paired_score_shift": {
+    "identity": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "pairs": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "process": {
+     "students": 0,
+     "median_diff": NaN,
+     "ci": [
+      NaN,
+      NaN
+     ]
+    }
+   },
+   "other_device_matched": {
+    "sessions": 0,
+    "students": 0,
+    "person_baseline": {
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "identity": NaN,
+     "identity_fa": NaN,
+     "pairs": NaN,
+     "pairs_fa": NaN,
+     "process": NaN,
+     "process_fa": NaN
+    },
+    "device_baseline": {
+     "sessions": 0,
+     "students": 0,
+     "hours": 0,
+     "fa_per_h": NaN,
+     "fa_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "identity": NaN,
+     "identity_fa": NaN,
+     "pairs": NaN,
+     "pairs_fa": NaN,
+     "process": NaN,
+     "process_fa": NaN
+    }
+   }
+  }
+ },
+ "rq3_profiles": {
+  "sessions": 302,
+  "students": 194,
+  "pairs": {
+   "same": {
+    "pairs": 141,
+    "students": 74,
+    "rhythm": 0.6232977226803451,
+    "rhythm_ci": [
+     0.5846624198825495,
+     0.682637390694272
+    ],
+    "process": 1.1666541487219226,
+    "process_ci": [
+     0.8811932689486869,
+     1.2651996283784992
+    ]
+   },
+   "cross": {
+    "pairs": 4,
+    "students": 4,
+    "rhythm": 0.6979565511181798,
+    "rhythm_ci": [
+     0.24321500410426594,
+     2.172326894847953
+    ],
+    "process": 1.1400227477844322,
+    "process_ci": [
+     1.0449000522704837,
+     1.5365116809572419
+    ]
+   },
+   "between": {
+    "pairs": 1368,
+    "students": 192,
+    "rhythm": 0.9921548489282868,
+    "rhythm_ci": [
+     0.9575887290660793,
+     1.0234812671918367
+    ],
+    "process": 0.8350139678330761,
+    "process_ci": [
+     0.7484823670000282,
+     0.9294776752851907
+    ]
+   }
+  },
+  "paired": {
+   "rhythm": {
+    "students": 0,
+    "median_cross_minus_same": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_cross_larger": NaN,
+    "between_minus_cross_students": 4,
+    "median_between_minus_cross": 0.12935281747235156,
+    "between_minus_cross_ci": [
+     -1.1930592801565456,
+     0.6227555817760253
+    ]
+   },
+   "process": {
+    "students": 0,
+    "median_cross_minus_same": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_cross_larger": NaN,
+    "between_minus_cross_students": 4,
+    "median_between_minus_cross": -0.2629300685869447,
+    "between_minus_cross_ci": [
+     -0.37728956284311055,
+     0.02697980930239985
+    ]
+   }
+  },
+  "gap": {
+   "same day": {
+    "pairs": 94,
+    "students": 47,
+    "rhythm": 0.6248173267163465,
+    "rhythm_ci": [
+     0.586370983241539,
+     0.7731631430018062
+    ],
+    "process": 0.731954877699436,
+    "process_ci": [
+     0.644806473427841,
+     1.07355075588344
+    ]
+   },
+   "1-7 days": {
+    "pairs": 6,
+    "students": 1,
+    "rhythm": 0.9957058986642897,
+    "rhythm_ci": [
+     NaN,
+     NaN
+    ],
+    "process": 0.4084062124226715,
+    "process_ci": [
+     NaN,
+     NaN
+    ]
+   },
+   "1-2 weeks": {
+    "pairs": 2,
+    "students": 1,
+    "rhythm": 0.8772658000528084,
+    "rhythm_ci": [
+     NaN,
+     NaN
+    ],
+    "process": 1.7021368194059108,
+    "process_ci": [
+     NaN,
+     NaN
+    ]
+   },
+   "2+ weeks": {
+    "pairs": 39,
+    "students": 33,
+    "rhythm": 0.5834001369497634,
+    "rhythm_ci": [
+     0.48375195952676886,
+     0.6386759683696371
+    ],
+    "process": 1.329759606582116,
+    "process_ci": [
+     1.2411522654882474,
+     1.658905801168375
+    ]
+   }
+  },
+  "spearman_days": {
+   "rhythm": {
+    "rho": -0.11175135921914466,
+    "ci": [
+     -0.2790228399077548,
+     0.047876555442161274
+    ]
+   },
+   "process": {
+    "rho": 0.4511366068752943,
+    "ci": [
+     0.29993049710083425,
+     0.5717067290051335
+    ]
+   }
+  },
+  "feature_shift": [
+   {
+    "feature": "dg_median",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "dg_lscale",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "hold_median",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "dg_alt_hand",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "dg_same_hand",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "dg_to_space",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "dg_from_space",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "dg_shifted",
+    "group": "rhythm",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "pause_per_100",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "pause_median",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "del_per_100",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "del_burst",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "fill_in_frac",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "run_rate",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   },
+   {
+    "feature": "focus_out_rate",
+    "group": "process",
+    "students": 0,
+    "median": NaN,
+    "ci": [
+     NaN,
+     NaN
+    ],
+    "share_positive": NaN
+   }
+  ],
+  "students_both": 0
+ },
+ "outcomes": {
+  "n_notes": 0,
+  "held_out": 0,
+  "n_sessions": 0,
+  "n_students": 0,
+  "by_outcome": {
+   "own_work": 0,
+   "had_help": 0,
+   "copied": 0,
+   "not_discussed": 0
+  },
+  "by_channel": {}
+ },
+ "minutes": 1.0806515256563822
+}

@@ -2,33 +2,118 @@
 \label{ch:rq1}
 
 \section{Setup}
-Classroom sessions of the test split (\cref{sec:split}), each scored against the
-student's own baseline from their earliest active minutes (\cref{sec:baseline}).
-Spliced sessions (\cref{sec:splicing}) give the detection rate, delay and switch-time
-error, separately for a partner on the same and on another device class; real sessions
-give the false-alarm rate, an upper bound. Compared methods: scaled Manhattan,
-TypeNet-style embedding and the Nosi-style rhythm measure, each with the same alarm
-stage and calibration. Keystroke baselines are scored only on splices made from raw
-events (sessions under 28 days old). The identity channels are also reported alone,
-since splices favour the process channel.
-\todo{Results on the classroom test split.}
+Classroom sessions are scored against each student's own baseline from their earliest ten
+active minutes (\cref{sec:baseline}). Spliced sessions (\cref{sec:splicing}) give the
+detection rate, delay and switch-time error, separately for a partner on the same and on
+another device class; real sessions give the false-alarm rate, an upper bound since some
+may contain real switches. Compared methods: scaled Manhattan, TypeNet-style embedding
+and the Nosi-style rhythm measure, each with the same alarm stage and calibration.
+Keystroke baselines see raw keys only, so they score a spliced session made from stored
+windows (sessions over 28 days old) as $A$'s typing alone. The identity channels are also
+reported alone, since splices favour the process channel.
 
-\subsection*{Development results (dev split)}
-On the dev split of the pilot (90 scored real sessions, 27.7 active hours, 45 splices with a
-partner on the same question and device class, 10-minute baselines), the frozen
-configuration catches 64\% of spliced takeovers (95\% interval 49--78\%) with a median delay
-of 450\,s, at 1.59 false alarms per active hour on real sessions (\cref{tab:retune-splice}).
-That is eight times the 0.2 per hour the thresholds were calibrated for on simulated typists,
-so real classwork drifts more than simulated typing, and some real sessions may themselves
-contain switches. No setting of $k$ escapes the trade-off: every step that cuts false alarms
-also cuts detection, down to 0.04 per hour and 11\% at $k = 2$. Two lessons carry to the test
-run. First, thresholds must be calibrated on classroom data (dev students' real sessions or
-their own baselines), not on simulated ones. Second, at these rates a flag starts a
-conversation and nothing more, which is the design's premise (\cref{ch:rq4}). Only 2--3
-splices per run pair different device classes on the same question, too few to report
-separately.
+The detector's settings are the ones live on the site, chosen on simulated typists
+(\cref{sec:rq1-harness}); Rohan kept them after the re-tune on dev showed every cheaper
+setting lost most detection (\cref{sec:retune}). What has to come from real data are the
+alarm thresholds $h$: calibrated on simulated typists, real sessions raised eight times the
+false alarms they were set for. The evaluation therefore has three steps
+(\texttt{harness/classroom.py}):
+\begin{enumerate}
+  \item \emph{Freeze} on the dev split: choose the calibration source and set every method's
+    $h$ for the false-alarm target fixed before any data, 0.2 per active hour, from dev
+    students' real sessions only (\texttt{classroom-frozen-config.json}).
+  \item \emph{Test} once on the held-out split at those thresholds, logged in
+    \texttt{test-ledger.jsonl} with the commit, configuration hash and corpus fingerprint.
+  \item Report the larger dev sample \emph{cross-fitted}: each of five folds scored at
+    thresholds set on the other four folds' students, so these numbers are also out of
+    sample for the thresholds.
+\end{enumerate}
 
-\subsection*{Synthetic pilot (phase 2 of the build)}
+\section{Freezing the thresholds on dev}
+Three calibration sources were compared on the dev split (\cref{tab:cls-dev}): other
+students' real sessions (\emph{holdout}), each student's own baseline minutes scored
+leave-one-out (\emph{self}), and both (\emph{pooled}). Holdout calibration hit its target
+best (mean $|\log(\text{achieved}/\text{target})| = 0.06$, against 0.33 pooled and 0.50 self):
+0.11, 0.22, 0.47, 1.05 and 1.95 false alarms per hour at targets 0.1 to 2. Self calibration
+overshoots every target (0.25 at 0.1, 1.73 at 1.0), because a student's baseline minutes
+are more alike than their later sessions (the drift of \cref{ch:rq3}). The frozen
+thresholds are $h = 18.5$ (rhythm), 27.0 (key pairs) and 26.0 (way of working), against 24,
+11.25 and 8.75 on simulated typists: the process threshold had to triple and the key-pair
+threshold more than double to hold 0.2 false alarms per hour on real classwork, while the
+rhythm threshold could come down.
+
+\input{tables/cls-dev}
+
+\section{Results}
+\subsection{Held-out test split}
+The test split turned out small (\cref{tab:cls-rq1}). Of 69 test students, 20 had a session
+left to score after their baseline, giving 21 real sessions (6.5 active hours), and those
+gave 4 same-device splices and 1 cross-device splice. No dev student had a scored session
+from 24 November when the database was copied (25 November), so the time cut added nothing
+yet. At the frozen thresholds the detector raised 0.15 false alarms per active hour (95\%
+interval 0--0.49) and flagged 1 of 21 real sessions, in line with the 0.2 it was frozen for:
+thresholds set on dev students' real sessions held on unseen students. It caught 1 of the 4
+same-device splices (19.5 minutes after the switch, through the rhythm channel) and not the
+cross-device one. With four splices the detection rate is not estimated (interval 0--100\%);
+the deployed thresholds caught 3 of 4 at 1.23 false alarms per hour (0.32--2.26) and 19\% of
+sessions flagged. The test run is recorded once in the ledger (configuration
+\texttt{2630c8689000}, corpus \texttt{2a209845068f9fa4}, commit \texttt{bbac70e}).
+
+\input{tables/cls-rq1}
+
+\subsection{Cross-fitted dev split}
+The dev split carries the precise estimate (\cref{tab:cls-dev-methods,fig:cls-curves}): 90
+real sessions of 88 students (27.7 active hours) and 45 same-device splices. At the frozen
+operating point the detector raises 0.22 false alarms per active hour (0.04--0.43), flags 6\%
+of real sessions, and catches 31\% of spliced takeovers (18--45\%), with a median delay of
+10 minutes (7.5--19.5) and a median error of 13.5 minutes in the estimated switch time. The
+identity channels alone catch almost as many (29\%, 16--43\%) at 0.14 false alarms per hour;
+the process channel adds little once its threshold is set on real sessions. With the deployed
+thresholds the detector catches 64\% (49--78\%) with a median delay of 7.5 minutes, at 1.59
+false alarms per hour and 29\% of real sessions flagged. In between, the curve gives 51\%
+at about 1 false alarm per hour and 69\% at about 2.
+
+Against the baselines at the same target, the thesis detector is not clearly ahead: scaled
+Manhattan catches 29\% (17--43\%) at 0.18 false alarms per hour, the TypeNet-style
+embedding 16\% and the Nosi-style L-scale 13\%. On real classwork, per-key timing compared
+directly (scaled Manhattan, or the detector's own key-pair channel) carries the identity
+signal, and nothing in the classroom data shows the extra channels adding detection at a
+fixed false-alarm rate. The two cross-device splices on dev (1 caught) are too few to say
+whether a device change makes a takeover easier to see.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{cls-detection-vs-false-alarms}
+  \caption{Splices caught against false alarms per active hour on real sessions, sweeping the
+    calibration target (held-out split, thresholds from dev at each target; dotted: thesis
+    detector on the cross-fitted dev split). Vertical line: the frozen target, 0.2 per hour.}
+  \label{fig:cls-curves}
+\end{figure}
+
+\input{tables/cls-dev-methods}
+
+\subsection{Which operating point runs in class}
+\label{sec:operating-point}
+Two operating points are now measured on the same real sessions (\cref{tab:cls-dev-methods}):
+the thresholds calibrated on classroom dev data (31\% of takeovers caught at 0.22 false alarms
+per active hour, 6\% of sessions flagged) and the thresholds calibrated on simulated typists
+that the site already used (64\% at 1.59 per hour, 29\% of sessions flagged). The live site
+keeps the second (Rohan, 25 November 2026). The reason is the design rule of
+\cref{ch:problem}: a flag only marks a moment for the teacher to talk about, never a finding,
+so a missed takeover costs more than a conversation that turns out to be about honest work.
+Favouring recall doubles the takeovers caught and shortens the delay from 10 to 7.5 minutes.
+The price is also measured: about 45 honest sessions flagged per real one at a 1-in-100
+cheating rate instead of 18 (\cref{ch:rq4}), and flags concentrated in Python lab sessions and
+on Windows machines (\cref{tab:cls-subgroups-deployed}). The calibrated thresholds stay in
+\texttt{classroom-frozen-config.json} as the alternative for a setting where false alarms
+weigh more, for example if flags were ever shown to anyone but the teacher.
+
+\paragraph{What the splices leave out.} $B$ continues their own code, so build order and
+the absence of a reading pause favour the process channel (\cref{sec:splicing}); its small
+contribution at real-data thresholds means this bias barely touches the headline. Real
+sessions may contain real switches, so the false-alarm rates are upper bounds.
+
+\section{Synthetic pilot (phase 2 of the build)}
 Before any student data, the detector was evaluated on 60 simulated typists
 (\cref{ch:detector}), each with four honest 30-minute baseline sessions and
 seven test sessions (A honest $\times 2$, B proxy, C takeover by a
@@ -39,9 +124,8 @@ Generated by \texttt{python -m studentide.detector.evaluate --typists 60
 verified, and the development runs behind each design choice, are in
 \cref{app:verification}.
 
-\section{Results}
-\todo{Classroom results replace this section; keep the synthetic pilot as a
-subsection.}
+
+\subsection*{Results}
 
 On the synthetic test set with $W=30$\,s (\cref{tab:detection-by-condition,fig:detection-by-condition}),
 a speed-matched partner taking over is caught in 72\% of sessions, with a
@@ -252,4 +336,13 @@ to 90\%), whereas the old per-edit version cuts copying to 77\%. Keeping
 comment keystrokes apart still changes nothing on simulated data.
 
 \section{Summary}
-\todo{After real data.}
+RQ1 asked how well a change of author can be detected in real classwork. With the live
+detector settings and thresholds set on real dev sessions for 0.2 false alarms per active
+hour, about a third of spliced takeovers are caught (31\%, 18--45\% on 45 dev splices),
+typically ten minutes after the switch, and the rate held on unseen students (0.15 per hour on
+the held-out split). Detection can be bought with false alarms (64\% at 1.59 per hour, the
+deployed setting), but not cheaply. The identity channels do most of the work, and a plain
+per-key timing comparison does about as well, so the contribution of this design lies less in
+a stronger detector than in measuring honestly what one can do in class. The held-out split
+is too small to confirm detection (4 splices); because every session from 24 November is held
+out, it grows with the term, and a final test run on it is planned and will be logged.

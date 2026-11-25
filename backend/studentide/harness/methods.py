@@ -200,8 +200,13 @@ def _grid(duration_s: float, W: float) -> tuple[np.ndarray, np.ndarray]:
     return start, start + W
 
 
-def _active(corpus: Corpus, s: Session, W: float) -> np.ndarray:
-    return np.array([w["active"] for w in corpus.windows(s, W)], bool)
+def _active(corpus: Corpus, s: Session, W: float, n: int | None = None) -> np.ndarray:
+    a = np.array([w["active"] for w in corpus.windows(s, W)], bool)
+    if n is None:
+        return a
+    out = np.zeros(n, bool)  # stored windows of a purged session may not match the stream grid
+    out[:min(n, len(a))] = a[:n]
+    return out
 
 
 # --------------------------------------------------------------- scaled Manhattan
@@ -247,7 +252,7 @@ class ScaledManhattan(Method):
             np.add.at(cnt, (wi[ok], col[ok] + off), 1)
         with np.errstate(invalid="ignore", divide="ignore"):
             v = np.where(cnt >= self.min_count, tot / cnt, np.nan)
-        act = _active(corpus, s, self.W)[:n]
+        act = _active(corpus, s, self.W, n)
         v[~act] = np.nan
         corpus._win[key] = v
         return v
@@ -366,7 +371,7 @@ class TypeNetStyle(Method):
             cnt = np.bincount(wi_a[inside], None, len(start))
             with np.errstate(invalid="ignore"):
                 d = np.where(cnt > 0, tot / np.maximum(cnt, 1), np.nan)
-        act = _active(corpus, s, self.W)[: len(d)]
+        act = _active(corpus, s, self.W, len(d))
         d[~act] = np.nan
         return start, end, d
 

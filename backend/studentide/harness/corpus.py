@@ -224,7 +224,7 @@ MIN_BASELINE_MIN = 3.0  # below this a student is not scored
 
 
 def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_device: bool = False,
-                     test_frac: float | None = None) -> Corpus:
+                     test_frac: float | None = None, held_out: bool = False) -> Corpus:
     """Every study session in the database, with no staging and no labels manifest.
 
     All sessions are honest as far as anyone knows. A student's baseline is their
@@ -236,7 +236,10 @@ def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_devic
     split still hashes the person. Sessions with no active window are left out (role
     "idle") so empty tabs don't count as honest hours. Dev-hash students' sessions from
     PILOT_TEST_FROM on are role "later": held out with the test split (split.pilot_split).
-    Labelled switches come from splicing these sessions (harness.splice).
+    Labelled switches come from splicing these sessions (harness.splice). With `held_out`
+    (the `test` run only), those "later" sessions of students who have a baseline become
+    role "test" with meta `held_out`: scored against the baseline from their earlier weeks,
+    never used for calibration. Roles of every other session are the same either way.
 
     Purged sessions (raw keys deleted, retention.py) carry their stored windows in
     `Session.win`, so the thesis detector scores them; the keystroke baselines
@@ -290,6 +293,8 @@ def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_devic
     usable: dict[str, list[Session]] = {}
     for s in sessions:  # already in time order
         active = sum(w["active"] for w in c.windows(s, 30.0)) * 0.5  # minutes
+        wins = [w for w in c.windows(s, 30.0) if w["active"]]
+        s.meta["kpm"] = sum(w.get("n_keys", 0) for w in wins) / (0.5 * len(wins)) if wins else None  # code keys per active minute
         if side[s.meta["person"]] == "dev" and s.meta["started_at"] >= PILOT_TEST_FROM:
             s.role = "later"
         elif not active:
@@ -312,6 +317,10 @@ def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_devic
         for i, s in enumerate(ss):
             s.role = "baseline" if i < n else "test"
         used[st] = tot
+    if held_out:
+        for s in sessions:
+            if s.role == "later" and s.student in used and s.meta["active_min"]:
+                s.role, s.meta["held_out"] = "test", True
     for s in sessions:
         active = s.meta["active_min"]
         s.order = order[s.student] = order.get(s.student, -1) + 1
@@ -324,6 +333,8 @@ def classroom_corpus(db_path: Path, baseline_min: float = BASELINE_MIN, by_devic
             counts = a.pop(f"_{k}")
             a[k] = str(max(counts, key=counts.get)) if counts else ""
         a["baseline_min"] = round(used.get(key, 0.0), 1)
+        kp = [(s.meta["kpm"], s.meta["active_min"]) for s in sessions if s.student == key and s.role == "baseline" and s.meta["kpm"]]
+        a["speed_kpm"] = round(sum(k * m for k, m in kp) / sum(m for _, m in kp), 1) if kp else None  # baseline typing speed
     return c
 
 

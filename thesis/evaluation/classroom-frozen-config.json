@@ -1,0 +1,235 @@
+{
+ "created": "2026-11-25",
+ "kind": "classroom",
+ "corpus": {
+  "source": "classroom:copy.sqlite3",
+  "students": 276,
+  "sessions": {
+   "idle:honest": 521,
+   "unscored:honest": 203,
+   "baseline:honest": 247,
+   "test:honest": 111,
+   "test:takeover": 49,
+   "test:takeover_random": 3
+  },
+  "fingerprint": "2a209845068f9fa4",
+  "baseline_min": 10.0,
+  "by_device": false,
+  "test_from": 1795458600.0,
+  "splices": {
+   "seed": 2026,
+   "per_session": 1,
+   "group": [
+    "question"
+   ],
+   "n": 52
+  }
+ },
+ "base_config": {
+  "file": "frozen-config.json",
+  "hash": "be03e7dea805"
+ },
+ "split": {
+  "test_frac": 0.3,
+  "dev": 207,
+  "test": 69,
+  "test_from": 1795458600.0
+ },
+ "baseline_min": 10.0,
+ "target_fa_per_h": 0.2,
+ "calibration_source": "holdout",
+ "calibration_error": {
+  "holdout": 0.058779483512547984,
+  "self": 0.49881573000526014,
+  "pooled": 0.3321001708763122
+ },
+ "n_base": 4,
+ "methods": {
+  "thesis": {
+   "kind": "thesis",
+   "process_w": 90,
+   "prior_n": 2.0,
+   "pairs": {
+    "normalise": true,
+    "min_count": 1,
+    "channel": "pairs",
+    "k": 0.5,
+    "n": 80
+   }
+  },
+  "sm": {
+   "kind": "sm",
+   "window_s": 30,
+   "k": 0.25,
+   "rule": "cusum"
+  },
+  "typenet": {
+   "kind": "typenet",
+   "window_s": 30,
+   "steps": 1500,
+   "k": 0.25,
+   "rule": "cusum"
+  },
+  "nosi": {
+   "kind": "nosi",
+   "window_s": 30,
+   "k": 0.5,
+   "rule": "cusum"
+  }
+ },
+ "operating_points": {
+  "thesis": {
+   "k": {
+    "identity": 1.0,
+    "process": 0.5,
+    "pairs": 0.5
+   },
+   "h": {
+    "identity": 18.5,
+    "process": 26.0,
+    "pairs": 27.0
+   },
+   "rule": "cusum",
+   "window_s": {
+    "identity": 30,
+    "process": 90,
+    "pairs": 30
+   },
+   "pair_vocab": [
+    "Unidentified>Unidentified",
+    "KeyE>KeyL",
+    "KeyS>KeyE",
+    "KeyI>KeyN",
+    "KeyN>KeyT",
+    "KeyL>KeyF",
+    "KeyT>KeyI",
+    "KeyP>KeyR",
+    "KeyF>Digit9",
+    "KeyM>KeyE",
+    "Semicolon>Enter",
+    "KeyR>KeyI",
+    "KeyF>Period",
+    "KeyI>KeyM",
+    "Equal>Space",
+    "Space>Equal",
+    "KeyT>Space",
+    "Enter>Enter",
+    "Digit9>Quote",
+    "KeyA>KeyT",
+    "Space>Space",
+    "Equal>Equal",
+    "KeyT>KeyF",
+    "KeyM>KeyP",
+    "KeyO>KeyN",
+    "KeyR>KeyE",
+    "KeyA>KeyM",
+    "KeyI>KeyF",
+    "KeyT>KeyE",
+    "KeyC>KeyA",
+    "KeyS>KeyT",
+    "Space>KeyI",
+    "KeyE>KeyS",
+    "Digit5>KeyD",
+    "KeyI>KeyT",
+    "KeyE>KeyA",
+    "Enter>KeyP",
+    "KeyU>KeyR",
+    "KeyE>Space",
+    "KeyA>KeyL",
+    "KeyN>KeyI",
+    "KeyV>KeyA",
+    "KeyF>Space",
+    "KeyT>KeyA",
+    "KeyL>KeyS",
+    "KeyU>KeyN",
+    "Digit9>Digit0",
+    "Enter>KeyS",
+    "KeyL>KeyA",
+    "Equal>Digit0",
+    "KeyU>KeyE",
+    "KeyN>KeyO",
+    "KeyL>KeyU",
+    "Comma>Space",
+    "KeyY>KeyE",
+    "BracketLeft>Enter",
+    "KeyE>KeyR",
+    "KeyB>KeyE",
+    "KeyA>KeyB",
+    "KeyN>Space",
+    "KeyA>KeyR",
+    "Space>KeyN",
+    "KeyL>KeyO",
+    "Backslash>KeyN",
+    "KeyI>KeyO",
+    "Digit0>Digit0",
+    "KeyT>KeyU",
+    "Space>KeyT",
+    "Space>KeyS",
+    "KeyO>KeyC",
+    "Minus>Minus",
+    "KeyS>KeyA",
+    "KeyE>KeyT",
+    "KeyA>KeyN",
+    "KeyE>KeyM",
+    "Enter>KeyI",
+    "Period>KeyL",
+    "KeyR>Space",
+    "Digit0>Semicolon",
+    "KeyN>KeyF"
+   ]
+  },
+  "sm": {
+   "k": {
+    "keystroke": 0.25
+   },
+   "h": {
+    "keystroke": 55.0
+   },
+   "rule": "cusum",
+   "window_s": {
+    "keystroke": 30
+   }
+  },
+  "typenet": {
+   "k": {
+    "keystroke": 0.25
+   },
+   "h": {
+    "keystroke": 58.0
+   },
+   "rule": "cusum",
+   "window_s": {
+    "keystroke": 30
+   }
+  },
+  "nosi": {
+   "k": {
+    "rhythm": 0.5
+   },
+   "h": {
+    "rhythm": 10.75
+   },
+   "rule": "cusum",
+   "window_s": {
+    "rhythm": 30
+   }
+  }
+ },
+ "deployed_point": {
+  "k": {
+   "identity": 1.0,
+   "process": 0.5,
+   "pairs": 0.5
+  },
+  "h": {
+   "identity": 24.0,
+   "process": 8.75,
+   "pairs": 11.25
+  }
+ },
+ "speed_cuts_kpm": [
+  53.6,
+  61.2
+ ],
+ "splice_seed": 2026
+}
