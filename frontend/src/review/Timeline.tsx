@@ -107,7 +107,9 @@ export function Timeline({ review, t, onSeek, instant, showTruth, focusEpisode, 
           ))}
           {review.events.pastes.map((p, i) => (
             <rect key={i} x={x(p.t) - 5} y={evTop + EV_ROW / 2 - 5} width={10} height={10} rx={2} transform={`rotate(45 ${x(p.t)} ${evTop + EV_ROW / 2})`}
-              fill="var(--warn)" stroke="var(--surface)" strokeWidth={2} />
+              fill={p.blocked ? "none" : "var(--warn)"} stroke={p.blocked ? "var(--warn)" : "var(--surface)"} strokeWidth={p.blocked ? 1.5 : 2}>
+              <title>{p.blocked ? "Blocked paste from outside" : "Paste"}</title>
+            </rect>
           ))}
           {review.events.runs.map((r, i) => (
             <circle key={i} cx={x(r.t)} cy={evTop + 2.5 * EV_ROW} r={4.5} fill={r.error_type ? "var(--danger)" : "var(--success)"} stroke="var(--surface)" strokeWidth={2} />

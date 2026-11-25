@@ -41,7 +41,7 @@ Per student and lab day (timezone `STUDENTIDE_TIMEZONE`, default Asia/Kolkata):
 | Measure | Default | Counts |
 | --- | --- | --- |
 | Active minutes | ≥ 10 | distinct minutes with an edit, a Run or a Check |
-| Typed characters | ≥ 40 | typed text only; pastes, drops and Reset don't count |
+| Typed characters | ≥ 40 | typed text only; pastes (in-IDE ones too), drops and Reset don't count |
 | Run or Check | off | when on, at least one |
 
 Sandbox Labs (desktop app) count the same way: printable keys typed in the

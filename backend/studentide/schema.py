@@ -22,6 +22,11 @@ file changed outside our editor, from the sidecar watcher) and port_open
 (something in the instance started or stopped listening). The desktop app
 also sends batches with a signed, hash-chained envelope (batches.py); that is
 transport, not payload, so it is not part of this schema.
+
+Version 4 (paste guard) is additive: in study contexts the editor blocks pastes and drops of text
+copied outside Scribelab. clipboard gains action "drop", `source` (where the text came from),
+`blocked` (the paste never reached the document, so no edit follows) and `surface`; an allowed
+in-IDE paste or drop is logged with edit origin "input.paste.internal" / "input.drop.internal".
 """
 
 from __future__ import annotations
@@ -30,8 +35,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-SCHEMA_VERSION = 3
-SUPPORTED_VERSIONS = (1, 2, 3)
+SCHEMA_VERSION = 4
+SUPPORTED_VERSIONS = (1, 2, 3, 4)
 
 
 class _Payload(BaseModel):
@@ -68,7 +73,9 @@ class EditData(_Payload):
     Offsets and lengths are UTF-16 code units, as JavaScript counts them.
     """
 
-    origin: str = Field(max_length=64)  # CodeMirror userEvent: input.type, input.paste, delete.backward, undo, ...
+    # CodeMirror userEvent: input.type, input.paste, delete.backward, undo, ...; v4 adds input.paste.internal and
+    # input.drop.internal (text copied inside Scribelab: normal editing, not paste evidence). See is_outside_paste().
+    origin: str = Field(max_length=64)
     changes: list[tuple[int, int, str]]
     len_before: int
     len_after: int
@@ -88,15 +95,27 @@ class EditData(_Payload):
         return self
 
 
-class ClipboardData(_Payload):
-    """paste / copy / cut on the editor. The pasted text itself arrives in the
-    following edit event (origin input.paste); this records the clipboard side."""
+PasteSource = Literal["editor", "page", "document", "external"]
 
-    action: Literal["paste", "copy", "cut"]
+
+class ClipboardData(_Payload):
+    """paste / copy / cut / drop on the editor. The pasted text itself arrives in the
+    following edit event (origin input.paste); this records the clipboard side.
+
+    v4: `source` of a paste or drop when the paste guard is on: "editor" (copied from a
+    Scribelab editor or terminal), "page" (read-only text on the screen, e.g. the question),
+    "document" (already in the student's own code) or "external". `blocked`: an external
+    paste the guard refused; nothing reached the document. `surface`: "terminal" for a
+    blocked paste into the desktop terminal (allowed ones are term_paste events)."""
+
+    action: Literal["paste", "copy", "cut", "drop"]
     length: int
     lines: int
     text: str  # clipboard text, truncated to MAX_CLIPBOARD by the client
     truncated: bool = False
+    source: PasteSource | None = None  # None: guard off (learning lab) or a recording before v4
+    blocked: bool = False
+    surface: Surface = "editor"
 
 
 class CursorData(_Payload):
@@ -226,6 +245,16 @@ class PortOpenData(_Payload):
     port: int = Field(ge=0, le=65535)
     process: str = Field(default="", max_length=64)
     open: bool
+
+
+def is_outside_paste(origin: str) -> bool:
+    """An edit that inserted pasted or dropped text from outside the IDE (or of unknown source,
+    before v4). In-IDE pastes ("….internal") count as ordinary editing."""
+    return origin.startswith(("input.paste", "input.drop")) and not origin.endswith(".internal")
+
+
+def is_internal_paste(origin: str) -> bool:
+    return origin in ("input.paste.internal", "input.drop.internal")
 
 
 PAYLOADS: dict[str, type[_Payload]] = {

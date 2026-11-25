@@ -21,6 +21,8 @@ import "@xterm/xterm/css/xterm.css";
 import { api } from "../api";
 import { captureExtension, captureWindow, keyData, SNAPSHOT_EVERY_MS } from "../capture";
 import { desktop, desktopError } from "../desktop";
+import { classify, track } from "../pasteguard";
+import { PasteNotice, usePasteNotice } from "./PasteNotice";
 import { newSittingId, startSandboxSession, type LiveSession } from "../editor/session";
 import { LessonText } from "../learn/LessonText";
 import { FileEditor } from "../sandbox/bits";
@@ -382,7 +384,10 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => void flush(), 700);
   };
-  const extensions = useMemo(() => (cur ? [captureExtension(rec, { path: cur })] : []), [rec, cur]);
+  const pasteNotice = usePasteNotice();
+  // Sandbox labs are study sessions: pastes from outside Scribelab are blocked here too (pasteguard.ts).
+  const extensions = useMemo(() => (cur ? [captureExtension(rec, { path: cur, guard: { onBlocked: pasteNotice.show } })] : []),
+    [rec, cur, pasteNotice.show]);
 
   const act = async (kind: "run" | "check") => {
     setBusy(kind);
@@ -459,7 +464,8 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
             )}
             <Button size="sm" disabled={!!busy || readOnly} onClick={() => setConfirm(true)}>{busy === "submit" ? <Spinner /> : <Send className="size-3.5" />} Submit</Button>
           </div>
-          <div className="min-h-0 flex-1">
+          <div className="relative min-h-0 flex-1">
+            <PasteNotice {...pasteNotice} />
             {content === null ? <div className="grid h-full place-items-center"><Spinner /></div>
               : cur ? <FileEditor key={cur} path={cur} value={content} onChange={edit} readOnly={readOnly} extensions={extensions} />
               : <div className="grid h-full place-items-center text-sm text-muted">Pick a file on the left.</div>}
@@ -542,9 +548,12 @@ function DesktopTerminal({ instanceId, assignmentId, session, visible, readOnly 
   const resizeRef = useRef<() => void>(() => {});
   const [gen, setGen] = useState(0);
   const [exited, setExited] = useState(false);
+  const pasteNotice = usePasteNotice();
+  const showNotice = pasteNotice.show;
 
   useEffect(() => {
     const d = desktop!;
+    const untrack = track(); // copies from the terminal, editor and instructions count as inside Scribelab
     const rec = session.rec;
     const css = getComputedStyle(document.documentElement);
     const term = new XTerm({
@@ -576,7 +585,15 @@ function DesktopTerminal({ instanceId, assignmentId, session, visible, readOnly 
       const text = e.clipboardData?.getData("text/plain") ?? "";
       e.preventDefault();
       e.stopPropagation();
-      if (id && text) void d.terminal.paste(id, text); // the runtime logs term_paste, then types it
+      if (!text) return;
+      const source = classify(text);
+      if (source === "external") { // blocked like the editor: logged as a clipboard event, never typed
+        rec.log("clipboard", { action: "paste", length: text.length, lines: text.split("\n").length, text: text.slice(0, 20_000),
+          truncated: text.length > 20_000, source, blocked: true, surface: "terminal" }, e.timeStamp);
+        showNotice();
+        return;
+      }
+      if (id) void d.terminal.paste(id, text); // the runtime logs term_paste, then types it
     };
     el.addEventListener("keydown", down, true);
     el.addEventListener("keyup", up, true);
@@ -584,18 +601,19 @@ function DesktopTerminal({ instanceId, assignmentId, session, visible, readOnly 
     const ro = new ResizeObserver(resize);
     ro.observe(el);
     return () => {
-      ro.disconnect(); data.dispose(); offs.forEach((off) => off());
+      ro.disconnect(); data.dispose(); offs.forEach((off) => off()); untrack();
       el.removeEventListener("keydown", down, true); el.removeEventListener("keyup", up, true); el.removeEventListener("paste", paste, true);
       if (id) void d.terminal.close(id);
       term.dispose();
     };
-  }, [instanceId, assignmentId, session, gen]);
+  }, [instanceId, assignmentId, session, gen, showNotice]);
 
   useEffect(() => { if (visible) requestAnimationFrame(() => resizeRef.current()); }, [visible]);
 
   return (
     <div className="relative min-h-0 flex-1 bg-console">
       <div key={gen} ref={host} className="absolute inset-0 overflow-hidden p-2" />
+      <PasteNotice {...pasteNotice} />
       {exited && (
         <button onClick={() => { setExited(false); setGen((g) => g + 1); }}
           className="absolute bottom-3 right-3 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text shadow">New shell</button>

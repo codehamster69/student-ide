@@ -70,7 +70,7 @@ await page.keyboard.press("Enter");
 const typingTo = await page.evaluate(() => performance.now());
 const longTasks = await page.evaluate(([a, b]) => window.__longTasks.filter(([t, d]) => t + d > a && t < b), [typingFrom, typingTo]);
 
-// Paste the rest, as a student copying from elsewhere would.
+// Try to paste the rest, as a student copying from elsewhere would: the paste guard blocks it (schema v4).
 const pasted = 'elif i % 3 == 0:\n        print("Fizz")\n    elif i % 5 == 0:\n        print("Buzz")\n    else:\n        print(i)';
 await page.keyboard.press("Backspace"); // dedent one level to the if
 await page.evaluate((text) => {
@@ -78,6 +78,13 @@ await page.evaluate((text) => {
   dt.setData("text/plain", text);
   document.querySelector(".cm-content").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
 }, pasted);
+await page.waitForSelector("text=Pasting from outside Scribelab is turned off here");
+// So type it instead (Enter auto-indents; Backspace dedents).
+for (const line of ['elif i % 3 == 0:', 'print("Fizz")', 'elif i % 5 == 0:', 'print("Buzz")', 'else:', 'print(i)']) {
+  if (/^(elif|else)/.test(line) && !line.startsWith("elif i % 3")) await page.keyboard.press("Backspace");
+  await page.keyboard.type(line, { delay: 40 });
+  if (line !== "print(i)") await page.keyboard.press("Enter");
+}
 
 // Leave the tab and come back.
 await page.evaluate(() => window.dispatchEvent(new Event("blur")));
@@ -114,8 +121,9 @@ const downs = count((e) => e.type === "key" && e.data.action === "down");
 const ups = count((e) => e.type === "key" && e.data.action === "up");
 assert.ok(downs > 50 && Math.abs(downs - ups) <= 2, `key down/up: ${downs}/${ups}`);
 assert.ok(count((e) => e.type === "key" && e.data.cls === "backspace") >= 1);
-assert.ok(count((e) => e.type === "edit" && e.data.origin === "input.paste") === 1, "paste edit");
-assert.ok(count((e) => e.type === "clipboard" && e.data.action === "paste" && e.data.text === pasted) === 1, "clipboard paste");
+assert.ok(count((e) => e.type === "edit" && e.data.origin.startsWith("input.paste")) === 0, "blocked paste made no edit");
+assert.ok(count((e) => e.type === "clipboard" && e.data.action === "paste" && e.data.text === pasted
+  && e.data.blocked === true && e.data.source === "external") === 1, "blocked paste logged");
 assert.ok(count((e) => e.type === "focus" && e.data.target === "window") >= 2, "window focus");
 assert.ok(count((e) => e.type === "run") === 1 && runs.length === 1, "run");
 

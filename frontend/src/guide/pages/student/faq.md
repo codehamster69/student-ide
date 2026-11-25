@@ -11,7 +11,9 @@ No. A flag, called a *moment worth a conversation*, only ever leads to a convers
 
 ## Can I paste code?
 
-Pastes are allowed and are recorded like everything else. They are not counted as typing for attendance.
+Yes, your own. In labs and competitions you can copy, cut and paste anything inside Scribelab: your code, code from another question of the same lab, and text from the question. Pasting text copied from somewhere else (another website, an AI chat, another app) is turned off, and a short notice says so. Type it yourself instead.
+
+Pastes, and attempts to paste from outside, are recorded like everything else. Pastes are not counted as typing for attendance. The learning lab is practice, so pasting works there as usual.
 
 ## A notice says my teacher is viewing my editor.
 

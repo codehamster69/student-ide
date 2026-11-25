@@ -39,6 +39,8 @@ import json
 import re
 from dataclasses import dataclass, field
 
+from .schema import is_internal_paste
+
 K = 8               # tokens per fingerprinted window
 W = 4               # winnowing window: any shared run of K + W - 1 tokens is caught
 MIN_MATCH = 8       # shortest common run that counts in tiling
@@ -270,6 +272,8 @@ def paste_stats(events: list[dict]) -> dict:
         if e["type"] == "edit":
             data = e["data"] if isinstance(e["data"], dict) else json.loads(e["data"])
             n = sum(len(text) for _, _, text in data["changes"])
+            if is_internal_paste(data["origin"]):
+                continue  # v4: the student's own code moved inside the IDE, neither typed nor pasted
             if data["origin"].startswith("input.paste"):
                 pasted += n
                 n_pastes += 1

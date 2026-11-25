@@ -99,6 +99,31 @@ did not change.
 \section{Event schema and storage}
 \todo{Summary here, full schema in \cref{app:schema}.}
 
+\subsection{Pastes from outside the IDE}
+\label{sec:paste-guard}
+The pilot showed that students' own copy and paste (moving a block, reusing code
+from the previous question) was counted as paste evidence, the same as pasting an
+answer from another page. Browsers do not tell a page where clipboard text came
+from, so the editor remembers what was copied inside it instead: on a study screen
+every copy, cut or drag start is kept as a hash of the normalised text for a day.
+A paste is accepted when it matches one of those copies or already occurs in the
+student's own code, and is then logged as ordinary editing
+(\texttt{input.paste.internal}). Anything else is blocked with a short notice
+(\cref{fig:paste-guard}) and kept as a \emph{blocked paste} event with the text
+the student tried to paste: no code changes, but the attempt is itself a copying
+signal. The learning lab, which is practice and not study data, is exempt. Text
+inserted by a browser extension or an input method is not a paste event and is
+seen as typing; retyping from a second screen is what the detector's channels
+are for.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\linewidth]{pasteguard/paste-guard-blocked}
+  \caption{A paste copied outside Scribelab is turned away with a notice; the
+  student's own copy and paste and text copied from the question still work.}
+  \label{fig:paste-guard}
+\end{figure}
+
 \section{Privacy and data lifecycle}
 \label{sec:privacy}
 Nothing is recorded before a student accepts the consent notice, which lists

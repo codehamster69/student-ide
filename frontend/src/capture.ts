@@ -3,6 +3,7 @@
 import { Transaction, type Extension } from "@codemirror/state";
 import { EditorView, ViewPlugin } from "@codemirror/view";
 import type { Recorder } from "./recorder";
+import { classify, dragStartedInside, track, type PasteSource } from "./pasteguard";
 
 const MAX_CLIPBOARD = 20_000;
 const CURSOR_THROTTLE_MS = 100;
@@ -45,22 +46,48 @@ function lineCount(s: string): number {
   return s ? s.split("\n").length : 0;
 }
 
-function clipboard(rec: Recorder, action: "paste" | "copy" | "cut", text: string, ts: number) {
+type ClipAction = "paste" | "copy" | "cut" | "drop";
+
+function clipboard(rec: Recorder, action: ClipAction, text: string, ts: number,
+  extra: { source?: PasteSource; blocked?: boolean } = {}) {
   rec.log("clipboard", {
     action,
     length: text.length,
     lines: lineCount(text),
     text: text.slice(0, MAX_CLIPBOARD),
     truncated: text.length > MAX_CLIPBOARD,
+    ...extra,
   }, ts);
 }
 
+/** Study screens pass this to block pastes and drops from outside Scribelab (see pasteguard.ts). */
+export type PasteGuard = {
+  /** called after an outside paste or drop was blocked, to show the notice */
+  onBlocked: (kind: "paste" | "drop") => void;
+  /** the student's other open documents (other questions of the sitting); the current one is always included */
+  ownText?: () => string[];
+};
+
 /** CodeMirror extension that records keys, edits, clipboard, cursor and focus.
- * `path`: the file of a multi-file desktop workspace (schema v2 key/edit `path`). */
-export function captureExtension(rec: Recorder, opts: { path?: string } = {}): Extension {
+ * `path`: the file of a multi-file desktop workspace (schema v2 key/edit `path`).
+ * `guard`: block outside pastes (study contexts); allowed in-IDE pastes and drops are logged
+ * with edit origin "input.paste.internal" / "input.drop.internal" (schema v4). */
+export function captureExtension(rec: Recorder, opts: { path?: string; guard?: PasteGuard } = {}): Extension {
   const at = opts.path ? { path: opts.path } : {};
+  const guard = opts.guard;
   let lastCursor = 0;
   let pendingCursor: number | undefined;
+  /** the next input.paste / input.drop transaction comes from inside the IDE */
+  let internal: "paste" | "drop" | null = null;
+  const markInternal = (kind: "paste" | "drop") => {
+    internal = kind;
+    setTimeout(() => { internal = null; }, 0); // CodeMirror dispatches synchronously; dropped files are blocked anyway
+  };
+  const originOf = (tr: Transaction): string => {
+    const o = tr.annotation(Transaction.userEvent) ?? "unknown";
+    if (internal && o === `input.${internal}`) return `${o}.internal`;
+    return o;
+  };
 
   const logCursor = (view: EditorView) => {
     const sel = view.state.selection.main;
@@ -76,7 +103,7 @@ export function captureExtension(rec: Recorder, opts: { path?: string } = {}): E
         changes.push([fromA, toA, inserted.toString()]);
       });
       rec.log("edit", {
-        origin: tr.annotation(Transaction.userEvent) ?? "unknown",
+        origin: originOf(tr),
         changes,
         len_before: tr.startState.doc.length,
         len_after: tr.newDoc.length,
@@ -106,15 +133,43 @@ export function captureExtension(rec: Recorder, opts: { path?: string } = {}): E
     };
   });
 
+  const own = (view: EditorView) => [view.state.doc.toString(), ...(guard?.ownText?.() ?? [])];
+
   const dom = EditorView.domEventHandlers({
-    paste(e) { clipboard(rec, "paste", e.clipboardData?.getData("text/plain") ?? "", e.timeStamp); },
+    paste(e, view) {
+      const text = e.clipboardData?.getData("text/plain") ?? "";
+      if (!guard) { clipboard(rec, "paste", text, e.timeStamp); return false; }
+      const source = classify(text, () => own(view));
+      const blocked = source === "external";
+      clipboard(rec, "paste", text, e.timeStamp, { source, blocked });
+      if (!blocked) { markInternal("paste"); return false; }
+      e.preventDefault();
+      guard.onBlocked("paste");
+      return true;
+    },
+    drop(e, view) {
+      if (!guard) return false;
+      const text = e.dataTransfer?.getData("text/plain") ?? "";
+      const files = (e.dataTransfer?.files?.length ?? 0) > 0;
+      const source: PasteSource = dragStartedInside() && !files ? (classify(text, () => own(view)) === "page" ? "page" : "editor")
+        : "external";
+      const blocked = source === "external";
+      clipboard(rec, "drop", text, e.timeStamp, { source, blocked });
+      if (!blocked) { markInternal("drop"); return false; }
+      e.preventDefault();
+      guard.onBlocked("drop");
+      return true;
+    },
     copy(e, view) { clipboard(rec, "copy", selectedText(view), e.timeStamp); },
     cut(e, view) { clipboard(rec, "cut", selectedText(view), e.timeStamp); },
     focus(e) { rec.log("focus", { target: "editor", state: "in" }, e.timeStamp); },
     blur(e) { rec.log("focus", { target: "editor", state: "out" }, e.timeStamp); },
   });
 
-  return [updates, keys, dom];
+  // While a guarded editor is mounted, copies anywhere on the page are remembered (pasteguard.track).
+  const tracking = guard ? [ViewPlugin.define(() => ({ destroy: track() }))] : [];
+
+  return [updates, keys, dom, tracking];
 }
 
 function selectedText(view: EditorView): string {
