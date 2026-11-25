@@ -11,8 +11,17 @@
 
 name: studentide
 
+# Logs go to the VM's journal, not Docker's per-container files: `up --build` recreates the
+# containers on every deploy and reboot, and the json-file logs went with them, so a class's
+# errors were gone by the time anyone looked. Read them with
+#   journalctl CONTAINER_NAME=studentide-app-1 --since "2 days ago"
+x-logging: &logging
+  driver: journald
+  options: {tag: "{{.Name}}"}
+
 services:
   caddy:
+    logging: *logging
     image: caddy:2.8
     restart: unless-stopped
     ports: ["80:80", "443:443", "443:443/udp"]
@@ -29,6 +38,7 @@ services:
     depends_on: [app]
 
   app:
+    logging: *logging
     build: {context: .., dockerfile: Dockerfile}
     image: studentide:latest
     restart: unless-stopped
@@ -46,6 +56,7 @@ services:
       retries: 3
 
   runner:
+    logging: *logging
     image: studentide:latest
     restart: unless-stopped
     command: ["uvicorn", "studentide.runner_service:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
@@ -64,6 +75,7 @@ services:
   # socket; preview instances it starts get small limits and no host mounts, and sit on the internal
   # "previews" network where the only way out is preview-proxy (package registries only). Students never run here.
   previews:
+    logging: *logging
     image: studentide:latest
     profiles: [previews]
     user: root                   # to use the Docker socket
@@ -79,6 +91,7 @@ services:
 
   # The registries-only way out for preview instances: package registries pass, everything else gets 403.
   preview-proxy:
+    logging: *logging
     image: studentide:latest
     profiles: [previews]
     restart: unless-stopped
@@ -89,6 +102,7 @@ services:
     mem_limit: 128m
 
   backup:
+    logging: *logging
     image: studentide:latest
     restart: unless-stopped
     command: ["python", "-m", "studentide.backup", "--db", "/data/studentide.sqlite3", "--dir", "/backups",

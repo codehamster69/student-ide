@@ -42,6 +42,7 @@ detector, evaluation harness and thesis sources live in this repository too.
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md) |
 | 4. Evaluation harness | done on synthetic data, see [docs/evaluation.md](docs/evaluation.md) |
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
+| Pilot data statistics | aggregates-only, pseudonymous report of live recordings (data quality, devices, copying signs, detector flag rates); see [docs/pilot-data.md](docs/pilot-data.md) |
 | Sandbox Labs monitoring | file watcher (`fs_change`, `port_open`), 5-minute offline journal with signed hash-chained batches, review lanes and "appeared without typing", live terminal mirror, readiness board, consent v3, attendance; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) and [docs/review.md](docs/review.md) |
 | Desktop app (Sandbox Labs) | Electron window on the site, browser sign-in, bridge for local labs, auto-update from GitHub Releases through the server (unsigned builds for now), public download page `#/download` picks the installer for the visitor's computer, see [docs/desktop.md](docs/desktop.md) |
 | Guides and help centre | student and teacher guides in the app (Guide in the sidebar and student app bar, Help button per teacher page, Ctrl+K), public at `#/help`, desktop Help menu; see [docs/guide.md](docs/guide.md) |

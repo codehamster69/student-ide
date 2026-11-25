@@ -178,7 +178,7 @@ footer code { font-family: var(--font-mono); font-size: 12px; color: var(--ink);
 
 <script>
 // Edit this block to update the page; keep it in step with thesis/progress/STATUS.md.
-const UPDATED = "3 Nov 2026";
+const UPDATED = "25 Nov 2026";
 const LABEL = { done: "Done", prog: "In progress", pend: "Pending" };
 
 const BUILD = [
@@ -223,16 +223,17 @@ const BUILD = [
     { t: "Google sign-in for @iiitsurat.ac.in; roles from the address, admin override", s: "done", pr: "#14" },
     { t: "Raw keystrokes deleted after the baseline (window summaries kept); erase a student", s: "done", pr: "#14" },
     { t: "Docker Compose: HTTPS, isolated code runner, nightly backups; deploy guide", s: "done", pr: "#14" },
-    { t: "Google OAuth client, India-region VM and domain set up", s: "pend" },
-    { t: "Pilot in a real lab", s: "pend" },
-  ], note: 'Pilot only: recordings become study data only after ethics approval.' },
+    { t: "Google OAuth client, India-region VM and domain set up", s: "done" },
+    { t: "Pilot data stats tool; server logs kept across deploys", s: "done", pr: "#61" },
+    { t: "Pilot in real labs (1,118 sessions)", s: "done" },
+  ], note: 'Oral institutional approval (Dean, HoD, faculty); written confirmation pending.' },
 ];
 
 const STUDY = [
   { id: "P0", title: "Phase 0", sub: "Survey, ethics, logger", from: 1, to: 2, s: "prog", fill: "33%", items: [
     { t: "Build the logger", s: "done", pr: "#2" },
     { t: "Student survey", s: "pend" },
-    { t: "Ethics approval", s: "pend" },
+    { t: "Ethics approval (oral; written pending)", s: "prog" },
   ]},
   { id: "P1", title: "Phase 1", sub: "Baseline labs", from: 3, to: 4, s: "pend", items: [
     { t: "Four weeks of normal labs, 60 to 80 volunteers", s: "pend" },

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: **2026-11-03**. Live page: <https://claude.ai/artifact/7nwKBLuR3yH3HDyJ3588Bd>
+Last updated: **2026-11-25**. Live page: <https://claude.ai/artifact/7nwKBLuR3yH3HDyJ3588Bd>
 (private; its source is [`phase-diagram.html`](phase-diagram.html)). The same picture for the
 thesis is the TikZ figure [`latex/flowcharts/phase-progress.tex`](../latex/flowcharts/phase-progress.tex),
 shown in appendix E.
@@ -70,8 +70,8 @@ flowchart LR
 | 5 Deployment | Google sign-in limited to @iiitsurat.ac.in; roles from the address format, admin override (People page) | ✅ | #14 |
 | 5 Deployment | Raw keystrokes deleted after the 4-week baseline or 28 days, window summaries kept; erase a student on request | ✅ | #14 |
 | 5 Deployment | Docker Compose: Caddy HTTPS, isolated code runner, nightly backups; deploy guide for an India-region VM | ✅ | #14 |
-| 5 Deployment | Google OAuth client, VM and domain set up (Rohan) | ⬜ | |
-| 5 Deployment | Pilot in a real lab (study data only after ethics approval) | ⬜ | |
+| 5 Deployment | Google OAuth client, VM and domain set up (Rohan) | ✅ | |
+| 5 Deployment | Pilot in real labs: 1,118 sessions, 281 students, 27 Oct to 23 Nov; first look in docs/pilot-data.md | ✅ | this PR |
 
 Detector, synthetic results (seed 7, 60 typists): 72% of matched takeovers caught, 80 s
 median delay, 80% of copying caught (after the build-order rework), 0.42 false alarms per honest hour.
@@ -90,7 +90,7 @@ discuss, none of the 4 honest ones and none of the 24 baseline-week sessions did
 | --- | --- | --- | --- |
 | 0 | 1-2 | Build the logger | ✅ (#2) |
 | 0 | 1-2 | Student survey | ⬜ |
-| 0 | 1-2 | Ethics approval (gates all real data collection) | ⬜ |
+| 0 | 1-2 | Ethics approval: oral institutional approval (Dean, HoD, faculty) per Rohan, 2026-11-25; written confirmation pending, to attach in appendix B | 🟧 |
 | 1 | 3-4 | Baseline labs, 60 to 80 volunteers; per-student baselines | ⬜ |
 | 2 | 5-6 | Staged conditions A honest, B proxy, C takeover, D copying, E paste; grade-matched proxies | ⬜ |
 | 3 | 7 | Mock remote interview on own laptop, 20 to 30 people | ⬜ |
