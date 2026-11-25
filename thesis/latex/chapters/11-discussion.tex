@@ -1,7 +1,299 @@
 \chapter{Discussion}
 \label{ch:discussion}
+
+This chapter reads the results of \cref{ch:rq1,ch:rq2,ch:rq3,ch:rq4} together,
+asks what they mean for programming assessment, and sets out what the evidence
+cannot show. The held-out split turned out small (20 students, 21 sessions, 4
+splices), so detection figures come from the dev split, cross-fitted so that they
+are out-of-sample, and the held-out run confirms the false-alarm rate
+(\cref{ch:rq1}).
+
+\section{Summary of findings}
+\label{sec:disc-findings}
+
+\paragraph{RQ1: a mid-session switch can be detected, slowly, at a real cost in
+false alarms.} With thresholds calibrated on dev students' real sessions for 0.2
+false alarms per active hour, the detector catches 31\% of 45 same-device spliced
+takeovers (95\% interval 18--45\%), with a median delay of 10 minutes, at 0.22
+false alarms per active hour on real sessions (6\% of sessions flagged). On the
+held-out split the false-alarm rate holds at 0.15 per hour (0--0.49), and 1 of
+the 4 held-out splices is caught. The thresholds still running in the live system
+catch 64\% at 1.59 false alarms per hour (\cref{tab:retune-splice}). On simulated
+typists the same design caught 86\% of speed-matched takeovers at 0.19 false
+alarms per hour (\cref{sec:rq1-harness}); the gap between those settings is
+itself a finding (\cref{sec:disc-drift}). Against the baselines at matched false
+alarms, scaled Manhattan catches 29\% (at 0.18 per hour), the TypeNet-style model
+16\% and the Nosi-style measure 13\%. The identity channels alone catch 29\% at
+0.14 per hour, so on classroom data the advantage over scaled Manhattan, clear on
+simulated typists, is within the intervals.
+
+\paragraph{RQ2: transcription measures and copying signs.} The process score
+ranks sessions with an outside paste above others with an AUC of 0.71--0.74, and
+0.61--0.64 when its own paste and focus features are removed. Rhythm, key pairs
+and Nosi's L-scale sit near 0.5: they do not see these copying signs at all. No
+blocked pastes or keyless text occurred yet. Most pastes were the student's own
+code moving inside the editor (434 of 518 on dev, 84\%; \cref{sec:retune}), so
+copying is reported as its own signal rather than folded into the switch
+detector.
+
+\paragraph{RQ3: rhythm is stable, process drifts.} Transfer between device
+classes could not be measured: only 4 students typed on both classes. Over time,
+rhythm is stable (median distance 0.62 between a student's own sessions against
+0.99 between students, rank correlation with days apart $-0.11$), while process
+features drift (1.17 within students, more than 0.84 between them, correlation
+0.45 with days apart). Alarms follow the process drift: 0.07 per hour on
+sessions from the same day as the baseline against 0.17 at two to three weeks.
+The first look had already found more flags on a student's less usual device
+(9.9 against 5.7 episodes per hour, \cref{tab:pilot}).
+
+\paragraph{RQ4: precision is low at realistic rates.} At 1 in 100 sessions,
+5.4\% of flags would be real (2.7--20.1\%); at 1 in 500, 1.1\%. At the live
+thresholds the figures are 2.2\% and 0.4\%, so a teacher would see around 45
+honest sessions flagged for each real takeover at the higher prevalence. At the
+live thresholds the largest gaps are by operating system (Windows 2.38 against
+Linux 0.66 false alarms per hour) and by context (Python labs 2.05 against C
+competitions 0.28, where language and context coincide and short competitions
+were never flagged); at the calibrated thresholds most intervals overlap.
+
 \section{What the results mean for assessment}
+\label{sec:disc-assessment}
+
+\subsection{Real classwork drifts more than any simulation}
+\label{sec:disc-drift}
+The most consistent result of the thesis is that real classroom sessions look
+less like their own baseline than simulated sessions do. On synthetic typists
+the detector met its target of 0.2 false alarms per hour with thresholds set on
+simulated data; the first look at real labs gave 7.5 episodes per active hour,
+and even after the pilot fixes those thresholds give 1.59 on the dev split. Re-tuning located the cause (\cref{sec:retune}): the
+standardised score of honest work averages 1.2--1.6 rather than 0 on every
+channel. A student's baseline is a few short sessions on one or two questions,
+early in the term; later sessions are on harder questions, at another time of
+day, sometimes on another machine, by a student who is still learning to
+program and to type. None of that is a change of author, and all of it moves the
+features. \RQ{3} shows which features move: rhythm stays close to the student's
+own over weeks, while process features drift further from a student's own
+earlier sessions than from other students', and alarms more than double between
+same-day sessions and sessions two to three weeks after the baseline.
+
+This agrees with the critiques of behavioural-biometric evaluation reviewed in
+\cref{sec:rw-keystroke}: drift between sessions, not separability within one,
+limits continuous authentication \cite{eberz2017evaluating}, and natural typing
+on varied hardware is harder than prompted typing
+\cite{sun2016buffalo,murphy2017clarkson}. It also echoes writing research, where
+the task changes keystroke features \cite{conijn2019keystroke}. For this
+thesis, it means that synthetic results are a test of the code, not of the
+method, and that any threshold must be calibrated on classroom data from the
+course where it will be used.
+
+\subsection{No operating point is free}
+Every change that cut false alarms on real sessions also cut detection of
+spliced takeovers (\cref{tab:retune-splice}): dropping build order, raising
+$k$ to 1, 1.5 and 2 traced a curve from 64\% caught at 1.59 false alarms per hour
+to 11\% at 0.04, and recalibrating $h$ on classroom data for 0.2 per hour lands
+at 31\%. The quiet configuration that looked best from flag rates alone
+hid the takeovers along with the drift. The thesis therefore reports the whole
+trade-off curve rather than a single tuned point, and the choice of operating
+point is left to the people who will act on the flags. Because a flag only starts a conversation, the live system deliberately keeps
+the earlier, higher-recall thresholds (64\% caught at 1.59 false alarms per
+hour) rather than the classroom-calibrated ones (31\% at 0.22;
+\cref{sec:operating-point}): a teacher can dismiss an extra moment in seconds,
+but a missed takeover is never discussed at all. The evaluation reports the
+classroom-calibrated point as its headline because that false-alarm rate was
+fixed before the held-out run, and reports the live point next to it.
+
+\subsection{Which signals carry the evidence}
+Three channels contribute differently. The rhythm-based identity channel behaves
+on real data much as it did on simulated data (0.24 episodes per active hour in
+the first look), and together the identity channels catch 29\% of splices at
+0.14 false alarms per hour, nearly all of what the full detector catches. The key-pair channel fires first on most of the caught dev
+splices, which makes its vocabulary on real classes the most promising place to
+gain detection without more false alarms. The process channel (pauses,
+revisions, build order, runs, focus) raised most of the pilot's flags, because
+build order follows the question as much as the person; yet it also carries part
+of the splice detection, partly because a spliced partner continues their own
+code (\cref{sec:disc-limitations}). The identity channels are therefore also
+reported on their own in \cref{ch:rq1}. On classroom data, scaled Manhattan
+over individual digraphs does about as well as the identity channels (29\%), so
+what this thesis adds is less the typing features than the per-student
+baseline, the accumulation over time, the estimated switch time and the
+evaluation on real classes.
+
+\subsection{Takeovers are caught in minutes, not seconds}
+A median delay of ten minutes at the calibrated thresholds (450\,s at the
+live ones) means a helper who types for
+two or three minutes will usually go unflagged, while one who takes over for the
+rest of a lab is likely to be caught, with an estimated switch time the teacher
+can check on the timeline. The tool therefore deters and surfaces sustained
+takeovers, the case that matters most for assessment, rather than every
+borrowed keystroke. A full proxy who types the whole session has no change to
+detect within that session; only a comparison with the student's earlier
+sessions (the baseline) can reveal it, and only if the baseline itself was the
+student's own work.
+
+\subsection{Copying needs its own evidence}
+Most pastes in real classes were the student's own text. The process score
+agrees only moderately with outside pastes (AUC 0.71--0.74, and 0.61--0.64
+without its own paste and focus features), and the typing measures, Nosi's
+L-scale included, not at all. Paste origin and blocked outside pastes
+(\cref{sec:paste-guard}) are direct, explainable evidence of copying, far more
+so than a shift in typing rhythm. This matches the wider finding that detecting
+generated text after the fact is unreliable and can be unfair
+\cite{weberwulff2023testing,liang2023gptdetectors}: what the editor can record
+about \emph{how} text arrived is more defensible than any guess about where it
+came from.
+
 \section{A flag is a conversation}
-\todo{How teachers should use the timeline; harms of false flags.}
+\label{sec:disc-conversation}
+The precision figures settle what a flag may be used for. At any plausible
+prevalence most flags are honest students, so a flag cannot be evidence of
+misconduct; at most it is a reason to look and to talk. The design commits to
+this throughout: students are told on the consent screen that a flag only ever
+leads to a conversation, the review timeline shows the evidence behind each
+moment (which channel, which features, the estimated switch time, the code
+written around it) rather than a verdict, and nothing feeds a grade
+(\cref{sec:review-timeline}).
+
+How a teacher uses a moment matters as much as how it was computed. A teacher
+who opens a moment should first look at the code and the timeline, and then talk
+with the student the way a lab viva already works: ask them to explain a part of
+the code written after the estimated switch, to extend it, or to fix a small bug
+in it. A student who wrote it can usually do so, whatever their typing looked
+like. The conversation should not open with the flag as an accusation, and its
+outcome should be recorded as what it was (\emph{explained, own work},
+\emph{had help}, \emph{copied}, \emph{not discussed}) and nothing more
+(\cref{sec:teacher-review}). No outcome had been
+noted when the data was analysed, so whether teachers find the moments worth
+discussing is still open; when notes exist, they describe how moments were
+used, not whether they were right.
+
+False flags carry harms even under this design. A student asked about their work
+may feel distrusted, as students monitored by proctoring software report
+\cite{balash2021examining,coghlan2021proctor}; repeated flags for the same
+student could shape how a teacher sees them; and flags do not fall evenly. The
+pilot already shows uneven rates by device (9.9 against 5.7 episodes per hour
+on a less usual device; at the live thresholds 2.38 per hour on Windows against
+0.66 on Linux), and a student on a phone has no typing rhythm at all.
+Students who own no laptop, or who switch between a shared lab PC and a borrowed
+one, would be flagged more for reasons unrelated to honesty. The mitigations are
+procedural: labs should require a laptop or PC, teachers should know that device
+changes raise flags, and a flag should never be raised with a student twice for
+the same pattern without a new reason. Prinsloo and Slade's obligation to act
+\cite{prinsloo2017elephant} cuts both ways here: having the data creates a duty
+to use it well, which includes the duty not to over-read it.
+
+Keeping a human decision at every step is also what the EU AI Act requires of
+high-risk systems in education (human oversight, transparency to the people
+affected) \cite{euaiact2024}, and what India's DPDP Act's purpose limitation
+implies: data collected to support teaching is used for a conversation about
+learning, not for discipline \cite{dpdp2023}.
+
 \section{Limitations}
+\label{sec:disc-limitations}
+
+\paragraph{No ground truth.} The thesis draws every conclusion from naturalistic
+classroom recordings (\cref{sec:naturalistic}). No real session is known to
+contain a switch and none is known to be clean. False alarms measured on real
+sessions are therefore upper bounds, since some of them may be real switches, and
+precision computed from them is a lower bound. Teachers' conversation outcomes
+are not labels either: they exist only for moments a teacher chose to discuss,
+and a student's account is not proof.
+
+\paragraph{Spliced takeovers approximate real ones.} A splice joins two real
+students' typing on the same question at a known time (\cref{sec:splicing}). It
+differs from a real takeover in ways that cut both ways. Student $B$ continues
+their own code, not $A$'s, so line-level build order reflects $B$'s document,
+and a real helper would first pause to read $A$'s code; both make the process
+channel's job easier than in reality, so splice detection is optimistic for that
+channel. On the other hand, a real helper is often a stronger programmer than
+the student and types differently, which splices between classmates on the same
+question do not guarantee. Splices also assume each source session had a single
+author. Finally, splices need two students on the same question and split side:
+45 on dev, only 4 on the held-out split, and only 2--3 per run that pair
+different device classes, too few to measure a takeover by someone on another
+kind of machine.
+
+\paragraph{The device confound.} Students chose their devices. Lab PCs and
+personal laptops differ in keyboard, operating system and browser, and the
+students who brought laptops may differ from those who did not. Device class is
+itself inferred, from a browser fingerprint shared by three or more students
+(\cref{sec:baseline}), which can misplace a laptop model popular in the class.
+Phones (120 sessions in the first look) send no key events, so those sessions
+have no identity evidence at all. RQ3 compares devices within students only,
+and RQ4 reports device class with this caveat, but a device change and an
+author change remain partly confounded: both move the same features.
+
+\paragraph{Modest sample, short sessions, short baselines.} The pilot covers
+1,118 sessions of 281 students over four weeks (\cref{tab:pilot}), but the median
+session is five minutes and 108 key presses, and many sessions are opened and
+left (430 of 521 idle dev sessions have under 50 events). Only 332 dev sessions
+had a ready baseline and some typing, 10.7 active hours, and most students'
+baselines are a few minutes from one or two sessions. The held-out split
+has 20 students and 21 scored sessions, so it can confirm a false-alarm rate but
+not a detection rate, and detection headlines rest on cross-fitted dev results.
+Confidence intervals are correspondingly wide (31\%, 18--45\% on dev; precision
+at 1 in 100 from 2.7\% to 20.1\%), subgroup comparisons in \cref{ch:rq4} can
+detect only large differences, and only 4 students typed on both device classes. Baselines come from a student's
+earliest minutes, so a student who improves over the term drifts away from
+their baseline for honest reasons.
+
+\paragraph{One institution, one term, two languages.} All data comes from IIIT
+Surat classes in C and Python in one term.
+Typing behaviour, devices, class sizes and integrity norms differ elsewhere, and
+the results may not transfer to other courses, languages or keyboard layouts.
+
+\paragraph{Ethics approval.} The pilot ran with oral institutional approval from
+the Dean, the Head of Department and the course faculty; written confirmation is
+pending (\cref{sec:ethics}, \cref{app:ethics}). Students saw a consent screen
+before any recording, raw key events are deleted after 28 days, the analysis
+used pseudonymous aggregates only, and spliced sessions never left the analysis.
+Even so, an examiner may expect written approval from an institutional ethics
+committee for human-subject data, and the thesis can claim only what the oral
+approval covered until that confirmation is attached.
+
+\paragraph{Out of scope.} Deliberate imitation of another person's typing, a
+helper working through remote-desktop software on the student's machine,
+dictation, and help that the student then retypes (which is transcription, the
+subject of \RQ{2}, not a change of typist) are not modelled. The detector also
+cannot tell a takeover by a classmate from legitimate help by a teaching
+assistant who typed a line; the conversation can. Demographic attributes such
+as gender or prior experience were not recorded, so fairness is reported only
+for groups visible in the recordings.
+
 \section{Threats to validity}
+\label{sec:disc-validity}
+\begin{description}[leftmargin=1.5em,style=nextline]
+  \item[Internal validity] The split by student and by week (\cref{sec:split})
+    kept tuning off the test data, but the first look at the pilot reported
+    aggregates over all students before the split was fixed; it informed the
+    decision to re-tune, though no parameter was fitted on it. Test-split
+    sessions also feed class-level parts of the live review, which the frozen
+    evaluation configuration fits on dev students only.
+  \item[Construct validity] A splice stands in for a takeover and copying signs
+    stand in for copying; neither is the real event. Episodes per active hour
+    depend on the definition of an active window (30\,s with 20 code key
+    presses), which excludes idle time but also short bursts of typing.
+  \item[External validity] One institution, one term, two languages and the
+    device mix of one college, as above. The classes were real, which is the
+    design's strength: nobody was asked to cheat, and behaviour was not changed
+    by staging.
+  \item[Conclusion validity] Intervals come from resampling students, so they
+    account for repeated sessions of the same student, but subgroups and
+    cross-device splices are small. The held-out test was scored once per
+    frozen configuration and recorded in the ledger, so the reported test
+    figures are not the best of several tries; but with 20 held-out students it
+    has little power, and the dev results, though cross-fitted, were produced
+    on the same students the design was developed on.
+\end{description}
+
+\section{Recommendations for practice}
+\label{sec:disc-practice}
+For a department that wants to use process evidence in programming labs, the
+results suggest five rules. First, calibrate on your own classes: thresholds set
+on simulated or other courses' data will flag several times too often. Second,
+require a laptop or PC for assessed labs, and treat flags raised on a student's
+less usual device with extra caution. Third, treat paste origin and blocked
+outside pastes as the evidence for copying, and typing changes as the evidence
+for a change of author; do not mix them. Fourth, choose the operating point
+knowingly, from the whole trade-off curve, and say which one is in use. Fifth,
+use every flag only to start a conversation about the code, record the outcome
+as what it was, and never let a flag alone affect a grade.

@@ -25,6 +25,7 @@ python -m studentide.seed --db data/demo.sqlite3      # demo data for the review
 docker compose exec app python -m studentide.pilot --db /data/studentide.sqlite3 --detector --out /tmp/p.json  # on the VM; docs/pilot-data.md
 python -m studentide.pilot_tune --summary tune.json --thesis ../thesis/latex  # dev-only re-tune; docs/pilot-data.md
 cd backend && python -m studentide.harness dev --thesis ../thesis/latex   # test = held-out, run once, logged
+python -m studentide.harness freeze|test|rq --db COPY --classroom  # classroom eval on the VM; docs/evaluation.md
 cd desktop/app && npm install && npm run build      # desktop shell; smoke: BASE=… GBASE=… xvfb-run -a node e2e/smoke.mjs
 cd thesis/latex && latexmk -pdf main.tex              # thesis PDF into build/
 cd desktop/installer && npm test                     # installer tests; npm run package -- --linux packages the app

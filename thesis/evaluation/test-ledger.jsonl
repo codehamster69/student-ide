@@ -1,2 +1,3 @@
 {"config": "8e2ce5f7faa6", "corpus": "f4cd7f5ee7179c97", "dirty": true, "git": "6f11daa", "reason": "first test run for this config", "students": 36, "time": "2026-10-26T13:30:04Z"}
 {"config": "be03e7dea805", "corpus": "f4cd7f5ee7179c97", "dirty": true, "git": "e7800e5", "reason": "new frozen config: key-pair timing channel chosen on dev (2026-10-26); scored once", "students": 36, "time": "2026-10-26T15:11:23Z"}
+{"config": "2630c8689000", "corpus": "2a209845068f9fa4", "dirty": false, "git": "bbac70e", "kind": "classroom", "reason": "first classroom test run: thresholds frozen on dev (classroom-frozen-config.json)", "students": 69, "time": "2026-11-25T13:15:17Z"}

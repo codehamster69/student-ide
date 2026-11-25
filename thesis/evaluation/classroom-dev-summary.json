@@ -1,0 +1,2111 @@
+{
+ "calibration_error": {
+  "holdout": 0.058779483512547984,
+  "self": 0.49881573000526014,
+  "pooled": 0.3321001708763122
+ },
+ "calibration_source": "holdout",
+ "target": 0.2,
+ "calibration_check": [
+  {
+   "source": "holdout",
+   "target": 0.1,
+   "achieved": 0.10825697466884926
+  },
+  {
+   "source": "holdout",
+   "target": 0.2,
+   "achieved": 0.21651394933769852
+  },
+  {
+   "source": "holdout",
+   "target": 0.5,
+   "achieved": 0.4691135568983468
+  },
+  {
+   "source": "holdout",
+   "target": 1.0,
+   "achieved": 1.0464840884655429
+  },
+  {
+   "source": "holdout",
+   "target": 2.0,
+   "achieved": 1.9486255440392866
+  },
+  {
+   "source": "self",
+   "target": 0.1,
+   "achieved": 0.25259960756064825
+  },
+  {
+   "source": "self",
+   "target": 0.2,
+   "achieved": 0.3247709240065478
+  },
+  {
+   "source": "self",
+   "target": 0.5,
+   "achieved": 0.6134561897901458
+  },
+  {
+   "source": "self",
+   "target": 1.0,
+   "achieved": 1.7321115947015882
+  },
+  {
+   "source": "self",
+   "target": 2.0,
+   "achieved": 2.778595683167131
+  },
+  {
+   "source": "pooled",
+   "target": 0.1,
+   "achieved": 0.21651394933769852
+  },
+  {
+   "source": "pooled",
+   "target": 0.2,
+   "achieved": 0.3247709240065478
+  },
+  {
+   "source": "pooled",
+   "target": 0.5,
+   "achieved": 0.5051992151212965
+  },
+  {
+   "source": "pooled",
+   "target": 1.0,
+   "achieved": 1.2629980378032413
+  },
+  {
+   "source": "pooled",
+   "target": 2.0,
+   "achieved": 2.3455677844917338
+  }
+ ],
+ "curve": [
+  {
+   "target": 0.05,
+   "fa_per_h": 0.10825697466884926,
+   "flagged": 0.03333333333333333,
+   "tpr": 0.19148936170212766,
+   "takeover": 0.2,
+   "takeover_random": 0.0
+  },
+  {
+   "target": 0.1,
+   "fa_per_h": 0.10825697466884926,
+   "flagged": 0.03333333333333333,
+   "tpr": 0.19148936170212766,
+   "takeover": 0.2,
+   "takeover_random": 0.0
+  },
+  {
+   "target": 0.2,
+   "fa_per_h": 0.21651394933769852,
+   "flagged": 0.05555555555555555,
+   "tpr": 0.3191489361702128,
+   "takeover": 0.3111111111111111,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 0.3,
+   "fa_per_h": 0.43302789867539704,
+   "flagged": 0.1,
+   "tpr": 0.40425531914893614,
+   "takeover": 0.4,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 0.5,
+   "fa_per_h": 0.4691135568983468,
+   "flagged": 0.1111111111111111,
+   "tpr": 0.425531914893617,
+   "takeover": 0.4222222222222222,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 0.75,
+   "fa_per_h": 0.8660557973507941,
+   "flagged": 0.16666666666666666,
+   "tpr": 0.46808510638297873,
+   "takeover": 0.4666666666666667,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 1.0,
+   "fa_per_h": 1.0464840884655429,
+   "flagged": 0.2,
+   "tpr": 0.5106382978723404,
+   "takeover": 0.5111111111111111,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 1.5,
+   "fa_per_h": 1.5516833035868394,
+   "flagged": 0.2777777777777778,
+   "tpr": 0.5531914893617021,
+   "takeover": 0.5555555555555556,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 2.0,
+   "fa_per_h": 1.9486255440392866,
+   "flagged": 0.3111111111111111,
+   "tpr": 0.6808510638297872,
+   "takeover": 0.6888888888888889,
+   "takeover_random": 0.5
+  },
+  {
+   "target": 3.0,
+   "fa_per_h": 2.88685265783598,
+   "flagged": 0.37777777777777777,
+   "tpr": 0.723404255319149,
+   "takeover": 0.7111111111111111,
+   "takeover_random": 1.0
+  },
+  {
+   "target": 5.0,
+   "fa_per_h": 4.907649518321167,
+   "flagged": 0.45555555555555555,
+   "tpr": 0.851063829787234,
+   "takeover": 0.8444444444444444,
+   "takeover_random": 1.0
+  },
+  {
+   "target": 10.0,
+   "fa_per_h": 9.670956403750534,
+   "flagged": 0.6777777777777778,
+   "tpr": 0.9574468085106383,
+   "takeover": 0.9555555555555556,
+   "takeover_random": 1.0
+  }
+ ],
+ "curve_identity": [
+  {
+   "target": 0.05,
+   "takeover": 0.2,
+   "takeover_random": 0.0,
+   "fa_per_h": 0.07217131644589951
+  },
+  {
+   "target": 0.1,
+   "takeover": 0.2,
+   "takeover_random": 0.0,
+   "fa_per_h": 0.07217131644589951
+  },
+  {
+   "target": 0.2,
+   "takeover": 0.28888888888888886,
+   "takeover_random": 0.5,
+   "fa_per_h": 0.14434263289179902
+  },
+  {
+   "target": 0.3,
+   "takeover": 0.4,
+   "takeover_random": 0.5,
+   "fa_per_h": 0.3247709240065478
+  },
+  {
+   "target": 0.5,
+   "takeover": 0.4,
+   "takeover_random": 0.5,
+   "fa_per_h": 0.3247709240065478
+  },
+  {
+   "target": 0.75,
+   "takeover": 0.4444444444444444,
+   "takeover_random": 0.5,
+   "fa_per_h": 0.5773705315671961
+  },
+  {
+   "target": 1.0,
+   "takeover": 0.4666666666666667,
+   "takeover_random": 0.5,
+   "fa_per_h": 0.721713164458995
+  },
+  {
+   "target": 1.5,
+   "takeover": 0.5111111111111111,
+   "takeover_random": 0.5,
+   "fa_per_h": 1.010398430242593
+  },
+  {
+   "target": 2.0,
+   "takeover": 0.5777777777777777,
+   "takeover_random": 0.5,
+   "fa_per_h": 1.2990836960261911
+  },
+  {
+   "target": 3.0,
+   "takeover": 0.6,
+   "takeover_random": 0.5,
+   "fa_per_h": 1.876454227593387
+  },
+  {
+   "target": 5.0,
+   "takeover": 0.8222222222222222,
+   "takeover_random": 1.0,
+   "fa_per_h": 3.211623581842528
+  },
+  {
+   "target": 10.0,
+   "takeover": 0.9111111111111111,
+   "takeover_random": 1.0,
+   "fa_per_h": 6.423247163685056
+  }
+ ],
+ "at_target": {
+  "students": 88,
+  "honest": {
+   "n": 90,
+   "hours": 27.71184036111111,
+   "students": 88,
+   "fa_per_h": 0.21651394933769852,
+   "fa_per_h_ci": [
+    0.04014947607135204,
+    0.4279761766143041
+   ],
+   "flagged": 0.05555555555555555,
+   "flagged_ci": [
+    0.011111111111111112,
+    0.10869565217391304
+   ]
+  },
+  "takeover": {
+   "n": 45,
+   "detected": 0.3111111111111111,
+   "delay_median_s": 600.0,
+   "delay_p90_s": 1539.0000000000002,
+   "switch_err_median_s": 810.0,
+   "early_alarms": 1,
+   "first_channel": {
+    "identity": 6,
+    "process": 3,
+    "pairs": 5
+   },
+   "students": 44,
+   "detected_ci": [
+    0.175,
+    0.4490051020408163
+   ],
+   "delay_ci": [
+    450.0,
+    1170.0
+   ]
+  },
+  "takeover_random": {
+   "n": 2,
+   "detected": 0.5,
+   "delay_median_s": 420.0,
+   "delay_p90_s": 420.0,
+   "switch_err_median_s": 30.0,
+   "early_alarms": 0,
+   "first_channel": {
+    "identity": 1
+   },
+   "students": 2,
+   "detected_ci": [
+    0.0,
+    1.0
+   ],
+   "delay_ci": [
+    420.0,
+    420.0
+   ]
+  },
+  "precision_100": 0.053537284894837486,
+  "precision_100_ci": [
+   0.026910587647733863,
+   0.20092735703245745
+  ],
+  "precision_500": 0.01109789932619897,
+  "precision_500_ci": [
+   0.00545668381975608,
+   0.04751654956747756
+  ]
+ },
+ "identity_at_target": {
+  "students": 88,
+  "honest": {
+   "n": 90,
+   "hours": 27.71184036111111,
+   "students": 88,
+   "fa_per_h": 0.14434263289179902,
+   "fa_per_h_ci": [
+    0.0332428187017039,
+    0.28694442355882277
+   ],
+   "flagged": 0.044444444444444446,
+   "flagged_ci": [
+    0.010869565217391304,
+    0.0889393939393939
+   ]
+  },
+  "takeover": {
+   "n": 45,
+   "detected": 0.28888888888888886,
+   "delay_median_s": 690.0,
+   "delay_p90_s": 1566.0000000000002,
+   "switch_err_median_s": 720.0,
+   "early_alarms": 1,
+   "first_channel": {
+    "identity": 7,
+    "pairs": 6
+   },
+   "students": 44,
+   "detected_ci": [
+    0.1568627450980392,
+    0.42857142857142855
+   ],
+   "delay_ci": [
+    450.0,
+    1172.249999999998
+   ]
+  },
+  "takeover_random": {
+   "n": 2,
+   "detected": 0.5,
+   "delay_median_s": 420.0,
+   "delay_p90_s": 420.0,
+   "switch_err_median_s": 30.0,
+   "early_alarms": 0,
+   "first_channel": {
+    "identity": 1
+   },
+   "students": 2,
+   "detected_ci": [
+    0.0,
+    1.0
+   ],
+   "delay_ci": [
+    420.0,
+    420.0
+   ]
+  },
+  "precision_100": 0.06161137440758292,
+  "precision_100_ci": [
+   0.02832144625269097,
+   0.2285874449437202
+  ],
+  "precision_500": 0.012858555885262114,
+  "precision_500_ci": [
+   0.0057494107954436284,
+   0.055525270858549906
+  ]
+ },
+ "deployed": {
+  "students": 88,
+  "honest": {
+   "n": 90,
+   "hours": 27.71184036111111,
+   "students": 88,
+   "fa_per_h": 1.587768961809789,
+   "fa_per_h_ci": [
+    1.1175815802519038,
+    2.0573806683435825
+   ],
+   "flagged": 0.28888888888888886,
+   "flagged_ci": [
+    0.1956521739130435,
+    0.38058300395256905
+   ]
+  },
+  "takeover": {
+   "n": 45,
+   "detected": 0.6444444444444445,
+   "delay_median_s": 450.0,
+   "delay_p90_s": 972.0,
+   "switch_err_median_s": 810.0,
+   "early_alarms": 19,
+   "first_channel": {
+    "pairs": 15,
+    "process": 14
+   },
+   "students": 44,
+   "detected_ci": [
+    0.49019607843137253,
+    0.7800121951219512
+   ],
+   "delay_ci": [
+    180.0,
+    630.0
+   ]
+  },
+  "takeover_random": {
+   "n": 2,
+   "detected": 0.5,
+   "delay_median_s": 360.0,
+   "delay_p90_s": 360.0,
+   "switch_err_median_s": 0.0,
+   "early_alarms": 0,
+   "first_channel": {
+    "process": 1
+   },
+   "students": 2,
+   "detected_ci": [
+    0.0,
+    1.0
+   ],
+   "delay_ci": [
+    360.0,
+    360.0
+   ]
+  },
+  "precision_100": 0.022036474164133745,
+  "precision_100_ci": [
+   0.01656906156263391,
+   0.031296545256604455
+  ],
+  "precision_500": 0.004450583179864949,
+  "precision_500_ci": [
+   0.0033314970066133875,
+   0.006368914502348917
+  ]
+ },
+ "subgroups": [
+  {
+   "attribute": "device",
+   "group": "lab-PC-like",
+   "students": 64,
+   "honest": {
+    "n": 66,
+    "hours": 19.983146694444443,
+    "students": 64,
+    "fa_per_h": 0.1501265063942125,
+    "fa_per_h_ci": [
+     0.0,
+     0.31408379023021554
+    ],
+    "flagged": 0.045454545454545456,
+    "flagged_ci": [
+     0.0,
+     0.10294117647058823
+    ]
+   },
+   "takeover": {
+    "n": 38,
+    "detected": 0.2894736842105263,
+    "delay_median_s": 690.0,
+    "delay_p90_s": 1620.0,
+    "switch_err_median_s": 900.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "identity": 4,
+     "process": 3,
+     "pairs": 4
+    },
+    "students": 37,
+    "detected_ci": [
+     0.15703125,
+     0.4329054054054054
+    ],
+    "delay_ci": [
+     450.0,
+     1170.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "device",
+   "group": "personal-like",
+   "students": 21,
+   "honest": {
+    "n": 21,
+    "hours": 7.066210972222223,
+    "students": 21,
+    "fa_per_h": 0.42455567938647926,
+    "fa_per_h_ci": [
+     0.0,
+     1.2002456460035664
+    ],
+    "flagged": 0.09523809523809523,
+    "flagged_ci": [
+     0.0,
+     0.23809523809523808
+    ]
+   },
+   "takeover": {
+    "n": 7,
+    "detected": 0.42857142857142855,
+    "delay_median_s": 480.0,
+    "delay_p90_s": 1176.0,
+    "switch_err_median_s": 720.0,
+    "early_alarms": 0,
+    "first_channel": {
+     "identity": 2,
+     "pairs": 1
+    },
+    "students": 7,
+    "detected_ci": [
+     0.0,
+     0.8333333333333334
+    ],
+    "delay_ci": [
+     90.0,
+     1350.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "device",
+   "group": "phone",
+   "students": 3,
+   "honest": {
+    "n": 3,
+    "hours": 0.6624826944444444,
+    "students": 3,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": null,
+   "small": true
+  },
+  {
+   "attribute": "os",
+   "group": "Android",
+   "students": 3,
+   "honest": {
+    "n": 3,
+    "hours": 0.6624826944444444,
+    "students": 3,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": null,
+   "small": true
+  },
+  {
+   "attribute": "os",
+   "group": "Linux",
+   "students": 41,
+   "honest": {
+    "n": 43,
+    "hours": 9.076587666666667,
+    "students": 41,
+    "fa_per_h": 0.11017356265642121,
+    "fa_per_h_ci": [
+     0.0,
+     0.34373235375330974
+    ],
+    "flagged": 0.023255813953488372,
+    "flagged_ci": [
+     0.0,
+     0.07317073170731707
+    ]
+   },
+   "takeover": {
+    "n": 18,
+    "detected": 0.16666666666666666,
+    "delay_median_s": 1170.0,
+    "delay_p90_s": 1170.0,
+    "switch_err_median_s": 900.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "identity": 2,
+     "pairs": 1
+    },
+    "students": 17,
+    "detected_ci": [
+     0.0,
+     0.375
+    ],
+    "delay_ci": [
+     90.0,
+     1170.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "os",
+   "group": "Mac",
+   "students": 9,
+   "honest": {
+    "n": 9,
+    "hours": 4.522272527777778,
+    "students": 9,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": {
+    "n": 5,
+    "detected": 0.4,
+    "delay_median_s": 1125.0,
+    "delay_p90_s": 1305.0,
+    "switch_err_median_s": 1485.0,
+    "early_alarms": 0,
+    "first_channel": {
+     "identity": 1,
+     "pairs": 1
+    },
+    "students": 5,
+    "detected_ci": [
+     0.0,
+     1.0
+    ],
+    "delay_ci": [
+     900.0,
+     1350.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "os",
+   "group": "Windows",
+   "students": 35,
+   "honest": {
+    "n": 35,
+    "hours": 13.450497472222223,
+    "students": 35,
+    "fa_per_h": 0.3717334626712454,
+    "fa_per_h_ci": [
+     0.07305483598469902,
+     0.7709348017938926
+    ],
+    "flagged": 0.11428571428571428,
+    "flagged_ci": [
+     0.02857142857142857,
+     0.2
+    ]
+   },
+   "takeover": {
+    "n": 22,
+    "detected": 0.4090909090909091,
+    "delay_median_s": 480.0,
+    "delay_p90_s": 1638.0,
+    "switch_err_median_s": 720.0,
+    "early_alarms": 0,
+    "first_channel": {
+     "identity": 3,
+     "process": 3,
+     "pairs": 3
+    },
+    "students": 22,
+    "detected_ci": [
+     0.21739130434782608,
+     0.625
+    ],
+    "delay_ci": [
+     330.0,
+     1155.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "lang",
+   "group": "c",
+   "students": 49,
+   "honest": {
+    "n": 51,
+    "hours": 7.141352,
+    "students": 49,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": {
+    "n": 14,
+    "detected": 0.0,
+    "delay_median_s": NaN,
+    "delay_p90_s": NaN,
+    "switch_err_median_s": NaN,
+    "early_alarms": 0,
+    "first_channel": {},
+    "students": 13,
+    "detected_ci": [
+     0.0,
+     0.0
+    ],
+    "delay_ci": [
+     NaN,
+     NaN
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "lang",
+   "group": "python",
+   "students": 38,
+   "honest": {
+    "n": 38,
+    "hours": 20.5346015,
+    "students": 38,
+    "fa_per_h": 0.29218974617062815,
+    "fa_per_h_ci": [
+     0.0482620852506524,
+     0.5470191994171894
+    ],
+    "flagged": 0.13157894736842105,
+    "flagged_ci": [
+     0.02631578947368421,
+     0.23684210526315788
+    ]
+   },
+   "takeover": {
+    "n": 31,
+    "detected": 0.45161290322580644,
+    "delay_median_s": 600.0,
+    "delay_p90_s": 1539.0000000000002,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "identity": 6,
+     "process": 3,
+     "pairs": 5
+    },
+    "students": 31,
+    "detected_ci": [
+     0.28125,
+     0.626875
+    ],
+    "delay_ci": [
+     450.0,
+     1170.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "ctx",
+   "group": "competition",
+   "students": 49,
+   "honest": {
+    "n": 51,
+    "hours": 7.141352,
+    "students": 49,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": {
+    "n": 14,
+    "detected": 0.0,
+    "delay_median_s": NaN,
+    "delay_p90_s": NaN,
+    "switch_err_median_s": NaN,
+    "early_alarms": 0,
+    "first_channel": {},
+    "students": 13,
+    "detected_ci": [
+     0.0,
+     0.0
+    ],
+    "delay_ci": [
+     NaN,
+     NaN
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "ctx",
+   "group": "lab",
+   "students": 38,
+   "honest": {
+    "n": 38,
+    "hours": 20.5346015,
+    "students": 38,
+    "fa_per_h": 0.29218974617062815,
+    "fa_per_h_ci": [
+     0.0482620852506524,
+     0.5470191994171894
+    ],
+    "flagged": 0.13157894736842105,
+    "flagged_ci": [
+     0.02631578947368421,
+     0.23684210526315788
+    ]
+   },
+   "takeover": {
+    "n": 31,
+    "detected": 0.45161290322580644,
+    "delay_median_s": 600.0,
+    "delay_p90_s": 1539.0000000000002,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "identity": 6,
+     "process": 3,
+     "pairs": 5
+    },
+    "students": 31,
+    "detected_ci": [
+     0.28125,
+     0.626875
+    ],
+    "delay_ci": [
+     450.0,
+     1170.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "ctx",
+   "group": "practice",
+   "students": 1,
+   "honest": {
+    "n": 1,
+    "hours": 0.03588686111111111,
+    "students": 1,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": null,
+   "small": true
+  },
+  {
+   "attribute": "speed",
+   "group": "fast",
+   "students": 30,
+   "honest": {
+    "n": 32,
+    "hours": 9.86992122222222,
+    "students": 30,
+    "fa_per_h": 0.10131793126661341,
+    "fa_per_h_ci": [
+     0.0,
+     0.3248768422471775
+    ],
+    "flagged": 0.03125,
+    "flagged_ci": [
+     0.0,
+     0.09375
+    ]
+   },
+   "takeover": {
+    "n": 21,
+    "detected": 0.2857142857142857,
+    "delay_median_s": 795.0,
+    "delay_p90_s": 1440.0,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 0,
+    "first_channel": {
+     "identity": 3,
+     "process": 1,
+     "pairs": 2
+    },
+    "students": 20,
+    "detected_ci": [
+     0.09090909090909091,
+     0.47368421052631576
+    ],
+    "delay_ci": [
+     390.0,
+     1710.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "speed",
+   "group": "medium",
+   "students": 29,
+   "honest": {
+    "n": 29,
+    "hours": 11.68828175,
+    "students": 29,
+    "fa_per_h": 0.08555577469716624,
+    "fa_per_h_ci": [
+     0.0,
+     0.30336462350633525
+    ],
+    "flagged": 0.034482758620689655,
+    "flagged_ci": [
+     0.0,
+     0.10344827586206896
+    ]
+   },
+   "takeover": {
+    "n": 15,
+    "detected": 0.3333333333333333,
+    "delay_median_s": 450.0,
+    "delay_p90_s": 1512.0,
+    "switch_err_median_s": 1440.0,
+    "early_alarms": 0,
+    "first_channel": {
+     "pairs": 3,
+     "identity": 1,
+     "process": 1
+    },
+    "students": 15,
+    "detected_ci": [
+     0.11421568627450981,
+     0.5833333333333334
+    ],
+    "delay_ci": [
+     210.0,
+     1620.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "speed",
+   "group": "slow",
+   "students": 29,
+   "honest": {
+    "n": 29,
+    "hours": 6.153637388888889,
+    "students": 29,
+    "fa_per_h": 0.6500220515466946,
+    "fa_per_h_ci": [
+     0.0,
+     1.224490957276591
+    ],
+    "flagged": 0.10344827586206896,
+    "flagged_ci": [
+     0.0,
+     0.2413793103448276
+    ]
+   },
+   "takeover": {
+    "n": 9,
+    "detected": 0.3333333333333333,
+    "delay_median_s": 510.0,
+    "delay_p90_s": 1038.0,
+    "switch_err_median_s": 180.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "identity": 2,
+     "process": 1
+    },
+    "students": 9,
+    "detected_ci": [
+     0.0,
+     0.7074999999999997
+    ],
+    "delay_ci": [
+     90.0,
+     1170.0
+    ]
+   },
+   "small": false
+  }
+ ],
+ "subgroups_deployed": [
+  {
+   "attribute": "device",
+   "group": "lab-PC-like",
+   "students": 64,
+   "honest": {
+    "n": 66,
+    "hours": 19.983146694444443,
+    "students": 64,
+    "fa_per_h": 1.5513072327401958,
+    "fa_per_h_ci": [
+     1.0750252074916078,
+     2.06715897563564
+    ],
+    "flagged": 0.3181818181818182,
+    "flagged_ci": [
+     0.20148437500000002,
+     0.42424242424242425
+    ]
+   },
+   "takeover": {
+    "n": 38,
+    "detected": 0.6578947368421053,
+    "delay_median_s": 330.0,
+    "delay_p90_s": 936.0000000000001,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 14,
+    "first_channel": {
+     "pairs": 12,
+     "process": 13
+    },
+    "students": 37,
+    "detected_ci": [
+     0.49359756097560975,
+     0.8101994851994851
+    ],
+    "delay_ci": [
+     180.0,
+     645.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "device",
+   "group": "personal-like",
+   "students": 21,
+   "honest": {
+    "n": 21,
+    "hours": 7.066210972222223,
+    "students": 21,
+    "fa_per_h": 1.8397412773414101,
+    "fa_per_h_ci": [
+     0.4710067677143851,
+     3.096476482586108
+    ],
+    "flagged": 0.23809523809523808,
+    "flagged_ci": [
+     0.047619047619047616,
+     0.42857142857142855
+    ]
+   },
+   "takeover": {
+    "n": 7,
+    "detected": 0.5714285714285714,
+    "delay_median_s": 555.0,
+    "delay_p90_s": 1011.0000000000001,
+    "switch_err_median_s": 675.0,
+    "early_alarms": 5,
+    "first_channel": {
+     "process": 1,
+     "pairs": 3
+    },
+    "students": 7,
+    "detected_ci": [
+     0.2,
+     1.0
+    ],
+    "delay_ci": [
+     420.0,
+     1200.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "device",
+   "group": "phone",
+   "students": 3,
+   "honest": {
+    "n": 3,
+    "hours": 0.6624826944444444,
+    "students": 3,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": null,
+   "small": true
+  },
+  {
+   "attribute": "os",
+   "group": "Android",
+   "students": 3,
+   "honest": {
+    "n": 3,
+    "hours": 0.6624826944444444,
+    "students": 3,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": null,
+   "small": true
+  },
+  {
+   "attribute": "os",
+   "group": "Linux",
+   "students": 41,
+   "honest": {
+    "n": 43,
+    "hours": 9.076587666666667,
+    "students": 41,
+    "fa_per_h": 0.6610413759385273,
+    "fa_per_h_ci": [
+     0.0,
+     1.256815451903584
+    ],
+    "flagged": 0.06976744186046512,
+    "flagged_ci": [
+     0.0,
+     0.15117886178861767
+    ]
+   },
+   "takeover": {
+    "n": 18,
+    "detected": 0.3888888888888889,
+    "delay_median_s": 630.0,
+    "delay_p90_s": 1044.0,
+    "switch_err_median_s": 900.0,
+    "early_alarms": 5,
+    "first_channel": {
+     "pairs": 3,
+     "process": 4
+    },
+    "students": 17,
+    "detected_ci": [
+     0.16206140350877193,
+     0.6428571428571429
+    ],
+    "delay_ci": [
+     180.0,
+     1020.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "os",
+   "group": "Mac",
+   "students": 9,
+   "honest": {
+    "n": 9,
+    "hours": 4.522272527777778,
+    "students": 9,
+    "fa_per_h": 1.3267665677257114,
+    "fa_per_h_ci": [
+     0.5417289042523166,
+     2.308170260774277
+    ],
+    "flagged": 0.4444444444444444,
+    "flagged_ci": [
+     0.2222222222222222,
+     0.7777777777777778
+    ]
+   },
+   "takeover": {
+    "n": 5,
+    "detected": 0.8,
+    "delay_median_s": 690.0,
+    "delay_p90_s": 1056.0,
+    "switch_err_median_s": 720.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "pairs": 3,
+     "process": 1
+    },
+    "students": 5,
+    "detected_ci": [
+     0.3333333333333333,
+     1.0
+    ],
+    "delay_ci": [
+     90.0,
+     1200.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "os",
+   "group": "Windows",
+   "students": 35,
+   "honest": {
+    "n": 35,
+    "hours": 13.450497472222223,
+    "students": 35,
+    "fa_per_h": 2.3790941610959706,
+    "fa_per_h_ci": [
+     1.6494228351530036,
+     3.180130743628208
+    ],
+    "flagged": 0.5428571428571428,
+    "flagged_ci": [
+     0.37142857142857144,
+     0.6857142857142857
+    ]
+   },
+   "takeover": {
+    "n": 22,
+    "detected": 0.8181818181818182,
+    "delay_median_s": 375.0,
+    "delay_p90_s": 738.0,
+    "switch_err_median_s": 765.0,
+    "early_alarms": 13,
+    "first_channel": {
+     "pairs": 9,
+     "process": 9
+    },
+    "students": 22,
+    "detected_ci": [
+     0.6414438502673797,
+     0.9583333333333334
+    ],
+    "delay_ci": [
+     180.0,
+     540.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "lang",
+   "group": "c",
+   "students": 49,
+   "honest": {
+    "n": 51,
+    "hours": 7.141352,
+    "students": 49,
+    "fa_per_h": 0.28005901403543754,
+    "fa_per_h_ci": [
+     0.0,
+     0.643478301112576
+    ],
+    "flagged": 0.0392156862745098,
+    "flagged_ci": [
+     0.0,
+     0.10204081632653061
+    ]
+   },
+   "takeover": {
+    "n": 14,
+    "detected": 0.21428571428571427,
+    "delay_median_s": 630.0,
+    "delay_p90_s": 654.0,
+    "switch_err_median_s": 180.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "process": 2,
+     "pairs": 1
+    },
+    "students": 13,
+    "detected_ci": [
+     0.0,
+     0.4497474747474745
+    ],
+    "delay_ci": [
+     270.0,
+     660.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "lang",
+   "group": "python",
+   "students": 38,
+   "honest": {
+    "n": 38,
+    "hours": 20.5346015,
+    "students": 38,
+    "fa_per_h": 2.0453282231943968,
+    "fa_per_h_ci": [
+     1.4966420403486338,
+     2.720265255347435
+    ],
+    "flagged": 0.631578947368421,
+    "flagged_ci": [
+     0.4598684210526316,
+     0.7631578947368421
+    ]
+   },
+   "takeover": {
+    "n": 31,
+    "detected": 0.8387096774193549,
+    "delay_median_s": 435.0,
+    "delay_p90_s": 990.0,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 18,
+    "first_channel": {
+     "pairs": 14,
+     "process": 12
+    },
+    "students": 31,
+    "detected_ci": [
+     0.6984090909090909,
+     0.9436804451510332
+    ],
+    "delay_ci": [
+     180.0,
+     645.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "ctx",
+   "group": "competition",
+   "students": 49,
+   "honest": {
+    "n": 51,
+    "hours": 7.141352,
+    "students": 49,
+    "fa_per_h": 0.28005901403543754,
+    "fa_per_h_ci": [
+     0.0,
+     0.643478301112576
+    ],
+    "flagged": 0.0392156862745098,
+    "flagged_ci": [
+     0.0,
+     0.10204081632653061
+    ]
+   },
+   "takeover": {
+    "n": 14,
+    "detected": 0.21428571428571427,
+    "delay_median_s": 630.0,
+    "delay_p90_s": 654.0,
+    "switch_err_median_s": 180.0,
+    "early_alarms": 1,
+    "first_channel": {
+     "process": 2,
+     "pairs": 1
+    },
+    "students": 13,
+    "detected_ci": [
+     0.0,
+     0.4497474747474745
+    ],
+    "delay_ci": [
+     270.0,
+     660.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "ctx",
+   "group": "lab",
+   "students": 38,
+   "honest": {
+    "n": 38,
+    "hours": 20.5346015,
+    "students": 38,
+    "fa_per_h": 2.0453282231943968,
+    "fa_per_h_ci": [
+     1.4966420403486338,
+     2.720265255347435
+    ],
+    "flagged": 0.631578947368421,
+    "flagged_ci": [
+     0.4598684210526316,
+     0.7631578947368421
+    ]
+   },
+   "takeover": {
+    "n": 31,
+    "detected": 0.8387096774193549,
+    "delay_median_s": 435.0,
+    "delay_p90_s": 990.0,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 18,
+    "first_channel": {
+     "pairs": 14,
+     "process": 12
+    },
+    "students": 31,
+    "detected_ci": [
+     0.6984090909090909,
+     0.9436804451510332
+    ],
+    "delay_ci": [
+     180.0,
+     645.0
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "ctx",
+   "group": "practice",
+   "students": 1,
+   "honest": {
+    "n": 1,
+    "hours": 0.03588686111111111,
+    "students": 1,
+    "fa_per_h": 0.0,
+    "fa_per_h_ci": [
+     0.0,
+     0.0
+    ],
+    "flagged": 0.0,
+    "flagged_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "takeover": null,
+   "small": true
+  },
+  {
+   "attribute": "speed",
+   "group": "fast",
+   "students": 30,
+   "honest": {
+    "n": 32,
+    "hours": 9.86992122222222,
+    "students": 30,
+    "fa_per_h": 1.8237227627990413,
+    "fa_per_h_ci": [
+     1.1510037387060872,
+     2.514973500349554
+    ],
+    "flagged": 0.375,
+    "flagged_ci": [
+     0.22039930555555556,
+     0.5333333333333333
+    ]
+   },
+   "takeover": {
+    "n": 21,
+    "detected": 0.7142857142857143,
+    "delay_median_s": 270.0,
+    "delay_p90_s": 828.0,
+    "switch_err_median_s": 810.0,
+    "early_alarms": 8,
+    "first_channel": {
+     "pairs": 5,
+     "process": 10
+    },
+    "students": 20,
+    "detected_ci": [
+     0.5,
+     0.907034632034632
+    ],
+    "delay_ci": [
+     90.0,
+     608.624999999999
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "speed",
+   "group": "medium",
+   "students": 29,
+   "honest": {
+    "n": 29,
+    "hours": 11.68828175,
+    "students": 29,
+    "fa_per_h": 1.2833366204574936,
+    "fa_per_h_ci": [
+     0.6296535843049427,
+     1.9760159219288058
+    ],
+    "flagged": 0.3103448275862069,
+    "flagged_ci": [
+     0.13793103448275862,
+     0.4827586206896552
+    ]
+   },
+   "takeover": {
+    "n": 15,
+    "detected": 0.6666666666666666,
+    "delay_median_s": 510.0,
+    "delay_p90_s": 1092.0,
+    "switch_err_median_s": 1080.0,
+    "early_alarms": 8,
+    "first_channel": {
+     "pairs": 7,
+     "process": 3
+    },
+    "students": 15,
+    "detected_ci": [
+     0.4079166666666667,
+     0.8888888888888888
+    ],
+    "delay_ci": [
+     180.0,
+     827.249999999998
+    ]
+   },
+   "small": false
+  },
+  {
+   "attribute": "speed",
+   "group": "slow",
+   "students": 29,
+   "honest": {
+    "n": 29,
+    "hours": 6.153637388888889,
+    "students": 29,
+    "fa_per_h": 1.78756064175341,
+    "fa_per_h_ci": [
+     0.5841135179939123,
+     2.8124414608263715
+    ],
+    "flagged": 0.1724137931034483,
+    "flagged_ci": [
+     0.06896551724137931,
+     0.3103448275862069
+    ]
+   },
+   "takeover": {
+    "n": 9,
+    "detected": 0.4444444444444444,
+    "delay_median_s": 645.0,
+    "delay_p90_s": 930.0,
+    "switch_err_median_s": 1080.0,
+    "early_alarms": 3,
+    "first_channel": {
+     "pairs": 3,
+     "process": 1
+    },
+    "students": 9,
+    "detected_ci": [
+     0.1111111111111111,
+     0.75
+    ],
+    "delay_ci": [
+     60.0,
+     1020.0
+    ]
+   },
+   "small": false
+  }
+ ],
+ "methods": {
+  "sm": {
+   "metrics": {
+    "students": 88,
+    "honest": {
+     "n": 90,
+     "hours": 27.71184036111111,
+     "students": 88,
+     "fa_per_h": 0.18042829111474876,
+     "fa_per_h_ci": [
+      0.0,
+      0.4030641530669738
+     ],
+     "flagged": 0.03333333333333333,
+     "flagged_ci": [
+      0.0,
+      0.06833897485493215
+     ]
+    },
+    "takeover": {
+     "n": 45,
+     "detected": 0.28888888888888886,
+     "delay_median_s": 450.0,
+     "delay_p90_s": 1626.0000000000005,
+     "switch_err_median_s": 810.0,
+     "early_alarms": 1,
+     "first_channel": {
+      "keystroke": 13
+     },
+     "students": 44,
+     "detected_ci": [
+      0.1701241134751773,
+      0.4250132978723404
+     ],
+     "delay_ci": [
+      150.0,
+      1050.0
+     ]
+    },
+    "takeover_random": {
+     "n": 2,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 2,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 0.0804953560371517,
+    "precision_100_ci": [
+     0.0348145187748879,
+     1.0
+    ],
+    "precision_500": 0.017071569271175313,
+    "precision_500_ci": [
+     0.007105381972761483,
+     1.0
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.10825697466884926,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.1276595744680851,
+     "takeover": 0.13333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.10825697466884926,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.2127659574468085,
+     "takeover": 0.2222222222222222,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.18042829111474876,
+     "flagged": 0.03333333333333333,
+     "tpr": 0.2765957446808511,
+     "takeover": 0.28888888888888886,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.25259960756064825,
+     "flagged": 0.044444444444444446,
+     "tpr": 0.2553191489361702,
+     "takeover": 0.26666666666666666,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.5412848733442462,
+     "flagged": 0.13333333333333333,
+     "tpr": 0.2765957446808511,
+     "takeover": 0.28888888888888886,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.721713164458995,
+     "flagged": 0.15555555555555556,
+     "tpr": 0.3191489361702128,
+     "takeover": 0.3333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 0.9382271137966935,
+     "flagged": 0.18888888888888888,
+     "tpr": 0.3191489361702128,
+     "takeover": 0.3333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 1.4073406706950404,
+     "flagged": 0.2111111111111111,
+     "tpr": 0.3829787234042553,
+     "takeover": 0.4,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 1.912539885816337,
+     "flagged": 0.23333333333333334,
+     "tpr": 0.425531914893617,
+     "takeover": 0.4444444444444444,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 2.92293831605893,
+     "flagged": 0.2777777777777778,
+     "tpr": 0.46808510638297873,
+     "takeover": 0.4888888888888889,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 4.943735176544116,
+     "flagged": 0.3333333333333333,
+     "tpr": 0.6170212765957447,
+     "takeover": 0.6444444444444445,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 8.299701391278443,
+     "flagged": 0.5333333333333333,
+     "tpr": 0.6595744680851063,
+     "takeover": 0.6888888888888889,
+     "takeover_random": 0.0
+    }
+   ]
+  },
+  "typenet": {
+   "metrics": {
+    "students": 88,
+    "honest": {
+     "n": 90,
+     "hours": 27.71184036111111,
+     "students": 88,
+     "fa_per_h": 0.10825697466884926,
+     "fa_per_h_ci": [
+      0.0,
+      0.30234882876428154
+     ],
+     "flagged": 0.022222222222222223,
+     "flagged_ci": [
+      0.0,
+      0.056818181818181816
+     ]
+    },
+    "takeover": {
+     "n": 45,
+     "detected": 0.15555555555555556,
+     "delay_median_s": 930.0,
+     "delay_p90_s": 1782.0000000000005,
+     "switch_err_median_s": 630.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "keystroke": 7
+     },
+     "students": 44,
+     "detected_ci": [
+      0.05125,
+      0.2708333333333333
+     ],
+     "delay_ci": [
+      90.0,
+      1728.7499999999966
+     ]
+    },
+    "takeover_random": {
+     "n": 2,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 2,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 0.0660377358490566,
+    "precision_100_ci": [
+     0.019801980198019806,
+     1.0
+    ],
+    "precision_500": 0.013833992094861658,
+    "precision_500_ci": [
+     0.003992015968063873,
+     1.0
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.036085658222949756,
+     "flagged": 0.011111111111111112,
+     "tpr": 0.0851063829787234,
+     "takeover": 0.08888888888888889,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.07217131644589951,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.1276595744680851,
+     "takeover": 0.13333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.10825697466884926,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.14893617021276595,
+     "takeover": 0.15555555555555556,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.18042829111474876,
+     "flagged": 0.03333333333333333,
+     "tpr": 0.2127659574468085,
+     "takeover": 0.2222222222222222,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.25259960756064825,
+     "flagged": 0.03333333333333333,
+     "tpr": 0.3191489361702128,
+     "takeover": 0.3333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.39694224045244725,
+     "flagged": 0.06666666666666667,
+     "tpr": 0.3404255319148936,
+     "takeover": 0.35555555555555557,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 0.5773705315671961,
+     "flagged": 0.07777777777777778,
+     "tpr": 0.3829787234042553,
+     "takeover": 0.4,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 1.1547410631343922,
+     "flagged": 0.2,
+     "tpr": 0.46808510638297873,
+     "takeover": 0.4888888888888889,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 1.6238546200327388,
+     "flagged": 0.24444444444444444,
+     "tpr": 0.48936170212765956,
+     "takeover": 0.5111111111111111,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 2.742510024944181,
+     "flagged": 0.35555555555555557,
+     "tpr": 0.5531914893617021,
+     "takeover": 0.5777777777777777,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 4.727221227206417,
+     "flagged": 0.5111111111111111,
+     "tpr": 0.5957446808510638,
+     "takeover": 0.6222222222222222,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 4.907649518321167,
+     "flagged": 0.5111111111111111,
+     "tpr": 0.5957446808510638,
+     "takeover": 0.6222222222222222,
+     "takeover_random": 0.0
+    }
+   ]
+  },
+  "nosi": {
+   "metrics": {
+    "students": 88,
+    "honest": {
+     "n": 90,
+     "hours": 27.71184036111111,
+     "students": 88,
+     "fa_per_h": 0.25259960756064825,
+     "fa_per_h_ci": [
+      0.0,
+      0.6403383252422514
+     ],
+     "flagged": 0.022222222222222223,
+     "flagged_ci": [
+      0.0,
+      0.05558712121212118
+     ]
+    },
+    "takeover": {
+     "n": 45,
+     "detected": 0.13333333333333333,
+     "delay_median_s": 570.0,
+     "delay_p90_s": 825.0,
+     "switch_err_median_s": 270.0,
+     "early_alarms": 3,
+     "first_channel": {
+      "rhythm": 6
+     },
+     "students": 44,
+     "detected_ci": [
+      0.04253102836879433,
+      0.2340738423028786
+     ],
+     "delay_ci": [
+      225.0,
+      825.0
+     ]
+    },
+    "takeover_random": {
+     "n": 2,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 2,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 0.05714285714285714,
+    "precision_100_ci": [
+     0.025406050955414015,
+     1.0
+    ],
+    "precision_500": 0.011881188118811881,
+    "precision_500_ci": [
+     0.005145270238671677,
+     1.0
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.10825697466884926,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.0851063829787234,
+     "takeover": 0.08888888888888889,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.18042829111474876,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.10638297872340426,
+     "takeover": 0.1111111111111111,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.25259960756064825,
+     "flagged": 0.022222222222222223,
+     "tpr": 0.1276595744680851,
+     "takeover": 0.13333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.43302789867539704,
+     "flagged": 0.044444444444444446,
+     "tpr": 0.14893617021276595,
+     "takeover": 0.15555555555555556,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.721713164458995,
+     "flagged": 0.08888888888888889,
+     "tpr": 0.2127659574468085,
+     "takeover": 0.2222222222222222,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.8299701391278443,
+     "flagged": 0.1111111111111111,
+     "tpr": 0.2978723404255319,
+     "takeover": 0.3111111111111111,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 1.4073406706950404,
+     "flagged": 0.2,
+     "tpr": 0.2765957446808511,
+     "takeover": 0.28888888888888886,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 1.7321115947015882,
+     "flagged": 0.24444444444444444,
+     "tpr": 0.3191489361702128,
+     "takeover": 0.3333333333333333,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 2.165139493376985,
+     "flagged": 0.3,
+     "tpr": 0.3617021276595745,
+     "takeover": 0.37777777777777777,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 3.3920518729572766,
+     "flagged": 0.3888888888888889,
+     "tpr": 0.46808510638297873,
+     "takeover": 0.4888888888888889,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 4.871563860098217,
+     "flagged": 0.5555555555555556,
+     "tpr": 0.5957446808510638,
+     "takeover": 0.6222222222222222,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 5.412848733442463,
+     "flagged": 0.6,
+     "tpr": 0.6595744680851063,
+     "takeover": 0.6888888888888889,
+     "takeover_random": 0.0
+    }
+   ]
+  }
+ },
+ "minutes": 13.424530677000682
+}

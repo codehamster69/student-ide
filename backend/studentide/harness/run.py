@@ -20,6 +20,12 @@ dev (dev students only, 5-fold cross-fitting):
   4. short baselines: 1-8 baseline sessions, with and without the prior;
   then writes the frozen configuration.
 
+freeze (classroom, dev only): keep the live detector settings (--base-config), choose the
+  calibration source and set every method's thresholds h on dev students' real sessions
+  for --target false alarms per hour; writes classroom-frozen-config.json (harness.classroom).
+  `test --classroom` then scores the held-out split once at those frozen thresholds.
+rq (classroom): RQ2 copying-sign agreement and RQ3 drift / cross-device transfer, aggregates only.
+
 compare (dev students only, as often as needed): each --configs file's own operating
   point (k, h as frozen) on real and spliced classroom sessions, cross-fitted; e.g.
   python -m studentide.harness compare --db pilot.sqlite3 --classroom \
@@ -68,7 +74,7 @@ def log(*a):
 
 def load(a) -> Corpus:
     if a.db and a.classroom:
-        c = classroom_corpus(a.db, a.baseline_min, a.by_device, a.test_frac)
+        c = classroom_corpus(a.db, a.baseline_min, a.by_device, a.test_frac, held_out=getattr(a, "held_out", False))
         add_splices(c, seed=a.seed, test_frac=a.test_frac)
         return c
     if a.db:
@@ -334,6 +340,9 @@ def dev(a):
 # ------------------------------------------------------------- test
 
 def test(a):
+    if a.db and a.classroom:  # classroom data: own frozen config, thresholds frozen on dev (harness.classroom)
+        from . import classroom
+        return classroom.test(a)
     out, th = a.out, a.thesis
     fz_path = out / "frozen-config.json"
     if not fz_path.exists():
@@ -472,7 +481,8 @@ def compare(a):
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="python -m studentide.harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("mode", choices=["dev", "test", "compare"])
+    p.add_argument("mode", choices=["dev", "test", "compare", "freeze", "rq"])
+    p.add_argument("--base-config", type=Path, help="freeze: detector settings to keep (default: the live frozen-config.json)")
     p.add_argument("--configs", nargs="+", type=Path, help="compare: config JSON files (frozen-config shape)")
     p.add_argument("--compare-out", type=Path, help="compare: write the aggregate results here")
     p.add_argument("--typists", type=int, default=120)
@@ -498,5 +508,8 @@ def main(argv=None) -> None:
         p.error("--db needs --labels or --classroom")
     if a.mode == "compare" and not a.configs:
         p.error("compare needs --configs")
-    {"dev": dev, "test": test, "compare": compare}[a.mode](a)
+    if a.mode in ("freeze", "rq") and not (a.db and a.classroom):
+        p.error(f"{a.mode} is for classroom data: --db ... --classroom")
+    from . import classroom
+    {"dev": dev, "test": test, "compare": compare, "freeze": classroom.freeze, "rq": classroom.rq}[a.mode](a)
 

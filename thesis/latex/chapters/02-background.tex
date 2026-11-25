@@ -1,17 +1,182 @@
 \chapter{Background and Related Work}
 \label{ch:background}
 
-\section{Keystroke dynamics}
-Fixed-text and free-text keystroke biometrics \cite{monrose2000keystroke},
-benchmark of anomaly detectors including scaled Manhattan
-\cite{killourhy2009comparing}, and deep free-text models such as TypeNet
-\cite{acien2022typenet}.
+This thesis sits where four lines of work meet: keystroke biometrics, which
+asks \emph{who} is typing; sequential change detection, which asks
+\emph{when} something changed; the analysis of programming processes in
+computing education, which records \emph{how} students write code; and
+academic-integrity practice, which decides what may be done with any of it.
+This chapter reviews each in turn, then the two concerns that limit every
+behavioural measure of students, fairness and privacy, and closes with the gap
+that the research questions of \cref{ch:problem} address.
 
-\section{Keystroke data in programming education}
-Programmer identification from typing \cite{longi2015identification}.
-In essay writing, keystroke-process features separate original composition
-from transcription with high accuracy, because transcription is more linear
-and bursty \cite{crossley2024plagiarism}.
+\section{Keystroke dynamics}
+\label{sec:rw-keystroke}
+
+\subsection{Static and free-text authentication}
+Keystroke dynamics identifies people by the timing of their typing: how long
+each key is held (dwell or hold time) and how long passes between successive
+keys (flight time, or digraph latency for a pair of keys). Surveys describe
+decades of work and a wide range of features and classifiers
+\cite{banerjee2012survey,teh2013survey}. The early systems were \emph{static}:
+the user types a fixed string such as a password, and the timing vector is
+compared with an enrolled template. Monrose and Rubin showed that typing
+rhythm is distinctive enough to serve as a biometric for both structured and
+free text \cite{monrose2000keystroke}. Bergadano et al.\ compared samples by
+the relative order of trigraph durations rather than their absolute values,
+which made the measure robust to a typist who is faster or slower on a given
+day \cite{bergadano2002keystroke}.
+
+Free-text methods drop the fixed string. Gunetti and Picardi compared any two
+samples through the n-graphs they share, using a relative (rank-order) and an
+absolute distance, and showed that people can be told apart from ordinary
+typing of different texts \cite{gunetti2005freetext}. This matters here,
+because students in a lab never type the same text twice: every question, and
+every student's solution to it, is different.
+
+Benchmarks made the field comparable. Killourhy and Maxion collected one
+password typed 400 times by each of 51 people and compared 14 anomaly
+detectors under one protocol; the scaled Manhattan detector, which divides
+each feature's distance by its mean absolute deviation in the user's
+training data, had the lowest equal error rate (9.6\%)
+\cite{killourhy2009comparing}. Its simplicity and strength make it the
+standard baseline, and it is one of the baselines of this thesis
+(\cref{ch:rq1}). Deep models came later. TypeNet trains a recurrent network
+with a triplet loss to embed sequences of key timings, so that a new user is
+enrolled from a few samples without retraining, and evaluates on very large
+populations \cite{acien2022typenet}. It was trained on the Aalto typing data of
+Dhakal et al., 136 million keystrokes from 168,000 volunteers transcribing
+sentences online, whose analysis also showed how much typing varies with
+skill and habit (for example, rollover, pressing the next key before releasing
+the current one) \cite{dhakal2018typing}. A TypeNet-style embedding is the
+second learned baseline in this thesis.
+
+\subsection{Continuous authentication}
+Authentication at log-in says nothing about who types afterwards.
+\emph{Continuous} authentication keeps checking during a session, typically
+over a sliding window of recent keystrokes. Bours argued that such systems
+should be judged not by an equal error rate on fixed-size samples but by how
+many actions an impostor can take before being locked out and how many a
+genuine user takes before a false lock-out, and proposed a trust model in
+which each action raises or lowers a running trust score
+\cite{bours2012continuous}. Mondal and Bours combined keystroke and mouse
+dynamics in this framework \cite{mondal2017continuous}. On phones, continuous
+authentication from touch, motion and typing is an active area of its own
+\cite{patel2016continuous}.
+
+Shared free-text data sets let these ideas be tested on natural typing. The
+Buffalo data set collected long free-text and transcription sessions,
+including sessions on a different keyboard \cite{sun2016buffalo}; the
+Clarkson~II data set logged participants' ordinary computer use, unprompted,
+over a long period \cite{murphy2017clarkson}. Both report that accuracy falls
+when typing is natural rather than prompted and when hardware changes, which
+is the setting of this thesis.
+
+\subsection{Evaluating behavioural biometrics}
+Two critiques shape the evaluation in \cref{ch:study}. Eberz et al.\ showed
+that common shortcuts inflate reported accuracy: training and testing on
+interleaved rather than time-ordered samples, ignoring how a user's behaviour
+drifts between sessions, and summarising a system by one equal error rate
+\cite{eberz2017evaluating}. Sugrim et al.\ likewise argued that a single
+error rate hides how errors are spread across users and thresholds, and
+proposed metrics that expose it \cite{sugrim2019metrics}. This thesis
+therefore splits data by student and by week, always scores later sessions
+against earlier baselines, reports false alarms per hour and per session
+rather than an equal error rate, and gives subgroup error rates (\cref{ch:rq4}).
+
+\subsection{From authentication to authorship continuity}
+Continuous authentication asks ``is this the enrolled user?'' at every
+window. The question of this thesis is narrower and, in one way, easier: has
+the person typing \emph{changed} since the session began? The answer does not
+need an absolute decision per window, only evidence that accumulates after a
+change. It is also harder in another way: the typing is source code, full of
+navigation, deletion and long pauses for thought, produced by novices whose
+typing is still developing, on whatever device the lab offers. These
+differences motivate the change-point formulation below.
+
+\section{Change-point detection}
+\label{sec:rw-changepoint}
+Sequential change-point detection watches a stream of observations and raises
+an alarm as soon as possible after their distribution changes, while keeping
+false alarms rare. Page's cumulative sum (CUSUM) procedure accumulates the
+log-likelihood ratio of ``after'' against ``before'', resetting at zero, and
+alarms when the sum crosses a threshold $h$ \cite{page1954continuous}. Lorden
+framed the problem as minimising the worst-case expected delay subject to a
+bound on the mean time between false alarms, and showed CUSUM to be
+asymptotically optimal under that criterion \cite{lorden1971procedures};
+Moustakides proved it exactly optimal \cite{moustakides1986optimal}. The
+standard references cover the theory and its many variants
+\cite{basseville1993detection,tartakovsky2014sequential}. In statistical process
+control the same procedure is the CUSUM chart, tuned by a reference value $k$
+(the smallest shift worth detecting, in standard deviations) and a decision
+interval $h$ \cite{hawkins1998cusum}; the detector of \cref{ch:detector} uses
+exactly these two parameters per channel, and the classroom results
+(\cref{sec:retune}) are largely a story about choosing $k$.
+
+Two properties of CUSUM suit authorship continuity. It needs only the
+``before'' distribution, which a per-student baseline supplies, and a
+size of shift, not a model of every possible impostor. And the time at which
+the sum last left zero is a natural estimate of when the change happened,
+which the review timeline shows to the teacher. Offline methods, which look
+at a whole recorded series and segment it after the fact, are surveyed by
+Aminikhanghahi and Cook \cite{aminikhanghahi2017survey} and by Truong et al.\
+\cite{truong2020selective}; Bayesian online change-point detection maintains a
+posterior over the time since the last change \cite{adams2007bocpd}. These
+could re-segment a finished session for review, but a live classroom needs a
+decision while the student is still there, and CUSUM's two parameters can be
+explained to a teacher.
+
+\section{Programming-process data in computing education}
+\label{sec:rw-process}
+
+\subsection{Learning analytics from the IDE}
+Computing education has long logged how students program, not only what they
+submit. Jadud's error quotient summarised sequences of compilations by how
+often the same error recurred \cite{jadud2006methods}. Blikstein et al.\
+clustered snapshots of students' code over time and found distinct, stable
+programming styles \cite{blikstein2014pluralism}. An ITiCSE working group
+reviewed educational data mining in programming and found that most work
+predicts performance or detects struggle, from data at the granularity of
+compilations or submissions \cite{ihantola2015edm}. Hundhausen et al.\ proposed
+a process model for IDE-based learning analytics, from collecting data to
+intervening, and called for more attention to how analytics are acted on
+\cite{hundhausen2017ide}. ProgSnap2 standardised the format of programming
+process data so that data sets and tools can be shared
+\cite{price2020progsnap2}. The event schema of this thesis
+(\cref{app:schema}) is finer than ProgSnap2's typical granularity
+(individual keys and edits with their origin) but follows the same idea of a
+documented, versioned format.
+
+\subsection{Keystrokes of programmers}
+The closest strand uses keystroke timing in programming courses. Longi et al.\
+identified students from the timing of their typing while programming, with
+high accuracy once enough keystrokes were available
+\cite{longi2015identification}. Leinonen et al.\ inferred programming
+experience and course performance from the same kind of data
+\cite{leinonen2016inference}, and studied whether typing patterns collected
+during a course can authenticate students in practical programming exams
+\cite{leinonen2016exams}. Edwards et al.\ compared keystroke data from writing
+in a natural language and in a programming language, and found that the
+context changes which features predict learning outcomes
+\cite{edwards2020keystroke}. Hellas et al.\ followed up suspicious take-home
+exam submissions and found a spectrum from help-seeking and collaboration to
+systematic cheating \cite{hellas2017plagiarism}. Together these establish that
+programmers' typing is individual and measurable in real courses, and that
+integrity problems in programming are not only copying of finished code. None
+of them watches for a change of typist \emph{within} a session.
+
+\subsection{Keystroke logging in writing research}
+Writing research has studied keystroke logs for longer. Tools such as Inputlog
+record every key and pause of a writer and visualise the writing process
+\cite{leijten2013inputlog}. Conijn et al.\ showed that the writing task itself
+changes keystroke features (pause and revision behaviour differ between
+copying and composing, and between kinds of composition)
+\cite{conijn2019keystroke}. Crossley et al.\ used such process features to
+separate original essays from transcribed ones with high accuracy, because
+transcription is more linear and bursty \cite{crossley2024plagiarism}. The task
+effect found by Conijn et al.\ reappears in the pilot of this thesis: build
+order and revision follow the question as much as the person
+(\cref{sec:retune}).
 
 \subsection{Nosi IDE: the closest prior work}
 Nosi \cite{lueder2026nosi} is a fork of VS Code with LLM features disabled.
@@ -19,10 +184,11 @@ Assignments are distributed as encrypted files that are decrypted only in
 memory, so copying code out produces an encrypted payload and every paste
 is logged with its timestamp and content. This leaves manual retyping
 (``scribing'') of LLM output as the remaining stealthy route, which Nosi
-targets with one feature: the L-scale (an L-moment measure of dispersion)
-of log-transformed inter-arrival times (IAT) between keystrokes, after
-removing pauses over 5 minutes and zero-length intervals. Authentic coding
-has a long-tailed IAT distribution; scribing is flatter.
+targets with one feature: the L-scale (an L-moment measure of dispersion
+\cite{hosking1990lmoments}) of log-transformed inter-arrival times (IAT)
+between keystrokes, after removing pauses over 5 minutes and zero-length
+intervals. Authentic coding has a long-tailed IAT distribution; scribing is
+flatter.
 
 The evidence is a proof-of-concept with $N = 5$, all authors and proficient
 coders, in an A--B--B--A design (code, scribe, scribe, code) on one
@@ -35,22 +201,204 @@ cases of LLM-assisted plagiarism by replaying edit logs.
 Nosi differs from this thesis in three ways. It asks whether code was
 \emph{transcribed}, not whether the \emph{author changed}; it uses a
 population-level, subject-independent classifier rather than a per-student
-baseline; and its sample is five expert authors. \RQ{2} replicates its
-measure at larger $N$ with ordinary students, and \RQ{1} addresses the
-switch it does not model.
+baseline; and its sample is five expert authors. \RQ{2} relates its measure
+to observable copying signs at larger $N$ with ordinary students, and \RQ{1}
+addresses the switch it does not model.
 
-\section{Academic integrity tooling}
-Identity checks at the start (proctoring), similarity and AI detection at
-the end, paste detection. \todo{Survey and position the gap: nothing
-checks continuity in between.}
+\section{Academic integrity in programming assessment}
+\label{sec:rw-integrity}
 
-\section{Change-point detection}
-CUSUM \cite{page1954continuous} and sequential change detection
-\cite{basseville1993detection}.
+\subsection{Contract cheating and impersonation}
+\emph{Contract cheating} is having a third party complete assessed work,
+whether paid or not \cite{lancaster2016contract}. Newton's systematic review
+of self-report surveys found that the share of students admitting to paying
+someone for their work rose over time, to about one in seven in surveys from
+2014 onward \cite{newton2018contract}. In a survey of over 14,000 students at
+Australian universities, Bretag et al.\ found about 6\% admitting to at least
+one contract-cheating behaviour, including having someone else sit an exam
+\cite{bretag2019contract}. Self-reports undercount, and the rates differ by
+country and discipline, so these numbers bound the problem only loosely; the
+precision analysis of \cref{ch:rq4} therefore uses two prevalences, 1 in 100
+and 1 in 500, rather than one estimate. Dawson treats the problem as one of
+\emph{assessment security}: no measure stops a determined cheat, and what
+matters is how much each measure raises the cost of cheating and how it fails
+\cite{dawson2020defending}. A takeover partway through a lab is a cheap form
+of contract cheating: no money changes hands, and the helper needs only the
+student's seat or screen for a few minutes.
 
-\section{Privacy, regulation and fairness}
-India's DPDP Act \cite{dpdp2023}; EU AI Act high-risk requirements for
-education \cite{euaiact2024}. \todo{Fairness in biometric systems.}
+\subsection{Checks at the start: identity and proctoring}
+Online and lab exams verify identity when a session starts, through a
+log-in, an ID card or a face match, and remote proctoring adds webcam,
+microphone and screen recording for the rest of the session. Atoum et al.\
+built an automated proctor from a webcam, a wearable camera and a microphone
+\cite{atoum2017proctoring}; Nigam et al.\ reviewed the AI-based proctoring
+systems that spread during the COVID-19 pandemic \cite{nigam2021proctoring}.
+These systems watch the room and the face, not the work, and they carry high
+costs in privacy and trust: students describe them as invasive
+\cite{balash2021examining}, ethicists question whether their benefits justify
+the surveillance \cite{coghlan2021proctor}, and universities adopted them as
+a ``necessary evil'' under emergency conditions \cite{selwyn2023necessary}.
+A lab already has a teacher in the room; what the teacher cannot see is whose
+hands produced which part of the code on sixty screens.
+
+\subsection{Checks at the end: similarity and generated code}
+Source-code plagiarism detection compares finished submissions. Winnowing
+fingerprints \cite{schleimer2003winnowing}, greedy string tiling
+\cite{wise1993gst} and tools such as JPlag \cite{prechelt2002jplag} find
+shared structure that survives renaming and reordering; reviews cover the
+many tools used in academia \cite{novak2019similarity} and the wider
+literature on plagiarism in programming assessments \cite{albluwi2019plagiarism}.
+Similarity detection catches two students who submit the same code. It cannot
+see a helper who writes a student's only copy, and it says nothing about
+\emph{when} or \emph{by whom} code was written.
+
+\subsection{Checks of the process: pastes and edit logs}
+Recording the process closes part of that gap. Editors used for assessment
+increasingly log pastes and replay edit histories, as Nosi does; the editor of
+this thesis logs every paste with its origin and blocks text pasted from
+outside the editor when the teacher turns that on (\cref{sec:paste-guard}). A
+paste log shows \emph{what} arrived without being typed. A takeover, however,
+is typed: the helper's keystrokes look like any other keystrokes unless they
+are compared with the student's own.
+
+\section{Large language models and assessment}
+\label{sec:rw-llm}
+Code-generating language models changed what an unsupervised programming
+task measures. Codex solved a large share of hand-written programming
+problems from their docstrings \cite{chen2021codex}, and AlphaCode reached
+roughly median human performance in programming competitions
+\cite{li2022alphacode}. On introductory programming exam questions, Codex
+scored better than most students \cite{finnieansley2022robots}. Computing
+educators have since mapped the opportunities and threats
+\cite{becker2023programming,prather2023robots,denny2024genai}; instructors'
+plans range from banning the tools to redesigning assessment around them
+\cite{lau2023ban}.
+
+Detecting generated text after the fact is unreliable. Weber-Wulff et al.\
+tested fourteen detection tools and found none accurate or reliable enough for
+academic-integrity decisions \cite{weberwulff2023testing}; Sadasivan et al.\
+argued that paraphrasing defeats detectors and that reliable detection becomes
+impossible as models approach human text \cite{sadasivan2023detected}; and
+Liang et al.\ found that GPT detectors flag essays by non-native English
+writers as machine-written far more often than essays by native writers
+\cite{liang2023gptdetectors}, a fairness failure with direct consequences for
+students. For code, Hoq et al.\ trained classifiers to separate ChatGPT-written
+from student-written CS1 submissions \cite{hoq2024chatgpt}, but such models
+must be retrained as models and prompts change.
+
+Process data offers a different route: whatever produced the text, a student
+who retypes it from another screen types differently from one who composes it,
+and a student who pastes it leaves a paste event. This is Nosi's premise
+\cite{lueder2026nosi} and the reason this thesis records copying signs
+(\cref{sec:weak-labels}). It is also a reason for care: a transcription
+measure is a measure of \emph{how} text was typed, not proof of where it came
+from.
+
+\section{Fairness of behavioural measures}
+\label{sec:rw-fairness}
+Biometric systems do not err equally across people. NIST's evaluation of face
+recognition found false-match and false-non-match rates that differed across
+demographic groups by factors of ten or more for many algorithms
+\cite{grother2019frvt}, and commercial face analysis had error rates far
+higher for darker-skinned women than for lighter-skinned men
+\cite{buolamwini2018gender}. Drozdowski et al.\ surveyed demographic bias
+across biometric modalities and found it largely unstudied outside the face
+\cite{drozdowski2020bias}. For keystroke dynamics, demographic attributes such
+as gender can be predicted from typing features \cite{tsimperidis2018gender},
+which means typing carries group information that a detector might pick up,
+and typing also differs with skill, keyboard layout and device
+\cite{dhakal2018typing}. In education, Baker and Hawn reviewed algorithmic bias
+and concluded that most of it is found only when someone looks for it by
+subgroup \cite{baker2022bias}. Group fairness criteria, such as equal false
+positive rates across groups, are defined in the general literature
+\cite{barocas2023fairml}; this thesis reports false alarms and detection by
+device class, operating system, language, context and typing speed
+(\cref{ch:rq4}) rather than claiming any one criterion is met.
+
+A second, statistical fairness issue is the base rate. When the event being
+detected is rare, even a small false-alarm rate means that most alarms are
+false: Axelsson made the point for intrusion detection, where it dominates
+the usefulness of any detector \cite{axelsson2000baserate}. Takeovers are rare
+in any one lab, so precision at a realistic prevalence, not detection rate,
+decides what a flag may be used for (\cref{ch:rq4}).
+
+\section{Privacy and ethics of monitoring students}
+\label{sec:rw-privacy}
+Learning analytics has a developed ethics literature. Slade and Prinsloo
+framed it as a moral practice, with students as agents in, not objects of,
+the analysis, and data use transparent to them \cite{slade2013ethics}. Pardo
+and Siemens set out principles of transparency, student control over data,
+security, and accountability \cite{pardo2014ethical}. Drachsler and Greller's
+DELICATE checklist turns such principles into questions an institution
+answers before deploying analytics, including legitimacy, consent and
+anonymisation \cite{drachsler2016delicate}. Prinsloo and Slade also note the
+converse duty: an institution that collects data and sees a problem has an
+obligation to act on it, which is why what a flag \emph{leads to} must be
+designed, not left open \cite{prinsloo2017elephant}. The proctoring studies
+above show what happens when these principles are skipped: students experience
+monitoring as distrust \cite{balash2021examining,coghlan2021proctor}.
+
+Law sets the outer limits. India's Digital Personal Data Protection Act 2023
+requires notice and consent for processing personal data, purpose
+limitation and erasure on request \cite{dpdp2023}. The EU AI Act classifies
+AI systems used in education to evaluate learning outcomes or to monitor and
+detect prohibited behaviour during tests as high-risk, with duties of risk
+management, data governance, human oversight and transparency, and it
+prohibits emotion recognition in education \cite{euaiact2024}. The EU Act does
+not apply in India, but its high-risk requirements are a useful design target
+(\cref{sec:ethics}). The editor follows both: it records no camera, screen or
+audio, tells students exactly what is recorded, deletes raw key events after
+28 days, lets a student erase their data, and gives every decision to a person
+(\cref{sec:privacy}).
 
 \section{Summary of the gap}
-\todo{Table: prior work vs.\ start/middle/end coverage, privacy, N.}
+\label{sec:rw-gap}
+\Cref{tab:rw-gap} places the prior work by \emph{when} in a session it checks
+authorship and \emph{what} it needs. Identity and proctoring checks act at the
+start or watch the person, not the work. Similarity and generated-text
+detection act on the finished product. Paste logs and Nosi watch the process,
+but for copying, not for a change of author, and Nosi's evidence rests on five
+expert participants. Keystroke continuous authentication watches the typist
+throughout, but it has been built and evaluated on prose and passwords, with
+population-level decisions per window, not on students' code in real classes.
+Programming-education work shows that student typing is individual, but does
+not monitor a session for a change.
+
+No prior work, to our knowledge, checks \emph{authorship continuity} in the
+middle of a programming session from the student's own baseline, estimates
+when a change happened, and evaluates this on naturalistic classroom data with
+error rates by subgroup and precision at realistic prevalence. That is the
+gap this thesis addresses.
+
+\begin{table}[ht]
+  \centering
+  \caption{Prior work by when it checks authorship and what it needs.}
+  \label{tab:rw-gap}
+  \small
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.3cm}
+      >{\raggedright\arraybackslash}p{1.9cm}
+      >{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}p{2.4cm}@{}}
+    \toprule
+    Approach & When & Signal & Camera or screen? \\
+    \midrule
+    Log-in, ID check, proctoring \cite{atoum2017proctoring,nigam2021proctoring}
+      & start, whole session & face, room, screen & yes \\
+    Code similarity \cite{schleimer2003winnowing,prechelt2002jplag,novak2019similarity}
+      & end & finished code across students & no \\
+    Generated-text detection \cite{weberwulff2023testing,hoq2024chatgpt}
+      & end & finished text or code & no \\
+    Paste logs, edit replay
+      & throughout & pastes, edit history & no \\
+    Nosi \cite{lueder2026nosi}
+      & throughout & keystroke rhythm (transcription), population model, $N=5$ & no \\
+    Continuous keystroke authentication \cite{bours2012continuous,acien2022typenet}
+      & throughout & typing vs.\ enrolled user; prose, passwords & no \\
+    Programmer typing \cite{longi2015identification,leinonen2016exams}
+      & per sample & identity from typing in courses & no \\
+    \midrule
+    This thesis
+      & throughout & change from the student's own baseline (typing, key pairs, process); estimated switch time; real classes & no \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
