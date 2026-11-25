@@ -71,7 +71,9 @@ def score_run(method: Method, corpus: Corpus, train: list[str], evaluate: list[s
     method.fit_population(corpus, train, n_base)
     models = {}
     for st in set(evaluate) | set(calib_students):
-        models[st] = method.fit_student(corpus, st, corpus.baseline(st, n_base))
+        base = corpus.baseline(st, n_base)
+        if base:  # classroom data: students with too little typing have no baseline and nothing scored
+            models[st] = method.fit_student(corpus, st, base)
     ev = corpus.tests(evaluate)
     series = {s.id: method.score(corpus, models[s.student], s) for s in ev}
     holdout = [(s, method.score(corpus, models[s.student], s)) for s in corpus.tests(calib_students)
