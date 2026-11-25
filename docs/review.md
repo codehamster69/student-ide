@@ -95,6 +95,10 @@ Tapping the chosen one again clears it.
   held out. `--summary REPORT --thesis ../thesis/latex` writes
   `tables/teacher-outcomes.tex`. These are what teachers recorded after a
   conversation, not labels of cheating, and the thesis reports them that way.
+- **Consent**: the consent screen and the student guide say that after a conversation the
+  instructor may note how it went, staff-only, never a mark, reported only as class-wide counts.
+  Added without a `CONSENT_VERSION` bump (Rohan, 2026-11-25): it describes what follows a
+  conversation the text already promised; teachers mention it in class.
 - Browser check and screenshot: `BASE=… TOKEN=… node frontend/e2e/review-outcomes.mjs [thesis/latex/snapshots/review] [light|dark]`.
 
 ## Sandbox Lab sessions

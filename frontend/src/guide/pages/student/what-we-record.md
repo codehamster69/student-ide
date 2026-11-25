@@ -27,7 +27,7 @@ No webcam, no microphone, no screen recording, and nothing from other apps or wi
 
 ## What it is used for
 
-Your typing patterns are compared only with **your own** earlier sessions, never with other students. If part of a session looks different from how you usually write, a teacher may see it as a *moment worth a conversation*. That is all it ever leads to: a conversation. It never changes your marks, your attendance or your place on a competition board, and it is never an automatic penalty.
+Your typing patterns are compared only with **your own** earlier sessions, never with other students. If part of a session looks different from how you usually write, a teacher may see it as a *moment worth a conversation*. That is all it ever leads to: a conversation. It never changes your marks, your attendance or your place on a competition board, and it is never an automatic penalty. After such a conversation your instructor may note how it went (for example "explained, own work"). Only staff see this note, it is never a mark, and the research reports only class-wide counts without names.
 
 ## How long it is kept
 

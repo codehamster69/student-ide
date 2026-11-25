@@ -56,7 +56,9 @@ Choices:
 
 ## Follow-ups
 
-- Consent text: a line telling students that teachers may note how a conversation
-  went was drafted and put to Rohan; the text is unchanged until he approves.
+- Consent text (Rohan approved 2026-11-25, same day): the consent screen and student
+  guide now say the instructor may note how a conversation went, staff-only, never a
+  mark, reported only as class-wide counts without names. No `CONSENT_VERSION` bump
+  (web is v2, Sandbox v3, so a bump would re-ask everyone); teachers mention it in class.
 - Run the pilot report on the VM once teachers have noted outcomes, then regenerate
   `tables/teacher-outcomes.tex`.

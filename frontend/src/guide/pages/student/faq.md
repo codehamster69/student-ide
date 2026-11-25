@@ -7,7 +7,7 @@ keywords: [faq, help, questions, flag, penalty, offline, watch, teacher viewing,
 
 ## Will a flag get me in trouble?
 
-No. A flag, called a *moment worth a conversation*, only ever leads to a conversation with your instructor. It is never an automatic penalty, never changes marks or attendance and never affects a competition place.
+No. A flag, called a *moment worth a conversation*, only ever leads to a conversation with your instructor. It is never an automatic penalty, never changes marks or attendance and never affects a competition place. After such a conversation your instructor may note how it went (for example "explained, own work"). Only staff see this note, it is never a mark, and the research reports only class-wide counts without names.
 
 ## Can I paste code?
 
