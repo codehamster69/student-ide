@@ -27,7 +27,8 @@ def pkce():
 
 def test_config(app, monkeypatch):
     c = TestClient(app)
-    assert c.get("/api/desktop/config").json() == {"min_version": None, "download_url": None, "sign_in": "browser", "updates": False}
+    assert c.get("/api/desktop/config").json() == {"min_version": None, "latest": None, "require_latest": False,
+                                                 "download_url": None, "sign_in": "browser", "updates": False}
     monkeypatch.setenv("STUDENTIDE_DESKTOP_MIN_VERSION", "0.2.0")
     assert c.get("/api/desktop/config").json()["min_version"] == "0.2.0"
 

@@ -81,3 +81,50 @@ def test_release_lists_installers_for_the_download_page(tmp_path):
     assert win["href"] == "/api/desktop/updates/StudentIDE-0.2.0-win-x64.exe"  # not the .blockmap
     assert c.get(win["href"]).status_code == 302
     assert client(tmp_path, None).get("/api/desktop/release").status_code == 404
+
+
+# Mandatory updates: the newest release is the minimum version (desktop.VersionPolicy).
+
+OLD = {"User-Agent": "Mozilla/5.0 Chrome/130 StudentIDE-Desktop/0.1.9"}
+NEW = {"User-Agent": "Mozilla/5.0 Chrome/130 StudentIDE-Desktop/0.2.0"}
+
+
+def start(c, headers, student="PG25CS07"):
+    c.post("/api/consent", json={"student_id": student})
+    return c.post("/api/sessions", json={"student_id": student, "task_id": "free", "client_meta": {}}, headers=headers)
+
+
+def test_newest_release_is_mandatory(tmp_path):
+    c = client(tmp_path, Releases("org/repo", "t", http=FakeGitHub()))
+    cfg = c.get("/api/desktop/config").json()
+    assert (cfg["min_version"], cfg["latest"], cfg["require_latest"]) == ("0.2.0", "0.2.0", True)
+    r = start(c, OLD)
+    assert r.status_code == 426 and r.json()["code"] == "desktop_update_required" and r.json()["min_version"] == "0.2.0"
+    assert start(c, NEW).status_code == 200
+    assert start(c, {}).status_code == 200  # browsers are never gated
+
+
+def test_outdated_app_finishes_open_work(tmp_path):
+    c = client(tmp_path, Releases("org/repo", "t", http=FakeGitHub()))
+    sid = start(c, NEW).json()["session_id"]
+    # the student keeps the old app open while a release comes out: events still go up
+    r = c.post(f"/api/sessions/{sid}/events", headers=OLD, json={"schema_version": 1, "events": [
+        {"seq": 0, "t": 0, "type": "focus", "data": {"state": "in"}}]})
+    assert r.status_code == 200, r.text
+    assert c.post("/api/competitions/x/join", headers=OLD, json={"student_id": "PG25CS07"}).status_code == 426
+
+
+def test_require_latest_off_and_fixed_minimum(tmp_path, monkeypatch):
+    monkeypatch.setenv("STUDENTIDE_DESKTOP_REQUIRE_LATEST", "0")
+    monkeypatch.setenv("STUDENTIDE_DESKTOP_MIN_VERSION", "0.1.5")
+    c = client(tmp_path, Releases("org/repo", "t", http=FakeGitHub()))
+    assert c.get("/api/desktop/config").json()["min_version"] == "0.1.5"
+    assert start(c, OLD).status_code == 200
+
+
+def test_github_down_never_locks_students_out(tmp_path, monkeypatch):
+    down = lambda url, headers, follow: (503, {}, b"")  # noqa: E731
+    monkeypatch.setenv("STUDENTIDE_DESKTOP_MIN_VERSION", "0.1.0")
+    c = client(tmp_path, Releases("org/repo", "t", http=down))
+    assert c.get("/api/desktop/config").json()["min_version"] == "0.1.0"
+    assert start(c, OLD).status_code == 200

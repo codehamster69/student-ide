@@ -81,6 +81,15 @@ the editor is untouched, and the end-to-end recording test still reports no
 main-thread task over \SI{50}{\milli\second} while typing. Consent wording
 did not change.
 
+Desktop app updates are mandatory: the server treats the newest release as
+the oldest version it accepts, so every desktop session is recorded by the
+same capture code and timing differences between students cannot come from
+app versions. An update never interrupts recorded work. The app installs at
+the first safe moment (no lab open and the event journal uploaded); until
+then an outdated app may finish what it has open but cannot start a new
+session. The unsigned macOS build replaces its own bundle, because the
+standard macOS updater refuses unsigned apps.
+
 \begin{figure}[ht]
   \centering
   \begin{subfigure}{0.48\textwidth}

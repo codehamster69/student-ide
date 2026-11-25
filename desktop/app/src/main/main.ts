@@ -5,8 +5,8 @@
  * learning lab, live view, review, attendance and View as student all work exactly
  * as on the web, and keystrokes are timed by the same Chromium. The shell adds:
  * browser sign-in, the `window.studentDesktop` bridge (src/shared/contract.ts) for
- * local features, a minimum-version gate (which updates the app by itself where it
- * can, modules/updates.ts), and an offline page. Navigation is locked
+ * local features, mandatory updates (a minimum-version gate that installs the new
+ * version by itself where it can, at a safe moment; modules/updates.ts), and an offline page. Navigation is locked
  * to the server origin; other links open in the system browser; camera, microphone,
  * screen and location permissions are always refused.
  */
@@ -16,12 +16,16 @@ import { join } from "node:path";
 import { compareVersions, Config, setupPaths } from "./config";
 import { Registry } from "./ipc";
 import { modules } from "./modules";
-import { Updater } from "./modules/updates";
+import { downloadUrl, Updater } from "./modules/updates";
 
 export interface Shell {
   config: Config;
   load(): void;
   focus(): void;
+  /** the main window is on screen and in front (an update then waits for the person to be idle) */
+  windowShown(): boolean;
+  /** saves the page the window is on, to reopen it after an update restart */
+  rememberPage(): void;
 }
 
 const portable = setupPaths();
@@ -73,7 +77,7 @@ function staticPage(name: string, params: Record<string, string>) {
   win?.loadFile(join(STATIC, name), { query: { server: server(), ...params } }).catch(() => undefined);
 }
 
-/** Loads the web app, unless the server says this app is too old. */
+/** Loads the web app, unless the server says this app is too old: then the update page. */
 async function load() {
   if (!win) return;
   try {
@@ -81,26 +85,42 @@ async function load() {
     if (r.ok) {
       const cfg = (await r.json()) as { min_version?: string | null; download_url?: string | null };
       if (cfg.min_version && compareVersions(app.getVersion(), cfg.min_version) < 0) {
-        const auto = updater.status.mode === "auto";
-        let download = cfg.download_url ? new URL(cfg.download_url, server()).href : "";
-        if (download.startsWith(`${server()}/api/desktop/download`)) {
-          download += `?os=${process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux"}&arch=${process.arch === "arm64" ? "arm64" : "x64"}`;
-        }
-        staticPage("update.html", { version: app.getVersion(), min: cfg.min_version, download, auto: auto ? "1" : "" });
-        if (auto) {  // show the download on the page, restart into the new version when it is here
-          updater.onChange = (st) => {
-            const text = st.state === "downloading" ? `Downloading the update… ${st.percent ?? 0}%`
-              : st.state === "ready" ? "Installing… the app opens again by itself."
-              : st.state === "error" ? `${st.reason ?? "The update failed."} Use the download link below.` : "Looking for the update…";
-            win?.webContents.executeJavaScript(`window.setProgress && window.setProgress(${JSON.stringify(text)})`).catch(() => undefined);
-          };
-          void updater.forceUpdate();
-        }
+        showUpdatePage(cfg.min_version, cfg.download_url);
         return;
       }
     }
   } catch { /* offline: the load below fails and shows the offline page */ }
-  win.loadURL(server()).catch(() => undefined);
+  updater.gated = false;
+  const resume = config.takeResumeUrl();
+  win.loadURL(resume && sameOrigin(resume) ? resume : server()).catch(() => undefined);
+}
+
+/** The blocking update page; where the app can update itself it does so straight away. */
+function showUpdatePage(min: string, downloadLink?: string | null) {
+  rememberPage();
+  updater.gated = true;
+  const auto = updater.status.mode === "auto";
+  let download = downloadLink ? new URL(downloadLink, server()).href : "";
+  if (download.startsWith(`${server()}/api/desktop/download`)) download = downloadUrl(server());
+  staticPage("update.html", { version: app.getVersion(), min, download, auto: auto ? "1" : "",
+                              reason: updater.status.mode === "manual" ? updater.status.reason ?? "" : "" });
+  if (!auto) return;
+  // show the download on the page, restart into the new version when it is here
+  updater.onChange = (st) => {
+    const text = st.state === "downloading" ? `Downloading the update… ${st.percent ?? 0}%`
+      : st.state === "ready" ? "Installing… the app opens again by itself."
+      : st.state === "error" ? `${st.reason ?? "The update failed."} Trying again in a moment, or use the download link below.`
+      : "Looking for the update…";
+    win?.webContents.executeJavaScript(`window.setProgress && window.setProgress(${JSON.stringify(text)})`).catch(() => undefined);
+    if (st.state === "error") setTimeout(() => void updater.forceUpdate(), 30_000);
+  };
+  void updater.forceUpdate();
+}
+
+/** The web app page the window is on (not the update or offline page). */
+function rememberPage() {
+  const url = win?.webContents.getURL() ?? "";
+  if (sameOrigin(url)) config.save({ resumeUrl: url });
 }
 
 function createWindow() {
@@ -112,6 +132,8 @@ function createWindow() {
   });
   win.once("ready-to-show", () => win?.show());
   win.on("closed", () => { win = null; });
+  // a full page load drops whatever the old page said about open work; the web app says it again
+  win.webContents.on("did-navigate", () => updater.setBusy(false));
   win.webContents.on("did-fail-load", (_e, code, desc, url, isMain) => {
     // -3 = aborted (a navigation replaced this one)
     if (isMain && code !== -3 && sameOrigin(url)) staticPage("offline.html", { reason: desc });
@@ -159,6 +181,8 @@ const shellApi: Shell = {
   get config() { return config; },
   load: () => { void load(); },
   focus: () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } },
+  windowShown: () => Boolean(win && win.isVisible() && !win.isMinimized() && win.isFocused()),
+  rememberPage,
 };
 
 app.on("second-instance", () => shellApi.focus());

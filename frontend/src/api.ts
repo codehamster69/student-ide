@@ -1,3 +1,4 @@
+import { desktop } from "./desktop";
 import type { LivePrompt } from "./questionText";
 
 export interface Task {
@@ -95,6 +96,8 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));
+    // an outdated desktop app can't start new work (backend desktop.py): the app updates now
+    if (res.status === 426 && detail.code === "desktop_update_required") void desktop?.updates?.updateNow?.().catch(() => {});
     throw new Error(detail.detail ?? `request failed (${res.status})`);
   }
   return res.json();

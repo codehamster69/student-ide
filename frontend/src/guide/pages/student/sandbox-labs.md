@@ -19,7 +19,7 @@ You do not install Docker yourself. The app sets up a private engine for Scribel
 
 If setup stops, the window says what to fix in plain words (for example: virtualization is off in the BIOS, or disk space is low). Running setup again carries on where it stopped. In a lab room, IT can prepare PCs once; ask your teacher.
 
-The app keeps itself up to date. A lab that needs a newer version says **Update the app to open**.
+The app keeps itself up to date, and updates are required: when a new version is out it installs as soon as you are not in a lab (it never restarts in the middle of one), then opens where you were. Until then you can finish what is open but not start something new; **Update now** on the card does it straight away. A lab that needs a newer version says **Update the app to open**.
 
 ## Open a lab
 

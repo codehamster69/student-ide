@@ -34,8 +34,9 @@
 <main>
   <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></div>
   <h1>Update Scribelab to continue</h1>
-  <p>This app is version <b id="v"></b>; the college server needs <b id="min"></b> or newer.</p>
+  <p>Scribelab <b id="min"></b> is out and every copy needs it; this one is <b id="v"></b>.</p>
   <p>Your work is saved on the server. After updating you carry on where you left off.</p>
+  <p id="reason" hidden></p>
   <p id="progress" hidden></p>
   <div class="row"><a id="dl" class="btn" target="_blank" rel="noopener">Download the new version</a></div>
 </main>
@@ -46,6 +47,9 @@
   document.getElementById("min").textContent = q.get("min");
   const dl = document.getElementById("dl");
   if (q.get("download")) dl.href = q.get("download"); else dl.remove();
+  // manual copies (portable .exe, .deb, a Mac copy that can't replace itself): why, and what to do
+  const reason = document.getElementById("reason");
+  if (q.get("reason")) { reason.hidden = false; reason.textContent = q.get("reason"); }
   // the app updates itself where it can (modules/updates.ts) and reports here
   const progress = document.getElementById("progress");
   window.setProgress = (text) => { progress.hidden = false; progress.textContent = text; };

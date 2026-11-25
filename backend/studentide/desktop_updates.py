@@ -142,7 +142,9 @@ def release_info(rel: Releases) -> dict:
         a = next((a for a in assets if re.search(pattern, a["name"])), None)
         if a:
             out.append({"os": os_name, "arch": arch, "kind": kind, "label": label, "note": note, "file": a["name"],
-                        "size": a.get("size"), "href": f"/api/desktop/updates/{a['name']}"})
+                        "size": a.get("size"), "href": f"/api/desktop/updates/{a['name']}",
+                        # "sha256:<hex>" from GitHub; the Mac app checks its download against it
+                        "digest": a.get("digest")})
     return {"version": latest.get("tag_name", "")[len(TAG_PREFIX):], "published_at": latest.get("published_at"),
             "installers": out}
 

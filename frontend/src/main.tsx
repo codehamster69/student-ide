@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { DesktopUpdate } from "./screens/DesktopUpdate";
 import { DESKTOP_SIGNIN } from "./desktop";
 import { DOWNLOAD_PAGE } from "./download";
 import "./ui/tokens.css";
@@ -38,7 +39,8 @@ function Root() {
   if (help) return <Suspense fallback={null}><HelpPage /></Suspense>;
   if (download) return <Suspense fallback={null}><DownloadPage /></Suspense>;
   if (isDesktopSignIn()) return <Suspense fallback={null}><DesktopSignIn /></Suspense>;
-  return review ? <Suspense fallback={null}><ReviewApp /></Suspense> : <App key={preview ? "preview" : "student"} />;
+  // staff areas get the desktop update card too (the student app places its own)
+  return review ? <Suspense fallback={null}><ReviewApp /><DesktopUpdate hidden={false} /></Suspense> : <App key={preview ? "preview" : "student"} />;
 }
 
 // No <StrictMode>: its double-invoked effects would open the editor twice and
