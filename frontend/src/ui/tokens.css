@@ -1,5 +1,5 @@
 /*
- * Student IDE design tokens.
+ * Scribelab design tokens ("Acid Night": ink, lime, a pink second accent).
  *
  * Every colour is a semantic CSS variable so the student editor and the
  * teacher dashboard share one palette and both get light and dark themes for
@@ -10,36 +10,42 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/space-grotesk";
 
 :root {
-  --bg: #f6f7f9;
+  --bg: #f6f6f1;
   --surface: #ffffff;
-  --surface-2: #f1f3f6;
-  --surface-3: #e7eaf0;
-  --border: #e2e5eb;
-  --border-strong: #cdd2dc;
-  --text: #0f172a;
-  --text-muted: #556074;
-  --text-faint: #8a93a6;
+  --surface-2: #f0f0ea;
+  --surface-3: #e6e6de;
+  --border: #e3e3dc;
+  --border-strong: #cfcfc6;
+  --text: #0b0b0f;
+  --text-muted: #55565f;
+  --text-faint: #8a8b94;
 
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-soft: #eef0ff;
-  --accent-fg: #ffffff;
-  --success: #15803d;
-  --success-soft: #e7f6ec;
+  /* Acid Night, light: ink buttons with lime text, lime highlights, pink second */
+  --accent: #0b0b0f;
+  --accent-hover: #26262e;
+  --accent-soft: rgb(198 244 50 / 0.38);
+  --accent-fg: #c6f432;
+  --accent-2: #d61f73;
+  --accent-2-soft: rgb(255 92 168 / 0.13);
+  --brand: #5f8a00;
+  --cta: #3f6b00;
+  --success: #3f7d0a;
+  --success-soft: #eef8d6;
   --warn: #b45309;
   --warn-soft: #fdf3e1;
-  --danger: #c0262d;
-  --danger-soft: #fdecec;
+  --danger: #d11a47;
+  --danger-soft: #fde8ee;
 
-  --console: #0d1117;
+  --console: #0b0b0f;
 
   /* detector channels on the review timeline (a 3-slot categorical palette
      against --surface, light and dark; pink stays clear of the amber --warn) */
-  --ch-identity: #4f46e5;
+  --ch-identity: #4d7c0f;
   --ch-pairs: #be185d;
-  --ch-process: #0d9488;
+  --ch-process: #0e7490;
   /* podium (class competitions) */
   --gold: #b7791f;
   --gold-soft: #fdf4dc;
@@ -50,132 +56,147 @@
   --console-text: #d7dde8;
   --console-danger: #ff9b95;
 
-  --syn-keyword: #7c3aed;
-  --syn-string: #0a7d55;
+  --syn-keyword: #c0166b;
+  --syn-string: #4d7c0f;
   --syn-number: #b45309;
-  --syn-comment: #8a93a6;
-  --syn-function: #2563eb;
-  --syn-def: #0e7490;
+  --syn-comment: #8a8b94;
+  --syn-function: #1d4ed8;
+  --syn-def: #0f766e;
   --syn-builtin: #c2410c;
-  --syn-constant: #c026d3;
-  --syn-operator: #475569;
+  --syn-constant: #7e22ce;
+  --syn-operator: #52525b;
 
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
-  --shadow-md: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -6px rgb(15 23 42 / 0.12);
-  --shadow-lg: 0 2px 4px rgb(15 23 42 / 0.04), 0 24px 56px -12px rgb(15 23 42 / 0.22);
+  --shadow-sm: 0 1px 2px rgb(18 21 28 / 0.05);
+  --shadow-md: 0 1px 2px rgb(18 21 28 / 0.04), 0 6px 16px -6px rgb(18 21 28 / 0.10);
+  --shadow-lg: 0 2px 4px rgb(18 21 28 / 0.04), 0 20px 48px -12px rgb(18 21 28 / 0.22);
   --grid-dot: rgb(15 23 42 / 0.07);
 
+  --sidebar: #fbfbf7;
+  --bg-glow: none;
+  --button-glow: 0 0 0 1px rgb(63 107 0 / 0.25), 0 8px 22px -10px rgb(95 138 0 / 0.55);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0d13;
-    --surface: #10141c;
-    --surface-2: #151a24;
-    --surface-3: #1c2230;
-    --border: #222937;
-    --border-strong: #2e3747;
-    --text: #e6e9f0;
-    --text-muted: #9aa3b5;
-    --text-faint: #687185;
-
-    --accent: #8b93ff;
-    --accent-hover: #a7adff;
-    --accent-soft: rgb(139 147 255 / 0.14);
-    --accent-fg: #0a0d13;
-    --success: #4ade80;
-    --success-soft: rgb(74 222 128 / 0.12);
-    --warn: #fbbf24;
-    --warn-soft: rgb(251 191 36 / 0.12);
-    --danger: #f87171;
-    --danger-soft: rgb(248 113 113 / 0.12);
-
-    --console: #080a0f;
-    --ch-identity: #7c83f5;
-    --ch-pairs: #f472b6;
-    --ch-process: #0fa595;
+    --bg: #0b0b0f;
+    --surface: #131318;
+    --surface-2: #1a1a21;
+    --surface-3: #23232c;
+    --border: #25252f;
+    --border-strong: #34343f;
+    --text: #f4f5ef;
+    --text-muted: #a5a7b4;
+    --text-faint: #6f7180;
+    --accent: #c6f432;
+    --accent-hover: #d6ff55;
+    --accent-soft: rgb(198 244 50 / 0.12);
+    --accent-fg: #0b0b0f;
+    --accent-2: #ff7cbb;
+    --accent-2-soft: rgb(255 92 168 / 0.14);
+    --brand: #c6f432;
+    --cta: #c6f432;
+    --success: #c6f432;
+    --success-soft: rgb(198 244 50 / 0.12);
+    --warn: #ffc04d;
+    --warn-soft: rgb(255 192 77 / 0.13);
+    --danger: #ff5c7a;
+    --danger-soft: rgb(255 92 122 / 0.14);
+    --console: #07070a;
+    --ch-identity: #c6f432;
+    --ch-pairs: #ff7cbb;
+    --ch-process: #22d3ee;
     --gold: #f5c451;
     --gold-soft: rgb(245 196 81 / 0.14);
     --silver: #cbd5e1;
     --silver-soft: rgb(203 213 225 / 0.12);
     --bronze: #f0a070;
     --bronze-soft: rgb(240 160 112 / 0.13);
-
-    --syn-keyword: #c4b5fd;
-    --syn-string: #86efac;
-    --syn-number: #fdba74;
-    --syn-comment: #687185;
-    --syn-function: #93c5fd;
-    --syn-def: #67e8f9;
-    --syn-builtin: #fda4af;
-    --syn-constant: #f0abfc;
-    --syn-operator: #a3adbf;
-
+    --syn-keyword: #ff7cbb;
+    --syn-string: #c6f432;
+    --syn-number: #ffc04d;
+    --syn-comment: #6f7180;
+    --syn-function: #7dd3fc;
+    --syn-def: #5eead4;
+    --syn-builtin: #ff9e7a;
+    --syn-constant: #d8b4fe;
+    --syn-operator: #a5a7b4;
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-md: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -6px rgb(0 0 0 / 0.5);
     --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 24px 56px -12px rgb(0 0 0 / 0.7);
     --grid-dot: rgb(255 255 255 / 0.05);
-
+    --sidebar: #0e0e13;
+    --bg-glow: radial-gradient(900px 420px at 90% -10%, rgb(255 92 168 / 0.10), transparent 60%), radial-gradient(800px 380px at -5% 0%, rgb(198 244 50 / 0.06), transparent 60%);
+    --button-glow: 0 0 0 1px rgb(198 244 50 / 0.4), 0 8px 28px -10px rgb(198 244 50 / 0.55);
     color-scheme: dark;
   }
 }
 
 /* Forced dark (same values as the media query above). */
 :root[data-theme="dark"] {
-  --bg: #0a0d13;
-  --surface: #10141c;
-  --surface-2: #151a24;
-  --surface-3: #1c2230;
-  --border: #222937;
-  --border-strong: #2e3747;
-  --text: #e6e9f0;
-  --text-muted: #9aa3b5;
-  --text-faint: #687185;
-  --accent: #8b93ff;
-  --accent-hover: #a7adff;
-  --accent-soft: rgb(139 147 255 / 0.14);
-  --accent-fg: #0a0d13;
-  --success: #4ade80;
-  --success-soft: rgb(74 222 128 / 0.12);
-  --warn: #fbbf24;
-  --warn-soft: rgb(251 191 36 / 0.12);
-  --danger: #f87171;
-  --danger-soft: rgb(248 113 113 / 0.12);
-  --console: #080a0f;
-  --ch-identity: #7c83f5;
-  --ch-pairs: #f472b6;
-  --ch-process: #0fa595;
+  --bg: #0b0b0f;
+  --surface: #131318;
+  --surface-2: #1a1a21;
+  --surface-3: #23232c;
+  --border: #25252f;
+  --border-strong: #34343f;
+  --text: #f4f5ef;
+  --text-muted: #a5a7b4;
+  --text-faint: #6f7180;
+  --accent: #c6f432;
+  --accent-hover: #d6ff55;
+  --accent-soft: rgb(198 244 50 / 0.12);
+  --accent-fg: #0b0b0f;
+  --accent-2: #ff7cbb;
+  --accent-2-soft: rgb(255 92 168 / 0.14);
+  --brand: #c6f432;
+  --cta: #c6f432;
+  --success: #c6f432;
+  --success-soft: rgb(198 244 50 / 0.12);
+  --warn: #ffc04d;
+  --warn-soft: rgb(255 192 77 / 0.13);
+  --danger: #ff5c7a;
+  --danger-soft: rgb(255 92 122 / 0.14);
+  --console: #07070a;
+  --ch-identity: #c6f432;
+  --ch-pairs: #ff7cbb;
+  --ch-process: #22d3ee;
   --gold: #f5c451;
   --gold-soft: rgb(245 196 81 / 0.14);
   --silver: #cbd5e1;
   --silver-soft: rgb(203 213 225 / 0.12);
   --bronze: #f0a070;
   --bronze-soft: rgb(240 160 112 / 0.13);
-  --syn-keyword: #c4b5fd;
-  --syn-string: #86efac;
-  --syn-number: #fdba74;
-  --syn-comment: #687185;
-  --syn-function: #93c5fd;
-  --syn-def: #67e8f9;
-  --syn-builtin: #fda4af;
-  --syn-constant: #f0abfc;
-  --syn-operator: #a3adbf;
+  --syn-keyword: #ff7cbb;
+  --syn-string: #c6f432;
+  --syn-number: #ffc04d;
+  --syn-comment: #6f7180;
+  --syn-function: #7dd3fc;
+  --syn-def: #5eead4;
+  --syn-builtin: #ff9e7a;
+  --syn-constant: #d8b4fe;
+  --syn-operator: #a5a7b4;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -6px rgb(0 0 0 / 0.5);
   --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 24px 56px -12px rgb(0 0 0 / 0.7);
   --grid-dot: rgb(255 255 255 / 0.05);
+  --sidebar: #0e0e13;
+  --bg-glow: radial-gradient(900px 420px at 90% -10%, rgb(255 92 168 / 0.10), transparent 60%), radial-gradient(800px 380px at -5% 0%, rgb(198 244 50 / 0.06), transparent 60%);
+  --button-glow: 0 0 0 1px rgb(198 244 50 / 0.4), 0 8px 28px -10px rgb(198 244 50 / 0.55);
   color-scheme: dark;
 }
 
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --radius-xl: 1.125rem;
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
+  --color-sidebar: var(--sidebar);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-text: var(--text);
@@ -185,6 +206,10 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-2: var(--accent-2);
+  --color-accent-2-soft: var(--accent-2-soft);
+  --color-brand: var(--brand);
+  --color-cta: var(--cta);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warn: var(--warn);
@@ -238,13 +263,17 @@
   html, body, #app { height: 100%; }
   body {
     margin: 0;
-    background: var(--bg);
+    background: var(--bg-glow), var(--bg);
+    background-attachment: fixed;
     color: var(--text);
     font-family: var(--font-sans);
     font-feature-settings: "cv11", "ss01";
+    font-size: 14px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
   ::selection { background: var(--accent-soft); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 }
@@ -268,4 +297,14 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* On the lime accent (dark themes) the tick is ink, not white. */
+:root[data-theme="dark"] .sid-checkbox:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230b0b0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sid-checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230b0b0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+  }
 }

@@ -222,7 +222,7 @@ function StudentCard({ s, now, editorView, fresh, onSeen }: {
   const st = STATE[s.state];
   const started = s.session_id !== null;
   return (
-    <Card className={cn("flex h-full flex-col gap-3 p-4 transition-shadow", fresh && "ring-2 ring-accent/60",
+    <Card data-student={s.student_id} className={cn("flex h-full flex-col gap-3 p-4 transition-shadow", fresh && "ring-2 ring-accent/60",
       !started && "opacity-70")}>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-mono text-sm font-semibold text-text">{s.student_id}</span>
