@@ -4,6 +4,45 @@
 \section{Ethics and data protection}
 \todo{Approval, consent, DPDP Act, EU AI Act design target.}
 
+\section{Pilot deployment: what real classes showed}
+\label{sec:pilot-data}
+The editor has run in real IIIT Surat classes since 27 October 2026 as a pilot
+with oral institutional approval (Dean, HoD and faculty; written confirmation pending,
+Appendix~B) and each student's consent on first sign-in. The recordings served as
+development data: they checked the recorder and the detector on real students and drove
+the re-tuning, so they are kept apart from the held-out test. Only pseudonymous aggregates were analysed
+(\texttt{studentide.pilot}), and nothing is labelled: no takeover, proxy or copying is known.
+
+\begin{table}[ht]
+  \centering
+  \caption{Pilot recordings, 27 Oct to 23 Nov 2026 (aggregates; development data).}
+  \label{tab:pilot}
+  \begin{tabular}{@{}lr@{}}
+    \toprule
+    Sessions (students) & 1,118 (281) \\
+    Lab / competition / practice / learning lab & 443 / 590 / 50 / 35 \\
+    C / Python & 608 / 456 \\
+    Windows / Linux / Android / Mac / iOS & 470 / 444 / 111 / 84 / 9 \\
+    Median session & 5 min, 108 key presses \\
+    Events lost outside the 28-day key purge & 0 \\
+    Sessions scored (baseline ready, some typing) & 157 \\
+    Detector episodes per active hour, labs & 7.5 (process 4.2, pairs 2.7, identity 0.24) \\
+    \quad on the student's usual / another device & 5.7 / 9.9 \\
+    Study sessions with a paste / a big paste or paste after looking away & 248 / 117 of 760 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Three lessons changed the plan. First, the recorder held up: a server restart during a
+lab lost no events, because each browser kept and re-sent its batch. Second, phones send
+no key events, so a student who codes on a phone has no rhythm at all, which is a fairness
+limit for RQ4 and a reason for labs to require a laptop or PC. Third, the process channel
+flagged far more often than on synthetic data, mostly through build order, which follows
+the question more than the person, and flags rose on a device other than the student's
+usual one. Since no takeover is known, these rates are an upper bound on false alarms
+and motivate re-tuning on development data before the staged sessions.
+\todo{Attach the written confirmation of the oral approval in Appendix~B.}
+
 \section{Phase 0: survey and logger}
 \todo{Months 1--2.}
 

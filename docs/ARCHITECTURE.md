@@ -32,6 +32,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `replay.py`, `export.py` | Rebuild documents from edit events; load sessions for analysis. |
 | `detector/` | Phase 2: habit features per 30 s window, per-student baseline, two-channel (identity/process) CUSUM, synthetic typists, synthetic evaluation. |
 | `harness/` | Phase 4: labelled corpus, strict dev/test split by student, thesis detector vs baselines (scaled Manhattan, TypeNet-style LSTM, Nosi-style), LaTeX/CSV/PDF outputs. |
+| `pilot.py` | Aggregates-only, pseudonymous report of live recordings (data quality, devices, copying signs, detector flag rates); docs/pilot-data.md. |
 
 ### Frontend (`frontend/src/`)
 - `recorder.ts` + `capture.ts`: framework-free capture; buffers events and uploads batches.

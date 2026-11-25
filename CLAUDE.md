@@ -22,6 +22,7 @@ cd backend && pytest -q tests/test_compete.py::test_lobby_then_live_then_scored 
 BASE=http://127.0.0.1:8000 TOKEN=change-me node frontend/e2e/record.mjs   # e2e, needs running server
 node frontend/e2e/screenshots.mjs out/ light          # thesis screenshots (or dark)
 python -m studentide.seed --db data/demo.sqlite3      # demo data for the review timeline
+docker compose exec app python -m studentide.pilot --db /data/studentide.sqlite3 --detector --out /tmp/p.json  # on the VM; docs/pilot-data.md
 cd backend && python -m studentide.harness dev --thesis ../thesis/latex   # test = held-out, run once, logged
 cd desktop/app && npm install && npm run build      # desktop shell; smoke: BASE=… GBASE=… xvfb-run -a node e2e/smoke.mjs
 cd thesis/latex && latexmk -pdf main.tex              # thesis PDF into build/

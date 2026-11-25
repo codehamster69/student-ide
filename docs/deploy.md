@@ -150,6 +150,7 @@ nothing is recorded before they agree.
 ```bash
 cd student-ide/deploy
 docker compose logs -f app                        # what the server is doing
+journalctl CONTAINER_NAME=studentide-app-1 --since "3 days ago"   # older logs, across deploys and reboots
 git pull && docker compose up -d --build          # update to the latest version
 docker compose restart app                        # after editing .env
 ```
