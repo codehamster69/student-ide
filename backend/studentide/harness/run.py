@@ -20,6 +20,11 @@ dev (dev students only, 5-fold cross-fitting):
   4. short baselines: 1-8 baseline sessions, with and without the prior;
   then writes the frozen configuration.
 
+compare (dev students only, as often as needed): each --configs file's own operating
+  point (k, h as frozen) on real and spliced classroom sessions, cross-fitted; e.g.
+  python -m studentide.harness compare --db pilot.sqlite3 --classroom \
+      --configs ../thesis/evaluation/frozen-config.json ../thesis/evaluation/pilot-dev-config.json
+
 test (test students, scored once per frozen configuration; logged in the ledger):
   RQ1 detector vs baselines at the frozen operating point, detection-vs-false-
   alarm curves, per-condition results with bootstrap intervals; RQ2 composing vs
@@ -43,7 +48,7 @@ from ..detector.evaluate import write_csv
 from ..detector.features import FEATURES, GROUPS, LEGACY_FEATURES
 from . import report, rq2
 from .corpus import Corpus, classroom_corpus, db_corpus, describe, synthetic_corpus
-from .engine import (CALIB_SOURCES, bootstrap, curve, cv_runs, outcomes, precision, score_run, stat_delay,
+from .engine import (CALIB_SOURCES, bootstrap, curve, cv_runs, fixed_outcomes, outcomes, precision, score_run, stat_delay,
                      stat_detected, stat_fa, stat_flagged, stat_precision, summarise, window_auc)
 from .methods import ChannelSpec, ChannelMethod, ScaledManhattan, TypeNetStyle, nosi_style, thesis_detector
 from .splice import add_splices
@@ -431,10 +436,45 @@ def test(a):
     log(f"test done in {(time.time() - t0) / 60:.1f} min; ledger -> {ledger.path}")
 
 
+# ------------------------------------------------------------- compare (dev only)
+
+def compare(a):
+    """Score dev students' real and spliced sessions at each given config's own operating
+    point (k and h as frozen, not recalibrated), 5-fold cross-fitted. Dev split only, so it
+    can be run as often as needed; aggregates only."""
+    corpus = load(a)
+    dev_s, _ = corpus.split_students(a.test_frac)
+    out = {"corpus": {k: v for k, v in describe(corpus).items() if k != "fingerprint"}, "dev_students": len(dev_s),
+           "configs": {}}
+    for path in a.configs:
+        cfg = json.loads(Path(path).read_text())
+        op = cfg["operating_point"]
+        spec = {**cfg["methods"]["thesis"], "k": op["k"]}
+        log(f"{path}: k {op['k']} h {op['h']}")
+        runs = cv_runs(lambda: make(spec), corpus, dev_s, n_base=4, self_cal=False)
+        recs = fixed_outcomes(runs, corpus, op["k"], op["h"])
+        s = summarise(recs)
+        res = {"fa_per_h": s["honest"]["fa_per_h"], "flagged": s["honest"]["flagged"],
+               "honest_sessions": s["honest"]["n"], "honest_hours": s["honest"]["hours"],
+               "fa_per_h_ci": bootstrap(recs, stat_fa)}
+        for v in ("takeover", "takeover_random"):
+            if v in s:
+                res[v] = {**{x: s[v][x] for x in ("n", "detected", "delay_median_s", "delay_p90_s",
+                                                   "switch_err_median_s", "early_alarms", "first_channel")},
+                          "detected_ci": bootstrap(recs, stat_detected(v)), "delay_ci": bootstrap(recs, stat_delay(v))}
+        out["configs"][str(path)] = res
+        log("   " + json.dumps(res, default=float))
+    if a.compare_out:
+        Path(a.compare_out).write_text(json.dumps(out, indent=1, default=float) + "\n")
+    return out
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="python -m studentide.harness", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("mode", choices=["dev", "test"])
+    p.add_argument("mode", choices=["dev", "test", "compare"])
+    p.add_argument("--configs", nargs="+", type=Path, help="compare: config JSON files (frozen-config shape)")
+    p.add_argument("--compare-out", type=Path, help="compare: write the aggregate results here")
     p.add_argument("--typists", type=int, default=120)
     p.add_argument("--seed", type=int, default=2026, help="fresh population, never used in phase 2")
     p.add_argument("--minutes", type=float, default=30)
@@ -455,5 +495,7 @@ def main(argv=None) -> None:
     a = p.parse_args(argv)
     if a.db and not (a.labels or a.classroom):
         p.error("--db needs --labels or --classroom")
-    (dev if a.mode == "dev" else test)(a)
+    if a.mode == "compare" and not a.configs:
+        p.error("compare needs --configs")
+    {"dev": dev, "test": test, "compare": compare}[a.mode](a)
 

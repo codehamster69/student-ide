@@ -127,6 +127,12 @@ is known clean. `--classroom` builds the corpus like this:
   text) and is not run by `test`; the RQ2 table stays synthetic until that
   analysis is added. The short-baselines sweep (by session count) is skipped; sweep
   `--baseline-min` on dev instead.
+- **Comparing configs on dev** (as often as needed; aggregates only):
+  `python -m studentide.harness compare --db <copy> --classroom --configs a.json b.json --compare-out c.json`
+  scores dev students' real and spliced sessions at each config's own k and h (not
+  recalibrated), 5-fold cross-fitted: false alarms per hour, takeover detection, delay,
+  with student-bootstrap intervals. Window features come from the harness, so review-side
+  stream options (own-paste filtering) only apply to sessions scored from stored windows.
 - **Limits of a splice.** B continues B's own code, so build order is B's document,
   and there is no "read the other person's code" pause. Both favour the process
   channel; report the identity channels alone as well.
