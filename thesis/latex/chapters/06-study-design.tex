@@ -82,8 +82,11 @@ reported separately.
 \section{Baselines from the earliest minutes}
 \label{sec:baseline}
 Without baseline weeks, a student's baseline is simply their earliest $M$ active minutes
-of typing, from whatever sessions those were in ($M = 20$ by default; the dev split
-sweeps it). Sessions that contribute to the baseline are never scored. Since flags rose
+of typing, from whatever sessions those were in ($M = 10$ by default; the dev split
+sweeps it), but never the student's last session, so that something is left to assess.
+A student whose baseline would cover less than three active minutes is not scored.
+Most pilot students typed well under 20 active minutes in total, so a longer baseline
+would leave almost nothing to assess. Sessions that contribute to the baseline are never scored. Since flags rose
 on a student's less usual device, the baseline can be kept per device class (lab-PC-like,
 personal-like, desktop app): a session is then scored against the student's baseline on
 the same class, and the dev split decides whether this helps. Device classes come from a
@@ -258,14 +261,18 @@ precision. All intervals are 95\% percentile intervals from resampling students.
   \label{fig:harness}
 \end{figure}
 
-\section{Teacher review (optional)}
+\section{Flags in teaching}
 \label{sec:teacher-review}
-If a course teacher can spare about an hour, a sample of about 30 flagged moments (mixed
-with unflagged ones, blind to which is which) is reviewed on the evidence timeline, and
-the teacher records whether each one would merit a conversation. This would show
-whether flags are useful in practice; it is not a label of cheating. Without it, the
-review interface is assessed only by its design (\cref{ch:system}) and this is stated as
-future work.
+No teacher is asked for extra time to review flags for the study. A flag is discussed when
+it needs to be, as part of ordinary teaching: the teacher opens the evidence timeline and
+talks with the student, and the flag leads to nothing else. The study does not stage or
+script these conversations. After one, the teacher can note its outcome with one tap on
+the moment (explained, own work; had help; copied; not discussed). These notes are
+reported descriptively, by channel and context, as evidence of whether moments were worth
+raising. They are not labels of cheating: a teacher's judgement after a short conversation
+is itself uncertain, students who were never flagged are never asked, and the notes are
+never used to tune the detector. Where no outcome is noted, the review interface is
+assessed by its design (\cref{ch:system}).
 
 \section{Threats to validity}
 \begin{itemize}
@@ -273,9 +280,11 @@ future work.
     overstated and precision understated; splices may differ from real takeovers
     (\cref{sec:splicing}).
   \item \emph{Self-selected devices.} Device effects are compared within students only.
+  \item \emph{Little judgement of usefulness.} Only flags that teachers chose to discuss
+    say anything about whether a flag was worth raising (\cref{sec:teacher-review}).
   \item \emph{One institution, one term, two languages.} Results may not transfer to
     other courses or to typing in other languages.
-  \item \emph{Short baselines.} Median sessions are about five minutes, so 20 active
+  \item \emph{Short baselines.} Median sessions are about five minutes, so 10 active
     minutes may span several sessions and days; the dev split tests shorter and longer.
   \item \emph{Raw-key purge.} After 28 days only stored windows remain, so keystroke
     baselines can be compared only on recent sessions; run the analysis within that
