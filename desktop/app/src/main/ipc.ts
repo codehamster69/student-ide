@@ -23,7 +23,7 @@ export function notImplemented(what: string): never {
 export interface ModuleContext {
   handle(name: string, fn: Handler): void;
   emit<K extends keyof DesktopEvents>(name: K, data: DesktopEvents[K]): void;
-  /** origin the app is locked to, e.g. https://studentide.hokora.xyz */
+  /** origin the app is locked to, e.g. https://scribelab.hokora.xyz */
   server(): string;
   /** fetch to the server with the app's signed-in cookie jar */
   fetch(path: string, init?: RequestInit): Promise<Response>;

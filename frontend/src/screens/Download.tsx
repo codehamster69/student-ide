@@ -13,7 +13,7 @@ const OS_NAME: Record<DesktopOs, string> = { windows: "Windows", mac: "macOS", l
 const OS_ICON = { windows: Monitor, mac: Laptop, linux: Terminal } as const;
 const FIRST_RUN: Record<DesktopOs, string> = {
   windows: "Windows may say “Windows protected your PC” the first time. Click More info, then Run anyway.",
-  mac: "Open the .dmg and drag Student IDE to Applications. The first time, right-click the app and choose Open, then Open again.",
+  mac: "Open the .dmg and drag Scribelab to Applications. The first time, right-click the app and choose Open, then Open again.",
   linux: "Make the AppImage executable (right-click, Properties, Allow executing, or chmod +x), then double-click it.",
 };
 
@@ -21,7 +21,7 @@ export function DownloadPage() {
   const [rel, setRel] = useState<Release | null | undefined>(undefined);
   const [platform, setPlatform] = useState<Awaited<ReturnType<typeof detectPlatform>>>(null);
   useEffect(() => {
-    document.title = "Get Student IDE";
+    document.title = "Get Scribelab";
     void detectPlatform().then(setPlatform);
     void latestRelease().then(setRel);
   }, []);
@@ -33,7 +33,7 @@ export function DownloadPage() {
       <motion.div variants={stagger(0.07)} initial="initial" animate="animate" className="w-full max-w-xl">
         <motion.div variants={item} className="mb-6 flex justify-center"><Logo /></motion.div>
         <Card variants={item} className="p-7 sm:p-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Get the Student IDE app</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-text">Get the Scribelab app</h1>
           <p className="mt-1.5 text-sm text-muted">
             Sandbox Labs run on your own computer in the desktop app. Install it once; it keeps itself up to date
             and signs in with your college Google account.
@@ -90,7 +90,7 @@ function Primary({ inst, version }: { inst: Installer; version: string }) {
       <Icon className="size-6 shrink-0" />
       <span className="grid min-w-0 flex-1">
         <span className="text-[15px] font-semibold">Download for {inst.os === "mac" ? inst.label : OS_NAME[inst.os]}</span>
-        <span className="truncate text-xs opacity-85">Student IDE {version}{inst.size ? ` · ${megabytes(inst.size)}` : ""}</span>
+        <span className="truncate text-xs opacity-85">Scribelab {version}{inst.size ? ` · ${megabytes(inst.size)}` : ""}</span>
       </span>
       <DownloadIcon className="size-5 shrink-0" />
     </a>

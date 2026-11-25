@@ -9,7 +9,7 @@ export interface AppInfo {
   chrome: string;         // Chromium version: the web app's timing source
   deviceId: string;       // SHA-256 of a random per-install id; never the machine's own ids
   portable: boolean;      // settings live next to the app (USB stick)
-  server: string;         // origin the shell is locked to, e.g. https://studentide.hokora.xyz
+  server: string;         // origin the shell is locked to, e.g. https://scribelab.hokora.xyz
 }
 
 export interface AppApi {

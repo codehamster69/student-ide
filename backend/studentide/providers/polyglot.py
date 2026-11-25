@@ -302,7 +302,7 @@ def starter(sig: Signature, language: str) -> str:
 
 # --- harnesses ---------------------------------------------------------------
 
-HEADER = "Student IDE test driver: reads one JSON value per argument from stdin, calls {call}\nand prints what it returns as JSON{nodes}."
+HEADER = "Scribelab test driver: reads one JSON value per argument from stdin, calls {call}\nand prints what it returns as JSON{nodes}."
 
 
 def _header(sig: Signature, call: str, comment: str) -> str:

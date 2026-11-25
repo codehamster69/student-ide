@@ -46,7 +46,7 @@ export async function desktopSignIn(origin: string, onBack: () => void): Promise
         finish(() => reject({ code: "signin_cancelled", title: "Sign-in was cancelled in the browser." }));
         return;
       }
-      res.end(PAGE("You're signed in", "Go back to the Student IDE app. You can close this tab."));
+      res.end(PAGE("You're signed in", "Go back to the Scribelab app. You can close this tab."));
       const c = url.searchParams.get("code");
       finish(() => (c ? resolve(c) : reject({ code: "signin_failed", title: "The browser did not send a sign-in code." })));
     });

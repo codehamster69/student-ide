@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 
 from .previews import DockerDriver, PreviewError, pty_bridge
 
-app = FastAPI(title="Student IDE previews")
+app = FastAPI(title="Scribelab previews")
 driver = DockerDriver()
 # previews.Previews names every preview this way, submissions.Grader every grading run
 CONTAINER = re.compile(r"^sbxp-(prv|sub)_[0-9a-f]{10}$")

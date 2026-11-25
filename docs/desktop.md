@@ -1,13 +1,13 @@
 # Desktop app (Sandbox Labs shell)
 
-`desktop/app/` is the Student IDE desktop app: an Electron window on the Student IDE
+`desktop/app/` is the Scribelab desktop app: an Electron window on the Scribelab
 server, plus a bridge to local features (the lab engine, sandboxes, terminals) that the
 web app uses when it runs inside the app. Plan: `thesis/plans/2026-10-30-desktop-client.md`.
 
 ## How it fits
 
 ```
- desktop/app (Electron)                                    Student IDE server
+ desktop/app (Electron)                                    Scribelab server
  ┌───────────────────────────────────────────────┐        ┌───────────────────────┐
  │ window: the server's own web app (same origin)│ HTTPS  │ every /api endpoint   │
  │   recorder.ts, editor, labs, live, review…  ──┼───────►│ + desktop.py:         │
@@ -35,6 +35,7 @@ server can refuse old shells (`STUDENTIDE_DESKTOP_MIN_VERSION`). Builds are not 
 | Sign-in | Google mode: through the system browser (below). Dev mode: the roll number / admin token screens work in the window as is. |
 | Version gate | Before loading, `GET /api/desktop/config`; below `min_version` it shows an update page with `download_url`. Where the app can update itself it downloads the new version on that page and restarts into it. |
 | Updates | `modules/updates.ts` (below). |
+| Rename | The product was renamed from Scribelab to Scribelab (2026-11-24). A saved server of `https://studentide.hokora.xyz` is read as the new default `https://scribelab.hokora.xyz`, and the data folder keeps its old name (`Scribelab` under the OS app-data folder), so sign-in, settings and the unsent journal survive the update. Apps from before the rename keep working on the old address: the server's Caddy still serves the desktop user agent and `/api` there. |
 | Offline | A local page with retry when the server can't be reached; work is on the server. `app.online` events tell the web app when the network drops (the 5-minute reconnect buffer of plan 4.3 builds on this). |
 | Help menu | Student guide, Teacher guide, Keyboard shortcuts (F1) and Sandbox Labs open the server's public guide (`#/help/…`, `frontend/src/guide/`) in a separate window, so a lab session in the main window is never interrupted. |
 | Look | The offline and update pages use the same tokens and logo as the web app (`frontend/src/ui/tokens.css`); the window background matches `--bg` so there is no flash on load. |
@@ -48,7 +49,7 @@ Google blocks sign-in inside embedded browsers, so the app follows RFC 8252 (loo
 1. The app makes a random `verifier`, `challenge = base64url(SHA-256(verifier))` and a `state`,
    and listens on `127.0.0.1:<random port>`.
 2. It opens `<server>/#/desktop/signin?challenge&port&state` in the system browser. The page signs
-   in as on the web, shows "Sign in to the Student IDE app as <you>?" and on Continue calls
+   in as on the web, shows "Sign in to the Scribelab app as <you>?" and on Continue calls
    `POST /api/auth/desktop/grant {challenge}` (needs the browser's session cookie).
 3. The browser goes to `http://127.0.0.1:<port>/callback?code&state`.
 4. The app calls `POST /api/auth/desktop/exchange {code, verifier}` and stores the returned
@@ -138,7 +139,7 @@ fine-grained token for that repository); unset = updates off and the app says so
 
 ### Where students download it
 
-Share **`<server>/#/download`** (studentide.hokora.xyz/#/download). The page needs no sign-in and
+Share **`<server>/#/download`** (scribelab.hokora.xyz/#/download). The page needs no sign-in and
 lists the newest release from `GET /api/desktop/release` (version, date, one entry per installer with
 size and a server link that 302s to GitHub). It offers the installer for the visitor's computer first
 (OS from the browser; Mac CPU from `userAgentData` where the browser gives it, otherwise Apple silicon),

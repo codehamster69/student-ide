@@ -34,7 +34,7 @@ export class Updater {
   /** Why this copy of the app can't replace itself, or "" when it can. */
   private manualReason(): string {
     if (this.s.config.portable) return "The portable app can't update itself: download the new version and replace it.";
-    if (process.platform === "darwin") return "Until the Mac app is signed, updates are a download: open it and drag Student IDE to Applications again.";
+    if (process.platform === "darwin") return "Until the Mac app is signed, updates are a download: open it and drag Scribelab to Applications again.";
     if (process.platform === "linux" && !process.env.APPIMAGE) return "Installed from a .deb package: download the new one, or update it with your package manager.";
     return "";
   }

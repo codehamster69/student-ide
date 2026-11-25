@@ -26,11 +26,11 @@ from . import polyglot
 from .base import Cached, Category, Imported, Provider, ProviderError, Summary, topic_categories
 
 URL = "https://raw.githubusercontent.com/google-research/google-research/master/mbpp/mbpp.jsonl"
-HARNESS = ("# Student IDE test driver: reads the arguments as JSON, calls your function, prints the result.\n"
+HARNESS = ("# Scribelab test driver: reads the arguments as JSON, calls your function, prints the result.\n"
            "import json as _json, sys as _sys\n"
            "print(_json.dumps({fn}(*_json.loads(_sys.stdin.read())), "
            "default=lambda o: sorted(o) if isinstance(o, (set, frozenset)) else str(o)))\n")
-LINES_HARNESS = ("# Student IDE test driver: reads one JSON value per argument per line, calls your function, prints the result.\n"
+LINES_HARNESS = ("# Scribelab test driver: reads one JSON value per argument per line, calls your function, prints the result.\n"
                  "import json as _json, sys as _sys\n"
                  "print(_json.dumps({fn}(*[_json.loads(_l) for _l in _sys.stdin.read().splitlines() if _l.strip()]), "
                  "default=lambda o: sorted(o) if isinstance(o, (set, frozenset)) else str(o)))\n")

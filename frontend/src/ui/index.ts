@@ -1,4 +1,4 @@
-// Student IDE design system: tokens (tokens.css), motion presets and React
+// Scribelab design system: tokens (tokens.css), motion presets and React
 // primitives shared by the student editor and the teacher dashboard.
 // See README.md in this folder.
 export { cn } from "./cn";

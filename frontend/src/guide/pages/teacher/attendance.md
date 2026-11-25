@@ -5,7 +5,7 @@ order: 9
 keywords: [attendance, roll call, class groups, key, present, 10 minutes, 40 characters, override, send, next group, my attendance]
 ---
 
-Student IDE can mark lab attendance in **Roll Call**, the attendance register.
+Scribelab can mark lab attendance in **Roll Call**, the attendance register.
 
 ## Set up once
 

@@ -108,7 +108,7 @@ export function Login({ cfg, onDone, onTeacher }: {
         </ul>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
           <a href="#/help/student/getting-started" className="flex items-center gap-2 text-[13px] font-medium text-accent hover:underline">
-            <LifeBuoy className="size-3.5" /> How Student IDE works
+            <LifeBuoy className="size-3.5" /> How Scribelab works
           </a>
           {!desktop && (
             <a href={DOWNLOAD_PAGE} className="flex items-center gap-2 text-[13px] font-medium text-accent hover:underline">

@@ -17,7 +17,7 @@ In-app documentation for students and teachers, written as Markdown and rendered
 - **Teachers:** Guide in the sidebar (`#/guide`, `#/guide/<audience>/<slug>`, in `routes.ts`); the top bar's
   **Help** button opens the guide page for the screen you are on (`helpFor()` in `review/ReviewApp.tsx`);
   guide pages are in Ctrl+K.
-- **Students:** the Guide tab in the app bar (student guide only, loaded on demand); "How Student IDE works" on
+- **Students:** the Guide tab in the app bar (student guide only, loaded on demand); "How Scribelab works" on
   the sign-in screen opens `#/help/student/getting-started`.
 - **Desktop app:** Help menu → the public guide in its own window (`docs/desktop.md`).
 

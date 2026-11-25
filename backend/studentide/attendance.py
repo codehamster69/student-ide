@@ -1,6 +1,6 @@
 """Attendance from labs, through Roll Call (the attendance site, codehamsters/attendance).
 
-Keys. Student IDE makes each teacher's Roll Call sync key (or the teacher pastes
+Keys. Scribelab makes each teacher's Roll Call sync key (or the teacher pastes
 one they already use) and keeps it on the server. "Open Roll Call" asks Roll Call
 for a one-time sign-in link, so the teacher lands there signed in; the key itself
 can be shown to its owner to sign in by hand. Each key is its own Roll Call
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS attendance_links (
     sync_key      TEXT NOT NULL,
     connected_at  REAL NOT NULL,
     checked_at    REAL,
-    issued        INTEGER NOT NULL DEFAULT 0 -- 1 = made by Student IDE, 0 = pasted by the teacher
+    issued        INTEGER NOT NULL DEFAULT 0 -- 1 = made by Scribelab, 0 = pasted by the teacher
 );
 
 -- Every time an admin opened another teacher's Roll Call register.
@@ -526,7 +526,7 @@ def router(db: Database, require_teacher: Callable, auth, transport: Transport |
         """Roll Call's register for this address (made by Google sign-in there, or
         linked from here before); with `key`, records it as theirs when they have
         none. None when linking is off, the address is the dev register, or Roll
-        Call is unreachable: Student IDE then works as before, on its own key."""
+        Call is unreachable: Scribelab then works as before, on its own key."""
         secret = link_secret()
         if not secret or not email:
             return None

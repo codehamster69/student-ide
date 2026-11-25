@@ -78,7 +78,7 @@ const shot = async (page, name) => {
 
 // --- website: listed, with the note to open them in the app
 let page = await open(false);
-await page.waitForSelector("text=Open these in the Student IDE app.");
+await page.waitForSelector("text=Open these in the Scribelab app.");
 assert.ok(await page.locator("button:has-text('Lab 3: Strings in C')").isDisabled());
 await page.locator("[data-testid=sandbox-labs]").scrollIntoViewIfNeeded();
 await shot(page, "01-website");
@@ -86,7 +86,7 @@ await page.context().close();
 
 // --- desktop app (stand-in bridge)
 page = await open(true);
-assert.equal(await page.locator("text=Open these in the Student IDE app.").count(), 0);
+assert.equal(await page.locator("text=Open these in the Scribelab app.").count(), 0);
 await page.locator("[data-testid=sandbox-labs]").scrollIntoViewIfNeeded();
 await shot(page, "02-home");
 await page.click("button:has-text('Lab 3: Strings in C')");

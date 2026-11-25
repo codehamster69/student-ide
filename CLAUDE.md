@@ -1,4 +1,4 @@
-# Student IDE
+# Scribelab (formerly Student IDE)
 
 Lab code editor for Rohan's M.Tech thesis (IIIT Surat): records *how* code is written
 (key timing, edits with origin, pastes, runs, focus) to detect a mid-session change of
@@ -84,6 +84,9 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - The e2e scripts need a running server with a built frontend and the same admin token.
 - Desktop releases: push a `desktop-vX.Y.Z` tag; CI publishes the GitHub release the server serves as the update feed.
   Builds are unsigned (docs/desktop-installer.md, Signing).
+- Brand: product name is Scribelab (scribelab.hokora.xyz); internal ids stay `studentide` (packages, env vars, DB,
+  appId, WSL distro, `StudentIDE-Desktop` UA). Old host is `STUDENTIDE_OLD_DOMAINS` in Caddy: browsers redirected,
+  desktop UA and /api still served.
 - Roll Call (codehamsters/attendance) shares Google client, admins and link secret; change both sides together.
 
 ## Compact instructions

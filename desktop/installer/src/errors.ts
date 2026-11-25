@@ -80,7 +80,7 @@ export const errors = {
       code: 'OLD_WINDOWS',
       title: 'Windows needs an update first.',
       detail: `Sandbox Labs needs Windows 10 version 2004 (build 19041) or newer. This PC has build ${build}.`,
-      fix: 'Run Windows Update, restart, then open Student IDE again.',
+      fix: 'Run Windows Update, restart, then open Scribelab again.',
     }),
 
   oldMacos: (version: string) =>
@@ -88,7 +88,7 @@ export const errors = {
       code: 'OLD_MACOS',
       title: 'macOS needs an update first.',
       detail: `Sandbox Labs needs macOS 13 Ventura or newer. This Mac has ${version}.`,
-      fix: 'Update macOS in System Settings > General > Software Update, then open Student IDE again.',
+      fix: 'Update macOS in System Settings > General > Software Update, then open Scribelab again.',
     }),
 
   virtualizationOff: (os: 'win32' | 'darwin' | 'linux') =>
@@ -164,7 +164,7 @@ export const errors = {
       code: 'ENGINE_NOT_RESPONDING',
       title: 'The Linux engine is installed but not answering.',
       detail: 'Setup finished installing it, but it did not start.',
-      fix: 'Restart the computer and open Student IDE again. If it still fails, send "Show details" to your teacher.',
+      fix: 'Restart the computer and open Scribelab again. If it still fails, send "Show details" to your teacher.',
       log,
     }),
 

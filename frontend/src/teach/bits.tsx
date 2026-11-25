@@ -45,7 +45,7 @@ export function LanguageDot({ language, className }: { language: Language; class
 
 const PROVIDER_NAMES: Record<string, string> = {
   exercism: "Exercism", leetcode: "LeetCode", hackerrank: "HackerRank", codechef: "CodeChef", codeforces: "Codeforces", mbpp: "MBPP",
-  originals: "Student IDE",
+  originals: "Scribelab",
 };
 
 export function SourceBadge({ source }: { source: QuestionSource | null }) {

@@ -47,7 +47,7 @@ export function DesktopSignIn() {
 
   let body;
   if (!p) {
-    body = <p className="text-sm text-muted">This sign-in link is incomplete. Press <b>Sign in with your browser</b> in the Student IDE app again.</p>;
+    body = <p className="text-sm text-muted">This sign-in link is incomplete. Press <b>Sign in with your browser</b> in the Scribelab app again.</p>;
   } else if (!cfg || me === undefined) {
     body = <div className="grid place-items-center py-6"><Spinner /></div>;
   } else if (cfg.mode !== "google") {
@@ -61,7 +61,7 @@ export function DesktopSignIn() {
     body = (
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="grid justify-items-center gap-2 py-2 text-center">
         <CheckCircle2 className="size-8 text-success" />
-        <p className="font-medium text-text">Signed in. Go back to the Student IDE app.</p>
+        <p className="font-medium text-text">Signed in. Go back to the Scribelab app.</p>
         <p className="text-sm text-muted">You can close this tab.</p>
       </motion.div>
     );
@@ -92,7 +92,7 @@ export function DesktopSignIn() {
       <motion.div variants={stagger(0.06)} initial="initial" animate="animate" className="grid w-full max-w-md gap-6">
         <motion.div variants={item} className="justify-self-center"><Logo /></motion.div>
         <Card variants={item} className="p-8">
-          <h1 className="text-xl font-semibold tracking-tight text-text">Sign in to the Student IDE app</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-text">Sign in to the Scribelab app</h1>
           <p className="mb-6 mt-1 text-sm text-muted">The desktop app on this computer asked to sign in.</p>
           {body}
         </Card>

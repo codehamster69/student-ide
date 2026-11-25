@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
-<title>Student IDE: can't reach the server</title>
+<title>Scribelab: can't reach the server</title>
 <style>
   /* same tokens as frontend/src/ui/tokens.css (no web fonts: this page must work offline) */
   :root { --bg:#f6f6f1; --surface:#fff; --surface-2:#f0f0ea; --text:#0b0b0f; --muted:#55565f; --faint:#8a8b94; --border:#e3e3dc; --accent:#0b0b0f; --accent-hover:#26262e; --accent-fg:#c6f432; --accent-soft:rgb(198 244 50 / .38); --cta:#3f6b00; --accent-2:#d61f73; --glow:0 0 0 1px rgb(63 107 0 / .25), 0 8px 22px -10px rgb(95 138 0 / .55); }
@@ -29,11 +29,11 @@
 </style>
 </head>
 <body>
-<header><svg class="mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect class="bg" x=".5" y=".5" width="31" height="31" rx="8"/><g class="fg"><rect x="6" y="15" width="3" height="9" rx="1.5"/><rect x="11" y="10" width="3" height="14" rx="1.5"/><rect x="16" y="17.5" width="3" height="6.5" rx="1.5"/><rect x="21" y="12.5" width="3" height="11.5" rx="1.5" fill-opacity=".55"/><rect x="25.5" y="8" width="1.6" height="16" rx=".8"/></g></svg>Student IDE</header>
+<header><svg class="mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0B0B0F"/><rect x="0.4" y="0.4" width="31.2" height="31.2" rx="8.6" fill="none" stroke="#C6F432" stroke-opacity=".45" stroke-width=".8"/><path fill="#C6F432" fill-rule="evenodd" transform="rotate(-18 15 17)" d="M9.5 6.5H20.5V11.5C20.5 15.5 18 19.5 15 27C12 19.5 9.5 15.5 9.5 11.5Z M13.3 11.3a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0-3.4 0Z M14.4 13.4H15.6V22.5L15 23.8L14.4 22.5Z"/><path fill="#FF5CA8" d="M24.5 4.5Q25 8 28 8.5Q25 9 24.5 12.5Q24 9 21 8.5Q24 8 24.5 4.5Z"/></svg>Scribelab</header>
 <div class="wrap">
 <main>
   <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-1.36-1.07"/><path d="M2 8.82a15 15 0 0 1 4.18-2.64"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><path d="m2 2 20 20"/></svg></div>
-  <h1>Can't reach Student IDE</h1>
+  <h1>Can't reach Scribelab</h1>
   <p>The app needs the college network or the internet. Your work is saved on the server, so nothing is lost.</p>
   <p><code id="server"></code> <span id="reason"></span></p>
   <div class="row"><button id="retry">Try again</button><span class="status"><span class="dot" aria-hidden="true"></span><span id="status">Retrying every 5 seconds</span></span></div>

@@ -66,7 +66,7 @@ async function unpackStatic(host: Host): Promise<{ cli: string[]; env: Record<st
       'Podman needs the small "uidmap" package (the newuidmap helper), which only an administrator can install.',
       undefined,
       'Ask the administrator to run "sudo apt install podman uidmap" (Fedora: sudo dnf install podman), then open ' +
-        'Student IDE again.',
+        'Scribelab again.',
     );
   }
   const arch = host.arch === 'arm64' ? 'arm64' : 'amd64';

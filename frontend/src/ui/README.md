@@ -1,4 +1,4 @@
-# Student IDE design system
+# Scribelab design system
 
 Shared look and motion for the student editor and the teacher dashboard.
 React 18 + Tailwind CSS v4 + [Motion](https://motion.dev).

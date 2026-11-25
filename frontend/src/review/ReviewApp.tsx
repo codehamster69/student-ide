@@ -122,7 +122,7 @@ export function ReviewApp() {
   const teaching = areaOf(r) === "teach";
   const watching = areaOf(r) === "live";
   const palette = useCommandPalette();
-  useEffect(() => { document.title = `${r.name === "guide" ? "Guide" : watching ? "Live" : teaching ? "Labs" : areaOf(r) === "sandbox" ? "Sandbox Labs" : "Review"} · Student IDE`; }, [r, teaching, watching]);
+  useEffect(() => { document.title = `${r.name === "guide" ? "Guide" : watching ? "Live" : teaching ? "Labs" : areaOf(r) === "sandbox" ? "Sandbox Labs" : "Review"} · Scribelab`; }, [r, teaching, watching]);
 
   const signOut = () => {
     token.clear();

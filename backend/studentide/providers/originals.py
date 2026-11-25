@@ -1,4 +1,4 @@
-"""Question sets written for Student IDE itself (data/sets/*.json, built by
+"""Question sets written for Scribelab itself (data/sets/*.json, built by
 scripts/build_question_sets.py). They are original, so they can ship with
 the app and carry the repository's own licence, and every question has
 stdin/stdout tests checked against a reference solution, which makes them
@@ -37,9 +37,9 @@ def _slug(s: str) -> str:
 
 class Originals(Provider):
     id = "originals"
-    name = "Student IDE sets"
+    name = "Scribelab sets"
     status = "bundled"
-    license = "Same as Student IDE"
+    license = "Same as Scribelab"
 
     @property
     def languages(self) -> tuple[str, ...]:  # type: ignore[override]
@@ -72,14 +72,14 @@ class Originals(Provider):
     def fetch(self, language: str, ref: str) -> Imported:
         hit = next(((s, x) for s, x in _questions(language) if x["ref"] == ref), None)
         if hit is None:
-            raise ProviderError(f"no {language} question '{ref}' in the Student IDE sets", 404)
+            raise ProviderError(f"no {language} question '{ref}' in the Scribelab sets", 404)
         s, x = hit
         hidden = sum(t["hidden"] for t in x["tests"])
         return Imported(
             title=x["title"], prompt=x["prompt"], starter_code=x["starter_code"], sample_input=x["sample_input"],
             tests=[dict(t) for t in x["tests"]],
             source={"provider": self.id, "ref": ref, "set": s["id"], "url": "", "license": self.license,
-                    "attribution": f"Student IDE question set '{s['title']}'", "fetched_at": time.time()},
+                    "attribution": f"Scribelab question set '{s['title']}'", "fetched_at": time.time()},
             notes=[f"{len(x['tests']) - hidden} visible examples and {hidden} hidden tests, compared exactly "
                    "(trailing spaces ignored)."],
         )

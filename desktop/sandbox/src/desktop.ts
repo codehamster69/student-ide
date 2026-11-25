@@ -76,7 +76,7 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
   async function sb(): Promise<Sandbox> {
     if (sandbox) return sandbox;
     const engine = await o.engine();
-    if (!engine) o.fail({ code: "no_engine", title: "The lab engine is not set up on this computer.", fix: "Run the Student IDE installer, or use a machine that passes the setup check." });
+    if (!engine) o.fail({ code: "no_engine", title: "The lab engine is not set up on this computer.", fix: "Run the Scribelab installer, or use a machine that passes the setup check." });
     sandbox = createSandbox({ engine: engine!, dataDir: ctx.userData, onEvent: (sessionKey, ev) => ctx.emit("sandbox.event", { sessionKey, ...ev }) });
     sandbox.watchIdle();
     return sandbox;
@@ -192,7 +192,7 @@ export function registerSandboxIpc(ctx: IpcContext, o: SandboxIpcOptions): { shu
     async setupCheck() {
       const engine = await o.engine();
       if (!engine) {
-        lastCheck = { ok: false, checks: [{ id: "engine.cli", ok: false, severity: "error", message: "The lab engine is not set up on this computer.", fix: "Run the Student IDE installer." }] };
+        lastCheck = { ok: false, checks: [{ id: "engine.cli", ok: false, severity: "error", message: "The lab engine is not set up on this computer.", fix: "Run the Scribelab installer." }] };
         void report();
         return lastCheck as Awaited<ReturnType<SandboxApi["setupCheck"]>>;
       }

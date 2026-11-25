@@ -116,7 +116,7 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
 
   // open: the lab definition (statement, tests) and the instance, in parallel
   useEffect(() => {
-    if (!desktop) { setError("Sandbox labs open in the Student IDE app."); return; }
+    if (!desktop) { setError("Sandbox labs open in the Scribelab app."); return; }
     const offs = [
       desktop.on("sandbox.progress", (p) => setProgress({ message: p.message, percent: p.percent })),
       desktop.on("sandbox.event", ({ sessionKey, type, data }) => {
