@@ -1,0 +1,2082 @@
+{
+ "corpus": {
+  "source": "classroom:copy.sqlite3",
+  "students": 276,
+  "sessions": {
+   "idle:honest": 521,
+   "unscored:honest": 203,
+   "baseline:honest": 247,
+   "test:honest": 111,
+   "test:takeover": 49,
+   "test:takeover_random": 3
+  },
+  "fingerprint": "2a209845068f9fa4",
+  "baseline_min": 10.0,
+  "by_device": false,
+  "test_from": 1795458600.0,
+  "splices": {
+   "seed": 2026,
+   "per_session": 1,
+   "group": [
+    "question"
+   ],
+   "n": 52
+  }
+ },
+ "evaluate": {
+  "test_students": 69,
+  "dev_students_with_later_sessions": 0
+ },
+ "frozen": {
+  "created": "2026-11-25",
+  "target_fa_per_h": 0.2,
+  "calibration_source": "holdout",
+  "operating_points": {
+   "thesis": {
+    "k": {
+     "identity": 1.0,
+     "process": 0.5,
+     "pairs": 0.5
+    },
+    "h": {
+     "identity": 18.5,
+     "process": 26.0,
+     "pairs": 27.0
+    },
+    "rule": "cusum",
+    "window_s": {
+     "identity": 30,
+     "process": 90,
+     "pairs": 30
+    },
+    "pair_vocab": [
+     "Unidentified>Unidentified",
+     "KeyE>KeyL",
+     "KeyS>KeyE",
+     "KeyI>KeyN",
+     "KeyN>KeyT",
+     "KeyL>KeyF",
+     "KeyT>KeyI",
+     "KeyP>KeyR",
+     "KeyF>Digit9",
+     "KeyM>KeyE",
+     "Semicolon>Enter",
+     "KeyR>KeyI",
+     "KeyF>Period",
+     "KeyI>KeyM",
+     "Equal>Space",
+     "Space>Equal",
+     "KeyT>Space",
+     "Enter>Enter",
+     "Digit9>Quote",
+     "KeyA>KeyT",
+     "Space>Space",
+     "Equal>Equal",
+     "KeyT>KeyF",
+     "KeyM>KeyP",
+     "KeyO>KeyN",
+     "KeyR>KeyE",
+     "KeyA>KeyM",
+     "KeyI>KeyF",
+     "KeyT>KeyE",
+     "KeyC>KeyA",
+     "KeyS>KeyT",
+     "Space>KeyI",
+     "KeyE>KeyS",
+     "Digit5>KeyD",
+     "KeyI>KeyT",
+     "KeyE>KeyA",
+     "Enter>KeyP",
+     "KeyU>KeyR",
+     "KeyE>Space",
+     "KeyA>KeyL",
+     "KeyN>KeyI",
+     "KeyV>KeyA",
+     "KeyF>Space",
+     "KeyT>KeyA",
+     "KeyL>KeyS",
+     "KeyU>KeyN",
+     "Digit9>Digit0",
+     "Enter>KeyS",
+     "KeyL>KeyA",
+     "Equal>Digit0",
+     "KeyU>KeyE",
+     "KeyN>KeyO",
+     "KeyL>KeyU",
+     "Comma>Space",
+     "KeyY>KeyE",
+     "BracketLeft>Enter",
+     "KeyE>KeyR",
+     "KeyB>KeyE",
+     "KeyA>KeyB",
+     "KeyN>Space",
+     "KeyA>KeyR",
+     "Space>KeyN",
+     "KeyL>KeyO",
+     "Backslash>KeyN",
+     "KeyI>KeyO",
+     "Digit0>Digit0",
+     "KeyT>KeyU",
+     "Space>KeyT",
+     "Space>KeyS",
+     "KeyO>KeyC",
+     "Minus>Minus",
+     "KeyS>KeyA",
+     "KeyE>KeyT",
+     "KeyA>KeyN",
+     "KeyE>KeyM",
+     "Enter>KeyI",
+     "Period>KeyL",
+     "KeyR>Space",
+     "Digit0>Semicolon",
+     "KeyN>KeyF"
+    ]
+   },
+   "sm": {
+    "k": {
+     "keystroke": 0.25
+    },
+    "h": {
+     "keystroke": 55.0
+    },
+    "rule": "cusum",
+    "window_s": {
+     "keystroke": 30
+    }
+   },
+   "typenet": {
+    "k": {
+     "keystroke": 0.25
+    },
+    "h": {
+     "keystroke": 58.0
+    },
+    "rule": "cusum",
+    "window_s": {
+     "keystroke": 30
+    }
+   },
+   "nosi": {
+    "k": {
+     "rhythm": 0.5
+    },
+    "h": {
+     "rhythm": 10.75
+    },
+    "rule": "cusum",
+    "window_s": {
+     "rhythm": 30
+    }
+   }
+  },
+  "deployed_point": {
+   "k": {
+    "identity": 1.0,
+    "process": 0.5,
+    "pairs": 0.5
+   },
+   "h": {
+    "identity": 24.0,
+    "process": 8.75,
+    "pairs": 11.25
+   }
+  }
+ },
+ "results": {
+  "thesis": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.15356809976957703,
+     "fa_per_h_ci": [
+      0.0,
+      0.4900809981311021
+     ],
+     "flagged": 0.047619047619047616,
+     "flagged_ci": [
+      0.0,
+      0.15
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.25,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 0.050359712230215826,
+    "precision_100_ci": [
+     0.0,
+     1.0
+    ],
+    "precision_500": 0.010411502231036193,
+    "precision_500_ci": [
+     0.0,
+     1.0
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.30713619953915405,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 0.4607042993087311,
+     "flagged": 0.09523809523809523,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 1.3821128979261932,
+     "flagged": 0.23809523809523808,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 1.5356809976957704,
+     "flagged": 0.2857142857142857,
+     "tpr": 0.6,
+     "takeover": 0.75,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 3.3784981949306947,
+     "flagged": 0.47619047619047616,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 5.221315392165619,
+     "flagged": 0.5238095238095238,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 10.289062684561662,
+     "flagged": 0.6190476190476191,
+     "tpr": 1.0,
+     "takeover": 1.0,
+     "takeover_random": 1.0
+    }
+   ]
+  },
+  "thesis_identity": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.15356809976957703,
+     "fa_per_h_ci": [
+      0.0,
+      0.4900809981311021
+     ],
+     "flagged": 0.047619047619047616,
+     "flagged_ci": [
+      0.0,
+      0.15
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.25,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 0.050359712230215826,
+    "precision_100_ci": [
+     0.0,
+     1.0
+    ],
+    "precision_500": 0.010411502231036193,
+    "precision_500_ci": [
+     0.0,
+     1.0
+    ]
+   }
+  },
+  "thesis_process": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": NaN,
+    "precision_100_ci": [
+     NaN,
+     NaN
+    ],
+    "precision_500": NaN,
+    "precision_500_ci": [
+     NaN,
+     NaN
+    ]
+   }
+  },
+  "deployed": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 1.2285447981566162,
+     "fa_per_h_ci": [
+      0.3175954229157289,
+      2.2601929792192013
+     ],
+     "flagged": 0.19047619047619047,
+     "flagged_ci": [
+      0.045454545454545456,
+      0.38095238095238093
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.75,
+     "delay_median_s": 720.0,
+     "delay_p90_s": 1320.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 2,
+      "process": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      180.0,
+      1470.0
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 1.0,
+     "delay_median_s": 630.0,
+     "delay_p90_s": 630.0,
+     "switch_err_median_s": 1530.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "process": 1
+     },
+     "students": 1,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      630.0,
+      630.0
+     ]
+    },
+    "precision_100": 0.03825136612021858,
+    "precision_100_ci": [
+     0.0,
+     0.17032037815126003
+    ],
+    "precision_500": 0.007829004597986827,
+    "precision_500_ci": [
+     0.0,
+     0.03913656069364149
+    ]
+   }
+  },
+  "by_block": {
+   "test students": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.15356809976957703,
+     "fa_per_h_ci": [
+      0.0,
+      0.5015114482835756
+     ],
+     "flagged": 0.047619047619047616,
+     "flagged_ci": [
+      0.0,
+      0.18636363636363618
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.25,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 0.050359712230215826,
+    "precision_100_ci": [
+     0.0,
+     1.0
+    ],
+    "precision_500": 0.010411502231036193,
+    "precision_500_ci": [
+     0.0,
+     1.0
+    ]
+   },
+   "later sessions of dev students": {
+    "students": 0,
+    "honest": {
+     "n": 0,
+     "hours": 0.0,
+     "students": 0,
+     "fa_per_h": NaN,
+     "fa_per_h_ci": [
+      NaN,
+      NaN
+     ],
+     "flagged": NaN,
+     "flagged_ci": [
+      NaN,
+      NaN
+     ]
+    }
+   }
+  },
+  "subgroups": [
+   {
+    "attribute": "device",
+    "group": "lab-PC-like",
+    "students": 15,
+    "honest": {
+     "n": 16,
+     "hours": 4.613249416666666,
+     "students": 15,
+     "fa_per_h": 0.21676694877741004,
+     "fa_per_h_ci": [
+      0.0,
+      0.621430505783829
+     ],
+     "flagged": 0.0625,
+     "flagged_ci": [
+      0.0,
+      0.2
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.25,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "device",
+    "group": "personal-like",
+    "students": 5,
+    "honest": {
+     "n": 5,
+     "hours": 1.8985196388888887,
+     "students": 5,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": null,
+    "small": false
+   },
+   {
+    "attribute": "os",
+    "group": "Linux",
+    "students": 8,
+    "honest": {
+     "n": 9,
+     "hours": 0.8031331388888889,
+     "students": 8,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "os",
+    "group": "Mac",
+    "students": 2,
+    "honest": {
+     "n": 2,
+     "hours": 0.8045821944444446,
+     "students": 2,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 1.0,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 1,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "small": true
+   },
+   {
+    "attribute": "os",
+    "group": "Windows",
+    "students": 10,
+    "honest": {
+     "n": 10,
+     "hours": 4.904053722222223,
+     "students": 10,
+     "fa_per_h": 0.20391293746816053,
+     "fa_per_h_ci": [
+      0.0,
+      0.6804984734351665
+     ],
+     "flagged": 0.1,
+     "flagged_ci": [
+      0.0,
+      0.3
+     ]
+    },
+    "takeover": {
+     "n": 2,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 2,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "lang",
+    "group": "c",
+    "students": 11,
+    "honest": {
+     "n": 12,
+     "hours": 1.0991788055555556,
+     "students": 11,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "lang",
+    "group": "python",
+    "students": 9,
+    "honest": {
+     "n": 9,
+     "hours": 5.41259025,
+     "students": 9,
+     "fa_per_h": 0.1847544251109716,
+     "fa_per_h_ci": [
+      0.0,
+      0.5795662443181987
+     ],
+     "flagged": 0.1111111111111111,
+     "flagged_ci": [
+      0.0,
+      0.3333333333333333
+     ]
+    },
+    "takeover": {
+     "n": 3,
+     "detected": 0.3333333333333333,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 3,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "ctx",
+    "group": "competition",
+    "students": 11,
+    "honest": {
+     "n": 12,
+     "hours": 1.0991788055555556,
+     "students": 11,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "ctx",
+    "group": "lab",
+    "students": 9,
+    "honest": {
+     "n": 9,
+     "hours": 5.41259025,
+     "students": 9,
+     "fa_per_h": 0.1847544251109716,
+     "fa_per_h_ci": [
+      0.0,
+      0.5795662443181987
+     ],
+     "flagged": 0.1111111111111111,
+     "flagged_ci": [
+      0.0,
+      0.3333333333333333
+     ]
+    },
+    "takeover": {
+     "n": 3,
+     "detected": 0.3333333333333333,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 3,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "speed",
+    "group": "fast",
+    "students": 4,
+    "honest": {
+     "n": 4,
+     "hours": 2.1245867222222223,
+     "students": 4,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 2,
+     "detected": 0.5,
+     "delay_median_s": 1170.0,
+     "delay_p90_s": 1170.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "identity": 1
+     },
+     "students": 2,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1170.0,
+      1170.0
+     ]
+    },
+    "small": true
+   },
+   {
+    "attribute": "speed",
+    "group": "medium",
+    "students": 5,
+    "honest": {
+     "n": 5,
+     "hours": 3.3547506944444447,
+     "students": 5,
+     "fa_per_h": 0.29808474342252206,
+     "fa_per_h_ci": [
+      0.0,
+      1.0536840151788451
+     ],
+     "flagged": 0.2,
+     "flagged_ci": [
+      0.0,
+      0.6
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "speed",
+    "group": "slow",
+    "students": 11,
+    "honest": {
+     "n": 12,
+     "hours": 1.032431638888889,
+     "students": 11,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   }
+  ],
+  "subgroups_deployed": [
+   {
+    "attribute": "device",
+    "group": "lab-PC-like",
+    "students": 15,
+    "honest": {
+     "n": 16,
+     "hours": 4.613249416666666,
+     "students": 15,
+     "fa_per_h": 1.7341355902192803,
+     "fa_per_h_ci": [
+      0.5261028721788261,
+      2.7123130698030784
+     ],
+     "flagged": 0.25,
+     "flagged_ci": [
+      0.058823529411764705,
+      0.4666666666666667
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.75,
+     "delay_median_s": 720.0,
+     "delay_p90_s": 1320.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 2,
+      "process": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      180.0,
+      1470.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "device",
+    "group": "personal-like",
+    "students": 5,
+    "honest": {
+     "n": 5,
+     "hours": 1.8985196388888887,
+     "students": 5,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": null,
+    "small": false
+   },
+   {
+    "attribute": "os",
+    "group": "Linux",
+    "students": 8,
+    "honest": {
+     "n": 9,
+     "hours": 0.8031331388888889,
+     "students": 8,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "os",
+    "group": "Mac",
+    "students": 2,
+    "honest": {
+     "n": 2,
+     "hours": 0.8045821944444446,
+     "students": 2,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 1.0,
+     "delay_median_s": 720.0,
+     "delay_p90_s": 720.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 1
+     },
+     "students": 1,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      720.0,
+      720.0
+     ]
+    },
+    "small": true
+   },
+   {
+    "attribute": "os",
+    "group": "Windows",
+    "students": 10,
+    "honest": {
+     "n": 10,
+     "hours": 4.904053722222223,
+     "students": 10,
+     "fa_per_h": 1.6313034997452842,
+     "fa_per_h_ci": [
+      0.5309603689581923,
+      2.775154060988912
+     ],
+     "flagged": 0.4,
+     "flagged_ci": [
+      0.1,
+      0.7
+     ]
+    },
+    "takeover": {
+     "n": 2,
+     "detected": 1.0,
+     "delay_median_s": 825.0,
+     "delay_p90_s": 1341.0,
+     "switch_err_median_s": 585.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 1,
+      "process": 1
+     },
+     "students": 2,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      180.0,
+      1470.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "lang",
+    "group": "c",
+    "students": 11,
+    "honest": {
+     "n": 12,
+     "hours": 1.0991788055555556,
+     "students": 11,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "lang",
+    "group": "python",
+    "students": 9,
+    "honest": {
+     "n": 9,
+     "hours": 5.41259025,
+     "students": 9,
+     "fa_per_h": 1.4780354008877727,
+     "fa_per_h_ci": [
+      0.4133077453196811,
+      2.7171292507659666
+     ],
+     "flagged": 0.4444444444444444,
+     "flagged_ci": [
+      0.1111111111111111,
+      0.7777777777777778
+     ]
+    },
+    "takeover": {
+     "n": 3,
+     "detected": 1.0,
+     "delay_median_s": 720.0,
+     "delay_p90_s": 1320.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 2,
+      "process": 1
+     },
+     "students": 3,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      180.0,
+      1470.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "ctx",
+    "group": "competition",
+    "students": 11,
+    "honest": {
+     "n": 12,
+     "hours": 1.0991788055555556,
+     "students": 11,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "ctx",
+    "group": "lab",
+    "students": 9,
+    "honest": {
+     "n": 9,
+     "hours": 5.41259025,
+     "students": 9,
+     "fa_per_h": 1.4780354008877727,
+     "fa_per_h_ci": [
+      0.4133077453196811,
+      2.7171292507659666
+     ],
+     "flagged": 0.4444444444444444,
+     "flagged_ci": [
+      0.1111111111111111,
+      0.7777777777777778
+     ]
+    },
+    "takeover": {
+     "n": 3,
+     "detected": 1.0,
+     "delay_median_s": 720.0,
+     "delay_p90_s": 1320.0,
+     "switch_err_median_s": 450.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 2,
+      "process": 1
+     },
+     "students": 3,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      180.0,
+      1470.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "speed",
+    "group": "fast",
+    "students": 4,
+    "honest": {
+     "n": 4,
+     "hours": 2.1245867222222223,
+     "students": 4,
+     "fa_per_h": 0.9413595496389481,
+     "fa_per_h_ci": [
+      0.0,
+      2.4047155402982785
+     ],
+     "flagged": 0.25,
+     "flagged_ci": [
+      0.0,
+      0.75
+     ]
+    },
+    "takeover": {
+     "n": 2,
+     "detected": 1.0,
+     "delay_median_s": 1095.0,
+     "delay_p90_s": 1395.0,
+     "switch_err_median_s": 360.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "pairs": 2
+     },
+     "students": 2,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      720.0,
+      1470.0
+     ]
+    },
+    "small": true
+   },
+   {
+    "attribute": "speed",
+    "group": "medium",
+    "students": 5,
+    "honest": {
+     "n": 5,
+     "hours": 3.3547506944444447,
+     "students": 5,
+     "fa_per_h": 1.7885084605351322,
+     "fa_per_h_ci": [
+      0.48380133371622813,
+      3.5120776386711836
+     ],
+     "flagged": 0.6,
+     "flagged_ci": [
+      0.2,
+      1.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 1.0,
+     "delay_median_s": 180.0,
+     "delay_p90_s": 180.0,
+     "switch_err_median_s": 900.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "process": 1
+     },
+     "students": 1,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      180.0,
+      180.0
+     ]
+    },
+    "small": false
+   },
+   {
+    "attribute": "speed",
+    "group": "slow",
+    "students": 11,
+    "honest": {
+     "n": 12,
+     "hours": 1.032431638888889,
+     "students": 11,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "small": false
+   }
+  ],
+  "purged_share": 0.038461538461538464,
+  "sm": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.5,
+     "delay_median_s": 885.0,
+     "delay_p90_s": 1041.0,
+     "switch_err_median_s": 675.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "keystroke": 2
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      690.0,
+      1080.0
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 1.0,
+     "delay_median_s": 480.0,
+     "delay_p90_s": 480.0,
+     "switch_err_median_s": 1530.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "keystroke": 1
+     },
+     "students": 1,
+     "detected_ci": [
+      1.0,
+      1.0
+     ],
+     "delay_ci": [
+      480.0,
+      480.0
+     ]
+    },
+    "precision_100": 1.0,
+    "precision_100_ci": [
+     1.0,
+     1.0
+    ],
+    "precision_500": 1.0,
+    "precision_500_ci": [
+     1.0,
+     1.0
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.6,
+     "takeover": 0.5,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.6,
+     "takeover": 0.5,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.6,
+     "takeover": 0.5,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.6,
+     "takeover": 0.5,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.6,
+     "takeover": 0.5,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 0.4607042993087311,
+     "flagged": 0.14285714285714285,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 0.4607042993087311,
+     "flagged": 0.14285714285714285,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 1.0749766983870392,
+     "flagged": 0.23809523809523808,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 2.4570895963132324,
+     "flagged": 0.2857142857142857,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 5.989155891013504,
+     "flagged": 0.6190476190476191,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    }
+   ]
+  },
+  "typenet": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": NaN,
+    "precision_100_ci": [
+     NaN,
+     NaN
+    ],
+    "precision_500": NaN,
+    "precision_500_ci": [
+     NaN,
+     NaN
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 0.4607042993087311,
+     "flagged": 0.14285714285714285,
+     "tpr": 0.6,
+     "takeover": 0.75,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 0.9214085986174622,
+     "flagged": 0.23809523809523808,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 1.2285447981566162,
+     "flagged": 0.23809523809523808,
+     "tpr": 0.6,
+     "takeover": 0.75,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 2.6106576960828094,
+     "flagged": 0.42857142857142855,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 2.7642257958523864,
+     "flagged": 0.42857142857142855,
+     "tpr": 0.8,
+     "takeover": 0.75,
+     "takeover_random": 1.0
+    }
+   ]
+  },
+  "nosi": {
+   "metrics": {
+    "students": 20,
+    "honest": {
+     "n": 21,
+     "hours": 6.511769055555556,
+     "students": 20,
+     "fa_per_h": 0.0,
+     "fa_per_h_ci": [
+      0.0,
+      0.0
+     ],
+     "flagged": 0.0,
+     "flagged_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "takeover": {
+     "n": 4,
+     "detected": 0.25,
+     "delay_median_s": 1080.0,
+     "delay_p90_s": 1080.0,
+     "switch_err_median_s": 90.0,
+     "early_alarms": 0,
+     "first_channel": {
+      "rhythm": 1
+     },
+     "students": 4,
+     "detected_ci": [
+      0.0,
+      1.0
+     ],
+     "delay_ci": [
+      1080.0,
+      1080.0
+     ]
+    },
+    "takeover_random": {
+     "n": 1,
+     "detected": 0.0,
+     "delay_median_s": NaN,
+     "delay_p90_s": NaN,
+     "switch_err_median_s": NaN,
+     "early_alarms": 0,
+     "first_channel": {},
+     "students": 1,
+     "detected_ci": [
+      0.0,
+      0.0
+     ],
+     "delay_ci": [
+      NaN,
+      NaN
+     ]
+    },
+    "precision_100": 1.0,
+    "precision_100_ci": [
+     1.0,
+     1.0
+    ],
+    "precision_500": 1.0,
+    "precision_500_ci": [
+     1.0,
+     1.0
+    ]
+   },
+   "curve": [
+    {
+     "target": 0.05,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.1,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.0,
+     "takeover": 0.0,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.2,
+     "fa_per_h": 0.0,
+     "flagged": 0.0,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.3,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.5,
+     "fa_per_h": 0.15356809976957703,
+     "flagged": 0.047619047619047616,
+     "tpr": 0.2,
+     "takeover": 0.25,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 0.75,
+     "fa_per_h": 0.4607042993087311,
+     "flagged": 0.09523809523809523,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.0,
+     "fa_per_h": 1.2285447981566162,
+     "flagged": 0.3333333333333333,
+     "tpr": 0.4,
+     "takeover": 0.5,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 1.5,
+     "fa_per_h": 1.3821128979261932,
+     "flagged": 0.3333333333333333,
+     "tpr": 0.6,
+     "takeover": 0.75,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 2.0,
+     "fa_per_h": 1.8428171972349243,
+     "flagged": 0.3333333333333333,
+     "tpr": 0.6,
+     "takeover": 0.75,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 3.0,
+     "fa_per_h": 2.917793895621964,
+     "flagged": 0.38095238095238093,
+     "tpr": 0.6,
+     "takeover": 0.75,
+     "takeover_random": 0.0
+    },
+    {
+     "target": 5.0,
+     "fa_per_h": 5.067747292396042,
+     "flagged": 0.42857142857142855,
+     "tpr": 1.0,
+     "takeover": 1.0,
+     "takeover_random": 1.0
+    },
+    {
+     "target": 10.0,
+     "fa_per_h": 6.4498601903222355,
+     "flagged": 0.42857142857142855,
+     "tpr": 1.0,
+     "takeover": 1.0,
+     "takeover_random": 1.0
+    }
+   ]
+  }
+ },
+ "git": {
+  "commit": "bbac70e",
+  "dirty": false
+ },
+ "minutes": 1.743721604347229
+}

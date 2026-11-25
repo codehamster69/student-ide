@@ -12,8 +12,11 @@ python -m studentide.harness dev  --thesis ../thesis/latex   # design + freeze, 
 python -m studentide.harness test --thesis ../thesis/latex   # report once, ~5 min
 
 # classroom data (a copy of the live database): spliced takeovers, no labels needed
-python -m studentide.harness dev  --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10]
-python -m studentide.harness test --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10] --thesis ../thesis/latex
+python -m studentide.harness dev    --db data/pilot.sqlite3 --classroom [--by-device] [--baseline-min 10]   # design sweeps
+python -m studentide.harness freeze --db data/pilot.sqlite3 --classroom   # live settings, h set on dev real sessions
+python -m studentide.harness test   --db data/pilot.sqlite3 --classroom   # held-out split, once, at the frozen h
+python -m studentide.harness rq     --db data/pilot.sqlite3 --classroom   # RQ2 / RQ3, descriptive
+python -m studentide.harness.classroom_report --eval ../thesis/evaluation --thesis ../thesis/latex   # tables, graphs
 
 # staged recordings with a labels manifest (kept for completeness; the thesis no longer stages sessions)
 python -m studentide.harness dev  --db data/study.sqlite3 --labels data/labels/ --thesis ../thesis/latex
@@ -127,8 +130,9 @@ is known clean. `--classroom` builds the corpus like this:
   may hide real cheating). Splices -> detection, delay, switch-time error.
   Precision at 1/100 and 1/500 from both (a lower bound). RQ2 there is weak-label
   agreement (big pastes, blocked outside pastes, paste after look-away, keyless
-  text) and is not run by `test`; the RQ2 table stays synthetic until that
-  analysis is added. The short-baselines sweep (by session count) is skipped; sweep
+  text), run by `rq` (`classroom.rq2`): per-sign AUC of each channel's session score,
+  also for the process channel without its paste and focus features, and the
+  within-session score after a sign. The short-baselines sweep (by session count) is skipped; sweep
   `--baseline-min` on dev instead.
 - **Comparing configs on dev** (as often as needed; aggregates only):
   `python -m studentide.harness compare --db <copy> --classroom --configs a.json b.json --compare-out c.json`
@@ -139,6 +143,19 @@ is known clean. `--classroom` builds the corpus like this:
 - **Limits of a splice.** B continues B's own code, so build order is B's document,
   and there is no "read the other person's code" pause. Both favour the process
   channel; report the identity channels alone as well.
+
+- **Classroom freeze and test** (`harness/classroom.py`). `freeze` keeps the detector
+  settings of `--base-config` (the live `frozen-config.json`) and chooses the calibration
+  source and every method's h on dev students' real sessions for `--target` (0.2/h),
+  writing `classroom-frozen-config.json`, plus a cross-fitted dev summary (curves,
+  subgroups, baselines). `test --classroom` loads the corpus with `held_out=True`: dev
+  students' sessions from PILOT_TEST_FROM become scored test sessions (never calibration),
+  splices pair them on the test side, and every method is scored at its frozen h, once
+  per corpus and config (ledger, `--reason` to repeat). `rq` scores every honest scored
+  session for RQ2 and RQ3 (detector drift by days since baseline; session-profile
+  distances within and between students and device classes). On the VM run these on a
+  database copy inside the app container with `PYTHONPATH` pointing at a copy of the
+  code and `STUDENTIDE_GIT_COMMIT` set, so the ledger records the commit.
 
 ## Labels manifest for real data
 
@@ -164,6 +181,11 @@ Every column of `students.csv` becomes a fairness subgroup in RQ4.
 |--------|---------------|---------------------------------|
 | `8e2ce5f7faa6` (#9) | two channels, process W = 90 s, prior n = 2 | 83% of non-honest, matched takeovers 64%, 0.28 FA/h |
 | `be03e7dea805` (#10) | + key-pair channel (80 pairs, speed-normalised, k = 0.5) | 92% of non-honest, matched takeovers 86% (scaled Manhattan 89%), 0.19 FA/h |
+
+Classroom (`classroom-frozen-config.json`, `2630c8689000`, 2026-11-25): live settings above,
+holdout calibration on dev real sessions, h = 18.5 / 27.0 / 26.0 (rhythm / pairs / process).
+Dev cross-fitted: 31% of same-device splices at 0.22 FA/h; held-out test (20 students,
+4 splices): 0.15 FA/h, 1 of 4 caught. Brain entry 2026-11-25-09.
 
 `dev` also writes an `operating_point` block (h per channel, k, window
 lengths, key-pair vocabulary) from the chosen detector fitted on all dev

@@ -1,19 +1,32 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-% Draft from the mid-semester presentation; rewrite once results exist.
 Programming assessments check who a student is at the start of a session,
 and whether the submitted code was copied or generated at the end. Nothing
 checks that the same person kept writing in between. This thesis studies
 \emph{authorship continuity}: detecting when a different person, such as a
 friend or a paid proxy, takes over partway through a coding session. We
-build the Student IDE, a lab code editor that records keystroke timing,
-pastes, edits and code runs without any webcam or screen recording. From
-each student's first four weeks of labs we learn a personal baseline of
-coding habits, score every 30-second window against it, and use a CUSUM
-change-point detector to flag a likely takeover and estimate when it
-happened. Teachers see an evidence timeline, and a flag leads only to a
-conversation, never a penalty. \todo{Headline results for RQ1--RQ4.}
+build Scribelab, a lab code editor that records keystroke timing, pastes,
+edits and code runs without any webcam or screen recording, and use it in
+real lab classes and competitions at IIIT Surat. Each student's earliest ten
+active minutes form a personal baseline; every later 30-second window is
+scored against it in a rhythm, a key-pair and a way-of-working channel, and a
+CUSUM change-point detector flags a likely takeover. Teachers see an evidence
+timeline, and a flag leads only to a conversation, never a penalty.
+
+The evaluation uses classroom data only (1,082 recorded sessions of 276 students) and
+builds labelled takeovers by splicing two students' real sessions on the same
+question. With thresholds frozen on development students' real sessions for
+0.2 false alarms per active hour, the detector catches 31\% of spliced
+takeovers (95\% interval 18--45\%) with a median delay of ten minutes, and the
+false-alarm rate held on unseen students (0.15 per hour); a plain per-key
+timing baseline does about as well. Thresholds calibrated on simulated typists
+raise eight times the false alarms on real classwork. Typing rhythm is a stable
+personal trait over three weeks, while the way of working drifts with the task
+and agrees only weakly with signs of copying (AUC 0.61--0.74 for outside
+pastes); rhythm and Nosi's transcription measure do not. If one session in a
+hundred held a takeover, about one flag in nineteen would be real. A flag can
+start a conversation, and nothing more.
 
 \vspace{1em}
 \noindent\textbf{Keywords:} keystroke dynamics, authorship continuity,

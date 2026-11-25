@@ -27,11 +27,11 @@ def nan(v) -> bool:
     return v is None or (isinstance(v, float) and math.isnan(v))
 
 
-def pct(v, c=None) -> str:
+def pct(v, c=None, nd=0) -> str:
     if nan(v):
         return "--"
-    s = f"{100 * v:.0f}\\%"
-    return s + (f" {{\\scriptsize[{100 * c[0]:.0f}, {100 * c[1]:.0f}]}}" if c and not nan(c[0]) else "")
+    s = f"{100 * v:.{nd}f}\\%"
+    return s + (f" {{\\scriptsize[{100 * c[0]:.{nd}f}, {100 * c[1]:.{nd}f}]}}" if c and not nan(c[0]) else "")
 
 
 def num(v, nd=2, c=None) -> str:
@@ -51,7 +51,7 @@ def mins(v, c=None) -> str:
 def table(caption, label, cols, header, rows, note=None) -> str:
     L = [GEN, "\\begin{table}[ht]", "  \\centering\\small", f"  \\caption{{{caption}}}", f"  \\label{{{label}}}",
          f"  \\resizebox{{\\linewidth}}{{!}}{{\\begin{{tabular}}{{{cols}}}", "    \\toprule", f"    {header} \\\\", "    \\midrule"]
-    L += [f"    {r} \\\\" if not r.startswith("\\") else f"    {r}" for r in rows]
+    L += [f"    {r}" if r in ("\\midrule",) else f"    {r} \\\\" for r in rows]
     L += ["    \\bottomrule", "  \\end{tabular}}"]
     if note:
         L.append(f"  \\par\\smallskip\\parbox{{\\linewidth}}{{\\footnotesize {note}}}")
@@ -81,8 +81,10 @@ def rq1_methods(t: dict, fz: dict) -> str:
         if key in ("thesis_process", "deployed"):
             rows.append("\\midrule")
     m = R["thesis"]["metrics"]
-    cap = (f"RQ1 on the held-out classroom split ({t['evaluate']['test_students']} test students plus the sessions from 24 November"
-           f" of {t['evaluate']['dev_students_with_later_sessions']} dev students; {m['honest']['n']} real sessions,"
+    nl = t['evaluate']['dev_students_with_later_sessions']
+    later = f"plus the sessions from 24 November of {nl} dev students" if nl else "no dev student had a scored session from 24 November"
+    cap = (f"RQ1 on the held-out classroom split ({t['evaluate']['test_students']} test students, {m['honest']['students']} of them with a"
+           f" scored session; {later}; {m['honest']['n']} real sessions,"
            f" {m['honest']['hours']:.1f} active hours; {m.get('takeover', {}).get('n', 0)} same-device and"
            f" {m.get('takeover_random', {}).get('n', 0)} cross-device splices), each method at thresholds frozen on the dev split"
            f" for {fz['target_fa_per_h']:g} false alarms per hour ({fz['calibration_source']} calibration). Scored once"
@@ -100,7 +102,7 @@ def rq1_dev_methods(d: dict, fz: dict) -> str:
         h, a = m["honest"], m.get("takeover", {})
         rows.append(" & ".join([METHOD[key], num(h["fa_per_h"], 2, h["fa_per_h_ci"]), pct(h["flagged"], h["flagged_ci"]),
                                 pct(a.get("detected"), a.get("detected_ci")), mins(a.get("delay_median_s"), a.get("delay_ci")),
-                                pct(m.get("precision_100"), m.get("precision_100_ci")), pct(m.get("precision_500"), m.get("precision_500_ci"))]))
+                                pct(m.get("precision_100"), m.get("precision_100_ci"), 1), pct(m.get("precision_500"), m.get("precision_500_ci"), 1)]))
         if key == "deployed":
             rows.append("\\midrule")
     m = d["at_target"]
@@ -245,10 +247,13 @@ def rq4_precision(t: dict) -> str:
     rows = []
     for key in ("thesis", "thesis_identity", "deployed", "sm", "typenet", "nosi"):
         m = t["results"][key]["metrics"]
+        none = not m["honest"]["flagged"]  # no real session flagged: precision is 0/0 or 1 by construction, not a result
         rows.append(" & ".join([METHOD[key], pct(m.get("takeover", {}).get("detected")), pct(m["honest"]["flagged"], m["honest"]["flagged_ci"]),
-                                pct(m.get("precision_100"), m.get("precision_100_ci")), pct(m.get("precision_500"), m.get("precision_500_ci"))]))
+                                "n/a" if none else pct(m.get("precision_100"), m.get("precision_100_ci"), 1),
+                                "n/a" if none else pct(m.get("precision_500"), m.get("precision_500_ci"), 1)]))
     cap = ("RQ4 precision: share of flagged sessions that would really contain a takeover if 1 in 100 or 1 in 500 sessions did,"
-           " from the held-out rates (caught = same-device splices; flagged = real sessions with at least one alarm).")
+           " from the held-out rates (caught = same-device splices; flagged = real sessions with at least one alarm). n/a: no real"
+           " session was flagged, so precision is not estimable from 21 sessions.")
     return table(cap, "tab:cls-precision", "@{}lrrrr@{}", "Method & Caught & Sessions flagged & Precision at 1/100 & at 1/500", rows)
 
 

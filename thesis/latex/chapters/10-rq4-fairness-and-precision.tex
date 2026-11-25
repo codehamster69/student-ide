@@ -7,7 +7,45 @@ tercile. For each: false alarms per active hour and share of real sessions flagg
 (upper bounds), and same-device splice detection, with student-bootstrap intervals.
 Demographic groups (gender, prior experience) are not recorded and are left as a
 limitation. Phone sessions have no key events and are reported apart.
-\todo{Classroom test-split results.}
+
+\subsection*{Classroom sessions}
+The held-out split has 20 scored students, too few for subgroups (\cref{tab:cls-subgroups}
+lists them for completeness; every group has 0--0.3 false alarms per hour and at most 4
+splices). The cross-fitted dev split (88 students) is used instead
+(\cref{tab:cls-subgroups-dev,fig:cls-subgroups}); a session counts under its own device, OS,
+language and context, a splice under its first student's session.
+
+At the frozen thresholds the rates are low everywhere and most intervals overlap: 0.15 false
+alarms per hour on lab-PC-like machines against 0.42 (0--1.2) on personal ones, 0.37
+(0.07--0.77) on Windows against 0.11 on Linux and none on Mac, 0.65 (0--1.22) for the slowest
+typing tercile against 0.09--0.10 for the others. Only Windows stands apart from Mac, where 9
+students' 4.5 hours raised no alarm. Detection follows the same pattern, from 17\%
+of splices on Linux to 41\% on Windows. One difference stands out and has a plain cause. In
+the scored sessions language and context coincide: every C session was a competition and
+every Python session a lab. Competition sessions are short (51 sessions in 7.1 active hours,
+about 8 minutes each); none was flagged and none of their 14 splices was caught, against 0.29
+false alarms per hour and 45\% of 31 splices caught (28--63\%) in the Python labs. A CUSUM
+needs minutes of evidence, so the detector is effectively blind in short competition rounds,
+whichever language they use.
+
+At the deployed thresholds the same gaps become large (\cref{tab:cls-subgroups-deployed}):
+Python lab sessions 2.05 false alarms per hour with 63\% of sessions flagged, C competition
+sessions 0.28 and 4\%; Windows 2.38 (1.65--3.18, 54\% flagged), Linux 0.66 (7\%). A session on
+Windows was several times more likely to be flagged than one on Linux, an unfairness of the
+live setting that the frozen thresholds largely remove. Device class and typing speed showed
+no clear difference at either setting.
+
+\input{tables/cls-subgroups-dev}
+\input{tables/cls-subgroups-deployed}
+\input{tables/cls-subgroups}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\linewidth]{cls-subgroups}
+  \caption{False alarms per active hour by subgroup at the deployed thresholds (dev split,
+    cross-fitted; groups of at least five students; 95\% intervals resampling students).}
+  \label{fig:cls-subgroups}
+\end{figure}
 
 \subsection*{Synthetic test students (evaluation harness)}
 Simulated people have no demographics, so the harness groups them by terciles
@@ -36,6 +74,26 @@ towards the top of the planned 60--80.
 Precision $= \frac{\mathrm{TPR}\,\pi}{\mathrm{TPR}\,\pi + \mathrm{FPR}(1-\pi)}$
 at $\pi = 1/100$ and $1/500$.
 
+\subsection*{Classroom sessions}
+On the cross-fitted dev split (\cref{tab:cls-dev-methods}) the frozen detector catches 31\%
+of spliced takeovers and flags 5.6\% of real sessions. If 1 in 100 sessions held a takeover,
+5.4\% of flagged sessions would really contain one (95\% interval 2.7--20.1\%), about 18 honest
+sessions flagged for every real one; at 1 in 500, 1.1\% (0.5--4.8\%), about 90 to one. The
+deployed thresholds catch twice as many takeovers but flag five times as many sessions, so
+precision falls to 2.2\% (1.7--3.1\%) and 0.4\%, about 45 and 225 honest sessions per real
+one. The identity channels alone do slightly better (6.2\% and 1.3\%) and scaled Manhattan
+similar (8\%, interval reaching 100\% because it flags almost nothing). On the held-out split
+the frozen detector flagged one real session and the baselines none, so precision cannot be
+estimated there (\cref{tab:cls-precision}). Real sessions may contain real switches, so these
+are lower bounds on precision; but even several times higher, most flags would still be honest
+students.
+
+\paragraph{Conversation outcomes.} When the database was copied, teachers had noted no
+outcome on any review moment (the one-tap note went live on 25 November,
+\cref{sec:teacher-review}), so \cref{tab:teacher-outcomes} has nothing to report yet.
+
+\input{tables/cls-precision}
+
 On the synthetic test students the thesis detector finds 92\% of non-honest
 sessions and flags 7\% of honest ones (\cref{tab:harness-precision}). If 1 in 100
 sessions involved a switch, about 12\% of flagged sessions would be real (95\%
@@ -63,3 +121,11 @@ use of the tool as evidence of misconduct would be wrong most of the time.
 \end{figure}
 
 \section{Summary}
+RQ4 asked whether the detector errs more for some students than others, and how much a flag
+is worth at realistic cheating rates. At thresholds set on real dev sessions no subgroup
+difference is clear, but the live thresholds flag Python lab sessions and Windows machines
+several times more often than C competitions and Linux, and short competition rounds are not
+assessed at all. Precision answers the second half bluntly: if 1 in 100 sessions held a
+takeover, about 1 flag in 19 would be real (5.4\%), and at 1 in 500 about 1 in 90. Whatever
+the threshold, most flags will be honest students, which is the quantitative case for the
+design rule that a flag only starts a conversation.

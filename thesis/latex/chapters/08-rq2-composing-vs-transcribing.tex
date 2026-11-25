@@ -8,14 +8,41 @@ cross-validation. Nosi's evidence is $N = 5$ expert authors on one task.
 On simulated typists the recipe is tested as a classifier, since copying is known
 there. Classroom data has no copying labels, so there the question is agreement with
 weak signs (\cref{sec:weak-labels}): whether the L-scale and the process-channel score
-are higher in windows before a big paste, a blocked outside paste, a paste after looking
-away or keyless text than in the same student's other windows, and how strongly they
+are higher in the windows right after a big paste, a blocked outside paste, a paste after
+looking away or keyless text than in the same session's other windows, and how strongly they
 rank sessions with such signs first. Pasting one's own code produces the same signs, so
 agreement is the claim, not accuracy.
-\todo{Window length sweep (Nosi reports about 80\% at \SI{150}{\second});
-comments-only typing as a known confound; per-student vs.\ population
-thresholds.}
 \section{Results}
+\subsection{Classroom sessions}
+Every honest scored session, dev and held-out together (111 real sessions of 108 students;
+only one held-out session showed a sign, so the splits are not reported apart), was scored
+with the frozen detector and checked for each sign (\cref{tab:cls-rq2-all}). The signs are
+rare: 13 sessions (12 students) had a paste from outside the editor, 11 of them of 80 or more
+characters, and 9 sessions a paste within a minute of coming back to the window. No scored
+session had text typed with no key press, and none a blocked paste, since paste blocking went
+live only on 25 November, after these sessions.
+
+\paragraph{The process channel agrees with the signs; rhythm does not.} A session with a big
+outside paste scores further from the student's baseline on the process channel than one
+without in 74\% of comparisons (AUC 0.74, 0.61--0.87); for any outside paste 0.71
+(0.57--0.85) and for a paste after looking away 0.72 (0.57--0.90). Part of this is true by
+construction, since the share of pasted text is a process feature. Without the paste and
+focus features, so on pauses, revisions, build order and runs alone, the association is
+weaker and its intervals touch 0.5: 0.64 (0.50--0.80) for a big paste, 0.61 (0.48--0.75)
+for any outside paste. The rhythm channel shows no association (AUC 0.42--0.53, every
+interval across 0.5), nor does the key-pair channel (0.54--0.63), and neither does Nosi's
+L-scale taken as a session median (0.46--0.54). Inside the same session, the process score
+in the three minutes after a big outside paste is higher than in the rest of the session by
+1.15 standard units (0.03--2.24), though only 3 sessions have windows on both sides.
+
+\paragraph{Agreement is not detection.} At the frozen thresholds the process channel flagged
+none of the sessions with a sign (and 1\% of those without): its threshold, raised to hold
+0.2 false alarms per hour on real sessions (\cref{ch:rq1}), is far above what one paste moves
+it. Copying therefore stays a separate, explicit sign on the review timeline (the paste
+itself, the look-away before it) rather than something the detector is expected to find.
+
+\input{tables/cls-rq2-all}
+
 \subsection*{Synthetic test students (evaluation harness)}
 On the 36 synthetic test students (\cref{tab:harness-rq2,fig:harness-rq2}) the
 Nosi recipe reaches 78\% balanced accuracy at 150\,s windows (interval 73--84\%),
@@ -49,3 +76,11 @@ lower bound on the confound the study should expect.
 \end{figure}
 
 \section{Summary}
+RQ2 asked whether measures of composing versus transcribing agree with the signs of copying
+that classroom sessions carry. They do for the way of working, weakly, and not for rhythm:
+sessions with outside pastes look less like the student's baseline in how they work (AUC
+0.71--0.74, 0.61--0.64 without the paste features themselves), while typing rhythm and
+Nosi's L-scale do not separate them at all. On simulated typists the L-scale reached 78\%
+balanced accuracy; on real classwork it shows no association with the signs, which argues
+against transcription detection from rhythm alone in a classroom. With 9--13 sessions carrying
+a sign, these are associations to test on more data, not accuracies.

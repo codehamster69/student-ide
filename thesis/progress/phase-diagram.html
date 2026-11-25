@@ -218,7 +218,7 @@ const BUILD = [
     { t: "Calibrate the alarm threshold (students' own baseline weeks)", s: "done", pr: "#9" },
     { t: "Fairness by subgroup; precision at 1 in 100 and 1 in 500", s: "done", pr: "#9" },
     { t: "Classroom mode: baselines from earliest minutes, spliced takeovers", s: "done", pr: "#63" },
-    { t: "Run on the classroom test split", s: "pend" },
+    { t: "Classroom freeze on dev; held-out split scored once (final run at end of term)", s: "prog" },
   ], note: 'Synthetic test students, with key-pair timing: <span class="mono">92%</span> of non-honest sessions caught at <span class="mono">0.19</span> false alarms per hour (matched takeovers <span class="mono">86%</span>, scaled Manhattan 89%); precision of a flag about <span class="mono">12%</span> at 1 in 100.' },
   { n: 5, title: "College deployment (pilot)", s: "prog", items: [
     { t: "Google sign-in for @iiitsurat.ac.in; roles from the address, admin override", s: "done", pr: "#14" },
@@ -244,11 +244,12 @@ const STUDY = [
     { t: "Detector re-tune on dev pilot data", s: "prog" },
     { t: "Baseline length and device-aware baselines chosen on dev", s: "pend" },
   ]},
-  { id: "S3", title: "Held-out test", sub: "Scored once", from: 8, to: 8, s: "pend", items: [
-    { t: "Test students and later weeks, scored once per frozen config", s: "pend" },
+  { id: "S3", title: "Held-out test", sub: "Scored once", from: 8, to: 8, s: "prog", fill: "50%", items: [
+    { t: "First run 2026-11-25: 20 test students, 0.15 false alarms per hour", s: "done" },
+    { t: "Final run on the later weeks at the end of term", s: "pend" },
   ]},
-  { id: "W", title: "Months 8 to 12", sub: "Measure and write", from: 8, to: 12, s: "pend", items: [
-    { t: "Write up RQ1 to RQ4 from classroom data", s: "pend" },
+  { id: "W", title: "Months 8 to 12", sub: "Measure and write", from: 8, to: 12, s: "prog", fill: "40%", items: [
+    { t: "Write up RQ1 to RQ4 from classroom data (ch 7-10, abstract)", s: "prog" },
   ]},
 ];
 
