@@ -21,6 +21,8 @@ const DATA_DIR_NAME = "Student IDE";
 export interface Settings {
   server?: string;
   installId?: string;
+  /** the page to reopen after an update restart (modules/updates.ts) */
+  resumeUrl?: string;
 }
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -64,6 +66,13 @@ export class Config {
     this.data = { ...this.data, ...patch };
     mkdirSync(dirname(this.file), { recursive: true });
     writeFileSync(this.file, JSON.stringify(this.data, null, 2));
+  }
+
+  /** The page saved before an update restart, once. */
+  takeResumeUrl(): string | undefined {
+    const url = this.data.resumeUrl;
+    if (url) this.save({ resumeUrl: undefined });
+    return url;
   }
 
   server(): string {

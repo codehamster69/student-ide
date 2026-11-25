@@ -33,7 +33,7 @@ server can refuse old shells (`STUDENTIDE_DESKTOP_MIN_VERSION`). Builds are not 
 |---|---|
 | Lock-down | Sandboxed renderer, context isolation, no Node, no `<webview>`. Navigation stays on the server origin; other links open in the system browser. Camera, microphone, screen, location and notification permissions are always refused. Devtools only in unpackaged builds or with `STUDENTIDE_DEVTOOLS=1`. |
 | Sign-in | Google mode: through the system browser (below). Dev mode: the roll number / admin token screens work in the window as is. |
-| Version gate | Before loading, `GET /api/desktop/config`; below `min_version` it shows an update page with `download_url`. Where the app can update itself it downloads the new version on that page and restarts into it. |
+| Version gate | Before loading and every 15 minutes, `GET /api/desktop/config`; below `min_version` it shows an update page with `download_url` (at a safe moment, see Updates). Where the app can update itself it downloads the new version on that page and restarts into it, on the page it was on. |
 | Updates | `modules/updates.ts` (below). |
 | Rename | The product was renamed from Scribelab to Scribelab (2026-11-24). A saved server of `https://studentide.hokora.xyz` is read as the new default `https://scribelab.hokora.xyz`, and the data folder keeps its old name (`Scribelab` under the OS app-data folder), so sign-in, settings and the unsent journal survive the update. Apps from before the rename keep working on the old address: the server's Caddy still serves the desktop user agent and `/api` there. |
 | Offline | A local page with retry when the server can't be reached; work is on the server. `app.online` events tell the web app when the network drops (the 5-minute reconnect buffer of plan 4.3 builds on this). |
@@ -83,7 +83,7 @@ Rules:
 | `engine` | installer (`desktop/installer`) | `status() -> {state, engine}`, `setup({silent?, images?}) -> EngineInfo` | `engine.progress {step, percent, message}` |
 | `sandbox` | sandbox (`desktop/sandbox`) | `setupCheck()`, `openLab(labId)`, `stop`, `reset`, `listFiles`, `readFile`, `writeFile`, `run` | `sandbox.event {sessionKey, type, data}`, `sandbox.progress` |
 | `terminal` | sandbox | `open(instanceId, {cwd, cols, rows}) -> {id}`, `write`, `resize`, `close` | `terminal.data {id, data}`, `terminal.exit {id, code}` |
-| `updates` | shell (`modules/updates.ts`) | `status() -> UpdateStatus`, `check()`, `restart()` | `updates.status UpdateStatus` |
+| `updates` | shell (`modules/updates.ts`) | `status() -> UpdateStatus`, `check()`, `restart()`, `setBusy(busy)`, `updateNow()` | `updates.status UpdateStatus` |
 
 All five are implemented: `engine` by `@studentide/installer` (docs/desktop-installer.md),
 `sandbox` and `terminal` by `@studentide/sandbox` (docs/sandbox-runtime.md). `updates` is optional
@@ -124,18 +124,40 @@ private, so the app never talks to GitHub: its updater (electron-updater, generi
 feed from the newest release and answers installer downloads with a 302 to GitHub's short-lived
 signed link, so 150 MB installers never pass through the VM.
 
+Updates are **mandatory** (Rohan, 2026-11-25: no student keeps using an old version). With the
+feed on, the server makes the newest release the minimum version (`VersionPolicy` in
+`backend/studentide/desktop.py`; `STUDENTIDE_DESKTOP_REQUIRE_LATEST=0` leaves only
+`STUDENTIDE_DESKTOP_MIN_VERSION`). If GitHub can't be reached the fixed minimum still holds, so a
+GitHub outage never locks students out.
+
 | Build | How it updates |
 |---|---|
-| Windows, installed (NSIS) | Downloads in the background, installs when the app closes or on "Restart now". No admin. |
+| Windows, installed (NSIS) | electron-updater: downloads in the background, installs silently and reopens. No admin. |
 | Linux AppImage | Same; the AppImage file is replaced. |
-| macOS dmg | `manual`: Squirrel.Mac only accepts signed apps, so the app shows the new version with a Download link until it is signed. |
-| Windows portable, Linux .deb | `manual`: download link (a portable exe has no installer; a .deb belongs to the package manager). |
+| macOS dmg | `modules/macupdate.ts`: Squirrel.Mac refuses unsigned apps, so the app downloads the new .dmg (checked against GitHub's SHA-256 for the asset), quits, and a detached shell mounts it, copies the app beside the old one, swaps them (the old one comes back if the swap fails) and opens it. Needs a bundle the account may replace; a copy run from the disk image or translocated, or in an Applications folder the account can't write, is `manual`. |
+| Windows portable, Linux .deb, Mac as above | `manual`: the update page blocks the app and offers the download link and why. |
 
-It never restarts on its own while you work: checks at start and every 4 h, the web app shows a quiet
-"ready, installs when you close the app" note outside editor sessions (`screens/DesktopUpdate.tsx`).
-The one exception is the version gate: the app can't be used then, so it restarts as soon as the
-download is done. Server setting: `STUDENTIDE_UPDATES_REPO` (+ `STUDENTIDE_UPDATES_TOKEN`, a read-only
-fine-grained token for that repository); unset = updates off and the app says so quietly.
+When it installs, so no work is lost:
+
+1. Checks at start and every 15 minutes; downloads quietly.
+2. Never while work is open: the web app reports an open lab, sitting or competition
+   (`updates.setBusy`, from the editor layer in `App.tsx`), the journal counts a recorded session as
+   open until it is closed (or 10 minutes without a batch), and events still waiting to upload (while
+   online) hold it too. A full page load clears the web app's flag; the web app says it again.
+3. At the first safe moment after that (no input for 2 minutes, the window hidden or in the
+   background, **Update now** on the card, or a 426 from the server) the app shows the update page,
+   installs and reopens on the page it was on. On quit the journal flushes (before-quit, up to 10 s)
+   and anything left stays on disk and goes up on the next start.
+4. While the update waits, the server lets the old version finish open work (events, runs, checks,
+   submissions) but answers `POST /api/sessions` and `POST /api/competitions/{id}/join` with
+   **426** `{"code": "desktop_update_required", "min_version"}`, and the web app calls
+   `updates.updateNow()`. Browsers are never gated.
+
+The web app's card (`screens/DesktopUpdate.tsx`, student home and staff areas, never in the editor)
+says "Update required" with **Update now** and can't be closed; a version that is ready but not yet
+required gets the old quiet note. Server setting: `STUDENTIDE_UPDATES_REPO` (+
+`STUDENTIDE_UPDATES_TOKEN`, a read-only fine-grained token for that repository); unset = updates off
+and the app says so quietly.
 
 ### Where students download it
 
@@ -159,6 +181,6 @@ npx electron . --server=http://127.0.0.1:8000     # against a local backend (dev
 npm run smoke                                     # Playwright drives the app against $BASE
 ```
 
-Server settings: `STUDENTIDE_DESKTOP_MIN_VERSION`, `STUDENTIDE_DESKTOP_DOWNLOAD_URL`, `STUDENTIDE_UPDATES_REPO`,
+Server settings: `STUDENTIDE_DESKTOP_MIN_VERSION`, `STUDENTIDE_DESKTOP_REQUIRE_LATEST`, `STUDENTIDE_DESKTOP_DOWNLOAD_URL`, `STUDENTIDE_UPDATES_REPO`,
 `STUDENTIDE_UPDATES_TOKEN` (see docs/deploy.md). `STUDENTIDE_UPDATES_DEV=1` lets an unpackaged build try
 the updater against a local server.

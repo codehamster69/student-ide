@@ -30,6 +30,25 @@ function keyStore(userData: string): KeyStore {
   };
 }
 
+/**
+ * What the updater needs to find a safe moment to restart (modules/updates.ts):
+ * which recorded sessions are still open and how many events wait for upload.
+ * A session counts as open from its first batch until the renderer closes it;
+ * one with no batch for OPEN_FOR_MS (left without closing) stops counting.
+ */
+const OPEN_FOR_MS = 10 * 60 * 1000;
+const lastBatch = new Map<string, number>();
+let current: Journal | undefined;
+export const journalActivity = {
+  openSessions(now = Date.now()): number {
+    let n = 0;
+    for (const [id, at] of lastBatch) { if (now - at < OPEN_FOR_MS) n++; else lastBatch.delete(id); }
+    return n;
+  },
+  pending(): number { return current?.state().pending ?? 0; },
+  online(): boolean { return current?.state().online ?? true; },
+};
+
 export const journalModule = (): DesktopModule => {
   let j: Journal | undefined;
   return {
@@ -46,10 +65,14 @@ export const journalModule = (): DesktopModule => {
           onState: (s) => ctx.emit("journal.state", s),
         });
         j.start();
+        current = j;
         return j;
       };
-      ctx.handle("journal.append", (sessionId: string, events: unknown[]) => get().append(String(sessionId), Array.isArray(events) ? events : []));
-      ctx.handle("journal.close", (sessionId: string) => get().close(String(sessionId)));
+      ctx.handle("journal.append", (sessionId: string, events: unknown[]) => {
+        lastBatch.set(String(sessionId), Date.now());
+        return get().append(String(sessionId), Array.isArray(events) ? events : []);
+      });
+      ctx.handle("journal.close", (sessionId: string) => { lastBatch.delete(String(sessionId)); return get().close(String(sessionId)); });
       ctx.handle("journal.state", () => get().state());
       // events left on disk from an earlier run (quit while offline, crash) go up straight away
       get();

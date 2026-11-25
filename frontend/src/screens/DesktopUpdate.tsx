@@ -1,6 +1,8 @@
-// A quiet note in the desktop app when a new version is ready (or, for Mac and
-// portable builds, ready to download). Never during an editor session: the
-// session layer hides it, so nothing interrupts a lab. Absent in browsers.
+// The desktop app's update card. Updates are mandatory (desktop/app/src/main/modules/updates.ts):
+// once the server needs a newer version the card can't be closed and "Update now"
+// takes the app to its update page; otherwise the app updates by itself when idle.
+// A plain note when a new version is merely ready. Never during an editor session:
+// the session layer hides it, so nothing interrupts a lab. Absent in browsers.
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Download, RefreshCw, X } from "lucide-react";
@@ -18,8 +20,10 @@ export function DesktopUpdate({ hidden }: { hidden: boolean }) {
     u.status().then(setSt, () => {});
     return desktop.on("updates.status", setSt);
   }, []);
-  const show = st && !hidden && closed !== st.latest &&
-    (st.state === "ready" || (st.mode === "manual" && st.state === "available" && st.downloadUrl));
+  const required = Boolean(st?.required);
+  const show = st && !hidden && (required || (closed !== st.latest &&
+    (st.state === "ready" || (st.mode === "manual" && st.state === "available" && st.downloadUrl))));
+  const updateNow = () => desktop?.updates?.updateNow?.().catch((e) => setErr(desktopError(e).message));
   return (
     <AnimatePresence>
       {show && (
@@ -29,21 +33,38 @@ export function DesktopUpdate({ hidden }: { hidden: boolean }) {
             {st.state === "ready" ? <RefreshCw className="size-3.5" /> : <Download className="size-3.5" />}
           </span>
           <div className="grid gap-1.5">
-            <p><strong className="font-semibold text-text">Scribelab {st.latest} is {st.state === "ready" ? "ready" : "out"}.</strong>{" "}
-              {st.state === "ready" ? "It installs by itself next time you close the app. Your work is saved either way." : st.reason}</p>
+            {required ? (
+              <p><strong className="font-semibold text-text">Update required.</strong>{" "}
+                Scribelab {st.minVersion ?? st.latest} is out and every copy needs it before new work starts.
+                {st.state === "downloading" ? ` Downloading… ${st.percent ?? 0}%.` : ""} Your work is saved either way.</p>
+            ) : (
+              <p><strong className="font-semibold text-text">Scribelab {st.latest} is {st.state === "ready" ? "ready" : "out"}.</strong>{" "}
+                {st.state === "ready" ? "It installs by itself when you're not in a lab. Your work is saved either way." : st.reason}</p>
+            )}
             {err && <p className="text-danger">{err}</p>}
             <div className="flex gap-2">
-              {st.state === "ready" ? (
+              {required ? (
+                <button className="h-7 rounded-full border border-transparent px-3 font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta" onClick={updateNow}>Update now</button>
+              ) : st.state === "ready" ? (
                 <button className="h-7 rounded-full border border-transparent px-3 font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta" onClick={() => desktop?.updates?.restart().catch((e) => setErr(desktopError(e).message))}>Restart now</button>
               ) : (
                 <button className="h-7 rounded-full border border-transparent px-3 font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta" onClick={() => desktop?.app.openExternal(st.downloadUrl!)}>Download</button>
               )}
-              <button className="h-7 rounded-full border border-transparent px-3 font-medium text-text transition-[border-color] hover:border-border-strong" onClick={() => setClosed(st.latest ?? "")}>Later</button>
+              {!required && <button className="h-7 rounded-full border border-transparent px-3 font-medium text-text transition-[border-color] hover:border-border-strong" onClick={() => setClosed(st.latest ?? "")}>Later</button>}
             </div>
           </div>
-          <button aria-label="Close" onClick={() => setClosed(st.latest ?? "")}><X className="size-3.5" /></button>
+          {!required && <button aria-label="Close" onClick={() => setClosed(st.latest ?? "")}><X className="size-3.5" /></button>}
         </motion.div>
       )}
     </AnimatePresence>
   );
+}
+
+/** Tells the desktop app a lab, sitting or competition is open, so a mandatory update waits for it. */
+export function DesktopBusy({ busy }: { busy: boolean }) {
+  useEffect(() => {
+    void desktop?.updates?.setBusy?.(busy).catch(() => {});
+  }, [busy]);
+  useEffect(() => () => { void desktop?.updates?.setBusy?.(false).catch(() => {}); }, []);
+  return null;
 }

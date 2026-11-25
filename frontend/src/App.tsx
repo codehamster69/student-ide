@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { DesktopUpdate } from "./screens/DesktopUpdate";
+import { DesktopBusy, DesktopUpdate } from "./screens/DesktopUpdate";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { ArrowLeft, Eye } from "lucide-react";
 import { setPreviewToken, type Lab, type LearnTrack, type Task } from "./api";
@@ -204,6 +204,7 @@ export function App() {
     : screen.name === "sandbox" ? `sandbox-${screen.labId}` : "shell";
   return (
     <MotionConfig reducedMotion="user">
+      <DesktopBusy busy={layer !== "shell"} />
       <AnimatePresence mode="wait">
         <motion.div key={layer} variants={page} initial="initial" animate="animate" exit="exit" className="h-full">
           {content}

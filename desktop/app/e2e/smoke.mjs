@@ -137,4 +137,46 @@ if (GBASE) {
   await app.close();
   console.log("google mode ok: browser sign-in handoff");
 }
+// -- 3. mandatory updates against a stub server: an open lab is never interrupted,
+// the update page takes over once nothing is open, and an outdated app is blocked at start
+{
+  const { createServer } = await import("node:http");
+  let min = null;
+  const srv = createServer((req, res) => {
+    if (req.url === "/api/desktop/config") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ min_version: min, download_url: "/api/desktop/download", updates: true }));
+    if (req.url.startsWith("/api/desktop/updates/latest")) return res.writeHead(200).end("version: 99.0.0\n");
+    res.writeHead(200, { "content-type": "text/html" }).end("<!doctype html><title>stub</title><p id=stub>web app</p>");
+  });
+  await new Promise((ok) => srv.listen(0, "127.0.0.1", ok));
+  const stub = `http://127.0.0.1:${srv.address().port}`;
+  process.env.STUDENTIDE_UPDATES_DEV = "1"; // let the updater run in a dev build (Linux, not an AppImage: "manual")
+  const app = await launch(stub);
+  const page = await app.firstWindow();
+  await page.waitForSelector("#stub");
+  const u = (f) => page.evaluate(f);
+  await u(() => window.studentDesktop.updates.setBusy(true)); // a lab is open
+  min = "99.0.0";
+  const st = await u(() => window.studentDesktop.updates.check());
+  assert.equal(st.required, true);
+  assert.equal(st.busy, true);
+  const refused = await u(() => window.studentDesktop.updates.updateNow().then(() => "", (e) => e.code));
+  assert.equal(refused, "update_busy");
+  assert.ok(await page.$("#stub"), "the open lab stays on screen");
+  await u(() => window.studentDesktop.updates.setBusy(false)); // lab closed
+  await u(() => window.studentDesktop.updates.updateNow());
+  await page.waitForSelector("text=Update Scribelab to continue");
+  assert.match(await page.textContent("#min"), /99\.0\.0/);
+  assert.match(await page.getAttribute("#dl", "href"), /\/api\/desktop\/download\?os=linux/);
+  assert.ok(await page.isVisible("#reason"), "a copy that can't update itself says why");
+  await shot(page, "desktop-06-update-required");
+  await app.close();
+
+  const again = await launch(stub); // outdated from the start: the update page, never the web app
+  const p2 = await again.firstWindow();
+  await p2.waitForSelector("text=Update Scribelab to continue");
+  await again.close();
+  srv.close();
+  delete process.env.STUDENTIDE_UPDATES_DEV;
+  console.log("mandatory updates ok: waits for open work, then blocks until updated");
+}
 console.log("desktop smoke passed");

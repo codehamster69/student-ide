@@ -20,7 +20,8 @@ every student endpoint acts only for the signed-in student:
     POST /api/auth/google               {credential}            -> account, sets the session cookie
     GET  /api/me                                   the signed-in account (401 if none)
     POST /api/auth/logout
-    GET  /api/desktop/config                       desktop app: min version, download link (desktop.py)
+    GET  /api/desktop/config                       desktop app: min version (newest release = mandatory), download link (desktop.py)
+                                                   outdated desktop apps get 426 on POST /api/sessions and competition join
     GET  /api/desktop/updates/{file}               auto-update feed from GitHub Releases (desktop_updates.py)
     GET  /api/desktop/download?os=&arch=           the newest installer (302 to a signed GitHub link)
     POST /api/auth/desktop/grant        {challenge}             browser -> one-time code for the desktop app
@@ -590,7 +591,9 @@ def create_app(db_path: str | Path | None = None, admin_token: str | None = None
 
     app.include_router(learn.router(db, auth, _student_id))
     releases = update_releases if update_releases is not None else desktop_updates.releases_from_env()
-    app.include_router(desktop.router(db, auth, me_json, updates=releases is not None))
+    desktop_policy = desktop.VersionPolicy(releases)
+    app.middleware("http")(desktop_policy.middleware())  # outdated desktop apps can't start new work (426)
+    app.include_router(desktop.router(db, auth, me_json, updates=releases is not None, policy=desktop_policy))
     app.include_router(desktop_updates.router(releases))
     attendance_router = attendance.router(db, require_admin, auth, attendance_transport)
     app.include_router(attendance_router)
