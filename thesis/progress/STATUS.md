@@ -105,8 +105,8 @@ entry 2026-11-25-02.
 | — | 8-12 | Write up RQ1 to RQ4 | ⬜ |
 
 Dropped on 2026-11-25: student survey, Phase 1 baseline labs, Phase 2 staged conditions A-E,
-Phase 3 mock remote interview (RQ3 is now transfer across devices). Teacher review of flags is
-future work: no teacher is asked for extra time (Rohan).
+Phase 3 mock remote interview (RQ3 is now transfer across devices). No separate teacher review:
+flags are discussed as part of normal teaching when they need to be (Rohan).
 
 ## Thesis groundwork
 
