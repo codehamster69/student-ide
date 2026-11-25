@@ -43,8 +43,8 @@ from .db import Database
 from .retention import stored_windows
 from .detector.detector import (CHANNELS, Baseline, channel_features, detect, feature_weights, pair_block_weights,
                                 population_prior)
-from .detector.features import (COMMENT_FEATURES, PAIR_PREFIX, add_pair_features, feature_group,
-                                pair_vocabulary, streams, window_features)
+from .detector.features import (COMMENT_FEATURES, PAIR_PREFIX, squash, add_pair_features, feature_group,
+                                finite_windows, fix_paste_frac, pair_vocabulary, streams, window_features)
 
 BASELINE_DAYS = 28.0
 MIN_BASELINE = 2  # sessions needed before anything is scored
@@ -112,6 +112,10 @@ class Settings:
     pairs: dict | None = None  # the frozen "pairs" spec, see harness.methods.ChannelMethod
     pair_vocab: list[str] = field(default_factory=list)  # fallback vocabulary (fitted on dev students)
     source: str = "built-in"
+    # pilot re-tune (brain 2026-11-25-06); both off in the frozen test config
+    min_baseline_windows: int = 0  # active typing windows (30 s) a baseline needs before anything is scored
+    device_baseline: bool = False  # compare with the student's sessions on the same device when there are enough
+    own_pastes: bool = True  # pastes of the student's own text from inside the IDE are not counted as pasting
 
     @property
     def pair_channel(self) -> str | None:
@@ -144,7 +148,9 @@ def load_settings(path: str | os.PathLike | None = None, h_override: str | None 
     k.update({ch: float(v) for ch, v in op.get("k", {}).items() if ch in chans})
     h = {ch: float(op.get("h", {}).get(ch, 10.0)) for ch in chans}
     h = parse_h(h_override if h_override is not None else os.environ.get("STUDENTIDE_H"), h)
-    return Settings(chans, W, k, h, wt, float(th.get("prior_n", 0.0)), pairs, list(op.get("pair_vocab", [])), source)
+    return Settings(chans, W, k, h, wt, float(th.get("prior_n", 0.0)), pairs, list(op.get("pair_vocab", [])), source,
+                    int(th.get("min_baseline_windows", 0)), bool(th.get("device_baseline", False)),
+                    bool(th.get("own_pastes", True)))
 
 
 def parse_h(raw: str | None, default: dict[str, float] | None = None) -> dict[str, float]:
@@ -155,6 +161,22 @@ def parse_h(raw: str | None, default: dict[str, float] | None = None) -> dict[st
             if k.strip() in h:
                 h[k.strip()] = float(v)
     return h
+
+
+def _device(session: dict) -> str:
+    """The machine a session ran on (pilot.device_fingerprint): rhythm moves with the keyboard."""
+    from .pilot import device_fingerprint
+    return device_fingerprint(json.loads(session.get("client_meta") or "{}"))
+
+
+def _strings(o) -> list[str]:
+    if isinstance(o, str):
+        return [o]
+    if isinstance(o, dict):
+        return [x for v in o.values() for x in _strings(v)]
+    if isinstance(o, list):
+        return [x for v in o for x in _strings(v)]
+    return []
 
 
 def _num(v) -> float | None:
@@ -255,12 +277,41 @@ class Reviewer:
     def _compute_windows(self, session: dict, W: float, now: float) -> list[dict]:
         sid, n = session["id"], session["n_events"]
         w = stored_windows(self.db, sid, W) if session.get("keys_purged_at") else None
-        if w is None:  # still has its raw keys (or a window length nobody stored before the purge)
+        stored = w is not None
+        if not stored:  # still has its raw keys (or a window length nobody stored before the purge)
             events = list(self.db.iter_events(sid))
-            w = window_features(streams(events), W) if events else []
+            w = window_features(streams(events, self.known_text(session), self.settings.own_pastes), W) if events else []
+        else:
+            w = finite_windows(w)
+        if stored and self.settings.own_pastes and any("paste_frac" in x for x in w):
+            # stored before pastes from inside the IDE were told apart: redo that one feature from
+            # the edits, which the purge keeps
+            w = fix_paste_frac(w, list(self.db.iter_events(sid, ("edit", "clipboard", "snapshot"))),
+                               self.known_text(session))
         with self._lock:
             self._windows[(sid, W)] = (n, w, now)
         return w
+
+    def known_text(self, session: dict) -> tuple[str, ...]:
+        """Text the student had inside the IDE apart from this session's own: the
+        question statement, and whatever they copied or cut in their other
+        sessions that day (another question of the same sitting). A paste of
+        it is not copying from outside (features.internal_paste)."""
+        out = []
+        if session.get("question_json"):
+            q = json.loads(session["question_json"])
+            out += [squash(v) for v in _strings(q) if len(v) >= 8]
+        day = session["started_at"] - 12 * 3600
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                "SELECT e.data FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.student_id = ? "
+                "AND s.id != ? AND s.started_at BETWEEN ? AND ? AND e.type = 'clipboard'",
+                (session["student_id"], session["id"], day, session["started_at"] + 12 * 3600)).fetchall()
+        for (data,) in rows:
+            d = json.loads(data)
+            if d.get("action") in ("copy", "cut") and d.get("text"):
+                out.append(squash(d["text"]))
+        return tuple(out)
 
     def channel_windows(self, session: dict, ch: str, pop: _Population) -> list[dict]:
         w = self.windows(session, self.settings.window_s[ch])
@@ -270,7 +321,7 @@ class Reviewer:
         return w
 
     def baseline_ids(self, student_sessions: list[dict], context: str = "lab", lab_id: str | None = None,
-                     language: str | None = None) -> list[str]:
+                     language: str | None = None, device: str | None = None, exclude: str | None = None) -> list[str]:
         """Lab context: the student's lab sessions in the first BASELINE_DAYS
         after their first one. Competition context: the student's sessions
         from their *other* competitions (leave one competition out), so a
@@ -282,6 +333,11 @@ class Reviewer:
         competition sessions in the same `language` once there are
         MIN_BASELINE of them, and with all of them until then."""
         mine = [s for s in student_sessions if s.get("context", "lab") == context and s["n_events"] > 0]
+        if device is not None:
+            # rhythm moves with the keyboard: same device when it has enough sessions of its own
+            same_dev = [s for s in mine if _device(s) == device]
+            if len([s for s in same_dev if s["id"] != exclude]) >= MIN_BASELINE:
+                mine = same_dev
         if context == "competition":
             others = [s for s in sorted(mine, key=lambda s: s["started_at"]) if s["lab_id"] != lab_id]
             same = [s for s in others if language and s.get("language") == language]
@@ -372,21 +428,28 @@ class Reviewer:
         if session_id not in by_id:
             raise KeyError(session_id)
         s = by_id[session_id]
+        st = self.settings
         mine = [x for x in sessions if x["student_id"] == s["student_id"]]
         context = s["context"]
         base_all = self.baseline_ids(mine, context, s["lab_id"], s.get("language"))
         in_baseline = context == "lab" and session_id in base_all
+        if self.settings.device_baseline:
+            base_all = self.baseline_ids(mine, context, s["lab_id"], s.get("language"),
+                                         _device(s), session_id)
         base_ids = [i for i in base_all if i != session_id]
+        base_typing = sum(sum(w["active"] for w in self.windows(by_id[i])) for i in base_ids)
+        ready = len(base_ids) >= MIN_BASELINE and base_typing >= st.min_baseline_windows
         wins = self.windows(s)
-        st = self.settings
         duration_s = max([wins[-1]["end"] if wins else 0.0] +
                          [self.windows(s, W)[-1]["end"] for W in set(st.window_s.values()) if self.windows(s, W)])
 
         out: dict = {
             "session": _session_json(s, duration_s, in_baseline),
             "window_s": self.window_s,
-            "baseline": {"status": "ready" if len(base_ids) >= MIN_BASELINE else "insufficient",
+            "baseline": {"status": "ready" if ready else "insufficient",
                          "n_sessions": len(base_ids), "needed": MIN_BASELINE, "session_ids": base_ids,
+                         "typing_min": round(base_typing * self.window_s / 60, 1),
+                         "typing_min_needed": round(st.min_baseline_windows * self.window_s / 60, 1),
                          "days": BASELINE_DAYS, "context": context, "language": s.get("language"),
                          # competition baselines are per language once there are enough (see baseline_ids)
                          "same_language": all(by_id[i].get("language") == s.get("language") for i in base_ids)},

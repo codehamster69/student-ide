@@ -177,6 +177,77 @@ no parameter was fitted on it. Test-split sessions also feed class-level pieces 
 live review (feature weights, key-pair vocabulary); the frozen evaluation configuration
 fits those on dev students only.
 
+\section{Re-tuning on development data}
+\label{sec:retune}
+The detector was re-tuned on the dev split only (\texttt{studentide.pilot\_tune}): 876
+sessions of 207 students, of which 332 had a ready baseline and some typing, for only
+10.7 active typing hours. Each variant was scored next to the database, and only
+per-window standardised scores under fresh pseudonyms left the server.
+\Cref{tab:pilot-retune} and \cref{fig:pilot-retune} give the episodes per active hour at
+the frozen thresholds.
+
+\begin{table}[ht]
+  \centering
+  \caption{Detector episodes per active typing hour on dev pilot sessions, frozen $h$.
+    No takeover is known, so every episode counts toward the false-alarm upper bound.}
+  \label{tab:pilot-retune}
+  \small
+  \input{tables/pilot-retune}
+\end{table}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth]{pilot-retune}
+  \caption{Where the pilot flags came from, by channel, as each change is added (dev).}
+  \label{fig:pilot-retune}
+\end{figure}
+
+Four findings shaped the configuration. First, 84\% of pastes (434 of 518) were the
+student's own text moved inside the IDE. Such a paste no longer counts as pasting. A paste
+counts as the student's own when its text was copied in the editor before, already stands
+in the document or comes from the question. Second, build order follows the question more
+than the person. Dropping it halves the process channel (3.8 to 2.1 per hour), and on
+synthetic data it costs little (matched takeovers 75\% to 72\%, copying 78\% to 95\%).
+Third, the standardised score of honest work averages 1.2--1.6 instead of 0 on every
+channel. This is day-to-day drift that a few short baseline sessions never show, and with
+$k=0.5$ it climbs into an alarm within minutes. Raising $k$ to 2 absorbs that drift and
+brings the rate to 0.28 per hour, the synthetic level. Recalibrating $h$ at the old $k$
+would need thresholds three to six times larger, fitted on two or three episodes, and it
+would slow every alarm. Fourth, sessions with an outside paste do not flag more often than
+others, so copying is reported as its own signal (outside pastes, blocked pastes) rather
+than through the process channel. A minimum of 10 minutes of baseline typing reduces the
+drift (identity 1.27 to 0.76) but leaves a quarter of the sessions scorable. Same-device
+baselines changed nothing measurable yet. Both stay available, but they are off.
+
+\paragraph{What quiet costs.} Measured on dev takeovers spliced from real sessions
+(\cref{sec:splicing}), the quiet configuration fails: with $k=2$ only 11\% of 45 splices
+are caught, against 64\% for the frozen configuration (\cref{tab:retune-splice}). Every
+step between the two trades false alarms for missed takeovers, and build order, which looked
+like noise from flag rates alone, carries part of the splice detection. The frozen
+configuration therefore stays live; the pilot fixes (own pastes, the 1\,ms floor) apply to
+every configuration.
+
+\begin{table}[ht]
+  \centering
+  \caption{False alarms against spliced takeovers on dev pilot data (90 honest sessions,
+    27.7 active hours, 45 splices; earliest 10 active minutes as baseline; 95\% student-bootstrap
+    intervals).}
+  \label{tab:retune-splice}
+  \small
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Configuration & False alarms/h & Takeovers caught & Median delay \\
+    \midrule
+    Frozen (build order; $k$ 1/0.5/0.5) & 1.59 [1.12, 2.06] & 64\% [49, 78] & 450\,s \\
+    Build order, $k=1$ & 0.87 [0.54, 1.21] & 49\% [33, 64] & 450\,s \\
+    No build order, frozen $k$ & 1.15 [0.78, 1.50] & 51\% [36, 65] & 450\,s \\
+    No build order, $k=1$ & 0.58 [0.34, 0.80] & 40\% [26, 55] & 585\,s \\
+    No build order, $k=1.5$ & 0.07 [0, 0.19] & 27\% [13, 40] & 660\,s \\
+    No build order, $k=2$ & 0.04 [0, 0.12] & 11\% [3, 20] & 1140\,s \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \section{Evaluation protocol}
 \label{sec:protocol}
 All research questions are answered by one evaluation harness

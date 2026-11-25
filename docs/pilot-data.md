@@ -57,3 +57,27 @@ started_at)`, applied to the real id inside the container before pseudonymising.
 1,118 sessions (281 students) from 27 Oct to 23 Nov: 443 lab, 590 competition, 50 practice,
 35 learning lab; 608 C and 456 Python; all web, no desktop app. See the brain entry
 `thesis/brain/entries/2026-11-25-01-pilot-data-first-look.md` for the numbers and what they changed.
+
+## Re-tuning on dev (2026-11-25)
+
+`backend/studentide/pilot_tune.py` scores detector variants on **dev sessions only** and
+writes per-window standardised scores (no keys, code, names or ids; fresh-salt pseudonyms):
+
+```bash
+# on the VM, inside the app container (about 1.5 h on the pilot VM at low priority)
+python -m studentide.pilot_tune --db /data/studentide.sqlite3 --out /tmp/tune.json
+# anywhere: CUSUM per variant, h calibration (half the students vs the other half), thesis outputs
+python -m studentide.pilot_tune --summary tune.json [--target 0.2] [--thesis ../thesis/latex]
+```
+
+Variants are cumulative: `frozen` (as live), `fixes` (own pastes don't count, 0 ms floor),
+`no_build`, `min_base` (10 min baseline typing), `device` (same-device baselines), plus
+`keep_build`. The summary also reports the proposal (`no_build` with k = 2) and each
+channel's drift (mean standardised score; 0 when the baseline saw the variation).
+
+Result (brain `2026-11-25-06-pilot-retune.md`): 6.81 → 0.28 episodes per active hour on
+332 scored dev sessions (10.7 h) with k = 2 and no build order. The splice check (brain
+`2026-11-25-07-retune-splice-check.md`, `harness compare --classroom`) rejected it: takeovers
+caught 64% → 11%. Every quieter setting misses more takeovers (table in thesis ch 6), so
+the live review keeps the frozen config; `pilot-dev-config.json` stays for the record.
+

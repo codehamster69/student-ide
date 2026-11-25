@@ -99,7 +99,7 @@ entry 2026-11-25-02.
 | Recording | 2-6 | Every lab and competition recorded on the live editor, lab PCs and own laptops; 1,118 sessions by 23 Nov | 🟧 |
 | Recording | 2-6 | Blocked outside pastes logged as a copying sign (paste guard) | 🟧 (#62) |
 | Design on dev | 3-7 | Spliced takeovers; split by student (30 %) and by week (from 24 Nov) | ✅ (#63) |
-| Design on dev | 3-7 | Detector re-tune on the dev split of pilot data | 🟧 |
+| Design on dev | 3-7 | Detector re-tune on the dev split of pilot data: #64 fixes + trade-off curve; k = 2 rejected on splices (64% → 11% caught), frozen config kept | 🟧 |
 | Design on dev | 3-7 | Baseline length and device-aware baselines chosen on dev | ⬜ |
 | Held-out test | 8 | Score the test split once; RQ1 to RQ4 | ⬜ |
 | — | 8-12 | Write up RQ1 to RQ4 | ⬜ |

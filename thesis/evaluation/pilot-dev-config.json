@@ -1,0 +1,193 @@
+{
+ "created": "2026-11-25",
+ "corpus": {
+  "source": "synthetic:synth-v1-n120-s2026-b8-m30",
+  "students": 120,
+  "fingerprint": "f4cd7f5ee7179c97",
+  "typists": 120,
+  "seed": 2026,
+  "n_base": 8,
+  "minutes": 30
+ },
+ "split": {
+  "test_frac": 0.3,
+  "dev": 84,
+  "test": 36
+ },
+ "target_fa_per_h": 0.2,
+ "calibration_source": "pooled",
+ "n_base": 4,
+ "methods": {
+  "thesis": {
+   "kind": "thesis",
+   "process_w": 90,
+   "prior_n": 2.0,
+   "pairs": {
+    "normalise": true,
+    "min_count": 1,
+    "channel": "pairs",
+    "k": 0.5,
+    "n": 80
+   },
+   "features": [
+    "dg_median",
+    "dg_lscale",
+    "hold_median",
+    "dg_alt_hand",
+    "dg_same_hand",
+    "dg_to_space",
+    "dg_from_space",
+    "dg_shifted",
+    "pause_per_100",
+    "pause_median",
+    "del_per_100",
+    "del_burst",
+    "run_rate",
+    "focus_out_rate",
+    "paste_frac"
+   ],
+   "own_pastes": true
+  },
+  "sm": {
+   "kind": "sm",
+   "window_s": 30,
+   "k": 0.25,
+   "rule": "cusum"
+  },
+  "typenet": {
+   "kind": "typenet",
+   "window_s": 30,
+   "steps": 1500,
+   "k": 0.25,
+   "rule": "cusum"
+  },
+  "nosi": {
+   "kind": "nosi",
+   "window_s": 30,
+   "k": 0.5,
+   "rule": "cusum"
+  }
+ },
+ "calibration_error": {
+  "holdout": 0.6127411391657284,
+  "self": 0.38874310166812026,
+  "pooled": 0.23834890289104
+ },
+ "operating_point": {
+  "h": {
+   "identity": 24.0,
+   "process": 8.75,
+   "pairs": 11.25
+  },
+  "k": {
+   "identity": 2.0,
+   "process": 2.0,
+   "pairs": 2.0
+  },
+  "window_s": {
+   "identity": 30,
+   "process": 90,
+   "pairs": 30
+  },
+  "pair_vocab": [
+   "Tab>Tab",
+   "Equal>Space",
+   "KeyI>KeyN",
+   "Comma>Space",
+   "Space>Equal",
+   "Enter>Tab",
+   "KeyN>Space",
+   "Space>KeyI",
+   "Semicolon>Enter",
+   "KeyT>Digit9",
+   "Digit0>Enter",
+   "KeyO>KeyR",
+   "KeyN>KeyT",
+   "KeyF>Space",
+   "KeyR>KeyI",
+   "Digit0>Semicolon",
+   "KeyR>Space",
+   "Digit9>Digit0",
+   "Digit0>Digit0",
+   "KeyE>KeyM",
+   "KeyE>KeyN",
+   "KeyF>KeyO",
+   "KeyT>KeyU",
+   "KeyA>KeyN",
+   "KeyG>KeyE",
+   "KeyS>KeyE",
+   "KeyE>KeyT",
+   "KeyI>KeyF",
+   "KeyD>KeyE",
+   "KeyM>KeyE",
+   "Enter>Enter",
+   "Tab>KeyI",
+   "KeyP>KeyR",
+   "KeyA>KeyL",
+   "KeyR>KeyE",
+   "KeyR>KeyA",
+   "Space>KeyF",
+   "KeyS>KeyT",
+   "Space>KeyS",
+   "Tab>KeyR",
+   "Space>KeyM",
+   "KeyS>Space",
+   "BracketRight>Enter",
+   "Space>BracketLeft",
+   "Space>KeyN",
+   "KeyL>KeyE",
+   "KeyR>KeyN",
+   "KeyU>KeyR",
+   "KeyE>Digit9",
+   "Space>KeyR",
+   "Digit0>Space",
+   "Space>Digit1",
+   "KeyI>KeyT",
+   "KeyE>KeyS",
+   "KeyE>KeyL",
+   "KeyS>Digit0",
+   "KeyI>KeyD",
+   "KeyN>KeyG",
+   "Space>Minus",
+   "KeyM>KeyO",
+   "KeyT>KeyA",
+   "KeyT>KeyE",
+   "KeyU>KeyE",
+   "KeyE>KeyR",
+   "KeyN>Digit9",
+   "KeyU>KeyT",
+   "KeyE>KeyF",
+   "KeyI>Space",
+   "Digit0>Comma",
+   "KeyP>KeyU",
+   "Digit9>KeyN",
+   "Space>Digit0",
+   "KeyC>KeyO",
+   "KeyO>KeyU",
+   "KeyD>Digit9",
+   "KeyL>KeyI",
+   "Equal>Equal",
+   "Space>KeyB",
+   "Space>KeyC",
+   "KeyS>BracketLeft"
+  ]
+ },
+ "pilot_retune": {
+  "what": "development re-tune on pilot classroom data (brain 2026-11-25-02); NOT the frozen test config",
+  "split": "harness.split.pilot_split dev: dev-hash students, sessions before 2026-11-24 00:00 IST",
+  "dev_sessions": 876,
+  "dev_students": 207,
+  "scored_sessions": 332,
+  "active_hours": 10.7,
+  "episodes_per_h_before": 6.81,
+  "episodes_per_h_after": 0.28,
+  "changes": [
+   "pastes of own text from inside the IDE do not count (own_pastes)",
+   "0 ms latencies floored at 1 ms",
+   "build order (fill_in_frac, open_blocks) left out of process",
+   "CUSUM k = 2 on every channel (absorbs day-to-day drift: mean honest score 1.2-1.4, not 0)",
+   "h kept: recalibrating on 10.7 active hours is too noisy (in-sample 0, other half 0.57/h)"
+  ],
+  "status": "rejected 2026-11-25 on dev splices: takeovers caught 64% -> 11% (brain 2026-11-25-07); kept for the record"
+ }
+}
