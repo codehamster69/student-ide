@@ -1,3 +1,65 @@
 \chapter{Event Schema}
 \label{app:schema}
-\todo{Full schema of logged events, generated from the editor's code.}
+
+This appendix lists everything the editor records. The source of truth is
+\nolinkurl{backend/studentide/schema.py}, which the server uses to validate every
+uploaded event; \cref{tab:event-schema} is generated from it by
+\nolinkurl{backend/scripts/build_schema_appendix.py}, and a test fails if the two
+drift apart. A prose version for developers is \nolinkurl{docs/event-schema.md}.
+
+\section{Envelope and storage}
+A session's events are uploaded in batches that name their schema version. Each
+event has the same envelope:
+\begin{description}[nosep,font=\ttfamily\mdseries]
+  \item[seq] a per-session counter from 0, assigned in the browser. Uploads are
+  retried until acknowledged and the server ignores a repeated \texttt{seq}, so
+  no event is stored twice; a gap means a lost event.
+  \item[t] milliseconds since the session started, from the browser's monotonic
+  event clock. Timing features use this, never server time. Sort by
+  \texttt{seq} for causal order and by \texttt{t} for timing.
+  \item[type] one of the types in \cref{tab:event-schema}.
+  \item[data] the payload for that type, validated against its model; unknown
+  fields are refused.
+\end{description}
+
+Events are stored in SQLite in an \texttt{events} table keyed by
+\texttt{(session\_id, seq)}. A \texttt{sessions} row holds the student, the
+lab and question (with a copy of the question as the student saw it,
+including its language), the sitting identifier, the context that marks non-study sessions
+(\texttt{learn}, \texttt{preview}; \cref{sec:non-study}), client metadata
+(browser or desktop app version, platform, screen) and, once raw keys are
+deleted, the time they were purged. A \texttt{runs} table holds each run's full
+code, input, output and error type, and \texttt{session\_windows} holds the
+window summaries that replace raw keys (\cref{sec:privacy}).
+
+\section{Versions}
+Every version is additive: a batch valid under an older version is valid under
+every newer one, so recordings from the first pilot day are still read by the
+current code.
+\begin{description}[nosep]
+  \item[v1] the browser editor: \texttt{key}, \texttt{edit},
+  \texttt{clipboard}, \texttt{cursor}, \texttt{run}, \texttt{snapshot},
+  \texttt{focus}, \texttt{session\_start}, \texttt{session\_end}.
+  \item[v2] the desktop app's Sandbox Labs: where a key was typed (editor,
+  terminal, an editor inside the terminal), the file of a multi-file workspace,
+  runs typed in the terminal, and terminal commands, output, pastes, package
+  installs and the hosts a lab connected to. Only editor keys feed the
+  detector.
+  \item[v3] files changed outside the editor and ports opened in a Sandbox Lab;
+  the desktop app also signs its batches and chains them by hash, so a
+  rewritten or missing batch shows as a record break in the review.
+  \item[v4] the paste guard (\cref{sec:paste-guard}): a paste or drop records
+  where its text came from (\texttt{editor}, \texttt{page}, \texttt{document} or
+  \texttt{external}) and whether it was blocked; allowed in-IDE pastes are edits
+  with origin \texttt{input.paste.internal}.
+\end{description}
+None of the v2 and v3 Sandbox Lab events is read by the detector evaluated in
+this thesis; they feed the review's evidence lanes only.
+
+\section{Payloads}
+\input{tables/event-schema}
+
+\paragraph{Not an event.} The staff-only note of how a conversation went
+(\cref{sec:review-timeline}) is stored in its own table, keyed by session,
+channel and the moment's estimated start. It is never part of a session's event
+stream, never read by the detector, and no student endpoint returns it.

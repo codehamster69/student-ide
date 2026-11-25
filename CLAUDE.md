@@ -55,7 +55,7 @@ No linter is configured; `tsc --noEmit` (part of `npm run build`) is the fronten
 - Routes: teacher-area hash URLs come only from `frontend/src/routes.ts` (`#/<area>/<collection>/<id>/<view>`);
   keep old links working by rewriting them there.
 - Event schema lives in `backend/studentide/schema.py`; bump `SCHEMA_VERSION` on any payload change
-  and update `docs/event-schema.md`.
+  and update `docs/event-schema.md` (+ rerun `backend/scripts/build_schema_appendix.py` for the thesis).
 - Every module opens with a docstring saying what it is for; keep that.
 - UI uses semantic tokens (`bg-surface`, `text-muted`…) from `frontend/src/ui/tokens.css`, never raw colours,
   so light and dark both work. Pages follow the recipe in `frontend/src/ui/README.md` (`Page`, `PageHeader`, `EmptyState`).

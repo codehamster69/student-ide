@@ -1,856 +1,338 @@
-\chapter{The Student IDE}
+\chapter{The Recording Editor}
 \label{ch:system}
 
+This chapter describes the parts of Scribelab (the Student IDE) that the method
+depends on: what the editor records and how precisely
+(\cref{sec:logging}), how a session is tied to a question and how pastes are
+handled (\cref{sec:sessions,sec:paste-guard}), what students agree to and how
+the data is kept and deleted (\cref{sec:privacy}), where it runs
+(\cref{sec:deployment}), and the review timeline through which a teacher sees
+the detector's output (\cref{sec:review-timeline}). The teaching features built
+around it so that the tool is used in ordinary classes (labs, competitions, a
+learning lab, a live class view, attendance) are summarised in
+\cref{app:features}; they matter to this thesis only through the data
+exclusions listed in \cref{sec:non-study}.
+
 \section{Architecture}
+\label{sec:architecture}
+\Cref{fig:pipeline} shows the pipeline. A browser editor (React and
+CodeMirror~6) records events and uploads them to a FastAPI server, which stores
+them in SQLite, cuts them into windows, compares each window with the student's
+own baseline and runs the change-point detector of \cref{ch:detector}. The
+review timeline reads the same stored events and detector output. A desktop
+app (Electron) wraps the same editor and recorder for students who prefer it;
+its sessions are recorded by the same capture code, and updates are mandatory,
+so timing differences between students cannot come from app versions.
+
 \begin{figure}[ht]
   \centering
   \tikzfig{pipeline}
-  \caption{The Student IDE pipeline. Parts 3--5 are the novel contribution.}
+  \caption{The Scribelab pipeline. Parts 3--5 are the novel contribution.}
   \label{fig:pipeline}
 \end{figure}
 
-\section{Event logging editor}
-\todo{What is logged (key down/up, paste, edit, cursor, run, error,
-snapshot), timing precision, tech stack and why. Screenshot in
-\texttt{snapshots/}. Feeds from brain entries tagged 04-system-design.}
+\section{What the editor records}
+\label{sec:logging}
+Each session is one stream of events, each with a per-session sequence number
+assigned in the browser and a time $t$ in milliseconds since the session
+started. The editor records:
+\begin{itemize}[nosep]
+  \item \textbf{key}: every physical key press and release inside the editor,
+  with the layout-independent key code, a key class (letter, digit, space,
+  punctuation, backspace, navigation, modifier\ldots) and the modifier state.
+  The typed character is not stored with the key; the edit stream has the text.
+  \item \textbf{edit}: each change to the document, with its origin (typing,
+  paste, drop, autocomplete, deletion, undo, redo, indent, reset) and the
+  changed ranges, so that the code at any instant can be rebuilt.
+  \item \textbf{clipboard}: copy, cut, paste and drop, with the text and, for a
+  paste, where it came from (\cref{sec:paste-guard}).
+  \item \textbf{run}: each program run, with its exit code, duration and error
+  type; the full code, input and output are kept in a separate table.
+  \item \textbf{focus}: the student leaving or returning to the editor, the
+  window or the tab, and moving between questions of a lab.
+  \item \textbf{cursor} moves that are not edits (at most one per
+  \SI{100}{\milli\second}), \textbf{snapshots} of the full text (at the start,
+  every \SI{30}{\second} if changed, before each run and at the end), and the
+  session's start and end.
+\end{itemize}
+The full schema, including the additive versions added for the desktop app,
+is in \cref{app:schema}.
 
-\subsection{Student interface}
-The student-facing screens (sign-in, consent, task picker, editor, run
-output) were redesigned once the logger worked
-(\cref{fig:ui-before-after}). The interface is React with Tailwind CSS
-and the Motion animation library, on top of a small shared design system
-(colour tokens with light and dark themes, motion presets and UI
-primitives) that the teacher timeline will reuse.
+\paragraph{Timing precision.} Key times come from the browser's own
+timestamp on each keyboard event, taken on the same monotonic clock as
+\texttt{performance.now()} and rounded to a microsecond, and not from when the
+handler runs, so a busy page delays the handler but not the recorded time.
+Browsers coarsen this clock for privacy, by
+browser and setting from about \SI{0.1}{\milli\second} to
+\SI{1}{\milli\second}, which is still well under the tens of milliseconds that
+separate typists; the detector floors intervals at \SI{1}{\milli\second} for
+the same reason. Events are uploaded every two seconds and retried until acknowledged;
+the server ignores a repeated sequence number, so no event is stored twice and
+a gap in the sequence shows a lost event.
 
-Motion is deliberately kept away from timing capture. The CodeMirror
-editor is created once and never re-rendered, so a keystroke causes no
-interface work beyond CodeMirror's own; animations run only on discrete
-actions (a run finishing, the finish dialog) and touch only opacity and
-transform so the browser can composite them off the main thread; and key
-times are taken from the browser event timestamp, not from when a handler
-runs. The end-to-end test confirms the event stream is unchanged
-(214 events of the same types before and after) and asserts that no main
-thread task longer than \SI{50}{\milli\second} overlaps the typing window.
-The consent text is unchanged; the motion respects the operating system's
-reduced-motion setting.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.48\textwidth}
-    \includegraphics[width=\linewidth]{ui-redesign/before-04-editor}
-    \caption{Phase 1 editor}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.48\textwidth}
-    \includegraphics[width=\linewidth]{ui-redesign/after-light-05-run-output}
-    \caption{Redesigned editor after a run}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.48\textwidth}
-    \includegraphics[width=\linewidth]{ui-redesign/after-light-01-login}
-    \caption{Sign-in with the keystroke-rhythm illustration}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.48\textwidth}
-    \includegraphics[width=\linewidth]{ui-redesign/after-light-02-consent}
-    \caption{Consent notice}
-  \end{subfigure}
-  \caption{Student interface before and after the redesign. All screens,
-  in light and dark themes, are in \texttt{snapshots/ui-redesign/}.}
-  \label{fig:ui-before-after}
-\end{figure}
-
-\subsection{Second redesign: navigation, consistency and guides}
-By November 2026 the tool had grown from one editor into labs, competitions,
-a learning lab, a live class view, the review timeline, Sandbox Labs and
-attendance, each added with its own page layout. A second redesign
-(November 2026, five stacked pull requests) made it one coherent product
-without changing what it records. The teacher area moved from a row of top
-tabs to a sectioned sidebar (authoring, in class, workspace) with
-breadcrumbs and a \emph{Ctrl+K} jump list over pages, labs, subjects and
-guide pages (\cref{fig:ui-redesign-2}); signed-in students get an app bar
-with their labs, the learning lab and a guide. Every page follows one recipe
-(page header with its main action, divided lists, empty states that say what
-to do first), documented in \texttt{frontend/src/ui/README.md}. The brand
-mark became the typing-rhythm bars that the review replay draws, the one
-visual signature kept on purpose.
-
-In-app guides for students and teachers were added as Markdown files,
-rendered without HTML, with search, links between pages and a \emph{Help}
-button on each teacher page that opens the matching guide; the same guides
-are public at \texttt{\#/help} and open from the desktop app's Help menu.
-The same safeguards as the first redesign apply: no animation per keystroke,
-the editor is untouched, and the end-to-end recording test still reports no
-main-thread task over \SI{50}{\milli\second} while typing. Consent wording
-did not change.
-
-Desktop app updates are mandatory: the server treats the newest release as
-the oldest version it accepts, so every desktop session is recorded by the
-same capture code and timing differences between students cannot come from
-app versions. An update never interrupts recorded work. The app installs at
-the first safe moment (no lab open and the event journal uploaded); until
-then an outdated app may finish what it has open but cannot start a new
-session. The unsigned macOS build replaces its own bundle, because the
-standard macOS updater refuses unsigned apps.
+\paragraph{Keeping capture undisturbed.} The interface (\cref{fig:editor}) is
+kept away from timing capture. The editor is created once and never
+re-rendered, so a keystroke causes no interface work beyond CodeMirror's own;
+animations run only on discrete actions (a run finishing, the finish dialog)
+and never inside the editor. An end-to-end test types into the editor and
+asserts that the event stream is complete and that no main-thread task longer
+than \SI{50}{\milli\second} overlaps the typing; it was rerun after each
+redesign of the interface.
 
 \begin{figure}[ht]
   \centering
-  \begin{subfigure}{0.48\textwidth}
-    \includegraphics[width=\linewidth]{redesign/before/tour-light-13-teach-labs}
-    \caption{Teacher labs, before}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{redesign/after/part2-02-student-consent}
+    \caption{Consent screen shown before anything is recorded.}
   \end{subfigure}\hfill
-  \begin{subfigure}{0.48\textwidth}
-    \includegraphics[width=\linewidth]{redesign/after/part1-13-teach-labs}
-    \caption{Teacher labs, sidebar navigation}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[width=\linewidth]{redesign/acid-night/light-10-student-workspace}
+    \caption{A lab sitting: question tabs, editor, input and output.}
   \end{subfigure}
-  \caption{Second redesign of the teacher area. Every screen before and after
-  is in \texttt{snapshots/redesign/}.}
-  \label{fig:ui-redesign-2}
+  \caption{The student side of Scribelab. The consent text in force is
+  reproduced in full in \cref{app:consent}; more screens are in
+  \cref{app:features}.}
+  \label{fig:editor}
 \end{figure}
 
-\section{Event schema and storage}
-\todo{Summary here, full schema in \cref{app:schema}.}
+\section{Sessions, questions and sittings}
+\label{sec:sessions}
+A session is one student answering one question in one language. Each session
+stores the lab and question it answers and a copy of the question as the
+student saw it, so a prompt corrected halfway through a lab does not change
+what an older recording was answering. This is what makes the evaluation
+possible: because every session names its question, two students' sessions on
+the same question can be spliced into a realistic takeover
+(\cref{sec:splicing}), and a student's rhythm in one language is not compared
+with their rhythm in another.
 
-\subsection{Pastes from outside the IDE}
+A lab is opened as one \emph{sitting}, with every question as a tab in the
+same editor. Underneath, each question still gets its own session, and the
+sessions of a sitting share a sitting identifier. One long session with
+per-question segments was the alternative, but windowing, the detector, the
+replay and the review all assume that a session answers one question with one
+document. Two details keep the detector honest across tabs: moving to another
+question is logged as a question focus change, not as looking away, and a
+pause between keystrokes that spans a return from another question is not
+counted as a pause. When a student reopens a question, the new session starts
+from the code of their previous one, recorded as its start snapshot, so the
+restored code is never mistaken for typing or a paste.
+
+A student who wants a clean slate can reset a question to its starter code.
+The reset is logged as an edit with origin \texttt{reset}, so replay stays
+exact and the review shows it, but the detector does not count it as writing:
+no inserted characters, no new lines and no caret jump.
+
+\section{Pastes from outside the IDE}
 \label{sec:paste-guard}
-The pilot showed that students' own copy and paste (moving a block, reusing code
-from the previous question) was counted as paste evidence, the same as pasting an
-answer from another page. Browsers do not tell a page where clipboard text came
-from, so the editor remembers what was copied inside it instead: on a study screen
-every copy, cut or drag start is kept as a hash of the normalised text for a day.
-A paste is accepted when it matches one of those copies or already occurs in the
-student's own code, and is then logged as ordinary editing
-(\texttt{input.paste.internal}). Anything else is blocked with a short notice
-(\cref{fig:paste-guard}) and kept as a \emph{blocked paste} event with the text
-the student tried to paste: no code changes, but the attempt is itself a copying
-signal. The learning lab, which is practice and not study data, is exempt. Text
-inserted by a browser extension or an input method is not a paste event and is
-seen as typing; retyping from a second screen is what the detector's channels
-are for.
+The pilot showed that students' own copy and paste (moving a block, reusing
+code from the previous question) was counted as paste evidence, the same as
+pasting an answer from another page; 84\,\% of pastes in the pilot were text
+copied inside the editor. Browsers do not tell a page where clipboard text came
+from, so the editor remembers what was copied inside it instead: on a study
+screen every copy, cut or drag start is kept as a hash of the normalised text
+for a day. A paste is accepted when it matches one of those copies, the
+question text, or code already in the student's document, and is then logged as
+ordinary editing (\texttt{input.paste.internal}). Anything else is blocked with
+a short notice (\cref{fig:paste-guard}) and kept as a \emph{blocked paste}
+event with the text the student tried to paste: the code does not change, but
+the attempt is itself a copying signal, used as a weak label in
+\cref{sec:weak-labels}. Text inserted by a browser extension or an input
+method is not a paste event and is seen as typing; retyping from a second
+screen is what the detector's channels are for.
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.8\linewidth]{pasteguard/paste-guard-blocked}
+  \includegraphics[width=0.75\linewidth]{pasteguard/paste-guard-blocked}
   \caption{A paste copied outside Scribelab is turned away with a notice; the
   student's own copy and paste and text copied from the question still work.}
   \label{fig:paste-guard}
 \end{figure}
 
-\section{Privacy and data lifecycle}
+\section{Consent, privacy and data lifecycle}
 \label{sec:privacy}
-Nothing is recorded before a student accepts the consent notice, which lists
-what is recorded (key timing, edits, pastes, runs, focus changes), what is
-not (webcam, microphone, screen), that the only consequence of a flag is a
-conversation, and that raw keystrokes are deleted once summary statistics
-exist. The system keeps that last promise mechanically rather than by
-policy.
+Nothing is recorded before a student accepts the consent notice
+(\cref{fig:editor}a, full text in \cref{app:consent}). It lists what is
+recorded (key timing, edits, pastes, runs, focus changes) and what is not
+(webcam, microphone, screen, other apps); says that typing is compared only
+with the student's own earlier sessions, that the only consequence of
+something unusual is a conversation, that a teacher may note how that
+conversation went, and that a teacher can follow the class live; and promises
+that raw keystrokes are deleted once summary statistics exist. When the text
+changes in substance, students who agreed to an earlier version are asked
+again before their next session.
 
-The detector never needs single key presses after they have been turned into
+The system keeps the deletion promise mechanically rather than by policy. The
+detector never needs single key presses after they have been turned into
 window features: a baseline is a per-feature median and spread over windows,
-and a session is scored window by window (\cref{ch:detector}). So raw key
-events have a short life. When they are due, the server first computes the
-session's window features at every window length the frozen configuration
-uses (30 and 90\,s) and stores them, then deletes the session's key events in
-the same transaction, so keys are never gone without their summaries. A
-window holds aggregates only: medians and spreads of key timing, rates of
-pauses, deletions, runs and looks away, and for each frequent key pair its
-mean log time and count. Raw keys are due for a student's baseline sessions
-as soon as the four baseline weeks are over, and for every session after
-28~days at the latest; a session still open is never touched. Baselines,
-scores and the review timeline then read the stored windows. On the
-synthetic demo class, every session's scores, alarms and episodes were
-identical before and after purging (\texttt{tests/test\_retention.py}).
+and a session is scored window by window (\cref{ch:detector}). When raw key
+events are due, the server first computes and stores the session's window
+features at every window length the frozen configuration uses (30 and
+\SI{90}{\second}), then deletes the session's key events in the same
+transaction, so keys are never gone without their summaries. A window holds
+aggregates only: medians and spreads of key timing, rates of pauses,
+deletions, runs and looks away, and for each frequent key pair its mean log
+time and count. Raw keys are due 28~days after a session at the latest; a
+session still open is never touched. On the synthetic demo class, every
+session's scores, alarms and episodes were identical before and after purging.
 
 Two things are kept on purpose. Edit events stay, because they are the
-student's code and drive the replay; they carry a time per change, so if the
-ethics committee reads ``keystroke data'' to include them, their timestamps
-can be coarsened after the same deadline. And once a session is purged, it
-cannot be re-analysed at a window length that was not stored, which is the
-price of the promise and one more reason the configuration is frozen before
-real data arrives (\cref{ch:study}).
-
-\Cref{tab:dpdp} maps the design onto the Digital Personal Data Protection
-Act, 2023, which governs the college as a data fiduciary.
+student's code and drive the replay; their timestamps can be coarsened after
+the same deadline if the ethics committee reads ``keystroke data'' to include
+them. And once a session is purged it cannot be re-analysed at a window length
+that was not stored, which is one more reason the detector configuration is
+frozen. \Cref{tab:dpdp} maps the design onto the Digital Personal Data
+Protection Act, 2023, which governs the institute as a data fiduciary; the
+approval behind the pilot is described in \cref{app:ethics}.
 
 \begin{table}[ht]
   \centering\small
   \begin{tabular}{p{0.3\linewidth}p{0.62\linewidth}}
     \toprule
-    Requirement & How Student IDE meets it \\
+    Requirement & How Scribelab meets it \\
     \midrule
-    Notice and consent & Consent screen before any recording; consent time stored per student. \\
-    Purpose limitation & Data serve only the authorship-continuity check and the study; no grades are computed from it. \\
+    Notice and consent & Consent screen before any recording; consent time and version stored per student. \\
+    Purpose limitation & Data serve only the authorship-continuity check and the study; no grade is computed from it. \\
     Data minimisation & No video, audio or screen; raw keys replaced by window summaries on a schedule. \\
-    Storage limitation & Raw keys deleted after the baseline or 28 days; backups kept 14 days. \\
-    Erasure & One command removes everything recorded about a student (\texttt{--erase-student}). \\
-    Security safeguards & College Google accounts only, role-based access, HTTPS, student code isolated from the data. \\
-    Data location & Hosted on one VM in an Indian cloud region; backups stay there. \\
+    Storage limitation & Raw keys deleted after 28 days at the latest; backups kept 14 days. \\
+    Erasure & One command removes everything recorded about a student. \\
+    Security safeguards & Institute Google accounts only, role-based access, HTTPS, student code run apart from the data. \\
+    Data location & One virtual machine in an Indian cloud region; backups stay there. \\
     \bottomrule
   \end{tabular}
   \caption{The pilot deployment against the main duties of the DPDP Act 2023.}
   \label{tab:dpdp}
 \end{table}
 
+\subsection{Sessions that are not study data}
+\label{sec:non-study}
+Some recorded sessions must never reach a baseline, the detector or the
+evaluation, because the person typing is not known to be the student or the
+setting is not an assessed lab. Each such source is marked on the session and
+excluded everywhere the detector reads:
+\begin{itemize}[nosep]
+  \item \emph{learning-lab practice} (context \texttt{learn}): unsupervised
+  practice that anyone could have typed;
+  \item \emph{staff previews} (context \texttt{preview}): a teacher using
+  ``View as student'', decided by the server from the sign-in;
+  \item \emph{reset edits} (origin \texttt{reset}): starter code nobody typed;
+  \item \emph{competition sessions}: kept out of a student's lab baseline
+  because time pressure and an audience change how people type; they are
+  compared only with the same student's other competitions.
+\end{itemize}
+Teacher notes on how a conversation went are stored apart from the event
+stream, are visible to staff only and are never read by the detector.
+
 \section{Deployment at IIIT Surat}
 \label{sec:deployment}
-For a pilot with real classes the editor runs on one virtual machine in an
-Indian cloud region as four containers (\cref{fig:deployment}). A reverse
-proxy (Caddy) terminates HTTPS with an automatically renewed certificate.
-The application holds the SQLite database on a volume and purges raw keys
-every six hours. Student programs, which are arbitrary code, run in a
-separate runner container with a read-only file system, no Linux
-capabilities, process and memory limits and an internal network with no route
-to the internet; it never sees the database or any secret, so a hostile
-program can at worst crash the runner, which restarts. A backup container
-copies the database every 24~hours through SQLite's online backup API,
-checks each copy's integrity and keeps two weeks.
+For the pilot the editor runs on one virtual machine in an Indian cloud region
+as four containers (\cref{fig:deployment}). A reverse proxy (Caddy) terminates
+HTTPS. The application holds the SQLite database and purges raw keys every six
+hours. Student programs, which are arbitrary code, run in a separate runner
+container with a read-only file system, no Linux capabilities, process and
+memory limits and no route to the internet; it never sees the database or any
+secret. A backup container copies the database every 24~hours, checks each
+copy's integrity and keeps two weeks.
 
 \begin{figure}[ht]
   \centering
   \resizebox{\linewidth}{!}{\tikzfig{deployment}}
-  \caption{Pilot deployment: one VM in an India region, four containers
-  (\texttt{deploy/docker-compose.yml}).}
+  \caption{Pilot deployment: one VM in an India region, four containers.}
   \label{fig:deployment}
 \end{figure}
 
-Sign-in uses the college's Google accounts. The browser obtains an ID token
-from Google, and the server checks its signature, audience and expiry, that
-the address is verified, and that both the address and the Workspace domain
-claim are \texttt{iiitsurat.ac.in}; it then sets an HttpOnly session cookie
-whose hash alone is stored. Roles follow the college's address format: an
-address of the form \texttt{<ug|pg><year><branch><roll>} is a student, and
-its local part (for example \texttt{PG25CS07}) becomes the student identifier
-used in rosters, baselines and the timeline, so a student's sessions follow
-their account rather than whatever roll number they type. Any other college
-address is a teacher. Administrators, named in the server configuration, can
-override a role for teaching assistants and unusual addresses
-(\cref{fig:deploy-signin}). This replaced the single shared research token of
-the earlier phases with personal teacher accounts, so access to recordings is
-tied to a person. Every student endpoint acts only for the signed-in student,
-and every teacher endpoint needs a teacher account.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{deploy/deploy-01-google-sign-in}
-    \caption{Student sign-in with the college account.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{deploy/deploy-02-people}
-    \caption{Administrators override roles, e.g.\ for a TA.}
-  \end{subfigure}
-  \caption{Google sign-in and roles in the pilot deployment.}
-  \label{fig:deploy-signin}
-\end{figure}
-
-\subsection{Who sees which lab}
-\label{sec:ownership}
-Personal accounts made a second rule possible: a teacher sees only their own
-classes. Each lab and competition records the teacher who made it. A teacher
-sees and manages only the labs they own or were added to as a co-teacher, and
-only the sessions, review timelines, live views and results recorded in those
-labs; anything else is refused, and lists simply leave it out. An owner can
-share a lab with colleagues who teach it with them (same rights, except
-changing who it is shared with), and administrators see everything. Labs made
-before ownership existed had no owner and went to the administrators, who hand
-each one to its teacher (\cref{fig:ownership}). Sessions outside any lab, such
-as the practice tasks, are visible to administrators only.
-
-One detail keeps the detector unchanged. A student's baseline is built from
-all of their lab sessions, whichever teacher's lab they were recorded in, so
-the evidence a teacher sees is the same as an administrator would see; what is
-limited is which sessions a teacher can open, not what each session is
-compared with. The review screen now starts from the class rather than the
-student: one row per lab session (a lab on the day it ran, with its time and
-how many students are worth a conversation), which opens that class's
-sessions student by student.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{ownership/ownership-light-03-review-lab-sessions}
-    \caption{Review starts from the teacher's lab sessions, one per class meeting.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{ownership/ownership-light-01-admin-unowned}
-    \caption{Administrators see every lab; older labs await an owner.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{ownership/ownership-light-02-teachers-panel}
-    \caption{The owner shares a lab with a co-teacher.}
-  \end{subfigure}
-  \caption{Lab ownership. Light and dark versions are in \texttt{snapshots/ownership/}.}
-  \label{fig:ownership}
-\end{figure}
-
-Using these recordings as study data still requires ethics approval; until
-then the deployment is a pilot that checks the system in real labs, and its
-recordings are kept out of the results in \cref{ch:rq1,ch:rq2,ch:rq3,ch:rq4}.
-
-\section{Labs and questions}
-\label{sec:teacher-authoring}
-Teachers set up the sittings students record in from the same token-gated
-area as the review timeline (\cref{fig:teach}). A \emph{lab} is one sitting,
-such as a weekly lab class or a class competition (\cref{ch:study}). It holds ordered questions, each with a prompt, optional
-starter code that opens in the editor and a sample input, and is assigned to
-a roster of roll numbers or to everyone who signs in. A lab is a draft, open
-(assigned students see it and can start) or closed (hidden, recordings kept).
-
-Each recorded session stores the lab and question it answers, so every
-keystroke, edit and run is tied to them through the session without changing
-the event schema. The session also keeps a copy of the question as the
-student saw it: a teacher may correct a prompt halfway through a lab, and an
-older recording must still say what it was answering, which matters when
-composing and transcribing are compared on the same question (RQ2). Labs and
-questions with recordings can be closed or edited but not deleted. Because
-every session names its question, the evaluation can splice two students'
-sessions on the same question (\cref{sec:splicing}).
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{teach/teach-light-08-demo-lab}
-    \caption{Teacher view of a lab: ordered questions with starter code, the
-    roster, and who has started or finished each question.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{teach/teach-light-03-question-form}
-    \caption{Adding a question.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{teach/teach-light-05-student-labs}
-    \caption{What an assigned student sees after consent.}
-  \end{subfigure}
-  \caption{Labs and questions. Light and dark versions of every screen are
-  in \texttt{snapshots/teach/}.}
-  \label{fig:teach}
-\end{figure}
-
-\subsection{A lab as one sitting}
-\label{sec:sitting}
-At first each question of a lab opened its own editor from the lab list, so a
-student moving from question one to two left the editor, went back to the
-list and started again, and reopening a question started from its starter
-code. A lab is now opened once, as a \emph{sitting}: every question is a tab
-in the same editor, each keeping its own code, undo history, input and output,
-and finishing the lab hands in the sitting (\cref{fig:sitting}). Opening the
-lab again later starts a new sitting in which each question picks up the code
-where the student left it.
-
-Underneath, a sitting is not one recording. Each question the student opens
-gets its own session, and the sessions of a sitting share a sitting
-identifier. One long session with per-question segments was the alternative,
-but every later stage (windowing and the detector, the per-session review
-timeline and code replay, test checks, the live view) assumes that a session
-answers one question with one document, and a mixed session would have to be
-cut apart again before any of them could use it. Linked sessions keep that
-assumption and still let the analysis put a lab visit back together. Two
-details keep the detector honest about switching. Moving to another question
-is logged on both sessions as a question focus change rather than as looking
-away from the editor, and a gap between keystrokes that spans a return from
-another question is not counted as a pause, since the student was working,
-not stuck.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{sitting/sitting-light-03-question-2}
-    \caption{One sitting: the lab's questions as tabs and in the side panel; question one keeps its code while the student works on two.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{sitting/sitting-light-01-labs}
-    \caption{The lab list: one button opens the whole lab.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{sitting/sitting-light-04-finish}
-    \caption{Finishing hands in the whole sitting.}
-  \end{subfigure}
-  \caption{A lab as one sitting. Light and dark versions are in \texttt{snapshots/sitting/}.}
-  \label{fig:sitting}
-\end{figure}
-
-\paragraph{Starting a question again.} Because a question resumes the
-student's latest code, a student who wants a clean slate needs a way back to
-the starter code. A \emph{Reset} button above the editor asks for
-confirmation and then replaces the code with the starter in a single editor
-transaction (Figure~\ref{fig:reset}). It is logged as an ordinary edit event
-with origin \texttt{reset}, so replay and the hand-in stay exact and the
-reset stays visible in the review, where it is labelled. The detector applies
-the edit to its copy of the document but does not count it as writing: no
-inserted characters, no new lines and no caret jump, since nobody typed the
-starter. The reset stays in the editor's undo history, so Ctrl+Z brings the
-old code back (that undo is recorded as an ordinary edit).
-
-\begin{figure}[t]
-  \centering
-  \begin{minipage}{0.49\linewidth}
-    \includegraphics[width=\linewidth]{reset/reset-light-01-confirm}
-  \end{minipage}\hfill
-  \begin{minipage}{0.49\linewidth}
-    \includegraphics[width=\linewidth]{reset/reset-light-02-starter}
-  \end{minipage}
-  \caption{Reset: the student confirms (left) and the question is back at its starter code (right).}
-  \label{fig:reset}
-\end{figure}
-
-\subsection{Optional tests, languages and question sources}
-\label{sec:question-sources}
-Correctness is deliberately optional. A lab measures effort, so a question
-may carry no tests at all; if the teacher adds some, students can press
-\emph{Check} to see how they are doing, and nothing is scored. Competitions
-are the one place correctness counts, so a question placed in a competition
-must keep at least one test. A test is a standard-input / expected-output
-pair, which works the same in every language; a test can be hidden, in which
-case the student learns only whether it passed. Checks are stored on the
-server against the copy of the question the session started with, so a test
-fixed halfway through a lab never changes how an open session is checked,
-and the event schema stays at version 1.
-
-Each lab also has a subject and a programming language (Python, C, C++, Java
-or JavaScript). The editor's syntax mode, the file name and the runner follow
-the lab; compiled languages are compiled once per check and run against every
-test. The language is part of the session's snapshot, which matters for the
-detector: a student's keystroke rhythm in C++ (braces, semicolons, \texttt{<<})
-is not the rhythm of their Python, so a baseline should only be compared with
-sessions in the same language.
-
-A teacher who does not want to write their own question can pick one from a
-platform (\cref{fig:sources}). Platforms are pluggable providers with one
-interface: list categories, list questions in a category, fetch a question.
-Nothing is pre-stored: the list and the question are fetched when the teacher
-looks, and the pick is copied into the lab as an ordinary question with its
-source and licence recorded. Only platforms that permit it are fetched.
-LeetCode, HackerRank and CodeChef publish no API for problem statements
-(CodeChef closed its public API in 2020, HackerRank's API covers only a
-company's own tests, LeetCode's GraphQL endpoint is internal) and none
-licenses its problems for reuse, so they are \emph{link only}: the teacher
-keeps a link to the original and writes the question in their own words.
-Exercism's exercises are MIT-licensed and served from public repositories, so
-they are fetched live; for Python and JavaScript its shared test data becomes
-input/output tests through a small driver that calls the student's function
-and prints the result as JSON.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{questions/questions-light-03-preview}
-    \caption{Picking an Exercism question, fetched live, with 14 tests.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{questions/questions-light-04-link-only}
-    \caption{A link-only platform: the teacher writes the question.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{questions/questions-light-05-tests-editor}
-    \caption{Optional tests, one hidden.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{questions/questions-light-07-student-check}
-    \caption{A student's ungraded check.}
-  \end{subfigure}
-  \caption{Question sources and optional tests. All screens, light and dark,
-  are in \texttt{snapshots/questions/}.}
-  \label{fig:sources}
-\end{figure}
-
-A larger, topic-sorted set came next. The legitimate route to Codeforces
-problems is an openly licensed research copy. The first version used
-CodeContests \cite{li2022alphacode} (4{,}551 problems rated 800 to 2000);
-it was replaced by the open-r1 Codeforces dataset \cite{penedo2025codeforces}
-(CC~BY~4.0), which covers twice as many problems, up to 2025, and solves the
-first version's main gap. About a third of Codeforces problems accept several
-correct answers (``print any of them''), and exact comparison marks right
-answers wrong, so CodeContests problems of that kind had to ship without
-tests. open-r1 provides, for each such problem, a checker program validated
-against accepted human solutions. The app now bundles every problem its
-runner can execute (9{,}097: not interactive, reading standard input), at
-every rating, and judges the 1{,}759 multi-answer problems by running the
-checker on the student's output, through the same sandboxed runner as
-student code, never in the server process. Codeforces' tags are mapped onto
-one topic vocabulary shared by every source (strings, dynamic programming,
-graphs, trees, sorting, mathematics and so on), so a teacher can browse by
-topic and then by rating band. Examples come in as visible tests and up to
-ten small official or generated cases as hidden ones; answers that are real
-numbers are compared within $10^{-6}$. CodeChef problems (332, easy and
-medium) still come from CodeContests. MBPP \cite{austin2021program}, about a
-thousand short beginner Python problems with three asserts each, is fetched
-live; its asserts become the same JSON-argument tests as Exercism's, and its
-topics, which the dataset does not label, are guessed from the wording and
-marked as guesses.
-
-LeetCode needed a different arrangement. LeetCodeDataset
-\cite{xia2025leetcodedataset} (Apache~2.0) gives 2{,}869 LeetCode problems with
-LeetCode's topic tags, difficulty, starter code and about a hundred test
-asserts each, written and checked by the dataset's authors. Its problem
-descriptions, however, are LeetCode's own text, which LeetCode claims and
-enforces copyright in, and a dataset licence cannot grant rights its authors
-do not hold. The app therefore stores the tests, tags and starter code
-(2{,}834 problems, after dropping the 26 that modify their input in place and
-9 without enough usable tests) but never the text: an imported question keeps
-an empty prompt and a pointer to the dataset row, and the student's browser
-loads the text from the public Hugging Face dataset viewer each time the
-question is shown, checking that the row is the right problem
-(\cref{fig:leetcode}). Where a campus network blocks the dataset viewer, the
-browser falls back to the app's server, which fetches the same row and holds
-only the text in memory; if neither path works the student gets a link to
-the original and the teacher's lab editor flags the question before class. A teacher may instead write the problem in their own
-words, which then replaces the live text. The tests call the method on
-LeetCode's \texttt{class Solution} with the same arguments, building linked
-lists and binary trees where the problem takes them, and print the return
-value as JSON; results that may come ``in any order'' are compared after
-sorting, and real numbers within $10^{-5}$. HackerRank remains link only.
-
-Nothing in such a test is specific to Python: it passes arguments to a
-function and compares the value returned. The LeetCode and MBPP problems
-are therefore offered in every lab language. Each argument's type is read from
-the dataset's Python type hint (for MBPP, which has none, from the test
-values) and narrowed by the values the way LeetCode writes its own
-signatures: an integer that needs 64 bits becomes 	exttt{long long}, a string
-that is always one character becomes 	exttt{char}. From that signature the
-app generates a LeetCode-style starter for C, C++, Java and JavaScript and a
-driver that reads one JSON value per argument, calls the student's function
-and prints the answer in the same JSON as the Python driver, so one set of
-tests and expected outputs serves all five languages
-(\cref{fig:leetcode-cpp}). This covers 2{,}828 of the 2{,}834 LeetCode problems
-and 836 of 974 MBPP problems; the rest return values with no single type
-outside Python (a mixed tuple, a dictionary). The drivers were checked by
-round-tripping real test values of every type through a function that returns
-its argument (170 language and type combinations), by compiling a program for
-every signature shape, and with our own solutions in each language.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.8\linewidth]{leetcode/leetcode-light-07-cpp-preview}
-  \caption{The same LeetCode problem in a C++ lab: starter generated from the
-  Python signature, the same ten tests.}
-  \label{fig:leetcode-cpp}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{leetcode/leetcode-light-02-preview-live-text}
-    \caption{Preview: text loaded live, tests bundled.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{leetcode/leetcode-light-04-student-check}
-    \caption{A student checks a solution.}
-  \end{subfigure}
-  \caption{LeetCode problems: the server keeps LeetCodeDataset's tests and
-  topics; LeetCode's text is fetched by the browser and never stored. All
-  screens are in \texttt{snapshots/leetcode/}.}
-  \label{fig:leetcode}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=\linewidth]{sources/sources-light-01-codeforces-topics}
-  \caption{Browsing Codeforces problems by topic and rating. All screens,
-  light and dark, are in \texttt{snapshots/sources/}.}
-  \label{fig:datasets}
-\end{figure}
-
-Platform problems suit practice but are often too long or too tricky for a
-first-year class competition, so the app also ships original question sets
-written for it. The first, \emph{C fundamentals}, has thirteen short
-problems in teaching order: input and output, operators, conditionals,
-loops, a number pattern, arrays, strings and one function to complete
-(\cref{tab:set-c-fundamentals}). Each has two visible examples and three to
-ten hidden tests aimed at the usual slips (a leap-year rule without the
-century case, 1 counted as prime, a grade boundary off by one). Expected
-outputs are computed from a small model of each problem when the set is
-built, and a test runs every reference C solution, compiled with the same
-runner the students use, against every test, and checks that the bare
-starter code fails. The reference solutions never leave the server.
-
-\input{tables/question-set-c-fundamentals}
-
-\section{Class competitions}
-\label{sec:competitions}
-A competition is a lab run as a timed, class-wide challenge with a live
-leaderboard (\cref{fig:compete}). It reuses the lab's questions, roster and
-recorded sessions and adds a clock, a lobby in which students choose the name
-shown on the board, and test-graded submissions. Ordinary labs treat
-correctness as optional, since in class the effort is what matters; a
-competition is the one place where correctness is scored. Every competition
-question therefore needs at least one test case before the clock can start.
-A submission earns $100 \times$ the share of tests passed, keeping the best
-submission per question, plus up to 50 points for a full solve, scaled by the
-share of the planned time still left. Wrong submissions cost nothing.
-
-The board is kept deliberately gentle: by default students see the top ten
-and their own place, never who is last; badges (first to solve, fastest per
-question, solved them all, most bugs fixed) let more students stand out; and
-only chosen board names are shown. The leaderboard reads nothing from the
-detector or the review timeline, so a moment flagged for conversation can
-never cost a place or become public.
-
-Competition sittings are recorded like any lab but measured separately. Time
-pressure and an audience change how people type and work, so a competition
-is a different behaviour, not a noisy lab. A student's lab baseline therefore
-leaves competition sessions out, and a competition session is compared only
-with the same student's sessions from their other competitions (leave one
-competition out), with the same minimum of two sessions before anything is
-scored. This keeps the lab baseline clean and gives the thesis a second,
-within-student condition: how far a student's competition habits sit from
-their lab habits is itself a measurement, and a takeover during a
-competition is judged against how that student behaves under pressure.
-
-\paragraph{Hand-in at the bell.} Students often have working code in the
-editor that they never got round to submitting when time runs out. When the
-clock ends (or the teacher ends it early), each student's editor stops and
-sends its last edits, and after a grace period of \SI{20}{\second} the server
-rebuilds every question's code from the recorded edits that reached it in
-time and grades it as a submission made at the end
-(\cref{fig:compete-handin}). Only questions the student actually worked on
-are handed in (code that is not empty and differs from the starter), code
-identical to an earlier submission is not graded twice, and edits that arrive
-after the grace period are ignored. Because the hand-in is rebuilt from the
-same edit log the detector reads, it needs no extra data from the student,
-and it runs once per competition, in the background, while the board shows
-that grading is still under way. Competitions that had already ended when
-the feature shipped keep their announced results.
-
-\paragraph{Coming back to a question.} A student moves between competition
-questions through the board, and each visit opens a fresh session. At first
-a fresh session also meant fresh starter code, so going back to the board to
-try another question threw away the first attempt on screen (it was still in
-the log). Now the server rebuilds the code of the student's latest session on
-that question, in the same language, from its edits and hands it to the new
-session, which records it as its start snapshot. Replay, the detector and the
-hand-in at the bell all read it from there, so nothing downstream changes: a
-session still answers one question in one language, and the restored code is
-never mistaken for typing or a paste. Lab sittings already resumed this way;
-competitions had been left out only because they were built before
-sittings.
-
-\paragraph{Any language.} For college-level contests a competition can be
-set to \emph{any language}: each student picks C, C++, Java, JavaScript or
-Python per question, from a switcher above the editor
-(\cref{fig:anylang}). The tests are stdin in, stdout out, so one set serves
-every language; what differs is kept per language on the question (starter
-code and, for imported function-style problems, the test driver), and a
-question whose tests need a driver opens only in the languages that have
-one. Each language a student tries on a question is its own recorded session,
-so a session never mixes languages, and a submission is always graded in its
-session's language, never one the browser claims. The hand-in at the bell
-takes the language the student edited last, and the board shows the
-languages each student's points came from. Because typing rhythm differs
-between languages (braces, semicolons, longer keywords), the review timeline
-compares a competition session with the same student's competition sessions
-in the same language once there are enough of them, and with all of them
-until then.
-
-\paragraph{Similar submissions.} Teachers can open a page of \emph{similar
-submissions worth a look} for a competition. It uses the method behind MOSS
-and JPlag: each student's last submission per question and language is
-reduced to normalised tokens (names, layout, comments, literals and
-include/import lines removed), winnowed fingerprints
-\parencite{schleimer2003winnowing} pick candidate pairs, and greedy string
-tiling \parencite{wise1993gst,prechelt2002jplag} finds the common stretches
-of at least eight tokens. Starter code and stretches that most of the class
-wrote identically are masked, C is compared with C++, and the other
-languages within themselves. The page lists pairs with their share of common
-code and shows both programs side by side with matching stretches in the same
-colour, next to how each program got into the editor: characters typed and
-pasted, from the same edit log the detector reads (\cref{fig:anylang}). In
-keeping with the rest of the system it never says ``copied'', never ranks
-students and never touches a score; it says that short answers to small
-problems often look alike and that a pair is a reason to talk. On six contest
-problems solved independently three times each in C/C++ and in Python, no
-independent pair reached 0.4, while every copy disguised by renaming,
-reformatting, rewritten constructs and dead code scored at least 0.67
-(\cref{tab:similarity-separation}, \cref{fig:similarity-separation}). The
-independent solutions were written for this check by one author in
-deliberately different styles; real classmates write more alike, so the
-pilot competitions will tell how often an honest pair crosses 0.5.
-
-\input{ablations/similarity/table}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.85\linewidth]{similarity-separation}
-  \caption{Similarity of every independent pair and every disguised copy in
-  the check of \cref{tab:similarity-separation}. The dashed line is where
-  the page starts to list pairs as a strong overlap.}
-  \label{fig:similarity-separation}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{anylang/anylang-light-04-editor-in-c}
-    \caption{The student switched this question to C; Python stays saved.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{anylang/anylang-light-07-similar-list}
-    \caption{Similar submissions worth a look, per question.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{anylang/anylang-light-08-similar-pair}
-    \caption{A pair side by side: matching stretches, typed and pasted characters.}
-  \end{subfigure}
-  \caption{Any-language competitions and the similar-submissions page.
-  All screens are in \texttt{snapshots/anylang/}.}
-  \label{fig:anylang}
-\end{figure}
-
-\paragraph{Leaderboard for staff.} The full board (with roll numbers and
-per-question detail) is open to the competition's owner, its co-teachers and
-admins (\cref{sec:ownership}), and is linked from the labs list, the
-competition's page (which also shows the top five) and the live class view.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{handin/handin-light-01-editor-clock}
-    \caption{The editor shows the clock and hands in at zero.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{handin/handin-light-06-board-handing-in}
-    \caption{Teacher's board during the grace period.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{handin/handin-light-04-lab-page}
-    \caption{Competition page: leaderboard link and top five.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{handin/handin-light-08-arena-final}
-    \caption{Student's final standing; ``At the bell'' marks a hand-in.}
-  \end{subfigure}
-  \caption{Hand-in when time runs out, and the staff leaderboard. Light and
-  dark screens are in \texttt{snapshots/handin/}.}
-  \label{fig:compete-handin}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{compete/compete-light-04-lobby}
-    \caption{Lobby: students pick a board name before the clock starts.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{compete/compete-light-05-arena-live}
-    \caption{Live: questions, own standing and the board.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{compete/compete-light-07-submit-solved}
-    \caption{Submit runs the tests; hidden tests report pass or fail only.}
-  \end{subfigure}\hfill
-  \begin{subfigure}{0.49\textwidth}
-    \includegraphics[width=\linewidth]{compete/compete-dark-09-podium}
-    \caption{Teacher's projector board with the podium at the end.}
-  \end{subfigure}
-  \caption{Class competitions. All screens, light and dark, are in
-  \texttt{snapshots/compete/}.}
-  \label{fig:compete}
-\end{figure}
+Sign-in uses the institute's Google accounts. The server checks the ID token's
+signature, audience and expiry and that the address belongs to the institute's
+domain. Roles follow the institute's address format: an address of the form
+\texttt{<ug|pg><year><branch><roll>} is a student, and its local part becomes
+the student identifier, so a student's sessions follow their account rather
+than a roll number they type. Any other institute address is a teacher. A
+teacher sees only the labs they own or co-teach and the sessions recorded in
+them; administrators see everything. A student's baseline is built from all of
+their lab sessions whichever teacher's lab they were in, so what is limited is
+which sessions a teacher can open, not what each session is compared with.
 
 \section{Teacher evidence timeline}
 \label{sec:review-timeline}
-The last part of the pipeline is a review screen for the teacher or
-interviewer (\cref{fig:review-session}). It is opened from the same web
-application under \texttt{\#/review}, but only with the research token
-that also guards the raw-data API; without the token on the server the
-whole review side is switched off. The token is kept in the browser tab
-only.
+The last part of the pipeline is a review screen for the teacher
+(\cref{fig:review-session}). Review starts from a teacher's lab sessions (a lab
+on the day it ran, with how many students are worth a conversation) and opens
+that class's sessions student by student (\cref{fig:review-overview}).
 
-\paragraph{What it shows.} An overview lists every session with a small
-trace of both detector channels and the moments it found
-(\cref{fig:review-overview}). Opening a session shows one time axis with,
-from top to bottom: for each channel, a strip of per-window scores (how far
-each \SI{30}{\second} window sits from the student's own baseline) and the
-CUSUM trace drawn against its threshold; then pastes, times the student
-left the editor, runs (clean or with an error) and typing activity. A
-playhead can be dragged or played at 1--60$\times$; the code is rebuilt in
-the browser from the recorded edits at that instant, with lines changed in
-the previous \SI{30}{\second} tinted, and a strip of the last key-press
-intervals shows the typing rhythm at that point. The replay was checked
-against all 524 stored snapshots of eight sessions with no mismatch.
+\paragraph{What it shows.} A session shows one time axis with, from top to
+bottom: for each detector channel, a strip of per-window scores (how far each
+window sits from the student's own baseline) and the CUSUM trace against its
+threshold; then pastes (blocked and allowed), times the student left the
+editor, runs (clean or with an error) and typing activity. A playhead can be
+dragged or played at 1--60$\times$; the code is rebuilt in the browser from the
+recorded edits at that instant, with recently changed lines tinted, and a strip
+of the last key-press intervals shows the typing rhythm at that point. The
+replay was checked against all 524 stored snapshots of eight sessions with no
+mismatch.
 
 \paragraph{From alarms to moments.} CUSUM restarts after every alarm, so a
 lasting change (for example, a second person typing for the rest of the
-session) raises a chain of alarms, each starting where the previous one
-fired. The screen merges such a chain into one \emph{moment to discuss},
-with the detector's estimated start, the time it was first noticed and how
-long the difference lasted. For each moment it lists the habits that moved
-most between the estimated start and the first alarm, in the student's own
-units (``time between keys: usual \SI{158}{\milli\second}, here
-\SI{134}{\milli\second}'') with a bar for how many of the student's usual
-spreads that is. These are the same per-feature $z$ values the detector
-sums, so the explanation is the model rather than a story told about it.
+session) raises a chain of alarms. The screen merges such a chain into one
+\emph{moment to discuss}, with the detector's estimated start, the time it was
+first noticed and how long the difference lasted. For each moment it lists the
+habits that moved most, in the student's own units (``time between keys:
+usual \SI{158}{\milli\second}, here \SI{134}{\milli\second}'') with a bar for
+how many of the student's usual spreads that is. These are the same
+per-feature $z$ values the detector sums, so the explanation is the model
+rather than a story told about it.
 
 \paragraph{Wording.} Nothing on the screen says ``flag'', ``cheating'' or
-``suspicious''. A session either has \emph{moments worth a conversation}
-or ``nothing stood out''. Every moment comes with three suggested
-questions (walk me through this code; did anything change at that point;
-make a small change while I watch) and the reminder that habits shift for
-ordinary reasons and that no mark or penalty follows from the screen.
-Baseline-week sessions are scored only against the student's other
-baseline sessions and are labelled as a check of the baseline, not of the
-student; students without enough baseline sessions are not scored at all.
+``suspicious''. A session either has \emph{moments worth a conversation} or
+``nothing stood out''. Every moment comes with three suggested questions (walk
+me through this code; did anything change at that point; make a small change
+while I watch) and the reminder that habits shift for ordinary reasons and
+that no mark or penalty follows. Students without enough baseline are not
+scored at all.
 
-\paragraph{The screen runs the evaluated detector.} The review screen reads
-the configuration the evaluation harness froze
-(\texttt{thesis/evaluation/frozen-config.json}, \cref{sec:rq1-harness}), so
+\paragraph{The screen runs the evaluated detector.} The review reads the
+configuration the evaluation harness froze
+(\nolinkurl{thesis/evaluation/frozen-config.json}, \cref{sec:rq1-harness}), so
 what a teacher sees is what was evaluated: three lanes (typing rhythm and
 key-pair timing on \SI{30}{\second} windows, way of working on
-\SI{90}{\second} windows), each with its own CUSUM $k$, the population prior
-for short baselines and the thresholds $h$ calibrated on the dev students.
-Each lane is drawn on its own window grid against one time axis. The
-population parts (feature weights, the key-pair vocabulary, the prior) are
-fitted on the class's own baseline sessions once three students have one,
-just as the harness fits them on its training students. Thresholds can be
-overridden once they are calibrated on the class's real data.
+\SI{90}{\second} windows), each with its own CUSUM $k$ and threshold $h$, and
+the population prior for short baselines. On the simulated demo class, seven
+of the eight non-honest sessions got a moment on the expected kind of lane and
+none of the honest ones did; this checks that the screen shows the detector
+faithfully and is not an evaluation (that is \cref{ch:rq1}).
 
-\paragraph{Demo data.} \texttt{python -m studentide.seed} fills a fresh
-database with simulated students (four honest baseline weeks, then
-sessions under the study conditions). Their ground truth is stored with
-the session and can be overlaid on the timeline
-(\cref{fig:review-session}b), which made the screen testable before any
-real student was recorded. It is refused on an existing database file so
-demo and real data never mix. On the default demo (six simulated students,
-twelve assessed sessions) with the frozen configuration, seven of the eight
-non-honest sessions got a moment on the expected kind of lane (one
-speed-matched takeover was missed), none of the four honest sessions did,
-and none of the 24 baseline-week sessions did either (with the earlier
-untuned thresholds and no prior, 5 of 24 baseline-week sessions had raised
-a moment). This is a check that the screen shows the detector faithfully,
-not an evaluation (that is \cref{ch:rq1}).
+\paragraph{After the conversation.} Teachers already talk through moments with
+students as part of teaching, so each moment card ends with an optional
+one-tap note of how that conversation went: \emph{explained, own work},
+\emph{had help}, \emph{copied} or \emph{not discussed}
+(\cref{fig:review-outcome}). The note is stored per moment, is visible to staff
+only, and is never an input to the detector. It records the conversation, not
+a verdict; \cref{sec:teacher-review} describes how the thesis uses the counts.
 
 \begin{figure}[ht]
   \centering
   \includegraphics[width=\linewidth]{review/review-light-02-overview}
   \caption{Review overview on simulated students: each row shows every
-  channel's accumulated evidence relative to the threshold (dashed) and
-  the moments to discuss, with the channel that found them.}
+  channel's accumulated evidence relative to the threshold (dashed) and the
+  moments to discuss, with the channel that found them.}
   \label{fig:review-overview}
 \end{figure}
 
 \begin{figure}[ht]
   \centering
   \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{review/review-light-03-session-takeover}
+    \includegraphics[width=\linewidth,height=0.34\textheight,keepaspectratio]{review/review-light-03-session-takeover}
     \caption{A simulated takeover: the typing-rhythm and key-pair lanes mark
     moments; the replay shows the code at the playhead.}
   \end{subfigure}\\[1ex]
   \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{review/review-light-04-takeover-truth-hover}
-    \caption{Same session with the simulated ground truth (switch at 7:43)
-    overlaid and the hover read-out for one window. The key-pair lane's
-    first moment is dated well before the switch, a reminder that the
-    estimated start is a guess.}
+    \includegraphics[width=\linewidth,height=0.34\textheight,keepaspectratio]{review/review-light-04-takeover-truth-hover}
+    \caption{The same session with the simulated switch time (7:43) overlaid.
+    The key-pair lane's first moment is dated well before the switch, a
+    reminder that the estimated start is a guess.}
   \end{subfigure}
-  \caption{Session review timeline. Light and dark versions of every
-  screen are in \texttt{snapshots/review/}.}
+  \caption{Session review timeline.}
   \label{fig:review-session}
 \end{figure}
-
-\paragraph{After the conversation.} Teachers already talk through moments with
-students as part of teaching, so each moment card ends with an optional one-tap
-note of how that conversation went: \emph{explained, own work}, \emph{had help},
-\emph{copied} or \emph{not discussed} (\cref{fig:review-outcome}). The note is
-stored per moment (session, channel and estimated start), is visible to staff
-only, and is never an input to the detector, which reads recorded events and
-nothing else. It records the conversation, not a verdict; \cref{sec:teacher-review}
-describes how the thesis uses the counts.
 
 \begin{figure}[ht]
   \centering
@@ -858,242 +340,4 @@ describes how the thesis uses the counts.
   \caption{A moment card with the staff-only conversation note (``Had help''
   chosen). Tapping the chosen note again clears it.}
   \label{fig:review-outcome}
-\end{figure}
-
-\section{Live classroom view}
-\label{sec:live-view}
-The review timeline is deliberately after the fact. During a lab, though, a
-teacher mostly wants to know who is stuck, and the editor already uploads its
-events every two seconds. A \emph{Live} tab uses those same events while a
-lab is open (\cref{fig:live-class}). The class view shows one card per
-student: whether they are typing, working, quiet, have the editor in a
-background tab, or have closed it; the question they are on; edits per
-30~seconds over the last ten minutes; their runs and the last error; their
-last test check; and any moments worth a conversation the timeline has found
-in this lab so far. It shows no code. From a card, the teacher can open a
-read-only copy of that student's editor, rebuilt on the server from the edit
-events (\cref{sec:privacy}), with the student's caret and recent runs.
-
-Watching live changes what students agree to, and covert watching would sit
-badly with a design whose only consequence is a conversation. So viewing is
-never silent: while a teacher has a student's editor open, that student's
-editor says so with the teacher's name, and while the class view is open every
-student in the lab sees a small notice (\cref{fig:live-editor}). Each view is
-logged, the consent screen names live viewing, students who agreed to the
-earlier text are asked again, and a server setting limits the feature to the
-class view (no code) or turns it off if the ethics committee prefers. No new
-data is recorded for it; the live views only change who can see existing
-events, and when. Whether knowing they may be watched changes how students
-type is an open question for the study; the viewing log lets the analysis
-compare or exclude sessions that had an editor view.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=\linewidth]{live/live-light-03-class}
-  \caption{Live class view of the open demo lab: state, question, recent
-  activity, runs, test checks and moments per student. No code is shown.}
-  \label{fig:live-class}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{live/live-light-04-editor}
-    \caption{The teacher's read-only view of one student's editor, two seconds behind.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{live/live-light-05-student-notice}
-    \caption{The same student's editor at that moment: the top bar names who is viewing.}
-  \end{subfigure}
-  \caption{Live editor view and the notice the student sees.}
-  \label{fig:live-editor}
-\end{figure}
-
-\section{Learning lab}
-\label{sec:learning-lab}
-
-Besides timed labs and competitions, students have an always-open
-\emph{learning lab}: short lessons that each explain one idea next to code
-the student can change and run (\cref{fig:learn}). Eight tracks were
-written for the pilot, 82 lessons from beginner to advanced, checked against a
-full first-year syllabus so no core concept is missing: C (sixteen beginner
-lessons from \texttt{printf}, types and casts through \texttt{switch}, loop
-control, scope, pointers, structs and recursion, then fourteen advanced ones on
-dynamic memory, linked lists, stacks and queues, function pointers, bit
-operations, the preprocessor, files, sorting and binary search, command-line
-arguments and error handling, multi-file programs and variadic functions),
-C++ (from streams, vectors, pointers, namespaces and recursion through
-classes, RAII, static and friend members, templates, iterators and the STL to
-virtual functions, smart pointers, move semantics and
-\texttt{optional}/\texttt{variant}) and Python (beginner, intermediate and
-advanced, from operators, nested lists and modules through argument passing,
-\texttt{collections} and regular expressions to generators, decorators,
-dataclasses, type hints and testing, and sorting algorithms with big-O). Each lesson's examples can be loaded
-into the editor with one click, and each ends with a small exercise checked
-by the same stdin/stdout tests as lab questions
-(\cref{sec:question-sources}). Lessons are Markdown files kept in the
-repository with a hidden model answer; an automated test runs every model
-answer (it must pass) and every starter (it must not).
-
-A track opens in the same editor as a lab sitting (\cref{sec:sitting}), so
-the student practises in exactly the environment used for assessed work, and
-the lesson's code is waiting when they come back. Every pane of that editor
-(the lesson or question text, the output and the input) can be resized by
-dragging its edge, which also helps long lab questions on small screens. Practice is recorded like
-a lab, since it adds real typing to the dataset, but it is kept apart from
-everything the detector reads: each session is marked as learning-lab
-practice, is excluded from baselines, review, the live view and the
-evaluation harness, and does not start a student's four-week baseline
-period. Unsupervised practice could be typed by anyone, so it is never
-treated as evidence of the student's own rhythm. Students are told this on
-the learning lab's page and in the editor.
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{learn/learn-light-02-lessons}
-    \caption{The learning lab's lesson list, with the notice about recording.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{learn/learn-light-04-exercise-checked}
-    \caption{A lesson: text and examples (with Try it) beside the editor; the exercise passes Check.}
-  \end{subfigure}
-  \caption{The learning lab.}
-  \label{fig:learn}
-\end{figure}
-
-\paragraph{View as student.} Teachers and admins can open the student side
-from the teacher area under their own staff account, to check how a lab,
-including one still in draft, will look before students see it
-(\cref{fig:preview}). They see their own and shared labs (admins see all),
-the learning lab and the practice tasks, and can run and check code as a
-student would. These sessions are marked as previews on the server, which
-decides from the sign-in and not from anything the browser sends, so a
-student can never hide their own sessions this way. Previews are left out of
-baselines, the detector, review, the live view, lab progress and the
-research export, never block deleting a lab or question, and cannot join a
-competition, so a teacher never appears on a class board.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=\linewidth]{preview/preview-light-01-home}
-  \caption{View as student: a teacher's labs as students see them, with a draft lab marked and a bar that keeps the mode visible.}
-  \label{fig:preview}
-\end{figure}
-
-\section{Attendance through Roll Call}
-\label{sec:attendance}
-
-Lab classes also need an attendance register, which the department keeps in
-a separate web app, Roll Call. Rather than make teachers take a roll call
-during a lab whose every keystroke is already recorded, Student IDE marks it
-for them. A teacher connects once by pasting their Roll Call sync key (Roll
-Call has no accounts; the key is the faculty member's workspace, and it never
-leaves the Student IDE server). A lab can then attach one or more Roll Call
-\emph{class groups}, for example the two practical groups of a section that
-share a lab slot, either picked from the teacher's Roll Call or created from
-Student IDE with a roll-number range (\cref{fig:attendance}). Attaching a
-group adds its students to the lab's roster.
-
-\paragraph{Effective participation.} Being signed in is not taking part, so
-a student counts as present for a lab day only with at least ten
-\emph{active minutes} (distinct wall-clock minutes with an edit, a Run or a
-Check) and at least forty \emph{typed} characters; pasted or dropped text and
-Reset do not count as typing. Each lab can change both thresholds and can
-also require one Run or Check. Only the lab's own sessions count: learning-lab
-practice (\cref{sec:learning-lab}) and staff previews never do. The rule reads
-only edit, run and check records, not key timings, so it works after raw keys
-have been deleted (\cref{sec:deployment}), and it is independent of the
-detector: a highlighted moment never changes a student's attendance, keeping
-the promise that a flag leads only to a conversation.
-
-\paragraph{Marking.} When the teacher closes the lab, each lab day not yet
-sent becomes one Roll Call session per attached class group: every student on
-that group's roster is marked present or absent there, so a lab shared by
-several groups still lands in each student's own register. Before closing,
-the teacher can open the lab's attendance page, see for every student why the
-rule marked them (``14 active min, 140 typed chars, 1 run'', ``only 4 of 10
-active minutes''), override any mark and send. Students who worked in the lab
-but are on no attached roster are listed separately; this almost always means
-a Roll Call roster prefix that differs from the college address. Session ids
-are derived from lab, class group and day, so sending again replaces the same
-records instead of adding new ones, and a failed send is kept and can be
-retried without blocking the lab from closing.
-
-\paragraph{Sittings.} Lab groups of one section usually take the same lab
-on different days, so marking every attached group whenever the lab closes
-would record the group that was not in the room as absent. Opening a lab that
-has class groups therefore asks the teacher which group is performing; the
-opening becomes a \emph{sitting} for those groups. While it lasts, only their
-students see the lab (students on no attached roster are not restricted), and
-when the teacher closes the lab or moves to the next group, attendance for
-that day is sent for the sitting's groups alone. A group in which nobody
-worked that day is never sent, so a sitting opened by mistake does not mark a
-whole group absent (\cref{fig:which-group}).
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.6\linewidth]{attendance/attendance-light-03a-which-group}
-  \caption{Opening a lab with class groups asks which group is performing; only that group's students can work in the lab, and only they are marked when the sitting ends.}
-  \label{fig:which-group}
-\end{figure}
-
-\paragraph{Faculty without labs.} Keys made by Student IDE only reach teachers
-who use it, so Roll Call also offers Google sign-in with the same OAuth client
-and the same address rule: a student-shaped address is sent to the read-only
-view, any other college address gets its own register on first sign-in. Roll
-Call remains local-first; it keeps each teacher's key encrypted with a server
-secret so any device can open the register after sign-in. A shared link
-secret lets Student IDE adopt a register that a teacher already made in Roll
-Call, and record its own keys there, so one teacher never ends up with two
-registers. Admins on the shared list can open every register from Roll Call
-too, with the same banner and log as from Student IDE.
-
-\paragraph{Subjects and onboarding.} A lab's subject is also the Roll Call
-session's subject, and both apps gained a Subjects view: in Student IDE the
-labs of a course with their class groups and what has been sent, in Roll Call
-each subject across the classes it is taught to with every student's
-percentage. Each app has a ``Getting started'' checklist that ticks itself
-from what the new faculty member has already set up, and both now use one
-URL scheme (collections are plural nouns, an item is
-\texttt{/<collection>/<id>}, a view of it one more segment), with the older
-links kept working.
-
-\paragraph{Keys and who sees what.} Roll Call has no accounts: a random key
-is a workspace. Rather than asking faculty to copy that key between sites,
-Student IDE makes one per teacher, keeps it on its server, and signs the
-teacher in to Roll Call with a one-time link (valid once, for two minutes; Roll
-Call holds the key only encrypted with the link's code). Each teacher therefore
-sees only their own register. Students get their own key, which Student IDE
-grants, through each teacher whose class groups list them, read access to that
-student's marks alone; Roll Call stores only its hash, and a student key opens
-a read-only page of the student's own attendance and never a workspace
-(Figure~\ref{fig:my-attendance}). Because keys live in the browser, Roll Call
-gained a sign-out for shared lab computers and asks before mixing one person's
-local records into another's account. A teacher can replace a key that may
-have leaked: the register moves to the new key in one statement and the old
-key is refused from then on, so no stale device quietly opens an empty
-register. Admins, who are known only to Student IDE, can open any teacher's
-register with full access; Roll Call names whose register it is, and every
-such opening is logged.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=\linewidth]{attendance/attendance-light-17-my-attendance}
-  \caption{A student's ``My attendance'' in Roll Call, opened from Student IDE: their own marks by subject, read-only.}
-  \label{fig:my-attendance}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{attendance/attendance-light-04-preview}
-    \caption{A lab's attendance page: one card per attached class group, each mark with its reason; a mark can be tapped to override it.}
-  \end{subfigure}\\[1ex]
-  \begin{subfigure}{\textwidth}
-    \includegraphics[width=\linewidth]{attendance/attendance-light-11-rollcall-subject}
-    \caption{Roll Call after sending: the subject's sessions from Student IDE and each student's percentage.}
-  \end{subfigure}
-  \caption{Attendance from a lab, in Student IDE and in Roll Call.}
-  \label{fig:attendance}
 \end{figure}

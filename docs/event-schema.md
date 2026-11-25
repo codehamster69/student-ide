@@ -1,11 +1,13 @@
-# Event schema (v2)
+# Event schema (v4)
 
 The editor records one stream of events per **session** (one student working
 on one task in one sitting). Everything later in the pipeline (30-second
 feature windows, baselines, CUSUM, the teacher timeline) is computed from
 this stream, so it is kept small, append-only and versioned.
 
-The source of truth is `backend/studentide/schema.py`; this page explains it.
+The source of truth is `backend/studentide/schema.py`; this page explains it. The thesis's
+Appendix A table (`thesis/latex/tables/event-schema.tex`) is generated from it by
+`backend/scripts/build_schema_appendix.py`; rerun that after any schema change (a test checks).
 
 ## Storage
 
