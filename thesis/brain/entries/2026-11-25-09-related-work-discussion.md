@@ -30,8 +30,12 @@ section of ch 12 is written (Future work untouched).
   less usual device; 84% own pastes; 45 splices, 2-3 cross-device; 10.7 active hours.
   New derived number: dev precision illustration from 64% caught and 29% of real sessions
   flagged = ~2% at 1/100, 0.4% at 1/500 (~45 honest flags per real one).
-- Test-split numbers are red `\resultpending{...}` placeholders (macro via
-  `\providecommand` in ch 11 and ch 12) for the final-evaluation thread to fill.
+- Classroom results from the final-evaluation thread (PR #71) were then written into
+  ch 11 and the conclusion: classroom-calibrated thresholds catch 31% of dev splices
+  (18-45%) at 0.22 FA/h, median 10 min; held-out 0.15 FA/h, 1 of 4 splices; scaled
+  Manhattan 29%, identity channels alone 29%; RQ2 process AUC 0.71-0.74 vs outside
+  pastes, typing measures ~0.5; RQ3 rhythm stable, process drifts (rho 0.45 with days);
+  RQ4 precision 5.4% at 1/100, 1.1% at 1/500 (live thresholds 2.2%/0.4%); 0 teacher notes.
 
 ## Why
 
@@ -43,5 +47,5 @@ oral ethics approval with written confirmation pending, and out-of-scope attacks
 
 ## Follow-ups
 
-- Fill every `\resultpending` once the held-out test run is in ch 7-10, then delete the macro.
+- Merge after PR #71 so the ch 7-10 tables the discussion paraphrases are on main.
 - Ch 1 still has a TODO for problem evidence; Newton 2018 and Bretag 2019 are now in the bib.

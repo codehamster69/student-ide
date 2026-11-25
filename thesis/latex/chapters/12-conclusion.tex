@@ -2,7 +2,6 @@
 \label{ch:conclusion}
 \section{Conclusion}
 \label{sec:conclusion}
-\providecommand{\resultpending}[1]{\textcolor{red}{[\,#1\,]}}
 This thesis asked whether a change of author partway through a programming
 session can be detected from how the code is written, against the student's own
 earlier work, without a camera and without watching the screen. To answer it, it
@@ -19,20 +18,22 @@ changed on their own as a natural experiment, and copying signs the editor
 records as weak labels, all under a split by student and by week that was fixed
 before the single held-out run.
 
-The answers are these. \RQ{1}: a spliced takeover is caught in
-\resultpending{RQ1 test: \% caught [CI]} of sessions, a median of
-\resultpending{RQ1 test: median delay} after the switch, at
-\resultpending{RQ1 test: false alarms per active hour} on real sessions (dev: 64\%,
-450\,s, 1.59 per hour). Detection is possible, but slower and far noisier than on
-simulated typists, because honest classwork drifts from a short early baseline,
-and every setting that removes false alarms also removes detections. \RQ{2}:
-\resultpending{RQ2 test: one-sentence answer}; most pastes are the student's own
-code, so copying is best evidenced directly by paste origin and blocked outside
-pastes. \RQ{3}: \resultpending{RQ3 test: one-sentence answer}; flags rose on a
-student's less usual device already in the first look. \RQ{4}: at realistic
-prevalences most flags are honest students (precision
-\resultpending{RQ4 test: precision at 1/100 and 1/500}), and error rates
-\resultpending{RQ4 test: differ / do not measurably differ} across subgroups.
+The answers are these. \RQ{1}: with thresholds calibrated on classroom data for
+0.2 false alarms per active hour, 31\% of spliced takeovers are caught (18--45\%,
+cross-fitted dev), a median of ten minutes after the switch, and the held-out
+split confirms the false-alarm rate (0.15 per hour); the live thresholds catch
+64\% at 1.59 false alarms per hour. Detection is possible, but slower and far
+noisier than on simulated typists, because honest classwork drifts from a short
+early baseline, and every setting that removes false alarms also removes
+detections. \RQ{2}: the process score agrees moderately with outside pastes (AUC
+0.71--0.74), typing measures do not, and most pastes are the student's own code,
+so copying is best evidenced directly by paste origin and blocked outside
+pastes. \RQ{3}: transfer between devices could not be measured with four
+students on both, but over time typing rhythm is stable while process features
+drift, and alarms grow with the time since the baseline. \RQ{4}: at realistic
+prevalences most flags are honest students (precision 5.4\% at 1 in 100, 1.1\%
+at 1 in 500), and at the live thresholds false alarms differ several-fold by
+operating system and by context.
 
 The central conclusion follows from the last answer. Process evidence can show a
 teacher where to look, and when in a session something changed, but it cannot
