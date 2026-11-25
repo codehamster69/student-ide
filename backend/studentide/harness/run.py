@@ -5,6 +5,8 @@
 
     # recorded study data instead of simulated people:
     python -m studentide.harness dev --db data/study.sqlite3 --labels data/labels/
+    # naturalistic classroom data, labelled switches by splicing (docs/evaluation.md):
+    python -m studentide.harness dev --db data/pilot.sqlite3 --classroom
 
 dev (dev students only, 5-fold cross-fitting):
   1. calibration: holdout vs self vs pooled sources, and how many calibration
@@ -40,11 +42,12 @@ import numpy as np
 from ..detector.evaluate import write_csv
 from ..detector.features import FEATURES, GROUPS, LEGACY_FEATURES
 from . import report, rq2
-from .corpus import Corpus, db_corpus, describe, synthetic_corpus
+from .corpus import Corpus, classroom_corpus, db_corpus, describe, synthetic_corpus
 from .engine import (CALIB_SOURCES, bootstrap, curve, cv_runs, outcomes, precision, score_run, stat_delay,
                      stat_detected, stat_fa, stat_flagged, stat_precision, summarise, window_auc)
 from .methods import ChannelSpec, ChannelMethod, ScaledManhattan, TypeNetStyle, nosi_style, thesis_detector
-from .split import Ledger, config_hash, git_state, split
+from .splice import add_splices
+from .split import Ledger, config_hash, git_state
 
 CHEAT = report.CHEAT
 TARGETS = [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0]
@@ -59,6 +62,10 @@ def log(*a):
 
 
 def load(a) -> Corpus:
+    if a.db and a.classroom:
+        c = classroom_corpus(a.db, a.baseline_min, a.by_device, a.test_frac)
+        add_splices(c, seed=a.seed, test_frac=a.test_frac)
+        return c
     if a.db:
         return db_corpus(a.db, a.labels)
     return synthetic_corpus(a.typists, a.seed, n_base=8, minutes=a.minutes, cache=a.cache)
@@ -146,7 +153,7 @@ def calibration_experiment(runs, corpus, target, reps=20, seed=0) -> list[dict]:
 def dev(a):
     global _CORPUS
     corpus = _CORPUS = load(a)
-    dev_s, test_s = split(corpus.students, a.test_frac)
+    dev_s, test_s = corpus.split_students(a.test_frac)
     log(f"corpus {corpus.source}: {len(dev_s)} dev students, {len(test_s)} test students (test not touched)")
     out, th = a.out, a.thesis
     meta = f"{corpus.source}, dev split, {len(dev_s)} students, 5-fold"
@@ -263,11 +270,12 @@ def dev(a):
 
     # 4. short baselines (holdout calibration: self needs >= 2 sessions)
     log("4. short baselines ...")
-    bl = [(n, p) for n in (1, 2, 3, 4, 6, 8) for p in (0.0, 2.0)]
+    # classroom data: a baseline is minutes, not sessions; sweep --baseline-min across runs instead
+    bl = [] if "baseline_min" in corpus.meta else [(n, p) for n in (1, 2, 3, 4, 6, 8) for p in (0.0, 2.0)]
     brows = parallel([(f"{n}/{p}", {**ref, "prior_n": p}, dev_s, n, "holdout", T, None, "cusum") for n, p in bl], a.workers)
     for r, (n, p) in zip(brows, bl):
         r.update({"n_base": n, "prior": "none" if p == 0 else f"{p:g} sessions",
-                  "takeover": r["takeover"], "copying": r["copying"], "paste": r["paste"]})
+                  **{v: r.get(v, math.nan) for v in ("takeover", "copying", "paste")}})
 
     # operating point for the review timeline: the chosen detector fitted on
     # every dev student, h calibrated on them as `test` does
@@ -308,11 +316,13 @@ def dev(a):
         report.write(abl / "harness-window-length/table.tex", report.table_ablation(
             wrows, meta, "Window length $W$ for both channels, no population prior (dev students, cross-fitted, $h$ recalibrated per row).",
             "tab:harness-window-length"))
-        write_csv(abl / "harness-baseline-length/results.csv", brows)
-        report.write(abl / "harness-baseline-length/table.tex", report.table_baseline_length(brows, meta))
+        if brows:
+            write_csv(abl / "harness-baseline-length/results.csv", brows)
+            report.write(abl / "harness-baseline-length/table.tex", report.table_baseline_length(brows, meta))
         (th / "graphs").mkdir(exist_ok=True)
         report.plot_calibration(th / "graphs/harness-calibration.pdf", cal_rows, T)
-        report.plot_baseline_length(th / "graphs/harness-baseline-length.pdf", brows)
+        if brows:
+            report.plot_baseline_length(th / "graphs/harness-baseline-length.pdf", brows)
     log(f"dev done in {(time.time() - t0) / 60:.1f} min; frozen config -> {out / 'frozen-config.json'}")
 
 
@@ -325,7 +335,7 @@ def test(a):
         sys.exit("no frozen configuration: run `dev` first (the test split is only scored with a frozen config)")
     fz = json.loads(fz_path.read_text())
     corpus = load(a)
-    dev_s, test_s = split(corpus.students, fz["split"]["test_frac"])
+    dev_s, test_s = corpus.split_students(fz["split"]["test_frac"])
     fp, ch = corpus.fingerprint(), config_hash({k: v for k, v in fz.items() if k != "created"})
     ledger = Ledger(out / "test-ledger.jsonl")
     prev = ledger.previous(fp, ch)
@@ -351,7 +361,7 @@ def test(a):
         mrows.append(r)
         results[label] = (run, recs, k, rule)
         curves[label] = curve([run], corpus, TARGETS, source, k, rule)
-        log(f"    FA/h {r['fa_per_h']:.2f}  takeover {r['takeover']:.2f}  copying {r['copying']:.2f}  AUC {r['window_auc']:.3f}")
+        log(f"    FA/h {r['fa_per_h']:.2f}  takeover {r.get('takeover', math.nan):.2f}  copying {r.get('copying', math.nan):.2f}  AUC {r['window_auc']:.3f}")
 
     main_label = plan[0][0]
     run, recs, _, _ = results[main_label]
@@ -390,7 +400,8 @@ def test(a):
                          "takeover": stat_detected("takeover")(rs), "takeover_ci": bootstrap(rs, stat_detected("takeover"))})
 
     log("  RQ2 ...")
-    r2 = rq2.run(corpus, test_s, log=log)
+    # classroom data has no staged copying: RQ2 there is weak-label agreement (docs/evaluation.md), not this
+    r2 = None if "baseline_min" in corpus.meta else rq2.run(corpus, test_s, log=log)
 
     git = git_state(REPO)
     summary = {"meta": meta, "frozen": fz, "methods": mrows, "conditions": summ, "cis": cis, "curves": curves,
@@ -407,14 +418,16 @@ def test(a):
         report.write(th / "tables/harness-precision.tex", report.table_precision(prec, meta))
         write_csv(th / "tables/harness-fairness.csv", fair)
         report.write(th / "tables/harness-fairness.tex", report.table_fairness(fair, meta))
-        write_csv(th / "tables/harness-rq2.csv", r2["windows"])
-        report.write(th / "tables/harness-rq2.tex", report.table_rq2(r2, meta))
+        if r2:
+            write_csv(th / "tables/harness-rq2.csv", r2["windows"])
+            report.write(th / "tables/harness-rq2.tex", report.table_rq2(r2, meta))
         g = th / "graphs"
         g.mkdir(exist_ok=True)
         report.plot_curves(g / "harness-detection-vs-false-alarms.pdf", curves)
         report.plot_precision(g / "harness-precision.pdf", curves[main_label])
         report.plot_fairness(g / "harness-fairness.pdf", fair)
-        report.plot_rq2(g / "harness-rq2.pdf", r2)
+        if r2:
+            report.plot_rq2(g / "harness-rq2.pdf", r2)
     log(f"test done in {(time.time() - t0) / 60:.1f} min; ledger -> {ledger.path}")
 
 
@@ -427,6 +440,10 @@ def main(argv=None) -> None:
     p.add_argument("--minutes", type=float, default=30)
     p.add_argument("--db", type=Path, help="recorded study database (instead of synthetic)")
     p.add_argument("--labels", type=Path, help="folder with sessions.csv / students.csv")
+    p.add_argument("--classroom", action="store_true",
+                   help="with --db: every study session, no labels; baselines from the earliest minutes, splices as switches")
+    p.add_argument("--baseline-min", type=float, default=20.0, help="--classroom: active minutes in a baseline")
+    p.add_argument("--by-device", action="store_true", help="--classroom: one baseline per student and device class")
     p.add_argument("--test-frac", type=float, default=0.3)
     p.add_argument("--target", type=float, default=0.2, help="false alarms per honest hour")
     p.add_argument("--typenet-steps", type=int, default=1500)
@@ -436,7 +453,7 @@ def main(argv=None) -> None:
     p.add_argument("--thesis", type=Path, help="thesis/latex folder for tables and graphs")
     p.add_argument("--reason", help="test only: why the test split is being scored again")
     a = p.parse_args(argv)
-    if a.db and not a.labels:
-        p.error("--db needs --labels")
+    if a.db and not (a.labels or a.classroom):
+        p.error("--db needs --labels or --classroom")
     (dev if a.mode == "dev" else test)(a)
 

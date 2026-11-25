@@ -1,8 +1,13 @@
 \chapter{RQ4: Fairness and Precision at Realistic Rates}
 \label{ch:rq4}
 \section{Subgroup error rates}
-\todo{Typing speed, keyboard layout, prior experience, gender, etc.\ from the
-study's participant attributes (\texttt{students.csv} in the labels manifest).}
+Groups come from the recordings, with no survey: the device class and operating system
+a student mostly used, language (C or Python), lab or competition, and typing-speed
+tercile. For each: false alarms per active hour and share of real sessions flagged
+(upper bounds), and same-device splice detection, with student-bootstrap intervals.
+Demographic groups (gender, prior experience) are not recorded and are left as a
+limitation. Phone sessions have no key events and are reported apart.
+\todo{Classroom test-split results.}
 
 \subsection*{Synthetic test students (evaluation harness)}
 Simulated people have no demographics, so the harness groups them by terciles

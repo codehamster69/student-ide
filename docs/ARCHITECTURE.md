@@ -31,7 +31,7 @@ Feature-level detail lives in the other files in `docs/`; this page is the map.
 | `retention.py`, `backup.py` | Purge raw key timings after N days (consent promise); gzipped SQLite backups. |
 | `replay.py`, `export.py` | Rebuild documents from edit events; load sessions for analysis. |
 | `detector/` | Phase 2: habit features per 30 s window, per-student baseline, two-channel (identity/process) CUSUM, synthetic typists, synthetic evaluation. |
-| `harness/` | Phase 4: labelled corpus, strict dev/test split by student, thesis detector vs baselines (scaled Manhattan, TypeNet-style LSTM, Nosi-style), LaTeX/CSV/PDF outputs. |
+| `harness/` | Phase 4: corpus (synthetic, or classroom data with takeovers spliced from real sessions, `splice.py`), strict dev/test split by student (and by week for classroom data), thesis detector vs baselines (scaled Manhattan, TypeNet-style LSTM, Nosi-style), LaTeX/CSV/PDF outputs. |
 | `pilot.py` | Aggregates-only, pseudonymous report of live recordings (data quality, devices, copying signs, detector flag rates); docs/pilot-data.md. |
 
 ### Frontend (`frontend/src/`)
@@ -65,7 +65,7 @@ against the student's baseline with the config frozen in `thesis/evaluation/froz
 → the review timeline (`frontend/src/review/`) shows alarms with evidence and code replay.
 Sessions with context `learn` or `preview` never become study data.
 
-**3. Evaluation.** `harness dev` builds a corpus (synthetic, or recorded `--db` + labels),
+**3. Evaluation.** `harness dev` builds a corpus (synthetic, classroom `--db … --classroom`, or recorded `--db` + labels),
 tunes on dev students and freezes the config; `harness test` scores held-out students once,
 appends to `test-ledger.jsonl`, and writes tables and graphs into `thesis/latex/`.
 

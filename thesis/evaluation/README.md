@@ -13,5 +13,6 @@ tables and graphs they produced.
 
 The ledger is what lets the thesis say how often the test students were
 looked at. A new line with an unchanged corpus and config needs `--reason`.
-When the study data arrives, its runs go in the same ledger with a different
-corpus fingerprint.
+Classroom-data runs (`--classroom`) go in the same ledger with their own corpus
+fingerprint; the frozen config of a classroom `dev` run replaces the synthetic one
+only when Rohan decides the detector re-tune is final.

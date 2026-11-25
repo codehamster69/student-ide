@@ -23,11 +23,11 @@
   \node[prog, right=of b4] (b5) {5. College\\deployment, pilot (\#14)};
   \draw[arrow] (b4) -- (b5);
   % Study lane
-  \node[lane, below=34mm of bl.west, anchor=west] (sl) {Study (months 1--12)};
-  \node[prog, below right=3mm and 0mm of sl.south west] (p0) {Phase 0 \textperiodcentered{} M1--2\\survey, ethics, logger};
-  \node[pend, right=of p0] (p1) {Phase 1 \textperiodcentered{} M3--4\\baseline labs};
-  \node[pend, right=of p1] (p2) {Phase 2 \textperiodcentered{} M5--6\\staged sessions A--E};
-  \node[pend, right=of p2] (p3) {Phase 3 \textperiodcentered{} M7\\remote interview};
+  \node[lane, below=34mm of bl.west, anchor=west] (sl) {Study: classroom data only (months 1--12)};
+  \node[prog, below right=3mm and 0mm of sl.south west] (p0) {Set-up \textperiodcentered{} M1--2\\logger, ethics};
+  \node[prog, right=of p0] (p1) {Recording \textperiodcentered{} M2--6\\real labs, competitions};
+  \node[prog, right=of p1] (p2) {Design on dev \textperiodcentered{} M3--7\\splices, re-tune};
+  \node[pend, right=of p2] (p3) {Held-out test \textperiodcentered{} M8\\scored once};
   \node[pend, below=of p3] (w) {M8--12\\measure and write};
   \node[prog, below=of p0] (eth) {Ethics approval\\(oral; written pending)};
   \draw[arrow] (p0) -- (p1);
@@ -36,8 +36,8 @@
   \draw[arrow] (p3) -- (w);
   % Cross-lane dependencies
   \draw[dep] (b1) -- node[right, font=\scriptsize, text=gray, pos=0.3] {logger} (p0);
-  \draw[dep] (eth.east) -| node[pos=0.75, right, font=\scriptsize, text=gray] {gates} (p1.south);
-  \draw[dep] (p2.north east) -- node[sloped, below, font=\scriptsize, text=gray] {labelled test set} (b4.south west);
+  \draw[dep] (eth.east) -| node[pos=0.75, right, font=\scriptsize, text=gray] {covers} (p1.south);
+  \draw[dep] (p1.north east) -- node[sloped, below, font=\scriptsize, text=gray] {spliced takeovers} (b4.south west);
   % Legend
   \node[done, text width=1.9cm, minimum height=6mm, below=10mm of eth.south west, anchor=north west] (l1) {Done};
   \node[prog, text width=1.9cm, minimum height=6mm, right=of l1] (l2) {In progress};

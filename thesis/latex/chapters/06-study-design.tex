@@ -1,21 +1,50 @@
 \chapter{Study Design and Ethics}
 \label{ch:study}
 
-\section{Ethics and data protection}
-\todo{Approval, consent, DPDP Act, EU AI Act design target.}
+\section{Classroom data only}
+\label{sec:naturalistic}
+The original plan staged the evidence: four weeks of baseline labs, then sessions in
+which volunteers swapped seats at a set minute, copied, or pasted on cue, then mock
+remote interviews. In practice a lab cannot be controlled that tightly. Any given
+session could be a student's first, a re-attempt, on a lab PC or on their own laptop,
+in a lab or a competition, and some students may well copy from a language model. The
+students are a class being taught, not participants in an experiment, and asking them
+to cheat on cue would change the very behaviour being measured.
 
-\section{Pilot deployment: what real classes showed}
+The thesis therefore draws every conclusion from naturalistic recordings: whatever real
+classes produce, as they happen, with no staged phase, no separate baseline weeks, no
+interviews and no survey. This costs ground truth: no recorded session is known to
+contain a switch, and none is known to be clean. The design below recovers what it can
+without labels. Switches with a known time are made by splicing two real sessions
+(\cref{sec:splicing}). Real sessions give a false-alarm rate that is an upper bound
+(\cref{sec:protocol}). Device changes that students make on their own give a natural
+experiment (\cref{sec:devices}). Signs the editor records give weak labels for copying
+(\cref{sec:weak-labels}).
+
+\section{Ethics and data protection}
+\label{sec:ethics}
+The pilot runs with oral institutional approval from the Dean, the Head of Department and
+the course faculty; written confirmation is pending and will be attached as
+Appendix~B. Every student sees a consent screen on first sign-in that says what is
+recorded (key timing, edits, pastes, runs, focus; never the screen or camera), that a
+flag only ever leads to a conversation, and that the teacher can watch live. The design
+follows India's Digital Personal Data Protection Act 2023 and treats the EU AI Act's
+high-risk requirements for education as a target: raw key events are deleted after 28
+days and only window summaries are kept; a student can have all their data erased; the
+analysis uses pseudonymous aggregates and never names a student. Splicing
+(\cref{sec:splicing}) recombines summaries of two students' typing inside the analysis
+only; a spliced session is never shown to a teacher or attached to either student.
+
+\section{Setting and data}
 \label{sec:pilot-data}
-The editor has run in real IIIT Surat classes since 27 October 2026 as a pilot
-with oral institutional approval (Dean, HoD and faculty; written confirmation pending,
-Appendix~B) and each student's consent on first sign-in. The recordings served as
-development data: they checked the recorder and the detector on real students and drove
-the re-tuning, so they are kept apart from the held-out test. Only pseudonymous aggregates were analysed
-(\texttt{studentide.pilot}), and nothing is labelled: no takeover, proxy or copying is known.
+The editor has run in real IIIT Surat classes since 27 October 2026 (\cref{tab:pilot}).
+Students use it for programming labs and class competitions in C and Python, on the
+department's lab PCs or on their own laptops. Only pseudonymous aggregates were analysed
+(\texttt{studentide.pilot}), and nothing is labelled.
 
 \begin{table}[ht]
   \centering
-  \caption{Pilot recordings, 27 Oct to 23 Nov 2026 (aggregates; development data).}
+  \caption{Pilot recordings, 27 Oct to 23 Nov 2026 (aggregates over all students, before the split was fixed).}
   \label{tab:pilot}
   \begin{tabular}{@{}lr@{}}
     \toprule
@@ -39,84 +68,172 @@ no key events, so a student who codes on a phone has no rhythm at all, which is 
 limit for RQ4 and a reason for labs to require a laptop or PC. Third, the process channel
 flagged far more often than on synthetic data, mostly through build order, which follows
 the question more than the person, and flags rose on a device other than the student's
-usual one. Since no takeover is known, these rates are an upper bound on false alarms
-and motivate re-tuning on development data before the staged sessions.
-\todo{Attach the written confirmation of the oral approval in Appendix~B.}
+usual one. Since no takeover is known, these rates are an upper bound on false alarms;
+they motivated re-tuning the detector on the development split (\cref{sec:split}) and a
+device-aware baseline (\cref{sec:baseline}).
 
-\section{Phase 0: survey and logger}
-\todo{Months 1--2.}
+\paragraph{What counts as study data.} Learning-lab practice and teachers' ``View as
+student'' previews are recorded but never analysed, edits that reset the editor to its
+starter code are skipped, and sessions with no active window (30\,s with at least
+20 code key presses) are left out so that idle tabs do not count as honest hours. Phone
+sessions record no key events and so contribute only to the process channel; they are
+reported separately.
 
-\section{Phase 1: baseline labs}
-\todo{60--80 volunteers, first four lab weeks.}
+\section{Baselines from the earliest minutes}
+\label{sec:baseline}
+Without baseline weeks, a student's baseline is simply their earliest $M$ active minutes
+of typing, from whatever sessions those were in ($M = 20$ by default; the dev split
+sweeps it). Sessions that contribute to the baseline are never scored. Since flags rose
+on a student's less usual device, the baseline can be kept per device class (lab-PC-like,
+personal-like, desktop app): a session is then scored against the student's baseline on
+the same class, and the dev split decides whether this helps. Device classes come from a
+browser fingerprint without its version: one shared by three or more students looks
+like a lab PC. Raw keys of baseline sessions are purged after 28 days like any others;
+the stored windows keep the baseline usable.
 
-\section{Phase 2: staged conditions}
+\section{Spliced takeovers}
+\label{sec:splicing}
+A spliced session takes a real, scored session of student $A$ and, from a time $\tau$,
+continues it with the real typing of student $B$ from the same point of $B$'s session on
+the same question, shifted to follow on. Every key, edit and run on either side was
+really typed in class; only the join is made. The switch time is known by construction,
+so detection, delay and the error of $\hat\tau$ can be measured on real typing. Rules
+(\texttt{harness/splice.py}):
+\begin{itemize}
+  \item $B$ is another student on the same question and on the same side of the
+    dev/test split, so the task, its stage and the split stay matched.
+  \item A partner on the same device class gives the main condition; one on another
+    device class gives a second, easier condition, since the device change is part of
+    the signal.
+  \item $\tau$ is drawn uniformly from multiples of 90\,s that leave at least
+    three minutes, and two active windows, of each student.
+  \item Splices are made from raw events when both sessions still have them (so the
+    keystroke baselines can be scored), and from stored windows otherwise.
+\end{itemize}
+
 \begin{table}[ht]
   \centering
-  \caption{Phase 2 staged conditions.}
+  \caption{Conditions in the classroom evaluation.}
   \label{tab:conditions}
-  \begin{tabular}{@{}cl@{}}
+  \begin{tabular}{@{}lll@{}}
     \toprule
-    Condition & Description \\
+    Condition & Built from & Answers \\
     \midrule
-    A & Honest session \\
-    B & Full proxy (someone else writes the whole session) \\
-    C & Takeover at a random minute \\
-    D & Copying code out of another source \\
-    E & Pasting \\
+    Real session & a scored session as recorded & false alarms (upper bound) \\
+    Splice, same device class & $A$ then $B$, same question & detection, delay (RQ1) \\
+    Splice, other device class & $A$ then $B$, same question & detection with a device change \\
+    Cross-device baseline & real sessions scored on the other class's baseline & transfer (RQ3) \\
+    Copying signs & real sessions with weak signs & agreement (RQ2) \\
     \bottomrule
   \end{tabular}
 \end{table}
-\todo{Grade-matched proxies; counterbalancing; session length.}
 
-\section{Phase 3: mock remote interview}
-\todo{20--30 participants, own laptop.}
+What a splice cannot show is stated with every result. $B$ continues their own code,
+not $A$'s, so line-level build order reflects $B$'s document, and a real helper would
+first have to read $A$'s code, a pause that splices lack. Both make the process channel's
+task easier than a real takeover, so splice detection is optimistic for that channel,
+and the identity channels are also reported on their own. A splice also assumes that $A$
+and $B$ are each a single author; if either copied or had help, the splice is a harder
+case, not an easier one.
+
+\section{Devices as a natural experiment}
+\label{sec:devices}
+Students were not assigned to devices; they used what they had. Many used both a lab PC
+and their own laptop over the term, which allows a within-student comparison: the
+distance between two sessions of the same student on the same device, on different
+devices, and of two students on the same question. The same students are scored with a
+baseline from one device class and from the other. Because device choice is not random
+(students who bring laptops may differ), RQ3 compares within students only, and RQ4
+reports device class as a group with that caveat.
+
+\section{Weak labels for copying}
+\label{sec:weak-labels}
+The editor records signs that copying may have happened: a paste of 80 or more
+characters, a paste within a minute of coming back to the window, text that appears
+with no key press (an auto-typer), and, once teachers turn paste blocking on, each
+attempt to paste text from outside the editor, which is blocked and logged. These are
+signs, not labels: students also paste their own code. RQ2 asks whether transcription
+measures agree with them; no accuracy is claimed.
+
+\section{Held-out split: by student and by week}
+\label{sec:split}
+Two cuts make the test set. Thirty per cent of students form the test students, chosen
+by a salted hash of their id, so the split does not depend on who else enrolled. In
+addition, every session from 24 November 2026 onward is held out for all students, so
+the test also covers later weeks the design never saw. Development (dev) data is
+therefore the dev students' sessions before 24 November; detector re-tuning, feature
+choices, the baseline length $M$, device-aware baselines and thresholds are decided on it
+alone, and then frozen (\texttt{split.pilot\_split}, shared by the re-tuning work and
+the harness). Test students' earliest minutes serve as their own baseline but are never
+used for tuning.
+
+\paragraph{Disclosure.} The first look at the pilot (\cref{tab:pilot}) reported
+aggregates over all sessions to 23 November, test students included, before the split
+was fixed. It informed the decision to re-tune and to make baselines device-aware, but
+no parameter was fitted on it. Test-split sessions also feed class-level pieces of the
+live review (feature weights, key-pair vocabulary); the frozen evaluation configuration
+fits those on dev students only.
 
 \section{Evaluation protocol}
 \label{sec:protocol}
 All research questions are answered by one evaluation harness
-(\texttt{studentide.harness}, \cref{fig:harness}) that runs unchanged on simulated
-sessions now and on the study recordings later; only the corpus changes.
+(\texttt{studentide.harness}, \cref{fig:harness}). It ran first on simulated typists,
+whose results are kept as a reference; the classroom corpus
+(\texttt{--db \dots{} --classroom}) replaces them with real sessions and splices.
 
-\paragraph{Split by student.} Thirty per cent of participants form the test
-set, chosen by a salted hash of the participant id, so the split does not depend
-on who else enrolled and later enrolments move nobody. Every population-level
-quantity (feature weights, the population prior for short baselines, the
-TypeNet-style embedder, the digraph vocabulary of the scaled-Manhattan baseline
-and the alarm thresholds $h$) is estimated on development (dev) participants only.
+\paragraph{Design on dev, report on test once.} All choices (the calibration source,
+the process-channel window, the baseline length and whether it is device-aware, each
+baseline method's alarm rule and CUSUM $k$) are made on dev students with 5-fold
+cross-fitting, so that dev figures are also out-of-sample, and then frozen in a
+configuration file. The test split is scored once per frozen configuration; every test
+run is recorded in a ledger with its time, code version, configuration hash and corpus
+fingerprint, and re-scoring the same corpus with the same configuration needs a written
+reason, which is logged. Ablations are reported on dev, headline results on test.
 
-\paragraph{Design on dev, report on test once.} All choices (the
-calibration source, the process-channel window, whether to use a population
-prior, each baseline's alarm rule and CUSUM $k$) are made on dev
-participants with 5-fold cross-fitting, so that dev figures are also
-out-of-sample, and are then frozen in a configuration file. The test
-participants are scored once per frozen configuration; every test run is
-recorded in a ledger with its time, code version, configuration hash and
-corpus fingerprint, and re-scoring the same corpus with the same
-configuration needs a written reason, which is logged. Ablations are
-therefore reported on dev participants and headline results on test.
-
-\paragraph{Thresholds.} $h$ is set per channel for a target of 0.2 false
-alarms per honest hour (split equally across channels). Three calibration
-sources are compared: staged honest sessions of other students
-(\emph{holdout}), every student's own baseline sessions scored
-leave-one-session-out (\emph{self}, which needs no staged sessions), and
-both (\emph{pooled}).
+\paragraph{Thresholds.} $h$ is set per channel for a target of 0.2 false alarms per
+active hour of real sessions (split equally across channels). Calibration uses other
+dev students' real sessions (\emph{holdout}), each student's own baseline sessions
+scored leave-one-session-out (\emph{self}), or both (\emph{pooled}). Since some real
+sessions may contain undetected cheating, calibrating on them sets $h$ slightly high,
+which is the safe direction for a tool whose flags lead to conversations.
 
 \section{Metrics}
-For each condition: the share of sessions with an alarm after the switch,
-the median and 90th-percentile detection delay, the median error of the
-estimated switch time and the alarms raised before the switch; for honest
-sessions, false alarms per hour and the share of sessions with at least one
-alarm. Window-level AUC compares one window of the student with one window
-typed by someone else. Detection against false alarms per hour is traced by
-sweeping the calibration target. Precision at prevalence $\pi$ is
-$\mathrm{TPR}\,\pi/(\mathrm{TPR}\,\pi + \mathrm{FPR}(1-\pi))$ with TPR from
-non-honest and FPR from honest sessions, at $\pi = 1/100$ and $1/500$. All
-intervals are 95\% percentile intervals from resampling participants.
+For spliced sessions: the share with an alarm after $\tau$, the median and
+90th-percentile delay, the median error of $\hat\tau$, and alarms before $\tau$. For real
+sessions: false alarms per active hour and the share flagged at least once, both upper
+bounds. Detection against false alarms is traced by sweeping the calibration target.
+Precision at prevalence $\pi$ is $\mathrm{TPR}\,\pi/(\mathrm{TPR}\,\pi +
+\mathrm{FPR}(1-\pi))$, with TPR from same-device splices and FPR from real sessions, at
+$\pi = 1/100$ and $1/500$; using an upper-bound FPR makes this a lower bound on
+precision. All intervals are 95\% percentile intervals from resampling students.
 
 \begin{figure}[ht]
   \centering
   \resizebox{\linewidth}{!}{\tikzfig{evaluation-harness}}
-  \caption{The evaluation harness: one protocol for synthetic and recorded data.}
+  \caption{The evaluation harness: one protocol for simulated and classroom data.}
   \label{fig:harness}
 \end{figure}
+
+\section{Teacher review (optional)}
+\label{sec:teacher-review}
+If a course teacher can spare about an hour, a sample of about 30 flagged moments (mixed
+with unflagged ones, blind to which is which) is reviewed on the evidence timeline, and
+the teacher records whether each one would merit a conversation. This would show
+whether flags are useful in practice; it is not a label of cheating. Without it, the
+review interface is assessed only by its design (\cref{ch:system}) and this is stated as
+future work.
+
+\section{Threats to validity}
+\begin{itemize}
+  \item \emph{No ground truth.} Real sessions may hide real switches, so false alarms are
+    overstated and precision understated; splices may differ from real takeovers
+    (\cref{sec:splicing}).
+  \item \emph{Self-selected devices.} Device effects are compared within students only.
+  \item \emph{One institution, one term, two languages.} Results may not transfer to
+    other courses or to typing in other languages.
+  \item \emph{Short baselines.} Median sessions are about five minutes, so 20 active
+    minutes may span several sessions and days; the dev split tests shorter and longer.
+  \item \emph{Raw-key purge.} After 28 days only stored windows remain, so keystroke
+    baselines can be compared only on recent sessions; run the analysis within that
+    window when it matters.
+\end{itemize}

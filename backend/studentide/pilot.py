@@ -56,6 +56,25 @@ def ua_info(ua: str | None) -> tuple[str, str, str]:
     return os_, br, m.group(2) if m else ""
 
 
+def device_fingerprint(meta: dict) -> str:
+    """What identifies the machine a session ran on, from its client_meta: the desktop
+    app's device id, else OS, browser, screen, platform, time zone and language (no
+    browser version, so an update does not make a new device)."""
+    cl = meta.get("client") or {}
+    if cl.get("kind") == "desktop" and cl.get("device"):
+        return str(cl["device"])
+    os_, br, _ = ua_info(meta.get("user_agent"))
+    scr = meta.get("screen") or {}
+    return "|".join(map(str, (os_, br, scr.get("w"), scr.get("h"), scr.get("dpr"), meta.get("platform"),
+                              meta.get("timezone"), meta.get("language"))))
+
+
+def device_class(client: str, os_: str, n_students_on_fp: int) -> str:
+    """desktop app | phone | lab-PC-like (fingerprint shared by >= LAB_PC_STUDENTS students) | personal-like."""
+    return ("desktop app" if client == "desktop" else "phone" if os_ in ("Android", "iOS")
+            else "lab-PC-like" if n_students_on_fp >= LAB_PC_STUDENTS else "personal-like")
+
+
 class _Acc:
     """Running per-session counts while streaming its events in seq order."""
 
@@ -149,8 +168,7 @@ def session_rows(db_path: str, salt: str | None = None) -> dict[str, dict]:
         os_, br, ver = ua_info(meta.get("user_agent"))
         scr = meta.get("screen") or {}
         desktop = cl.get("kind") == "desktop"
-        fp = cl.get("device") if desktop and cl.get("device") else "|".join(
-            map(str, (os_, br, scr.get("w"), scr.get("h"), scr.get("dpr"), meta.get("platform"), meta.get("timezone"), meta.get("language"))))
+        fp = device_fingerprint(meta)
         q = json.loads(s["question_json"]) if s["question_json"] else {}
         ctx = s["context"] or ("competition" if kind.get(s["lab_id"]) == "competition" else
                                "lab" if s["lab_id"] in kind else "sandbox" if s["lab_id"] else "practice")
@@ -195,8 +213,7 @@ def session_rows(db_path: str, salt: str | None = None) -> dict[str, dict]:
     for r in rows.values():
         shared[r["fp"]].add(r["student"])
     for r in rows.values():
-        r["device"] = ("desktop app" if r["client"] == "desktop" else "phone" if r["os"] in ("Android", "iOS")
-                       else "lab-PC-like" if len(shared[r["fp"]]) >= LAB_PC_STUDENTS else "personal-like")
+        r["device"] = device_class(r["client"], r["os"], len(shared[r["fp"]]))
     return rows
 
 

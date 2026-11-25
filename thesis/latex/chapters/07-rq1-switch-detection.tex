@@ -2,7 +2,16 @@
 \label{ch:rq1}
 
 \section{Setup}
-\todo{Data, splits, baselines compared, once Phase 2 sessions exist.}
+Classroom sessions of the test split (\cref{sec:split}), each scored against the
+student's own baseline from their earliest active minutes (\cref{sec:baseline}).
+Spliced sessions (\cref{sec:splicing}) give the detection rate, delay and switch-time
+error, separately for a partner on the same and on another device class; real sessions
+give the false-alarm rate, an upper bound. Compared methods: scaled Manhattan,
+TypeNet-style embedding and the Nosi-style rhythm measure, each with the same alarm
+stage and calibration. Keystroke baselines are scored only on splices made from raw
+events (sessions under 28 days old). The identity channels are also reported alone,
+since splices favour the process channel.
+\todo{Results on the classroom test split.}
 
 \subsection*{Synthetic pilot (phase 2 of the build)}
 Before any student data, the detector was evaluated on 60 simulated typists
@@ -16,7 +25,7 @@ verified, and the development runs behind each design choice, are in
 \cref{app:verification}.
 
 \section{Results}
-\todo{Real-data results replace this section; keep the synthetic pilot as a
+\todo{Classroom results replace this section; keep the synthetic pilot as a
 subsection.}
 
 On the synthetic test set with $W=30$\,s (\cref{tab:detection-by-condition,fig:detection-by-condition}),
