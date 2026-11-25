@@ -43,6 +43,7 @@ MIN_PAIRS = 5  # digraphs needed for a latency statistic
 RUN_SPAN_S = 300.0  # run frequency is measured over the trailing five minutes
 BUILD_SPAN_S = 300.0  # so is build order: one window holds too few new lines
 MIN_LINES = 3  # completed code lines needed for fill_in_frac
+LOG_FLOOR_MS = 1.0  # latencies and holds are floored here before a log (0 only to reproduce pre-2026-11-25 windows)
 
 # feature -> group. Groups are what the ablation removes.
 FEATURES: dict[str, str] = {
@@ -170,7 +171,54 @@ def _new_lines(before: str, after: str, frm: int, text: str) -> tuple[int, bool]
     return n, follows
 
 
-def streams(events: list[dict]) -> Streams:
+def squash(text: str) -> str:
+    """Text without any whitespace, so re-indented or re-wrapped code still matches."""
+    return "".join(text.split())
+
+
+def internal_paste(origin: str, text: str, doc_before: str, clips: list[str], known: tuple[str, ...] = ()) -> bool:
+    """Was this paste (or drop) the student's own text from inside the IDE?
+    True when the client marked it so (an origin containing "internal"), or
+    when its text, ignoring whitespace, was copied or cut in the editor
+    earlier (`clips`, squashed), already stands in the document, or is in
+    `known` (squashed text the student had in the IDE elsewhere: the
+    question statement, copies made in the other questions of the sitting).
+    Moving one's own code around is not copying from somewhere else; in the
+    pilot 84% of pastes were of this kind (brain 2026-11-25-06)."""
+    if "internal" in origin:
+        return True
+    t = squash(text)
+    if not t:
+        return True
+    return t in squash(doc_before) or any(t in c for c in clips) or any(t in c for c in known)
+
+
+def finite_windows(windows: list[dict]) -> list[dict]:
+    """Stored windows computed before LOG_FLOOR_MS can hold -inf (log of a 0 ms
+    latency); read those as missing, as a window with too few pairs would be."""
+    if LOG_FLOOR_MS <= 0:
+        return windows
+    return [{k: (math.nan if isinstance(v, float) and math.isinf(v) else v) for k, v in w.items()} for w in windows]
+
+
+def fix_paste_frac(windows: list[dict], events: list[dict], known: tuple[str, ...] = ()) -> list[dict]:
+    """Recompute only `paste_frac` of stored windows (a session whose raw keys
+    were purged) from its edits, which are kept, so pastes from inside the IDE
+    stop counting there too. Other features are left as stored."""
+    s = streams(events, known)
+    out = []
+    for w in windows:
+        ei = np.flatnonzero((s.e_t >= w["start"] * 1000) & (s.e_t < w["end"] * 1000))
+        ins = s.e_inserted[ei]
+        out.append({**w, "paste_frac": float(ins[s.e_paste[ei]].sum() / ins.sum()) if ins.sum() else 0.0})
+    return out
+
+
+def streams(events: list[dict], known: tuple[str, ...] = (), own_pastes: bool = True) -> Streams:
+    """`known`: squashed texts (see `internal_paste`) that count as the
+    student's own when pasted, besides this session's own copies and text.
+    `own_pastes=False` counts every paste as pasted, as before 2026-11-25
+    (kept to compare with the old behaviour)."""
     doc: str | None = None
     caret = 0
     # schema v2: a desktop workspace has several files; each edit/snapshot names its path
@@ -182,6 +230,8 @@ def streams(events: list[dict]) -> Streams:
     e_t, e_app, e_line, e_ins, e_paste = [], [], [], [], []
     run_t, focus_t, switch_t = [], [], []
     l_t, l_fill, b_t, b_open = [], [], [], []
+    clips: list[str] = []  # squashed text copied or cut in the editor so far
+    n_internal = 0
     end = 0.0
     for ev in events:
         typ, d, t = ev["type"], ev["data"], ev["t"]
@@ -190,7 +240,10 @@ def streams(events: list[dict]) -> Streams:
             docs[cur] = doc
             cur = d.get("path")
             doc = docs.get(cur)
-        if typ == "snapshot":
+        if typ == "clipboard":
+            if d.get("action") in ("copy", "cut") and d.get("text"):
+                clips.append(squash(d["text"]))
+        elif typ == "snapshot":
             if doc is None:
                 doc = d["text"]
         elif typ == "key":
@@ -231,7 +284,11 @@ def streams(events: list[dict]) -> Streams:
                 e_app.append(ch[-1][1] >= d["len_before"] - 1)
                 e_line.append(doc.count("\n", 0, frm))
                 e_ins.append(ins)
-                e_paste.append(d["origin"].startswith("input.paste") or d["origin"].startswith("input.drop"))
+                pasted = d["origin"].startswith("input.paste") or d["origin"].startswith("input.drop")
+                if pasted and own_pastes and internal_paste(d["origin"], "".join(c[2] for c in ch), doc, clips, known):
+                    pasted = False
+                    n_internal += 1
+                e_paste.append(pasted)  # only text from outside the IDE counts as pasted
                 last = ch[-1]
                 caret = last[0] + len(last[2]) + sum(len(c[2]) - (c[1] - c[0]) for c in ch[:-1])
             before = doc
@@ -272,6 +329,7 @@ def streams(events: list[dict]) -> Streams:
         e_inserted=a(e_ins, float), e_paste=a(e_paste, bool),
         run_t=a(run_t, float), focus_out_t=a(focus_t, float), switch_t=a(switch_t, float),
         l_t=a(l_t, float), l_fill=a(l_fill, bool), b_t=a(b_t, float), b_open=a(b_open, float),
+        meta={"internal_pastes": n_internal},
     )
 
 
@@ -288,7 +346,9 @@ def lscale(x: np.ndarray) -> float:
 
 
 def _logmed(x: np.ndarray, min_n: int = MIN_PAIRS) -> float:
-    return float(np.log(np.median(x))) if len(x) >= min_n else math.nan
+    # floor at 1 ms: real browsers stamp two keys with the same millisecond now and then, and log(0)
+    # made a window feature -inf (pilot 2026-11-25), which no baseline spread can absorb
+    return float(np.log(max(float(np.median(x)), LOG_FLOOR_MS))) if len(x) >= min_n else math.nan
 
 
 def _across_switch(s: Streams, a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -323,7 +383,7 @@ def _window(s: Streams, lo: float, hi: float, comments: str) -> dict:
     flow = (lat < PAUSE_MS) & ~_across_switch(s, s.k_t[pa], s.k_t[pb])
     pa, pb, lat = pa[flow], pb[flow], lat[flow]
     f["dg_median"] = _logmed(lat)
-    f["dg_lscale"] = lscale(np.log(lat)) if len(lat) >= MIN_PAIRS else math.nan
+    f["dg_lscale"] = lscale(np.log(np.maximum(lat, LOG_FLOOR_MS))) if len(lat) >= MIN_PAIRS else math.nan
     holds = s.k_hold[typing]
     holds = holds[~np.isnan(holds)]
     f["hold_median"] = _logmed(holds)

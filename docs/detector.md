@@ -50,6 +50,11 @@ ones at 30 s windows and will change once real data exists.
   pauses, revisions, build order (share of new code lines written above
   existing code, and block headers still without a body, both over the
   trailing 5 minutes), run rate, focus losses, paste share.
+  Paste share counts only text from outside the IDE: a paste whose text (ignoring
+  whitespace) was copied or cut in the editor, already stands in the document, is in the
+  question, or carries an `*.internal` origin is the student's own (`features.internal_paste`).
+  Key latencies and holds are floored at 1 ms before a log (`LOG_FLOOR_MS`). Pilot re-tune
+  options and the dev-tuned proposal: docs/pilot-data.md.
 - **Baseline**: per feature median and 1.4826×MAD (floored), plus the
   student's own honest score level μ0, σ0 measured leave-one-session-out.
 - **Two channels**: *identity* (rhythm + digraph, weighted by intraclass
