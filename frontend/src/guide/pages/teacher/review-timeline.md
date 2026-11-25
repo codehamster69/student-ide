@@ -31,7 +31,7 @@ Each channel is a lane on the timeline. The detector keeps typing rhythm and way
 
 Consecutive alarms are merged into one **moment** with an estimated start and end. Each moment card lists the features that moved most, in the student's own spread, and **suggested questions** to ask. Select a moment to jump the replay to it.
 
-Other things on the timeline: pastes, runs that worked or failed, and focus changes. The **code replay** rebuilds the code at any point from the recorded edits.
+Other things on the timeline: pastes, runs that worked or failed, and focus changes. In labs and competitions students can only paste what they copied inside Scribelab; those pastes are ordinary editing and are not drawn. A paste from outside is blocked and drawn as an outlined diamond ("blocked paste"), with the text the student tried to paste. The **code replay** rebuilds the code at any point from the recorded edits.
 
 The banner at the top says one of: *Not scored yet*, *Baseline week*, *Nothing stood out*, or *N moments worth a conversation*.
 

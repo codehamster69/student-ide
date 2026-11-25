@@ -15,7 +15,7 @@ student on the roster (or everyone who started, for an "everyone" lab):
 | Activity | edits per 30 s over the last 10 minutes |
 | Runs | how many, and the last run's error type if it failed |
 | Tests | last Check result (labs with tests) |
-| Pastes | paste count in the current session |
+| Pastes | pastes from outside Scribelab in the current session, blocked attempts included (in-IDE copy and paste is not counted) |
 | Moments | "moments worth a conversation" the review timeline has found in this student's sessions of this lab, recomputed at most every 30 s; marked *new* when one appears while the page is open |
 
 No code is shown in the class view.

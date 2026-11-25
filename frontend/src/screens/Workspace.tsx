@@ -17,6 +17,7 @@ import { api, type CheckResult, type RunResult, type Task } from "../api";
 import { GradeView } from "../teach/bits";
 import { LANGUAGES, type Language } from "../teach/api";
 import { captureExtension, captureWindow, SNAPSHOT_EVERY_MS } from "../capture";
+import { PasteNotice, usePasteNotice } from "./PasteNotice";
 import { rememberLanguage, type LiveSession } from "../editor/session";
 import type { Recorder } from "../recorder";
 import { editorTheme } from "../editor/theme";
@@ -127,6 +128,7 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
   const [, setLangTick] = useState(0); // re-render after a language switch (langOf is a ref)
   const [switchingLang, setSwitchingLang] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const pasteNotice = usePasteNotice();
 
   const task = tasks[active];
   const sitting = tasks.length > 1;
@@ -175,7 +177,13 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
         indentUnit.of("    "),
         keymap.of([indentWithTab]),
         editorTheme,
-        captureExtension(s.rec),
+        // Study questions block pastes from outside Scribelab; the learning lab (practice) does not.
+        captureExtension(s.rec, t.lesson ? {} : {
+          guard: {
+            onBlocked: pasteNotice.show,
+            ownText: () => [...slots.current.values()].map((x) => x.state.doc.toString()),
+          },
+        }),
         Prec.highest(keymap.of([{ key: "Mod-Enter", run: () => (void runRef.current(), true) }])),
       ],
     });
@@ -718,7 +726,10 @@ export function Workspace({ studentId, tasks, start = 0, session, openSession, o
               </label>
             )}
           </div>
-          <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />
+          <div className="relative grid min-h-0">
+            <div ref={host} className="editor min-h-0 overflow-hidden bg-surface" />
+            <PasteNotice {...pasteNotice} />
+          </div>
 
           <section ref={consoleRow} className="relative grid min-h-0 border-t border-border"
             style={{ gridTemplateColumns: inputSize ? `${inputSize}px minmax(0,1fr)` : "minmax(180px,1fr) 2fr" }}>

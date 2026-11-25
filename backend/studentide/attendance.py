@@ -98,6 +98,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from .db import Database
+from .schema import is_outside_paste
 
 SCHEMA = """
 -- A teacher's Roll Call connection. The sync key is the teacher's whole Roll
@@ -155,7 +156,7 @@ CREATE TABLE IF NOT EXISTS attendance_sent (
 
 DEFAULT_RULE = {"min_active_minutes": 10, "min_typed_chars": 40, "require_run": False}
 COUNTED_CONTEXT = None  # sessions.context: NULL = a real lab session (not 'learn', not 'preview')
-NOT_TYPED = ("input.paste", "input.drop")
+NOT_TYPED = ("input.paste", "input.drop")  # prefixes; v4 "….internal" (in-IDE paste) is neither typed nor pasted
 TYPED_KEY = ("letter", "digit", "space", "punct")  # a printable key press (terminal typing, Sandbox Labs)
 
 
@@ -404,10 +405,11 @@ def lab_activity(db: Database, lab_id: str, day: str | None = None) -> dict[str,
             touch(x, ts)
             origin = d.get("origin", "")
             n = sum(len(c[2]) for c in e["data"].get("changes", []))
-            if origin.startswith("input") and origin not in NOT_TYPED:  # "reset"/"reload" are not input: never typed
+            if origin.startswith(NOT_TYPED):
+                if is_outside_paste(origin):
+                    x["pasted"] += n
+            elif origin.startswith("input"):  # "reset"/"reload" are not input: never typed
                 x["typed"] += n
-            elif origin in NOT_TYPED:
-                x["pasted"] += n
     for c in runs:
         s = by_id[c["session_id"]]
         x = ev(day_of(c["created_at"]), s["student_id"])

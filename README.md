@@ -44,6 +44,7 @@ detector, evaluation harness and thesis sources live in this repository too.
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
 | Sandbox Labs monitoring | file watcher (`fs_change`, `port_open`), 5-minute offline journal with signed hash-chained batches, review lanes and "appeared without typing", live terminal mirror, readiness board, consent v3, attendance; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) and [docs/review.md](docs/review.md) |
 | Desktop app (Sandbox Labs) | Electron window on the site, browser sign-in, bridge for local labs, auto-update from GitHub Releases through the server (unsigned builds for now), public download page `#/download` picks the installer for the visitor's computer, see [docs/desktop.md](docs/desktop.md) |
+| Paste guard | in labs, competitions and Sandbox Labs students paste only what they copied inside Scribelab (own code, other questions of the sitting, the question text); outside pastes are blocked with a notice and logged (schema v4, `input.paste.internal`); see [docs/event-schema.md](docs/event-schema.md) |
 | Guides and help centre | student and teacher guides in the app (Guide in the sidebar and student app bar, Help button per teacher page, Ctrl+K), public at `#/help`, desktop Help menu; see [docs/guide.md](docs/guide.md) |
 | 5. College deployment (pilot) | ready to deploy: Google sign-in for @iiitsurat.ac.in, HTTPS, backups, see [docs/deploy.md](docs/deploy.md) |
 | Sandbox Labs (teacher side) | subjects, environments, sandbox labs, shared library and capped "Try as a student" previews, server grading of submissions (hidden tests, gradebook, regrade), see [docs/sandbox-labs.md](docs/sandbox-labs.md); desktop app and local sandboxes in progress |
@@ -82,7 +83,7 @@ For frontend development run `npm run dev` in `frontend/` (proxies `/api` to por
 ## What gets recorded
 
 See [docs/event-schema.md](docs/event-schema.md). In short: key down/up with
-high-resolution timestamps, every edit with its origin, clipboard paste/copy/cut,
+high-resolution timestamps, every edit with its origin, clipboard paste/copy/cut (and blocked outside pastes),
 cursor moves, runs with full output, editor/window/tab focus, and periodic code
 snapshots, all per student and per session.
 
