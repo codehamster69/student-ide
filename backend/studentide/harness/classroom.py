@@ -481,6 +481,132 @@ def rq3_devices(rows: list[dict], rows_dev: list[dict] | None) -> dict:
     return out
 
 
+# RQ3 on every recorded session, not only scored ones: most students have one scored
+# session, so few have scored sessions on two device classes; session profiles (median of
+# each feature over a session's active windows) can compare all their sessions instead.
+PROFILE = {"rhythm": ["dg_median", "dg_lscale", "hold_median", "dg_alt_hand", "dg_same_hand", "dg_to_space", "dg_from_space",
+                      "dg_shifted"],
+           "process": ["pause_per_100", "pause_median", "del_per_100", "del_burst", "fill_in_frac", "run_rate", "focus_out_rate"]}
+PCS = ("lab-PC-like", "personal-like")
+MIN_PROFILE_W = 4  # active 30 s windows a session needs for a profile
+MIN_FEATS = 3
+GAP_BINS = [(0, 1, "same day"), (1, 7, "1-7 days"), (7, 14, "1-2 weeks"), (14, 1e9, "2+ weeks")]
+
+
+def _profiles(corpus: Corpus) -> list[dict]:
+    feats = [f for g in PROFILE.values() for f in g]
+    out = []
+    for s in corpus.sessions:
+        if s.meta.get("device") not in PCS or s.role == "idle":
+            continue
+        w = [x for x in corpus.windows(s, 30.0) if x["active"]]
+        if len(w) < MIN_PROFILE_W:
+            continue
+        p = {}
+        for f in feats:
+            v = [x[f] for x in w if f in x and x[f] is not None and np.isfinite(x[f])]
+            p[f] = float(np.median(v)) if len(v) >= 2 else math.nan
+        out.append({"person": s.meta["person"], "device": s.meta["device"], "q": s.meta.get("question"),
+                    "t": s.meta["started_at"], "p": p})
+    return out
+
+
+def rq3_profiles(corpus: Corpus, max_between: int = 5, seed: int = 0) -> dict:
+    P = _profiles(corpus)
+    feats = [f for g in PROFILE.values() for f in g]
+    scale = {}
+    for f in feats:
+        v = np.array([x["p"][f] for x in P if np.isfinite(x["p"][f])])
+        scale[f] = max(1.4826 * float(np.median(np.abs(v - np.median(v)))), 1e-6) if len(v) > 5 else math.nan
+
+    def dist(a, b, group):
+        z = [abs(a["p"][f] - b["p"][f]) / scale[f] for f in PROFILE[group]
+             if np.isfinite(a["p"][f]) and np.isfinite(b["p"][f]) and np.isfinite(scale[f])]
+        return float(np.mean(np.minimum(z, 6.0))) if len(z) >= MIN_FEATS else math.nan
+
+    by_p = {}
+    for x in P:
+        by_p.setdefault(x["person"], []).append(x)
+    pairs = []  # (kind, person, days apart, rhythm, process)
+    for per, xs in by_p.items():
+        for i in range(len(xs)):
+            for j in range(i + 1, len(xs)):
+                a, b = xs[i], xs[j]
+                kind = "same" if a["device"] == b["device"] else "cross"
+                pairs.append({"kind": kind, "student": per, "days": abs(a["t"] - b["t"]) / 86400,
+                              "rhythm": dist(a, b, "rhythm"), "process": dist(a, b, "process")})
+    rng = np.random.default_rng(seed)
+    by_q = {}
+    for x in P:
+        by_q.setdefault((x["q"], x["device"]), []).append(x)
+    for x in P:
+        others = [y for y in by_q.get((x["q"], x["device"]), []) if y["person"] != x["person"]]
+        for k in (rng.choice(len(others), min(max_between, len(others)), replace=False) if others else []):
+            y = others[int(k)]
+            pairs.append({"kind": "between", "student": x["person"], "days": abs(x["t"] - y["t"]) / 86400,
+                          "rhythm": dist(x, y, "rhythm"), "process": dist(x, y, "process")})
+
+    def per_student_median(rows, g):
+        by = {}
+        for r in rows:
+            if np.isfinite(r[g]):
+                by.setdefault(r["student"], []).append(r[g])
+        return {k: float(np.median(v)) for k, v in by.items()}
+
+    out = {"sessions": len(P), "students": len(by_p), "pairs": {}, "paired": {}, "gap": {}, "spearman_days": {}}
+    for kind in ("same", "cross", "between"):
+        R = [r for r in pairs if r["kind"] == kind]
+        e = {"pairs": len(R), "students": len({r["student"] for r in R})}
+        for g in PROFILE:
+            m = per_student_median(R, g)
+            rows = [{"student": k, "v": v} for k, v in m.items()]
+            e[g] = float(np.median(list(m.values()))) if m else math.nan
+            e[f"{g}_ci"] = _boot(rows, lambda rs: float(np.median([r["v"] for r in rs])) if rs else math.nan, 500)
+        out["pairs"][kind] = e
+    both = sorted({r["student"] for r in pairs if r["kind"] == "cross"} & {r["student"] for r in pairs if r["kind"] == "same"})
+    for g in PROFILE:
+        ms = per_student_median([r for r in pairs if r["kind"] == "same"], g)
+        mc = per_student_median([r for r in pairs if r["kind"] == "cross"], g)
+        mb = per_student_median([r for r in pairs if r["kind"] == "between"], g)
+        ds = [{"student": k, "d": mc[k] - ms[k]} for k in both if k in ms and k in mc]
+        db = [{"student": k, "d": mb[k] - mc[k]} for k in mc if k in mb]
+        out["paired"][g] = {"students": len(ds), "median_cross_minus_same": float(np.median([d["d"] for d in ds])) if ds else math.nan,
+                            "ci": _boot(ds, lambda x: float(np.median([d["d"] for d in x])) if x else math.nan, 1000),
+                            "share_cross_larger": float(np.mean([d["d"] > 0 for d in ds])) if ds else math.nan,
+                            "between_minus_cross_students": len(db),
+                            "median_between_minus_cross": float(np.median([d["d"] for d in db])) if db else math.nan,
+                            "between_minus_cross_ci": _boot(db, lambda x: float(np.median([d["d"] for d in x])) if x else math.nan, 1000)}
+    same = [r for r in pairs if r["kind"] == "same"]
+    for lo, hi, lab in GAP_BINS:
+        R = [r for r in same if lo <= r["days"] < hi]
+        e = {"pairs": len(R), "students": len({r["student"] for r in R})}
+        for g in PROFILE:
+            m = per_student_median(R, g)
+            rows = [{"student": k, "v": v} for k, v in m.items()]
+            e[g] = float(np.median(list(m.values()))) if m else math.nan
+            e[f"{g}_ci"] = _boot(rows, lambda rs: float(np.median([r["v"] for r in rs])) if rs else math.nan, 500)
+        out["gap"][lab] = e
+    for g in PROFILE:
+        out["spearman_days"][g] = {"rho": _spearman([r["days"] for r in same], [r[g] for r in same]),
+                                   "ci": _boot(same, lambda rs, g=g: _spearman([r["days"] for r in rs], [r[g] for r in rs]), 500)}
+    # which features move: within students with both classes, personal minus lab-PC median, in population scale units
+    shift = []
+    for f in feats:
+        ds = []
+        for per in both:
+            lab = [x["p"][f] for x in by_p[per] if x["device"] == "lab-PC-like" and np.isfinite(x["p"][f])]
+            own = [x["p"][f] for x in by_p[per] if x["device"] == "personal-like" and np.isfinite(x["p"][f])]
+            if lab and own and np.isfinite(scale[f]):
+                ds.append({"student": per, "d": (float(np.median(own)) - float(np.median(lab))) / scale[f]})
+        shift.append({"feature": f, "group": next(g for g, fs in PROFILE.items() if f in fs), "students": len(ds),
+                      "median": float(np.median([d["d"] for d in ds])) if ds else math.nan,
+                      "ci": _boot(ds, lambda x: float(np.median([d["d"] for d in x])) if x else math.nan, 1000),
+                      "share_positive": float(np.mean([d["d"] > 0 for d in ds])) if ds else math.nan})
+    out["feature_shift"] = shift
+    out["students_both"] = len(both)
+    return out
+
+
 def rq(a):
     from ..db import Database
     from ..pilot import outcome_counts
@@ -501,6 +627,7 @@ def rq(a):
            "rq3_drift": {sp: rq3_drift([r for r in rows if sp == "all" or r["split"] == sp]) for sp in ("dev", "test", "all")},
            "rq3_devices": {sp: rq3_devices([r for r in rows if sp == "all" or r["split"] == sp],
                                            [r for r in rows2 if sp == "all" or r["split"] == sp]) for sp in ("dev", "test", "all")},
+           "rq3_profiles": rq3_profiles(c1),
            "outcomes": outcome_counts(str(a.db)),
            "minutes": (time.time() - t0) / 60}
     (a.out / RQ_SUMMARY).write_text(json.dumps(out, indent=1, default=float) + "\n")
