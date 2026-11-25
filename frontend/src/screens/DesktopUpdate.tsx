@@ -24,8 +24,8 @@ export function DesktopUpdate({ hidden }: { hidden: boolean }) {
     <AnimatePresence>
       {show && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0, transition: spring }} exit={{ opacity: 0, y: 12 }}
-          role="status" className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-3 rounded-2xl border border-border bg-surface p-3.5 text-xs text-muted shadow-lg">
-          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+          role="status" className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-3.5 text-xs text-muted shadow-lg">
+          <span className="grid size-7 shrink-0 place-items-center rounded-full border border-cta/40 text-cta">
             {st.state === "ready" ? <RefreshCw className="size-3.5" /> : <Download className="size-3.5" />}
           </span>
           <div className="grid gap-1.5">
@@ -34,11 +34,11 @@ export function DesktopUpdate({ hidden }: { hidden: boolean }) {
             {err && <p className="text-danger">{err}</p>}
             <div className="flex gap-2">
               {st.state === "ready" ? (
-                <button className="h-7 rounded-full bg-accent px-3 font-medium text-accent-fg" onClick={() => desktop?.updates?.restart().catch((e) => setErr(desktopError(e).message))}>Restart now</button>
+                <button className="h-7 rounded-full border border-transparent px-3 font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta" onClick={() => desktop?.updates?.restart().catch((e) => setErr(desktopError(e).message))}>Restart now</button>
               ) : (
-                <button className="h-7 rounded-full bg-accent px-3 font-medium text-accent-fg" onClick={() => desktop?.app.openExternal(st.downloadUrl!)}>Download</button>
+                <button className="h-7 rounded-full border border-transparent px-3 font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta" onClick={() => desktop?.app.openExternal(st.downloadUrl!)}>Download</button>
               )}
-              <button className="h-7 rounded-full px-3 font-medium text-text hover:bg-surface-2" onClick={() => setClosed(st.latest ?? "")}>Later</button>
+              <button className="h-7 rounded-full border border-transparent px-3 font-medium text-text transition-[border-color] hover:border-border-strong" onClick={() => setClosed(st.latest ?? "")}>Later</button>
             </div>
           </div>
           <button aria-label="Close" onClick={() => setClosed(st.latest ?? "")}><X className="size-3.5" /></button>

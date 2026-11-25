@@ -4,12 +4,11 @@
 // the labs are listed with a note to open them in the Student IDE app, because
 // they run in a Linux instance on the student's own machine (docs/sandbox-labs.md).
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
-import { ArrowUpRight, Boxes, CalendarClock, Download, Laptop, ShieldCheck } from "lucide-react";
+import { Boxes, CalendarClock, ChevronRight, Download, Laptop, ShieldCheck } from "lucide-react";
 import { api } from "../api";
 import { bestInstaller, detectPlatform, DOWNLOAD_PAGE, latestRelease, type Installer } from "../download";
 import { desktop } from "../desktop";
-import { Badge, Spinner, cn, item, spring, stagger } from "../ui";
+import { Badge, Spinner, cn } from "../ui";
 import { COLOR_VAR, tint, type Network } from "../sandbox/api";
 
 export interface MyLab {
@@ -42,11 +41,10 @@ export const dueText = (due: number | null) => {
 
 export const NETWORK_LABEL: Record<Network, string> = { open: "Internet on", registries: "Package sites only", off: "No internet" };
 
-export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
+export function SandboxLabs({ studentId, onOpen }: {
   studentId: string;
   /** desktop app only: open the lab workspace */
   onOpen: (lab: MyLab, subject: MySubject) => void;
-  delay?: number;
 }) {
   const [subjects, setSubjects] = useState<MySubject[] | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
@@ -65,18 +63,16 @@ export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
   if (!subjects.length) return null;
 
   return (
-    <motion.section variants={stagger(0.06, delay)} initial="initial" animate="animate" className="mt-8" data-testid="sandbox-labs">
-      <motion.div variants={item} className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text"><Boxes className="size-4 text-accent" /> Sandbox labs</h2>
-          <p className="mt-0.5 max-w-2xl text-[13px] text-muted">
-            A full Linux machine per subject, with a terminal, on your own computer. Your files are saved to the server, so they follow you to any machine.
-          </p>
-        </div>
-      </motion.div>
+    <section className="mt-8" data-testid="sandbox-labs">
+      <div className="mb-3">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-text"><Boxes className="size-4 text-accent" /> Sandbox labs</h2>
+        <p className="mt-0.5 max-w-2xl text-[13px] text-muted">
+          A full Linux machine per subject, with a terminal, on your own computer. Your files are saved to the server, so they follow you to any machine.
+        </p>
+      </div>
 
       {!desktop && (
-        <motion.div variants={item} className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-cta/40 px-4 py-3">
           <Laptop className="size-5 shrink-0 text-accent" />
           <p className="min-w-0 flex-1 text-[13px] text-text">
             <strong className="font-semibold">Open these in the Student IDE app.</strong>{" "}
@@ -84,69 +80,65 @@ export function SandboxLabs({ studentId, onOpen, delay = 0.1 }: {
           </p>
           <span className="flex flex-wrap items-center gap-3">
             <a href={download?.href ?? DOWNLOAD_PAGE} target={download ? undefined : "_blank"} rel="noreferrer"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-accent-fg hover:bg-accent-hover">
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-3 text-[13px] font-semibold text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px focus-visible:border-cta">
               <Download className="size-3.5" /> {download ? `Get the app for ${download.os === "mac" ? "Mac" : download.os === "windows" ? "Windows" : "Linux"}` : "Get the app"}
             </a>
             {download && <a href={DOWNLOAD_PAGE} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-accent hover:underline">Other systems</a>}
           </span>
-        </motion.div>
+        </div>
       )}
 
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {subjects.map((s) => (
-          <motion.div key={s.id} variants={item}>
-            <div className="mb-2 flex items-center gap-2">
+          <div key={s.id} className="overflow-hidden rounded-xl border border-border shadow-sm">
+            <div className="flex items-center gap-2 border-b border-border px-5 py-2.5">
               <span className="size-2.5 rounded-full" style={{ backgroundColor: COLOR_VAR[s.color] ?? COLOR_VAR.indigo }} />
               <h3 className="text-[13px] font-semibold text-text">{s.title}</h3>
               {s.code && <span className="font-mono text-[11px] text-faint">{s.code}</span>}
               {s.semester && <span className="text-[11px] text-faint">· {s.semester}</span>}
             </div>
-            <div className="grid gap-2.5 sm:grid-cols-2">
+            <ul className="divide-y divide-border">
               {s.labs.map((lab) => {
                 const tooOld = !!appVersion && !versionAtLeast(appVersion, lab.min_desktop_version);
                 const can = !!desktop && !tooOld;
                 const due = dueText(lab.due_at);
                 return (
-                  <motion.button
-                    key={lab.id}
-                    whileHover={can ? { y: -2 } : undefined} whileTap={can ? { scale: 0.99 } : undefined} transition={spring}
-                    onClick={() => can && onOpen(lab, s)}
-                    disabled={!can}
-                    title={!desktop ? "Open this lab in the Student IDE app" : tooOld ? `Update the app to ${lab.min_desktop_version} or later to open this lab` : "Open the lab"}
-                    className={cn("group relative flex flex-col gap-2 overflow-clip rounded-xl border border-border bg-surface p-4 text-left shadow-sm transition-[border-color,box-shadow] duration-200",
-                      can ? "hover:border-accent/40 hover:shadow-md" : "cursor-default")}
-                  >
-                    <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: COLOR_VAR[s.color] ?? COLOR_VAR.indigo }} />
-                    <span className="flex items-start gap-3">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg" style={tint(s.color)}><Boxes className="size-4" /></span>
+                  <li key={lab.id}>
+                    <button
+                      onClick={() => can && onOpen(lab, s)}
+                      disabled={!can}
+                      title={!desktop ? "Open this lab in the Student IDE app" : tooOld ? `Update the app to ${lab.min_desktop_version} or later to open this lab` : "Open the lab"}
+                      className={cn("group flex w-full items-center gap-4 px-5 py-3.5 text-left border border-transparent transition-[border-color,transform,box-shadow]", can ? "hover:border-border-strong" : "cursor-default")}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={tint(s.color)}><Boxes className="size-4" /></span>
                       <span className="min-w-0 flex-1">
-                        <strong className="block text-sm font-semibold text-text">{lab.title}</strong>
-                        {lab.description && <span className="line-clamp-2 text-[13px] text-muted">{lab.description}</span>}
+                        <strong className="block text-sm font-medium text-text">{lab.title}</strong>
+                        {lab.description && <span className="line-clamp-1 text-[13px] text-muted">{lab.description}</span>}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <Badge>{lab.n_assignments} assignment{lab.n_assignments === 1 ? "" : "s"}</Badge>
+                          <Badge tone={lab.network === "open" ? "neutral" : "accent"}>{NETWORK_LABEL[lab.network]}</Badge>
+                          {lab.assessed && <Badge tone="warn"><ShieldCheck className="size-3" /> Assessed</Badge>}
+                          {lab.submitted != null && lab.n_assignments > 0 && (
+                            <Badge tone={lab.passed_all === lab.n_assignments ? "success" : lab.submitted ? "accent" : "neutral"}>
+                              {lab.submitted} of {lab.n_assignments} submitted
+                            </Badge>
+                          )}
+                          {lab.closed && <Badge>Closed: open to look, not to submit</Badge>}
+                          {desktop && lab.id === last && <Badge tone="accent">Last opened</Badge>}
+                          {due && <span className="inline-flex items-center gap-1 text-[11px] tabular-nums text-faint"><CalendarClock className="size-3" />{due}</span>}
+                          {tooOld && <Badge tone="danger">Update the app to open</Badge>}
+                          {!desktop && <span className="text-[11px] text-faint">Open in the app</span>}
+                        </span>
                       </span>
-                      {can && <ArrowUpRight className="size-4 shrink-0 text-faint transition-[transform,color] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />}
-                    </span>
-                    <span className="flex flex-wrap items-center gap-1.5 pl-11">
-                      <Badge>{lab.n_assignments} assignment{lab.n_assignments === 1 ? "" : "s"}</Badge>
-                      <Badge tone={lab.network === "open" ? "neutral" : "accent"}>{NETWORK_LABEL[lab.network]}</Badge>
-                      {lab.assessed && <Badge tone="warn"><ShieldCheck className="size-3" /> Assessed</Badge>}
-                      {lab.submitted != null && lab.n_assignments > 0 && (
-                        <Badge tone={lab.passed_all === lab.n_assignments ? "success" : lab.submitted ? "accent" : "neutral"}>
-                          {lab.submitted} of {lab.n_assignments} submitted
-                        </Badge>
-                      )}
-                      {lab.closed && <Badge>Closed: open to look, not to submit</Badge>}
-                      {desktop && lab.id === last && <Badge tone="accent">Last opened</Badge>}
-                      {due && <span className="inline-flex items-center gap-1 text-[11px] text-faint"><CalendarClock className="size-3" />{due}</span>}
-                      {tooOld && <Badge tone="danger">Update the app to open</Badge>}
-                      {!desktop && <span className="text-[11px] text-faint">Open in the app</span>}
-                    </span>
-                  </motion.button>
+                      {can && <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-cta" />}
+                    </button>
+                  </li>
                 );
               })}
-            </div>
-          </motion.div>
+            </ul>
+          </div>
         ))}
       </div>
-    </motion.section>
+    </section>
   );
 }

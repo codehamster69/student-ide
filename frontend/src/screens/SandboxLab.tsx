@@ -198,7 +198,7 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <header className="flex flex-wrap items-center gap-3 border-b border-border bg-surface px-4 py-2.5">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-2.5">
         <button onClick={leave} className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-text"><ArrowLeft className="size-3.5" /> Labs</button>
         <span className="h-4 w-px bg-border" />
         <div className="min-w-0">
@@ -223,7 +223,7 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
           <Card className="grid max-w-lg gap-3 p-6">
             <p className="flex items-start gap-2 text-sm text-text"><CircleAlert className="mt-0.5 size-4 shrink-0 text-danger" />{error}</p>
             {checks?.map((c) => (
-              <div key={c.id} className={cn("rounded-lg border px-3 py-2 text-[13px]", c.severity === "error" ? "border-danger/40 bg-danger-soft" : "border-warn/40 bg-warn-soft")}>
+              <div key={c.id} className={cn("rounded-lg border px-3 py-2 text-[13px]", c.severity === "error" ? "border-danger/40" : "border-warn/40")}>
                 <p className="text-text">{c.message}</p>
                 {c.fix && <p className="mt-0.5 text-muted">{c.fix}</p>}
               </div>
@@ -239,7 +239,7 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
             <AnimatePresence mode="wait">
               <motion.p key={progress.message} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="text-sm text-text">{progress.message}</motion.p>
             </AnimatePresence>
-            <div className="h-1 w-full overflow-hidden rounded-full bg-surface-3">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-border">
               <motion.div className="h-full bg-accent" animate={{ width: `${progress.percent ?? 8}%` }} transition={spring} />
             </div>
             <p className="text-xs text-muted">The first start of a subject downloads its environment and can take a few minutes. After that it opens in seconds.</p>
@@ -247,14 +247,14 @@ export function SandboxLab({ studentId, labId, onBack }: { studentId: string; la
         </div>
       ) : (
         <div className="flex min-h-0 flex-1">
-          <nav className="flex w-14 shrink-0 flex-col items-center gap-1.5 border-r border-border bg-surface py-3 md:w-56 md:items-stretch md:px-2" aria-label="Assignments">
+          <nav className="flex w-14 shrink-0 flex-col items-center gap-1.5 border-r border-border py-3 md:w-56 md:items-stretch md:px-2" aria-label="Assignments">
             {opened.assignments.map((a, i) => (
               <button key={a.id} onClick={() => switchTo(a.id)} title={a.title}
                 className={cn("relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px]", a.id === active ? "text-text" : "text-muted hover:text-text")}>
-                {a.id === active && <motion.span layoutId="sbx-asg" transition={spring} className="absolute inset-0 rounded-lg bg-surface-3" />}
+                {a.id === active && <motion.span layoutId="sbx-asg" transition={spring} className="absolute inset-0 rounded-lg border border-cta/40" />}
                 <span className={cn("relative grid size-6 shrink-0 place-items-center rounded-md font-mono text-[11px] font-semibold",
-                  { pass: "bg-success-soft text-success", partial: "bg-warn-soft text-warn", submitted: "bg-success-soft text-success",
-                    started: "bg-accent-soft text-accent", new: "bg-surface-3 text-muted" }[chip(a.id)])}>
+                  { pass: "border border-success/40 text-success", partial: "border border-warn/40 text-warn", submitted: "border border-success/40 text-success",
+                    started: "border border-cta/40 text-cta", new: "border border-border text-muted" }[chip(a.id)])}>
                   {chip(a.id) === "pass" || chip(a.id) === "submitted" ? <Check className="size-3.5" /> : i + 1}
                 </span>
                 <span className="relative hidden min-w-0 flex-1 md:block">
@@ -425,13 +425,13 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
     <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,3fr)_minmax(140px,2fr)] gap-2 p-2">
       <div className="grid min-h-0 grid-cols-[150px_minmax(0,1fr)] gap-2 lg:grid-cols-[170px_minmax(0,1fr)_340px]">
         <Card className="flex min-h-0 flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-faint">
+          <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-xs font-medium text-faint">
             Files <button onClick={() => void refresh()} aria-label="Refresh files" className="hover:text-text"><RefreshCw className="size-3" /></button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5">
             {files.map((f) => (
               <button key={f} onClick={async () => { await flush(); setCur(f); }} title={f}
-                className={cn("flex w-full items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-left font-mono text-xs", f === cur ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+                className={cn("flex w-full items-center gap-1.5 truncate rounded-md border border-transparent px-1.5 py-1 text-left font-mono text-xs", f === cur ? "border border-cta/40 text-cta" : "text-muted hover:text-text")}>
                 <FileText className="size-3 shrink-0" /><span className="truncate">{f}</span>
               </button>
             ))}
@@ -477,7 +477,7 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
         <Card className="col-span-2 hidden min-h-0 flex-col overflow-hidden lg:col-span-1 lg:flex">
           <div className="flex gap-1 border-b border-border p-1.5 text-[13px]">
             {(["statement", "output", "tests", ...(submission ? ["grade" as const] : [])] as const).map((t) => (
-              <button key={t} onClick={() => setPanel(t)} className={cn("rounded-md px-2.5 py-1 font-medium capitalize", panel === t ? "bg-surface-3 text-text" : "text-muted hover:text-text")}>
+              <button key={t} onClick={() => setPanel(t)} className={cn("rounded-md border border-transparent px-2.5 py-1 font-medium capitalize", panel === t ? "border border-cta/40 text-cta" : "text-muted hover:text-text")}>
                 {t}{t === "tests" && tests ? ` ${passed}/${tests.length}` : ""}
               </button>
             ))}
@@ -503,7 +503,7 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
                 <p className="text-sm font-medium text-text">{passed} of {tests.length} tests pass{spec.tests.n_hidden ? ` · ${spec.tests.n_hidden} more checked by your teacher` : ""}</p>
                 {tests.map((r, i) => (
                   <motion.div key={r.name + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                    className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40 bg-success-soft" : "border-danger/40 bg-danger-soft")}>
+                    className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40" : "border-danger/40")}>
                     <p className="flex items-center gap-1 font-medium text-text">{r.passed ? <Check className="size-3.5 text-success" /> : <X className="size-3.5 text-danger" />}{r.name}</p>
                     {!r.passed && r.expected !== undefined && <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-muted">expected {JSON.stringify(r.expected)}{"\n"}got      {JSON.stringify(r.stdout)}</pre>}
                     {!r.passed && r.stderr && <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-danger">{r.stderr.slice(-400)}</pre>}
@@ -519,8 +519,8 @@ function AssignmentPane({ instanceId, readOnly, a, spec, session, active, fsTick
       </div>
 
       <Card className="flex min-h-0 flex-col overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-faint">
-          <SquareTerminal className="size-3.5" /> Terminal <span className="font-mono font-normal normal-case tracking-normal">{a.workdir.replace("/home/student", "~")}</span>
+        <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-xs font-medium text-faint">
+          <SquareTerminal className="size-3.5" /> Terminal <span className="font-mono font-normal">{a.workdir.replace("/home/student", "~")}</span>
         </div>
         <DesktopTerminal instanceId={instanceId} assignmentId={a.id} session={session} visible={active} readOnly={readOnly} />
       </Card>
@@ -598,7 +598,7 @@ function DesktopTerminal({ instanceId, assignmentId, session, visible, readOnly 
       <div key={gen} ref={host} className="absolute inset-0 overflow-hidden p-2" />
       {exited && (
         <button onClick={() => { setExited(false); setGen((g) => g + 1); }}
-          className="absolute bottom-3 right-3 rounded-md bg-surface px-2.5 py-1 text-xs font-medium text-text shadow">New shell</button>
+          className="absolute bottom-3 right-3 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text shadow">New shell</button>
       )}
     </div>
   );
@@ -618,7 +618,7 @@ function Grade({ s }: { s: Submission }) {
       <p className="text-[11px] text-faint">Graded {s.graded_at ? new Date(s.graded_at * 1000).toLocaleString() : ""} on the server, hidden tests included.</p>
       {s.results?.map((r, i) => (
         <motion.div key={r.name + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-          className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40 bg-success-soft" : "border-danger/40 bg-danger-soft")}>
+          className={cn("rounded-lg border p-2 text-xs", r.passed ? "border-success/40" : "border-danger/40")}>
           <p className="flex items-center gap-1 font-medium text-text">{r.passed ? <Check className="size-3.5 text-success" /> : <X className="size-3.5 text-danger" />}{r.name}
             {r.hidden && <Badge className="ml-1">hidden</Badge>}{r.timed_out && <Badge tone="warn" className="ml-1">timed out</Badge>}</p>
           {!r.passed && !r.hidden && r.expected !== undefined && <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-muted">expected {JSON.stringify(r.expected)}{"\n"}got      {JSON.stringify(r.got)}</pre>}
@@ -635,7 +635,7 @@ function Tips() {
   if (!show) return null;
   const close = () => { setShow(false); try { localStorage.setItem(KEY, "1"); } catch { /* private mode */ } };
   return (
-    <div className="mb-3 rounded-lg border border-accent/30 bg-accent-soft p-2.5 text-[12px] text-text">
+    <div className="mb-3 rounded-lg border border-cta/40 p-2.5 text-[12px] text-text">
       <div className="flex items-start justify-between gap-2">
         <strong className="font-semibold">How this lab works</strong>
         <button onClick={close} aria-label="Hide tips"><X className="size-3.5 text-muted" /></button>

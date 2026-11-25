@@ -41,7 +41,7 @@ export function DownloadPage() {
 
           {rel === undefined && <div className="mt-8 flex justify-center"><Spinner /></div>}
           {rel === null && (
-            <p className="mt-6 rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">
+            <p className="mt-6 rounded-lg border border-border px-4 py-3 text-sm text-muted">
               The app isn't available to download yet. Ask your teacher, or check back later.
             </p>
           )}
@@ -49,7 +49,7 @@ export function DownloadPage() {
           {rel && (
             <>
               {best ? <Primary inst={best} version={rel.version} /> : (
-                <p className="mt-6 flex items-center gap-2 rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">
+                <p className="mt-6 flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-sm text-muted">
                   <MonitorSmartphone className="size-4 shrink-0" />
                   {platform ? `There's no build for this computer yet. ` : "Open this page on a laptop or desktop computer to install. "}
                   The builds below are for Windows, macOS and Linux.
@@ -62,7 +62,7 @@ export function DownloadPage() {
               )}
               {others.length > 0 && (
                 <div className="mt-7 border-t border-border pt-5">
-                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                  <h2 className="mb-2 text-[15px] font-semibold text-text">
                     {best ? "Other systems" : "Downloads"}
                   </h2>
                   <ul className="grid grid-cols-[minmax(0,1fr)] gap-1">
@@ -86,7 +86,7 @@ function Primary({ inst, version }: { inst: Installer; version: string }) {
   const Icon = OS_ICON[inst.os];
   return (
     <a href={inst.href} data-testid="primary-download"
-      className="mt-6 flex items-center gap-4 rounded-xl bg-accent px-5 py-4 text-accent-fg transition-colors hover:bg-accent-hover">
+      className="mt-6 flex items-center gap-4 rounded-xl border border-cta/40 px-5 py-4 text-cta transition-[border-color,transform,box-shadow] hover:border-cta hover:shadow-[var(--button-glow)] hover:-translate-y-px">
       <Icon className="size-6 shrink-0" />
       <span className="grid min-w-0 flex-1">
         <span className="text-[15px] font-semibold">Download for {inst.os === "mac" ? inst.label : OS_NAME[inst.os]}</span>
@@ -101,7 +101,7 @@ function Row({ inst }: { inst: Installer }) {
   const Icon = OS_ICON[inst.os];
   return (
     <li>
-      <a href={inst.href} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-surface-2">
+      <a href={inst.href} className="flex items-center gap-3 rounded-lg border border-transparent px-2 py-2 text-sm transition-[border-color] hover:border-border-strong">
         <Icon className="size-4 shrink-0 text-muted" />
         <span className="min-w-0 flex-1">
           <span className="font-medium text-text">{inst.label}</span>

@@ -44,7 +44,7 @@ function ErrorNote({ error }: { error: string }) {
     <AnimatePresence initial={false}>
       {error && (
         <motion.p key={error} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto", x: [0, -6, 6, -3, 0] }}
-          exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
+          exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </motion.p>
       )}
