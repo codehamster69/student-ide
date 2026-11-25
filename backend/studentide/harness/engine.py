@@ -71,7 +71,9 @@ def score_run(method: Method, corpus: Corpus, train: list[str], evaluate: list[s
     method.fit_population(corpus, train, n_base)
     models = {}
     for st in set(evaluate) | set(calib_students):
-        models[st] = method.fit_student(corpus, st, corpus.baseline(st, n_base))
+        base = corpus.baseline(st, n_base)
+        if base:  # classroom data: students with too little typing have no baseline and nothing scored
+            models[st] = method.fit_student(corpus, st, base)
     ev = corpus.tests(evaluate)
     series = {s.id: method.score(corpus, models[s.student], s) for s in ev}
     holdout = [(s, method.score(corpus, models[s.student], s)) for s in corpus.tests(calib_students)
@@ -103,34 +105,47 @@ def cv_runs(method_factory, corpus: Corpus, dev: list[str], k: int = 5, n_base: 
 # ------------------------------------------------------------------ records
 
 def outcomes(runs: list[Run], corpus: Corpus, source: str = "holdout", target: float = 0.2,
-             k: dict[str, float] | None = None, rule: str = "cusum") -> list[dict]:
+             k: dict[str, float] | None = None, rule: str = "cusum", channels: list[str] | None = None) -> list[dict]:
+    """h calibrated for `target` (split evenly over all channels); `channels` then keeps only
+    those channels' alarms (e.g. the identity channels alone at the full detector's h)."""
     recs = []
     for run in runs:
         kk = k or run.method.k()
         idx = run.h_index(kk, rule, source, target)
         ev, _, _ = run.grids(kk, rule)
         for s in run.eval_sessions:
-            o = combine(ev[s.id], idx)
+            g = {ch: v for ch, v in ev[s.id].items() if channels is None or ch in channels}
+            o = combine(g, idx)
             recs.append({"student": s.student, "variant": s.variant, "condition": s.condition,
                          "switch_s": s.switch_s, "duration_s": s.duration_s, "o": o,
-                         "attrs": corpus.students.get(s.student, {}),
+                         "attrs": corpus.students.get(s.student, {}), "smeta": _smeta(s),
                          "h": {ch: float(H_GRID[i]) for ch, i in idx.items()}})
     return recs
 
 
+SMETA = ("device", "os", "lang", "ctx", "held_out", "kpm", "partner_device")
+
+
+def _smeta(s: Session) -> dict:
+    """Session-level attributes for subgroup results (RQ4); a splice carries A's."""
+    return {k: s.meta.get(k) for k in SMETA}
+
+
 def fixed_outcomes(runs: list[Run], corpus: Corpus, k: dict[str, float], h: dict[str, float],
-                   rule: str = "cusum") -> list[dict]:
+                   rule: str = "cusum", channels: list[str] | None = None) -> list[dict]:
     """Like `outcomes`, but at a given operating point (k and h per channel, e.g. from a
-    frozen config) instead of recalibrating h. h snaps to the nearest grid value."""
+    frozen config) instead of recalibrating h. h snaps to the nearest grid value.
+    `channels` restricts the alarms to those channels (e.g. the identity channels alone)."""
     idx = {ch: int(np.argmin(np.abs(H_GRID - h[ch]))) for ch in h}
     recs = []
     for run in runs:
         ev, _, _ = run.grids({ch: k[ch] for ch in run.method.channels}, rule)
         for s in run.eval_sessions:
-            o = combine(ev[s.id], {ch: idx[ch] for ch in ev[s.id]})
+            g = {ch: v for ch, v in ev[s.id].items() if channels is None or ch in channels}
+            o = combine(g, {ch: idx[ch] for ch in g})
             recs.append({"student": s.student, "variant": s.variant, "condition": s.condition,
                          "switch_s": s.switch_s, "duration_s": s.duration_s, "o": o,
-                         "attrs": corpus.students.get(s.student, {}),
+                         "attrs": corpus.students.get(s.student, {}), "smeta": _smeta(s),
                          "h": {ch: float(H_GRID[idx[ch]]) for ch in ev[s.id]}})
     return recs
 

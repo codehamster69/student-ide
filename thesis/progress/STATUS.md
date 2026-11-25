@@ -25,8 +25,8 @@ flowchart LR
 
   subgraph Study["Study: classroom data only (months 1 to 12)"]
     S0["Set-up · M1-2<br/>logger, ethics"]:::prog --> S1["Recording · M2-6<br/>real labs and competitions"]:::prog
-    S1 --> S2["Design on dev · M3-7<br/>splices, re-tune"]:::prog --> S3["Held-out test · M8<br/>scored once"]:::pend
-    S3 --> W["M8-12<br/>measure and write"]:::pend
+    S1 --> S2["Design on dev · M3-7<br/>splices, re-tune"]:::prog --> S3["Held-out test · M8<br/>scored once"]:::prog
+    S3 --> W["M8-12<br/>measure and write"]:::prog
   end
 
   E["Ethics: oral approval,<br/>written pending"]:::prog -. covers .-> S1
@@ -67,7 +67,7 @@ flowchart LR
 | 4 Evaluation | Calibrate alarm threshold (students' own baseline weeks) | ✅ | #9 |
 | 4 Evaluation | Fairness by subgroup; precision at 1/100 and 1/500 | ✅ | #9 |
 | 4 Evaluation | Classroom mode: every study session, baseline = earliest 10 active minutes (never the last session) (optionally per device class), takeovers spliced from two real sessions on the same question, split by student and by week | ✅ | #63 |
-| 4 Evaluation | Run on the classroom test split (once per frozen config) | ⬜ | |
+| 4 Evaluation | Classroom freeze (thresholds from dev real sessions), held-out split scored once, RQ2/RQ3 analyses; final run at end of term | 🟧 | this PR |
 | 5 Deployment | Google sign-in limited to @iiitsurat.ac.in; roles from the address format, admin override (People page) | ✅ | #14 |
 | 5 Deployment | Raw keystrokes deleted after the 4-week baseline or 28 days, window summaries kept; erase a student on request | ✅ | #14 |
 | 5 Deployment | Docker Compose: Caddy HTTPS, isolated code runner, nightly backups; deploy guide for an India-region VM | ✅ | #14 |
@@ -81,6 +81,11 @@ Evaluation harness, synthetic test students (36, scored once per frozen config):
 channel (#10) 92% of non-honest sessions caught at 0.19 false alarms per hour, matched takeovers 86%
 (scaled Manhattan 89%, but blind to copying); precision of a flag about 12% at 1 in 100 prevalence.
 The two-channel config of #9 gave 83%, 64% and 0.28.
+
+Classroom evaluation (2026-11-25, thresholds frozen on dev real sessions for 0.2 false alarms per
+hour): dev cross-fitted 31% of spliced takeovers caught (18-45%), 10 min median delay, 0.22 false
+alarms per hour; held-out split 0.15 per hour (1 of 4 splices). Precision 5.4% at 1 in 100. Live
+(synthetic) thresholds: 64% at 1.59 per hour. Brain entry 2026-11-25-09.
 
 Dashboard demo (6 simulated students, frozen config): 7 of 8 non-honest sessions got a moment to
 discuss, none of the 4 honest ones and none of the 24 baseline-week sessions did.
@@ -101,8 +106,8 @@ entry 2026-11-25-02.
 | Design on dev | 3-7 | Spliced takeovers; split by student (30 %) and by week (from 24 Nov) | ✅ (#63) |
 | Design on dev | 3-7 | Detector re-tune on the dev split of pilot data: #64 fixes + trade-off curve; k = 2 rejected on splices (64% → 11% caught), frozen config kept | 🟧 |
 | Design on dev | 3-7 | Baseline length and device-aware baselines chosen on dev | ⬜ |
-| Held-out test | 8 | Score the test split once; RQ1 to RQ4 | ⬜ |
-| — | 8-12 | Write up RQ1 to RQ4 | ⬜ |
+| Held-out test | 8 | Score the test split once; RQ1 to RQ4: first run 2026-11-25 (20 students, 4 splices; ledger line 3), final run at end of term as later weeks accumulate | 🟧 |
+| — | 8-12 | Write up RQ1 to RQ4: ch 7-10 and abstract from classroom data | 🟧 |
 
 Dropped on 2026-11-25: student survey, Phase 1 baseline labs, Phase 2 staged conditions A-E,
 Phase 3 mock remote interview (RQ3 is now transfer across devices). No separate teacher review:

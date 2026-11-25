@@ -40,7 +40,7 @@ detector, evaluation harness and thesis sources live in this repository too.
 | 1. Event-logging editor | done |
 | 2. Feature extraction + CUSUM detector, synthetic data | done, see [docs/detector.md](docs/detector.md) |
 | 3. Teacher timeline dashboard | done, see [docs/review.md](docs/review.md); labs and questions in [docs/teaching.md](docs/teaching.md); staff-only one-tap conversation outcome per moment |
-| 4. Evaluation harness | done on synthetic data; classroom mode with spliced takeovers (no staging, no labels), see [docs/evaluation.md](docs/evaluation.md) |
+| 4. Evaluation harness | done; classroom results (thresholds frozen on dev, held-out split scored once, RQ1-RQ4) in thesis ch 7-10, see [docs/evaluation.md](docs/evaluation.md) |
 | 6. Sandbox Labs runtime (desktop) | local Linux instance per subject in Docker/Podman, terminal, runs, workspace sync, setup check, schema v2; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) |
 | Pilot data statistics | aggregates-only, pseudonymous report of live recordings (data quality, devices, copying signs, detector flag rates); see [docs/pilot-data.md](docs/pilot-data.md). Dev-only detector re-tune (`pilot_tune`): own in-IDE pastes discounted; quieter settings trade off missed takeovers (splice check), frozen config kept |
 | Sandbox Labs monitoring | file watcher (`fs_change`, `port_open`), 5-minute offline journal with signed hash-chained batches, review lanes and "appeared without typing", live terminal mirror, readiness board, consent v3, attendance; see [docs/sandbox-runtime.md](docs/sandbox-runtime.md) and [docs/review.md](docs/review.md) |
@@ -111,7 +111,9 @@ Strict student-level dev/test split, the thesis detector against scaled
 Manhattan, TypeNet-style and Nosi-style baselines, RQ1/RQ2/RQ4 tables and
 graphs into `thesis/latex/`. Runs on real classroom data with `--db … --classroom`:
 baselines from each student's earliest minutes, takeovers spliced from two real
-sessions on the same question, split by student and by week. See [docs/evaluation.md](docs/evaluation.md).
+sessions on the same question, split by student and by week. On classroom data, `freeze`
+sets the thresholds on dev students' real sessions, `test` scores the held-out split once
+and `rq` runs the RQ2/RQ3 analyses. See [docs/evaluation.md](docs/evaluation.md).
 
 ## Tests
 

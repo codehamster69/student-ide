@@ -130,16 +130,20 @@ def add_splices(corpus: Corpus, seed: int = 0, per_session: int = 1, test_frac: 
     people = {s.meta.get("person", s.student) for s in corpus.sessions}
     side = assign(people, TEST_FRAC if test_frac is None else test_frac)
     pool: dict[tuple, list[Session]] = {}
+
+    def side_of(s: Session) -> str:  # held-out later sessions (test run) are on the test side, whoever typed them
+        return "test" if s.meta.get("held_out") else side[s.meta.get("person", s.student)]
+
     for s in corpus.sessions:
         if s.role in ("test", "baseline") and s.condition == "honest" and all(s.meta.get(k) for k in group):
-            pool.setdefault((side[s.meta.get("person", s.student)], *(s.meta[k] for k in group)), []).append(s)
+            pool.setdefault((side_of(s), *(s.meta[k] for k in group)), []).append(s)
     made = []
     for a in [s for s in corpus.sessions if s.role == "test" and s.condition == "honest" and not s.meta.get("splice")]:
         if not all(a.meta.get(k) for k in group):
             continue
         me = a.meta.get("person", a.student)
         rng = np.random.default_rng([seed, zlib.crc32(a.id.encode())])
-        cands = [b for b in pool.get((side[me], *(a.meta[k] for k in group)), []) if b.meta.get("person", b.student) != me]
+        cands = [b for b in pool.get((side_of(a), *(a.meta[k] for k in group)), []) if b.meta.get("person", b.student) != me]
         taus = np.arange(SNAP_S * math.ceil(MIN_BEFORE_S / SNAP_S), a.duration_s - MIN_AFTER_S + 1e-6, SNAP_S)
         taus = [t for t in taus if _active_between(corpus, a, 0, t) >= MIN_ACTIVE]
         if not cands or not taus:

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -71,8 +72,10 @@ def git_state(repo: Path) -> dict:
             return subprocess.run(["git", *a], cwd=repo, capture_output=True, text=True, timeout=10).stdout.strip()
         except Exception:  # noqa: BLE001 - git missing is fine, the ledger just says so
             return ""
-    return {"commit": run("rev-parse", "--short", "HEAD") or "unknown",
-            "dirty": bool(run("status", "--porcelain", "--", "backend/studentide"))}
+    commit = run("rev-parse", "--short", "HEAD")
+    if not commit and os.environ.get("STUDENTIDE_GIT_COMMIT"):  # a copy of the code with no .git (e.g. run on the VM)
+        return {"commit": os.environ["STUDENTIDE_GIT_COMMIT"], "dirty": False}
+    return {"commit": commit or "unknown", "dirty": bool(run("status", "--porcelain", "--", "backend/studentide"))}
 
 
 class Ledger:
